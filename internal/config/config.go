@@ -33,6 +33,10 @@ const (
 	PINMin = 4
 	PINMax = 64
 
+	// DefaultIdleLock is how long a tool waits idle before it locks by
+	// itself, until the user says otherwise.
+	DefaultIdleLock = 300
+
 	bcryptCost = 10
 )
 
@@ -71,6 +75,16 @@ type Style struct {
 // Colours is the profile's pair.
 func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 
+// Tool is one tool's integration (function.md §6.2; user, 2026-09-25:
+// tmux and screen each their own): the file locku's block is written
+// into, as the user typed it — "~/…" allowed, empty is not set — and the
+// seconds the tool waits idle before it locks by itself, which is tmux's
+// lock-after-time and screen's idle; 0 is never.
+type Tool struct {
+	Conf     string `yaml:"conf"`
+	IdleLock int    `yaml:"idle_lock"`
+}
+
 // Config is config.yaml, one field per key.
 type Config struct {
 	Auth     string    `yaml:"auth"`
@@ -87,16 +101,9 @@ type Config struct {
 	PINPromptTimeout int                `yaml:"pin_prompt_timeout"`
 	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
-	// IdleLock is how many seconds idle before the lock comes up by
-	// itself: one value for every tool that runs locku as its
-	// screensaver — `locku setup` hands it to tmux's lock-after-time and
-	// screen's idle (user, 2026-09-24). 0 is never.
-	IdleLock int `yaml:"idle_lock"`
-	// TmuxConf and ScreenConf are the files `locku setup` writes into, as
-	// the user typed them — "~/…" allowed. Empty is not set, and setup
-	// refuses rather than guesses (user, 2026-09-24).
-	TmuxConf   string `yaml:"tmux_conf"`
-	ScreenConf string `yaml:"screen_conf"`
+	// The tools that run locku as their screensaver, each its own.
+	Tmux   Tool `yaml:"tmux"`
+	Screen Tool `yaml:"screen"`
 }
 
 // NewProfile is a profile called name of the saver kind as the program
@@ -135,7 +142,8 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
-		IdleLock:         300,
+		Tmux:             Tool{IdleLock: DefaultIdleLock},
+		Screen:           Tool{IdleLock: DefaultIdleLock},
 	}
 }
 
@@ -241,10 +249,20 @@ var renamed = map[string]string{
 	"lockout_seconds": "wrong_pin_attempt_cooldown",
 }
 
-// carryOver renames the keys from before 2026-09-24 in the parsed
-// document: the renamed ones, a `savers` LIST to `profiles` (a `savers`
-// map is the savers' defaults and stays), and each profile's `type` to
-// `saver`. The next save writes only the new names.
+// nested is every old top-level key that moved under a tool's mapping on
+// 2026-09-25 — tmux_conf into tmux: {conf: …} — and where; the one idle
+// time became each tool's own.
+var nested = []struct{ old, parent, child string }{
+	{"tmux_conf", "tmux", "conf"},
+	{"screen_conf", "screen", "conf"},
+	{"idle_lock", "tmux", "idle_lock"},
+	{"idle_lock", "screen", "idle_lock"},
+}
+
+// carryOver rewrites the keys from before in the parsed document: the
+// renamed ones, the nested ones, a `savers` LIST to `profiles` (a
+// `savers` map is the savers' defaults and stays), and each profile's
+// `type` to `saver`. The next save writes only the new names.
 func carryOver(doc *yaml.Node) {
 	root := doc
 	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
@@ -269,15 +287,46 @@ func carryOver(doc *yaml.Node) {
 			}
 		}
 	}
-}
-
-func hasKey(m *yaml.Node, key string) bool {
-	for i := 0; i+1 < len(m.Content); i += 2 {
-		if m.Content[i].Value == key {
-			return true
+	for _, n := range nested {
+		v := valueOf(root, n.old)
+		if v == nil {
+			continue
+		}
+		parent := mappingOf(root, n.parent)
+		if parent != nil && !hasKey(parent, n.child) {
+			copied := *v
+			parent.Content = append(parent.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: n.child}, &copied)
 		}
 	}
-	return false
+	for _, n := range nested {
+		dropKey(root, n.old)
+	}
+}
+
+func hasKey(m *yaml.Node, key string) bool { return valueOf(m, key) != nil }
+
+// valueOf is the value node under key in mapping m, or nil.
+func valueOf(m *yaml.Node, key string) *yaml.Node {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// mappingOf is the mapping under key in m, made when there is none, or
+// nil when key holds something that is not a mapping.
+func mappingOf(m *yaml.Node, key string) *yaml.Node {
+	if v := valueOf(m, key); v != nil {
+		if v.Kind == yaml.MappingNode {
+			return v
+		}
+		return nil
+	}
+	v := &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+	m.Content = append(m.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, v)
+	return v
 }
 
 func renameKey(m *yaml.Node, from, to string) {
@@ -287,6 +336,15 @@ func renameKey(m *yaml.Node, from, to string) {
 	for i := 0; i+1 < len(m.Content); i += 2 {
 		if m.Content[i].Value == from {
 			m.Content[i].Value = to
+		}
+	}
+}
+
+func dropKey(m *yaml.Node, key string) {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			m.Content = append(m.Content[:i], m.Content[i+2:]...)
+			return
 		}
 	}
 }
@@ -333,6 +391,15 @@ func tidy(p Profile, kind string) Profile {
 	}
 	p.BG, p.FG = strings.ToLower(p.BG), strings.ToLower(p.FG)
 	return p
+}
+
+// tidyTool is a tool's integration as the rest of locku can rely on it.
+func tidyTool(t Tool) Tool {
+	t.Conf = strings.TrimSpace(t.Conf)
+	if t.IdleLock < 0 {
+		t.IdleLock = DefaultIdleLock
+	}
+	return t
 }
 
 // sanitized brings a parsed file to something the rest of locku can rely
@@ -383,11 +450,7 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.WrongPINCooldown <= 0 {
 		cfg.WrongPINCooldown = Default().WrongPINCooldown
 	}
-	if cfg.IdleLock < 0 {
-		cfg.IdleLock = Default().IdleLock
-	}
-	cfg.TmuxConf = strings.TrimSpace(cfg.TmuxConf)
-	cfg.ScreenConf = strings.TrimSpace(cfg.ScreenConf)
+	cfg.Tmux, cfg.Screen = tidyTool(cfg.Tmux), tidyTool(cfg.Screen)
 	return cfg, note
 }
 

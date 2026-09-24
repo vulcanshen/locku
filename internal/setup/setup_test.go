@@ -167,7 +167,7 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	}
 	// No path is a refusal, not a guess; a relative one too. A path
 	// under ~ is expanded, the directory made.
-	if err := Tmux(&out, "", 300); err == nil || !strings.Contains(err.Error(), "tmux_conf is not set") {
+	if err := Tmux(&out, "", 300); err == nil || !strings.Contains(err.Error(), "tmux: no file set") {
 		t.Errorf("empty path: %v", err)
 	}
 	if err := Tmux(&out, "tmux.conf", 300); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
@@ -232,7 +232,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	// Unset, nothing is written — not even the shell rc.
 	h3 := t.TempDir()
 	t.Setenv("HOME", h3)
-	if err := Screen(new(bytes.Buffer), "", 300); err == nil || !strings.Contains(err.Error(), "screen_conf is not set") {
+	if err := Screen(new(bytes.Buffer), "", 300); err == nil || !strings.Contains(err.Error(), "screen: no file set") {
 		t.Errorf("empty path: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(h3, ".profile")); err == nil {

@@ -8,22 +8,34 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// Panel [1] (ui.md §1.1): three groups, their titles in blue, one under
+// Panel [1] (ui.md §1.1): four groups, their titles in blue, one under
 // the other with no gap. Profiles first: the ones the user has set up —
 // named, configured savers: the objects. Then Savers, the kinds there
 // are — the clock, the dino: the classes, which have no name but their
 // own and are not made or deleted (user, 2026-09-24, who drew the line
-// and put the profiles on top). The active profile — the one preference
-// › profile names — carries a green dot, and the dot is all it is: it
-// shows, it does not set. Settings is one row, preference. The group
-// titles are not stops.
+// and put the profiles on top). Then Integration: the tools that run
+// locku as their screensaver — tmux, screen — each with its file and
+// its idle time, set up and removed from here (user, 2026-09-25). The
+// active profile — the one preference › profile names — carries a
+// green dot, and the dot is all it is: it shows, it does not set.
+// Settings is one row, preference. The group titles are not stops.
 
 type sideKind int
 
 const (
 	sideProfile    sideKind = iota // a profile, by its index in cfg.Profiles
 	sideSaver                      // a kind of saver, by its index in saver.Kinds
+	sideTool                       // a tool, by its index in tools
 	sidePreference                 // the one settings row
+)
+
+// tools is the Integration group, in order; toolTmux and toolScreen are
+// the refs.
+var tools = []string{"tmux", "screen"}
+
+const (
+	toolTmux = iota
+	toolScreen
 )
 
 // sideItem is one stop of the cursor.
@@ -32,14 +44,18 @@ type sideItem struct {
 	ref  int
 }
 
-// sideItems is the stops in order: the profiles, the savers, preference.
+// sideItems is the stops in order: the profiles, the savers, the tools,
+// preference.
 func (m AppModel) sideItems() []sideItem {
-	items := make([]sideItem, 0, len(m.cfg.Profiles)+len(saver.Kinds)+1)
+	items := make([]sideItem, 0, len(m.cfg.Profiles)+len(saver.Kinds)+len(tools)+1)
 	for i := range m.cfg.Profiles {
 		items = append(items, sideItem{kind: sideProfile, ref: i})
 	}
 	for i := range saver.Kinds {
 		items = append(items, sideItem{kind: sideSaver, ref: i})
+	}
+	for i := range tools {
+		items = append(items, sideItem{kind: sideTool, ref: i})
 	}
 	return append(items, sideItem{kind: sidePreference})
 }
@@ -74,8 +90,14 @@ func (m AppModel) sideLines() []sideLine {
 	for i, k := range saver.Kinds {
 		out = append(out, sideLine{text: "  " + k, item: n + i})
 	}
+	n += len(saver.Kinds)
+	out = append(out, sideLine{text: "Integration", item: -1})
+	for i, t := range tools {
+		out = append(out, sideLine{text: "  " + t, item: n + i})
+	}
+	n += len(tools)
 	out = append(out, sideLine{text: "Settings", item: -1})
-	out = append(out, sideLine{text: "  preference", item: n + len(saver.Kinds)})
+	out = append(out, sideLine{text: "  preference", item: n})
 	return out
 }
 

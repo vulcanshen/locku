@@ -7,6 +7,7 @@ import (
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/saver"
+	"github.com/vulcanshen/locku/internal/setup"
 )
 
 // Panel [2] (ui.md §1.1): the detail of whatever [1]'s cursor is on, shown
@@ -15,9 +16,12 @@ import (
 // it is, which profiles are of it, and then its DEFAULTS — the same
 // fields and colours a profile has, which a profile made of it from now
 // on starts as, and which [p] previews; changing them changes no profile
-// already made (user, 2026-09-24). Preference is the PIN, the active
-// profile and the settings. Every key config.yaml has is a row here,
-// except `profiles`, which IS panel [1].
+// already made (user, 2026-09-24). A tool — tmux, screen — is its file
+// and its idle time, and whether locku's block is in the file; [S] Setup
+// and [X] Remove are its panel operations (user, 2026-09-25). Preference
+// is the PIN, the active profile and the lock's settings; what each one
+// means is in the ? help. Every key config.yaml has is a row here,
+// except `profiles` and `savers`, which ARE panel [1].
 //
 // Colours edit a DRAFT (user, 2026-09-24): the sliders move a copy, the
 // swatch row shows the saved colour and, when it differs, the draft
@@ -40,16 +44,16 @@ const (
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
-	rowNote  // a preference row's one-line explanation, dim, under it
 	rowPIN
 	rowProfile // preference's active profile
 	rowShowStatus
 	rowPINPromptTimeout
 	rowWrongPINAttempts
 	rowWrongPINCooldown
-	rowIdleLock
-	rowTmuxConf
-	rowScreenConf
+	rowTool     // a tool's name, read-only
+	rowConf     // a tool's file
+	rowIdleLock // a tool's idle time
+	rowBlock    // whether locku's block is in the tool's file, read-only
 )
 
 // row is one line of panel [2].
@@ -77,6 +81,10 @@ var about = map[string]string{
 	saver.KindDino:  "the offline dino run, jumping by itself, for ever",
 }
 
+// usualConf is where a tool's file usually is: the offer in the conf
+// box when nothing is set.
+var usualConf = map[string]string{"tmux": "~/.tmux.conf", "screen": "~/.screenrc"}
+
 // draftKey names whose colours a draft holds: a profile's, by name, or
 // a saver's defaults, by kind. The two namespaces never meet — a profile
 // may well be called clock.
@@ -89,7 +97,7 @@ func profileKey(name string) draftKey { return draftKey{name: name} }
 func saverKey(kind string) draftKey   { return draftKey{saver: true, name: kind} }
 
 // subject is what [2] edits under the cursor — a profile, or a saver's
-// defaults — with its draft key; ok is false on preference.
+// defaults — with its draft key; ok is false elsewhere.
 func (m AppModel) subject() (p config.Profile, key draftKey, ok bool) {
 	switch it := m.sideAt(); it.kind {
 	case sideProfile:
@@ -100,6 +108,14 @@ func (m AppModel) subject() (p config.Profile, key draftKey, ok bool) {
 		return m.cfg.Saver(kind), saverKey(kind), true
 	}
 	return config.Profile{}, draftKey{}, false
+}
+
+// tool is the tool under the cursor — tmux or screen — and its settings.
+func (m AppModel) tool() (name string, t config.Tool) {
+	if m.sideAt().ref == toolScreen {
+		return tools[toolScreen], m.cfg.Screen
+	}
+	return tools[toolTmux], m.cfg.Tmux
 }
 
 // draftOf is p's colours as the sliders have them: the draft under key
@@ -176,6 +192,14 @@ func (m AppModel) colourRows(key draftKey, p config.Profile) []row {
 	return out
 }
 
+// offOr is n, or "0 (off)" for none.
+func offOr(n int) string {
+	if n == 0 {
+		return "0 (off)"
+	}
+	return itoa(n)
+}
+
 // rows is panel [2] for the current selection.
 func (m AppModel) rows() []row {
 	value := valueColor
@@ -212,6 +236,28 @@ func (m AppModel) rows() []row {
 		}
 		out = append(out, fieldRows(p)...)
 		return append(out, m.colourRows(key, p)...)
+	case sideTool:
+		name, t := m.tool()
+		conf := row{kind: rowConf, label: "conf", value: t.Conf, color: value, stop: true}
+		if t.Conf == "" {
+			conf.value, conf.color = "not set", yellowColor
+		}
+		// Whether the block is there: what [S] Setup and [X] Remove are
+		// about, read off the file each time.
+		block := row{kind: rowBlock, label: "block", value: "no file set", color: dimColor}
+		switch {
+		case t.Conf == "":
+		case setup.Installed(t.Conf):
+			block.value, block.color = "in the file", liveColor
+		default:
+			block.value, block.color = "not in the file: S sets it up", yellowColor
+		}
+		return []row{
+			{kind: rowTool, label: "tool", value: name, color: dimColor},
+			conf,
+			{kind: rowIdleLock, label: "idle_lock", value: offOr(t.IdleLock), color: value, stop: true},
+			block,
+		}
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
@@ -225,47 +271,14 @@ func (m AppModel) rows() []row {
 		if m.cfg.ShowStatus {
 			status.value, status.color = "on", liveColor
 		}
-		after := itoa(m.cfg.WrongPINAttempts)
-		if m.cfg.WrongPINAttempts == 0 {
-			after = "0 (off)"
+		return []row{
+			pin,
+			active,
+			status,
+			{kind: rowPINPromptTimeout, label: "pin_prompt_timeout", value: itoa(m.cfg.PINPromptTimeout), color: value, stop: true},
+			{kind: rowWrongPINAttempts, label: "wrong_pin_attempts", value: offOr(m.cfg.WrongPINAttempts), color: value, stop: true},
+			{kind: rowWrongPINCooldown, label: "wrong_pin_attempt_cooldown", value: itoa(m.cfg.WrongPINCooldown), color: value, stop: true},
 		}
-		idle := itoa(m.cfg.IdleLock)
-		if m.cfg.IdleLock == 0 {
-			idle = "0 (off)"
-		}
-		// The files `locku setup` writes: unset is said, in yellow, since
-		// setup refuses without them (user, 2026-09-24).
-		pathRow := func(kind rowKind, label, p string) row {
-			r := row{kind: kind, label: label, value: p, color: value, stop: true}
-			if p == "" {
-				r.value, r.color = "not set", yellowColor
-			}
-			return r
-		}
-		// Every setting has a dim line under it saying what it is (user,
-		// 2026-09-24), so the screen explains itself without the menu.
-		var out []row
-		for _, r := range []struct {
-			row  row
-			note string
-		}{
-			{pin, "what the lock asks for; with none, any key unlocks"},
-			{active, "the profile the lock shows"},
-			{status, "user@host and the time, on the lock's last row"},
-			{row{kind: rowPINPromptTimeout, label: "pin_prompt_timeout", value: itoa(m.cfg.PINPromptTimeout), color: value, stop: true},
-				"seconds without a key before the PIN box closes; 0 never"},
-			{row{kind: rowWrongPINAttempts, label: "wrong_pin_attempts", value: after, color: value, stop: true},
-				"wrong PINs in a row before a cooldown; 0 off"},
-			{row{kind: rowWrongPINCooldown, label: "wrong_pin_attempt_cooldown", value: itoa(m.cfg.WrongPINCooldown), color: value, stop: true},
-				"seconds the cooldown lasts"},
-			{row{kind: rowIdleLock, label: "idle_lock", value: idle, color: value, stop: true},
-				"idle seconds until tmux or screen lock; 0 never; setup again after"},
-			{pathRow(rowTmuxConf, "tmux_conf", m.cfg.TmuxConf), "the file locku setup tmux writes its block into"},
-			{pathRow(rowScreenConf, "screen_conf", m.cfg.ScreenConf), "the file locku setup screen writes its block into"},
-		} {
-			out = append(out, r.row, row{kind: rowNote, value: r.note, color: dimColor})
-		}
-		return out
 	}
 }
 
@@ -302,8 +315,8 @@ func sliderBar(v int) string {
 }
 
 // detailTitle is panel [2]'s chip: a saver's name with ` · saver`, a
-// profile's name, or preference — with ` · unsaved` while a colour
-// draft differs (ui.md §B).
+// profile's name, a tool's with ` · integration`, or preference — with
+// ` · unsaved` while a colour draft differs (ui.md §B).
 func (m AppModel) detailTitle() string {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver, sideProfile:
@@ -316,6 +329,8 @@ func (m AppModel) detailTitle() string {
 			title += " · unsaved"
 		}
 		return title
+	case sideTool:
+		return "[2] " + tools[it.ref] + " · integration"
 	}
 	return "[2] preference"
 }
@@ -342,21 +357,8 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	// label, so that is the least the label column leaves.
 	lw := min(labelW, max(4, innerW-sliderW-5))
 	out := make([]string, 0, len(rows))
-	// keep is the last output line that must stay on screen: the cursor's
-	// row, and the note under it when there is one.
 	keep := 0
 	for i, r := range rows {
-		if r.kind == rowNote {
-			// Wrapped inside the label column, a little in from its edge
-			// (user, 2026-09-24): the note belongs to the key over it.
-			for _, l := range wrap(r.value, lw-3) {
-				out = append(out, "  "+dim.Render(padRight(l, innerW-2)))
-			}
-			if i == curRow+1 {
-				keep = len(out) - 1
-			}
-			continue
-		}
 		label := padRight(" "+r.label, lw)
 		var plain, styled string
 		switch r.kind {

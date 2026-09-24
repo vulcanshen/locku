@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -303,18 +305,22 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	}
 }
 
-// tmux_conf and screen_conf are typed, webu's way: the box opens on an
-// OFFER — the value, or the usual file when nothing is set — that Tab
-// takes and Backspace declines; Enter on an untouched offer changes
+// Integration holds tmux and screen, each with its file and its idle
+// time (user, 2026-09-25). The file is typed webu's way: the box opens
+// on an OFFER — the value, or the usual file when nothing is set — that
+// Tab takes and Backspace declines; Enter on an untouched offer changes
 // nothing; a relative path is refused (user, 2026-09-24).
-func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
-	m := newTestApp(t).press("G", "2", "G") // preference, last row
-	if m.rowAt().kind != rowScreenConf {
-		t.Fatalf("the last row is %v, not screen_conf", m.rowAt().kind)
+func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
+	m := newTestApp(t).press("G", "k") // under preference: screen, then tmux
+	if it := m.sideAt(); it.kind != sideTool || it.ref != toolScreen {
+		t.Fatalf("above preference sits screen, not %+v", it)
 	}
-	m = m.press("k")
-	if m.rowAt().kind != rowTmuxConf || !strings.Contains(m.View(), "not set") {
-		t.Fatalf("tmux_conf row: %+v", m.rowAt())
+	m = m.press("k", "2")
+	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowConf {
+		t.Fatalf("tmux, conf row: %+v %+v", it, m.rowAt())
+	}
+	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "no file set") {
+		t.Errorf("tmux's rows:\n%s", v)
 	}
 	m = m.press("enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
@@ -325,8 +331,8 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 	}
 	// Enter on the untouched offer: the box closes, nothing changes.
 	m = m.press("enter")
-	if m.input.isActive() || m.cfg.TmuxConf != "" {
-		t.Errorf("an offer nobody took must change nothing: %q", m.cfg.TmuxConf)
+	if m.input.isActive() || m.cfg.Tmux.Conf != "" {
+		t.Errorf("an offer nobody took must change nothing: %q", m.cfg.Tmux.Conf)
 	}
 	// Tab takes it; Enter saves it.
 	m = m.press("enter", "tab")
@@ -334,11 +340,8 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 		t.Fatalf("Tab: %+v", m.input)
 	}
 	m = m.press("enter")
-	if m.cfg.TmuxConf != "~/.tmux.conf" || saved(t).TmuxConf != "~/.tmux.conf" {
-		t.Errorf("tmux_conf %q", m.cfg.TmuxConf)
-	}
-	if !strings.Contains(m.View(), "~/.tmux.conf") {
-		t.Error("the row must show the path")
+	if m.cfg.Tmux.Conf != "~/.tmux.conf" || saved(t).Tmux.Conf != "~/.tmux.conf" {
+		t.Errorf("tmux conf %q", m.cfg.Tmux.Conf)
 	}
 	// The value is now the offer; typing starts fresh over it, a relative
 	// path is refused, an absolute one saved.
@@ -351,8 +354,8 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 		t.Fatalf("suffix %q", m.input.suffix)
 	}
 	m = m.press("ctrl+u").typed("/etc/tmux.conf").press("enter")
-	if m.cfg.TmuxConf != "/etc/tmux.conf" || saved(t).TmuxConf != "/etc/tmux.conf" {
-		t.Errorf("tmux_conf %q", m.cfg.TmuxConf)
+	if m.cfg.Tmux.Conf != "/etc/tmux.conf" || saved(t).Tmux.Conf != "/etc/tmux.conf" {
+		t.Errorf("tmux conf %q", m.cfg.Tmux.Conf)
 	}
 	// Backspace declines the offer; Enter on the empty line unsets.
 	m = m.press("enter", "backspace")
@@ -360,17 +363,83 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 		t.Fatalf("Backspace: %+v", m.input)
 	}
 	m = m.press("enter")
-	if m.cfg.TmuxConf != "" || saved(t).TmuxConf != "" {
-		t.Errorf("unset: %q", m.cfg.TmuxConf)
+	if m.cfg.Tmux.Conf != "" || saved(t).Tmux.Conf != "" {
+		t.Errorf("unset: %q", m.cfg.Tmux.Conf)
 	}
-	// screen_conf, with its own usual file.
+	// idle_lock is the tool's own: tmux's changes, screen's does not.
 	m = m.press("j", "enter")
+	if m.input.title != "number" || m.input.value != "300" {
+		t.Fatalf("idle box %+v", m.input)
+	}
+	m = m.press("ctrl+u").typed("45").press("enter")
+	if m.cfg.Tmux.IdleLock != 45 || saved(t).Tmux.IdleLock != 45 || m.cfg.Screen.IdleLock != 300 {
+		t.Errorf("tmux idle %d, screen idle %d", m.cfg.Tmux.IdleLock, m.cfg.Screen.IdleLock)
+	}
+	// screen, with its own usual file.
+	m = m.press("1", "j", "2", "enter")
 	if m.input.placeholder != "~/.screenrc" {
 		t.Fatalf("offer %q", m.input.placeholder)
 	}
 	m = m.press("tab", "enter")
-	if m.cfg.ScreenConf != "~/.screenrc" || saved(t).ScreenConf != "~/.screenrc" {
-		t.Errorf("screen_conf %q", m.cfg.ScreenConf)
+	if m.cfg.Screen.Conf != "~/.screenrc" || saved(t).Screen.Conf != "~/.screenrc" {
+		t.Errorf("screen conf %q", m.cfg.Screen.Conf)
+	}
+}
+
+// [S] Setup writes the block into the tool's file and [X] Remove takes
+// it out, from [1] and from [2]; both say why they cannot while no file
+// is set (user, 2026-09-25: buttons, in place of `locku setup`).
+func TestSetupAndRemoveFromTheScreen(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())           // no tmux: the file only
+	m := newTestApp(t).press("G", "k", "k") // tmux
+	m = m.press("S")
+	if !strings.Contains(m.toast.msg, "set conf first") {
+		t.Fatalf("setup without a file: %q", m.toast.msg)
+	}
+	conf := filepath.Join(t.TempDir(), "tmux.conf")
+	m = m.expireToast().press("2", "enter", "ctrl+u").typed(conf).press("enter")
+	if m.cfg.Tmux.Conf != conf || !strings.Contains(m.View(), "not in the file") {
+		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
+	}
+	m = m.press("S")
+	b, err := os.ReadFile(conf)
+	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") {
+		t.Fatalf("after Setup: %v\n%s", err, b)
+	}
+	if !strings.Contains(m.toast.msg, "wrote") || !strings.Contains(m.View(), "in the file") {
+		t.Errorf("toast %q, screen:\n%s", m.toast.msg, m.View())
+	}
+	// Setup and Remove sit in [2]'s menu as panel operations.
+	m = m.expireToast().press(" ")
+	if hotkeyIndex(m.menu.menuKeys(), "S") < 0 || hotkeyIndex(m.menu.menuKeys(), "X") < 0 {
+		t.Errorf("the tool's [2] menu: %v", m.menu.menuKeys())
+	}
+	// Remove asks, then takes the block out — from [1] this time.
+	m = m.press("esc", "1", "X")
+	if !m.confirm.isInteractive() || m.confirm.action != confirmRemoveTool {
+		t.Fatal("remove must confirm")
+	}
+	m = m.press("enter")
+	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "locku") {
+		t.Errorf("after Remove:\n%s", b)
+	}
+	if !strings.Contains(m.toast.msg, "removed") || !strings.Contains(m.View(), "not in the file") {
+		t.Errorf("toast %q, screen:\n%s", m.toast.msg, m.View())
+	}
+}
+
+// What each preference setting means is in the help, not on the panel
+// (user, 2026-09-25).
+func TestHelpExplainsThePreferences(t *testing.T) {
+	m := newTestApp(t).press("?", "G") // the preferences are the last section: scroll to the end
+	v := m.View()
+	for _, want := range []string{"wrong_pin_attempt_cooldown", "pin_prompt_timeout", "idle_lock", "Integration"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("help lacks %q:\n%s", want, v)
+		}
+	}
+	if pv := m.press("?", "G", "2").View(); strings.Contains(pv, "any key unlocks") {
+		t.Errorf("preference must not carry the notes:\n%s", pv)
 	}
 }
 
@@ -384,7 +453,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideProfile || it.ref != 0 || m.cfg.Profiles[0].Name != "clock" {
 		t.Fatalf("the cursor must start on the active profile, not %+v", it)
 	}
-	m = m.press("G", "k", "k") // under the profiles: the savers, then preference
+	m = m.press("G", "k", "k", "k", "k") // under the profiles: the savers, the tools, then preference
 	if it := m.sideAt(); it.kind != sideSaver || it.ref != 0 {
 		t.Fatalf("the first saver sits under the profiles, not %+v", it)
 	}
@@ -435,7 +504,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 	}
 	// Enter goes to [2] as on every row; the menu there has New and the
 	// panel operations, and no Enter row on the description.
-	m = m.press("1", "G", "k", "k", "enter", " ")
+	m = m.press("1", "G", "k", "k", "k", "k", "enter", " ")
 	if m.focus != panelDetail || hotkeyIndex(m.menu.menuKeys(), "n") < 0 || hotkeyIndex(m.menu.menuKeys(), "S") < 0 {
 		t.Errorf("a saver's [2] menu: %v", m.menu.menuKeys())
 	}
@@ -446,7 +515,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 // the saver's rows — a dino's size, runner and scene — lands under the
 // cursor, and previews as the run.
 func TestNewProfileOfASaver(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "n") // the dino saver, just above preference
+	m := newTestApp(t).press("G", "k", "k", "k", "n") // the dino saver, above the tools
 	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "dino" {
 		t.Fatalf("new box: %+v", m.input)
 	}
@@ -480,7 +549,7 @@ func TestNewProfileOfASaver(t *testing.T) {
 	m = m.press("x") // no PIN: any key hands back
 	// A second one of the same saver is offered the next free name, and
 	// the saver's [2] lists both.
-	m = m.press("1", "G", "k", "n")
+	m = m.press("1", "G", "k", "k", "k", "n")
 	if m.input.value != "dino2" {
 		t.Errorf("offer %q", m.input.value)
 	}
@@ -506,63 +575,16 @@ func TestPanelsLoop(t *testing.T) {
 		t.Error("d stops at the end")
 	}
 	m = m.press("2", "k")
-	if m.rowAt().kind != rowScreenConf {
+	if m.rowAt().kind != rowWrongPINCooldown {
 		t.Errorf("[2] loops too: k on the first row is %v", m.rowAt().kind)
 	}
 }
 
-// Every preference row has a dim line under it saying what it is; the
-// notes are not stops, and the rows scroll with the cursor when they
-// outgrow the panel.
-func TestPreferenceExplainsItself(t *testing.T) {
-	m := newTestApp(t).press("G", "2")
-	rows := m.rows()
-	if len(rows) != 18 {
-		t.Fatalf("%d rows", len(rows))
-	}
-	for i := 0; i < len(rows); i += 2 {
-		if !rows[i].stop || rows[i+1].kind != rowNote || rows[i+1].stop || rows[i+1].value == "" {
-			t.Errorf("rows %d, %d: %+v %+v", i, i+1, rows[i], rows[i+1])
-		}
-	}
-	// The notes are wrapped inside the label column: no line of the
-	// panel's body reaches the value column with note text, and every
-	// word is there.
-	v := m.View()
-	for _, want := range []string{"unlocks", "never", "cooldown", "setup"} {
-		if !strings.Contains(v, want) {
-			t.Errorf("note word %q missing:\n%s", want, v)
-		}
-	}
-	for _, l := range strings.Split(v, "\n") {
-		if i := strings.Index(l, "what the lock"); i >= 0 && strings.Contains(l, "any key unlocks") {
-			t.Errorf("a note ran past the label column:\n%s", l)
-		}
-	}
-	// On a short terminal the last rows are off the panel until the
-	// cursor gets there, and its note comes along.
-	m = m.size(60, 12).press("G")
-	if v := m.View(); !strings.Contains(v, "screen_conf") || strings.Contains(v, "PIN  ") {
+// [2] follows the cursor when its rows outgrow the panel.
+func TestDetailScrollsToTheCursor(t *testing.T) {
+	m := newTestApp(t).size(60, 12).press("2", "G")
+	if v := m.View(); !strings.Contains(v, "  B ") || strings.Contains(v, "name ") {
 		t.Errorf("the last row must be on screen, the first rows off it:\n%s", v)
-	}
-}
-
-// wrap breaks at spaces, never past w, and cuts a word longer than w.
-func TestWrap(t *testing.T) {
-	got := wrap("what the lock asks for; with none, any key unlocks", 26)
-	if len(got) != 2 || got[0] != "what the lock asks for;" || got[1] != "with none, any key unlocks" {
-		t.Errorf("%q", got)
-	}
-	for _, l := range wrap("seconds without a key before the PIN box closes; 0 never", 10) {
-		if dispW(l) > 10 {
-			t.Errorf("%q is wider than 10", l)
-		}
-	}
-	if got := wrap("abcdefghij", 4); len(got) != 3 || got[0] != "abcd" || got[2] != "ij" {
-		t.Errorf("a long word: %q", got)
-	}
-	if wrap("", 10) != nil || wrap("x", 0) != nil {
-		t.Error("nothing to wrap")
 	}
 }
 
@@ -790,7 +812,8 @@ func TestViewFitsTheTerminal(t *testing.T) {
 		check(t, m.press("G", "2"), "preference")
 		check(t, m.press("2", "G", "enter", "G", "enter"), "profile with a draft")
 		check(t, m.press("2", " "), "profile menu with regions")
-		check(t, m.press("G", "k", "2"), "a saver's detail")
+		check(t, m.press("G", "k", "k", "k", "2"), "a saver detail")
+		check(t, m.press("G", "k", "2"), "a tool detail")
 	}
 }
 
