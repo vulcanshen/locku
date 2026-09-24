@@ -75,7 +75,7 @@ type Config struct {
 // DefaultSaver is the instance a fresh install has, and the one drawn when
 // the file names none that exists.
 func DefaultSaver() Saver {
-	return Saver{Name: "clock", Type: "clock", Layout: "row", Size: "medium", Time: "HH:MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
+	return Saver{Name: "clock", Type: "clock", Layout: "row", Size: "medium", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
 }
 
 // Default is the file as it would be with every key left out.

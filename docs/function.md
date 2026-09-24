@@ -147,20 +147,22 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 
 | type | 參數 | 內容 | tick |
 |---|---|---|---|
-| clock | `layout` row / column；`size` small / medium / large；`time` 四選一；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`（12 時制多一行 `PM`），日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
+| clock | `layout` row / column；`size` small / medium / large；`time` `HH MM` / `HH MM SS`；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`，日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
+
+修訂（2026-09-24，第三輪）：12 時制 AM/PM 拿掉，time 只剩兩種；時間不畫冒號，時、分、秒之間用一個 2 px 的空白隔開（組內間隔 1 px、組間 4 px，分組看得出來），日期的減號保留。選項名稱改為 `HH MM` / `HH MM SS`，舊寫法 `HH:MM`、`HH:MM:SS` 與 AM/PM 兩種讀到時自動對應。
 
 修訂（2026-09-24，使用者實機試用後）：`layout` 新增，column 讓每行只有 2 到 4 個字，字因此大好幾倍；
 `size` 新增，一個字型像素佔 1 × 1 / 2 × 2 / 3 × 3 格，預設 medium，塞不下怎麼退見 5.3；
 點陣板的 `bg` / `fg` 從全域 style 搬進每個 saver，每個實例自己一組顏色，沒有全域顏色設定。
 
-time 四種：`HH:MM`（24 時制）、`HH:MM AM/PM`（12 時制）、`HH:MM:SS`、`HH:MM:SS AM/PM`。date 四種：`YYYY-MM-DD`、`YYYY-MMM-DD`、`MM-DD`、`MMM-DD`，MMM 是英文月份縮寫大寫（JAN 到 DEC）。時間與日期各自設定。
+time 兩種：`HH MM`、`HH MM SS`（24 時制）。date 四種：`YYYY-MM-DD`、`YYYY-MMM-DD`、`MM-DD`、`MMM-DD`，MMM 是英文月份縮寫大寫（JAN 到 DEC）。時間與日期各自設定。
 
 沒有自由輸入：所有內容由這兩個選項產生，字元集只有 0 到 9、冒號、減號、空白、大寫 A 到 Z，點陣字只畫這 39 個。
 
 實例規則：
 
 - name 唯一，是 config 裡 `saver` 指向的鍵。
-- 預設一個實例 `clock`（type clock，layout row，size medium，time `HH:MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `savers` 時用它。
+- 預設一個實例 `clock`（type clock，layout row，size medium，time `HH MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `savers` 時用它。
 - 可 duplicate（複製參數、要求新 name）、rename（連動 `saver` 指向）、delete。啟用中的不可刪，最後一個不可刪。type 建立後不可改，要換 type 就 duplicate 另一個。
 - v1 只有 clock 一個 type。type 欄位保留：新 type 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text type 已移除（2026-09-24），內容不可控。
 
@@ -172,16 +174,16 @@ Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬�
 
 縮放：
 
-1. 一行的像素寬 = 各字寬相加、字與字之間 1 px：數字與字母 5 px，冒號 1 px、空白 2 px、減號 3 px（修訂 2026-09-24：原本每個字一律 5 px、行距 2 px，冒號白佔 4 px，large 因此要 174 欄，32 吋螢幕都吃不到；比例寬之後 `HH:MM` 25 px、`HH:MM:SS` 39 px、`YYYY-MM-DD` 55 px）。像素高 = 7m + (m − 1)，行距 1 px。取最寬的一行。
+1. 一行的像素寬 = 各字寬相加、字與字之間 1 px：數字與字母 3 px（M、W 5 px），空白 2 px、減號 3 px、冒號 1 px（修訂 2026-09-24：原本每個字一律 5 px、行距 2 px，`HH:MM` 29 px，large 要 174 欄，32 吋螢幕都吃不到；先把標點改成比例寬，再因字形全是直角而把數字壓成 3 px 並拿掉時間的冒號，`HH MM` 18 px、`HH MM SS` 29 px、`YYYY-MM-DD` 39 px）。像素高 = 7m + (m − 1)，行距 1 px。取最寬的一行。
 
    各 size 需要的終端機（含 4 欄 / 3 列邊距與狀態列）：
 
    | 內容 | small | medium | large |
    |---|---|---|---|
-   | `HH:MM` 一行 | 54 × 10 | 104 × 17 | 154 × 24 |
-   | `HH:MM:SS` 一行 | 82 × 10 | 160 × 17 | 238 × 24 |
-   | `HH` / `MM` 直排 | 26 × 18 | 48 × 33 | 70 × 48 |
-   | `HH` / `MM` / `SS` 直排 | 26 × 26 | 48 × 49 | 70 × 72 |
+   | `HH MM` 一行 | 40 × 10 | 76 × 17 | 112 × 24 |
+   | `HH MM SS` 一行 | 62 × 10 | 120 × 17 | 178 × 24 |
+   | `HH` / `MM` 直排 | 18 × 18 | 32 × 33 | 46 × 48 |
+   | `HH` / `MM` / `SS` 直排 | 18 × 26 | 32 × 49 | 46 × 72 |
 2. 可用區 = 終端機寬減 4 欄邊距，高減 1 列狀態列再減 2 列邊距。
 3. 倍數 k 由 saver 的 `size` 決定：small 1、medium 2、large 3，每個字型像素放大成 k × k 格（修訂 2026-09-24：原本 k 是「塞得下的最大整數」，使用者要的是明確的大小選項，不是計算結果）。塞不下的順序：先照退階梯砍內容（下述），內容砍到底還塞不下才把 k 降一級再從完整內容試起；k = 1 也塞不下才把內容改用一般文字以 fg 色置中疊在板上，點陣板照鋪。所以 large 在寬終端機配 column 排版正好，在窄終端機會自己退成 medium 或 small，不會爆框。
 4. 整個畫布（狀態列以外的所有列）都是像素格，像 LED 點陣板：每格一個 glyph 加空格，沒亮的用該 saver 的 bg（預設 surface0 #313244），亮的用它的 fg（預設 gold #f2b753）。內容置中。終端機寬為奇數時最右一欄留白。splash 的名字、版本、開發者不出現，只取 glyph 畫法。
@@ -260,7 +262,7 @@ savers:
     type: clock
     layout: row           # row / column（依分隔符拆行）
     size: medium          # small / medium / large：一個字型像素佔 1 / 2 / 3 格見方
-    time: "HH:MM"          # HH:MM / HH:MM AM/PM / HH:MM:SS / HH:MM:SS AM/PM
+    time: "HH MM"          # HH MM / HH MM SS（時分秒以空白分組，不畫冒號）
     date: off             # off / YYYY-MM-DD / YYYY-MMM-DD / MM-DD / MMM-DD
     bg: "#313244"          # 這個 saver 的點陣板暗格，預設 surface0
     fg: "#f2b753"          # 亮格，預設 splash gold
@@ -328,11 +330,11 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 9. 驗證 v1 只做自家 PIN，PAM 留 `auth: pam` 擴充位，shadow 不做。
 10. 未設定 PIN 或 config 缺失、損毀時進入無 PIN 模式：照常顯示 saver，任何按鍵解鎖，畫面標明未設定 PIN。fail open。
 11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤鎖定由 config 的 lockout_after / lockout_seconds 控制，預設 0 關閉。
-12. saver 分 type 與具名實例：v1 type 只有 clock，參數 layout row / column、size small / medium / large、time 四選一、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
+12. saver 分 type 與具名實例：v1 type 只有 clock，參數 layout row / column、size small / medium / large、time `HH MM` / `HH MM SS`（24 時制，2026-09-24 拿掉 AM/PM）、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
 13. 狀態列 user@hostname 與鎖定時間預設顯示，show_status 可關；未設定 PIN 提示不可關。
 14. prompt_timeout 預設 30 秒，以最後一次按鍵起算，0 為永不收起。
 15. 畫布只有一種樣式：整面 LED 點陣板，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依 saver 的 size 放大 1 / 2 / 3 倍，塞不下先砍內容再降一級，1 倍也塞不下退化為一般文字疊在板上。saver 決定內容、大小與顏色。
-16. 內容全由固定選項產生；字元集 39 個（數字、冒號、減號、空白、大寫字母）。數字與字母 5 × 7，標點比例寬（冒號 1、空白 2、減號 3）；字形一律直角、沒有斜線，像七段顯示器：0 沒有中間斜線、7 沒有勾、S / O / I 與 5 / 0 / 1 同形，沒有直角寫法的字母取方塊字型的畫法（N 是 Π、V 是底部收窄的 U）。2026-09-24 修訂。
+16. 內容全由固定選項產生；字元集 39 個（數字、冒號、減號、空白、大寫字母）。字形一律直角、沒有斜線，像七段顯示器：0 沒有中間斜線、7 沒有勾、S / O / I 與 5 / 0 / 1 同形；也因此數字壓成 3 × 7，字母 3 × 7（M、W 5 × 7），標點比例寬（空白 2、減號 3、冒號 1，時間不再用冒號）；沒有直角寫法的字母取方塊字型的畫法（N 是 Π、V 是底部收尖的 U）。2026-09-24 修訂。
 17. Nerd Font 必裝，與家族相同；字型在使用者本機終端機，SSH 不影響。
 18. 第一幀不動畫；之後內容變更只對有變的像素做 splash 式 shuffle 揭露。
 19. 顏色是每個 saver 自己的 bg / fg（修訂 2026-09-24，原為全域 Settings › style），bg 預設 surface0、fg 預設 gold；以 RGB slider 設定、config 存 hex；滑桿改草稿，`S` 存、`R` 丟，`q` 遇到未存草稿先問。
@@ -356,7 +358,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 - screen 內 `lockscreen` 同上。
 - 裸 ssh 內執行同上。
 - clock saver 連續執行 8 小時，CPU 平均 < 1%，記憶體不成長。
-- 渲染器在 80×24、120×40、200×60 下對 `HH:MM` 各選到預期的 k；80×24 配 `HH:MM:SS` + `YYYY-MM-DD` 退成 `HH:MM` + `MM-DD`；40×12 退化為一般文字。
+- 渲染器在 80×24、120×40、200×60 下對 `HH MM` 各選到預期的 k（large：2 / 3 / 3）；80×24 small 配 `HH MM SS` + `YYYY-MM-DD` 退成 `HH MM SS` + `MM-DD`，medium 退成 `HH MM`；30×8 退化為一般文字。
 - 內容變更只動有變的像素，以 shuffle 揭露，沒變的像素輸出不變。
 - saver name 重複被擋。
 - style 任一 channel 改動後立即寫檔，Preview 反映；手改 config 的非法 hex 視同預設。

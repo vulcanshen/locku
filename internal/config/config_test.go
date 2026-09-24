@@ -41,7 +41,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("active %+v %v", s, ok)
 	}
 	// A saver's absent keys are the defaults too.
-	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Time != "HH:MM" || s.Date != "off" {
+	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Time != "HH MM" || s.Date != "off" {
 		t.Errorf("saver %+v", s)
 	}
 }
@@ -74,7 +74,7 @@ func TestSaverNotFoundIsNoted(t *testing.T) {
 	if s, ok := cfg.Active(); ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
 	}
-	if len(cfg.Savers) != 1 || cfg.Savers[0].Time != "HH:MM" || cfg.Savers[0].Date != "off" {
+	if len(cfg.Savers) != 1 || cfg.Savers[0].Time != "HH MM" || cfg.Savers[0].Date != "off" {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -102,7 +102,7 @@ func TestBadValuesAreDefaults(t *testing.T) {
 func TestSaveRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "deep", "config.yaml")
 	cfg := Default()
-	cfg.Savers = append(cfg.Savers, Saver{Name: "big", Type: "clock", Time: "HH:MM:SS", Date: "YYYY-MM-DD"})
+	cfg.Savers = append(cfg.Savers, Saver{Name: "big", Type: "clock", Time: "HH MM SS", Date: "YYYY-MM-DD"})
 	cfg.Saver = "big"
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)

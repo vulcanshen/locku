@@ -17,7 +17,7 @@ func newTestApp(t *testing.T) AppModel {
 	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
 	second := config.DefaultSaver()
-	second.Name, second.Time, second.Date = "clock2", "HH:MM:SS", "YYYY-MM-DD"
+	second.Name, second.Time, second.Date = "clock2", "HH MM SS", "YYYY-MM-DD"
 	cfg.Savers = append(cfg.Savers, second)
 	m := NewApp(cfg, "")
 	return m.size(100, 30)
@@ -178,7 +178,7 @@ func TestDuplicateLandsOnTheCopy(t *testing.T) {
 		t.Fatalf("clock2 exists: %q", m.input.suffix)
 	}
 	m = m.press("ctrl+u").typed("third").press("enter")
-	if len(m.cfg.Savers) != 3 || m.cfg.Savers[2].Name != "third" || m.cfg.Savers[2].Time != "HH:MM" || m.cur1 != 2 {
+	if len(m.cfg.Savers) != 3 || m.cfg.Savers[2].Name != "third" || m.cfg.Savers[2].Time != "HH MM" || m.cur1 != 2 {
 		t.Errorf("savers %+v cur1 %d", m.cfg.Savers, m.cur1)
 	}
 }
@@ -206,11 +206,11 @@ func TestDetailPreviewsThatSaver(t *testing.T) {
 	// P on [2] of clock2 previews clock2 although clock is active; P on
 	// preference previews the active one.
 	m := newTestApp(t).press("j", "2", "P")
-	if m.preview == nil || m.preview.clock.Time != "HH:MM:SS" {
+	if m.preview == nil || m.preview.clock.Time != "HH MM SS" {
 		t.Fatal("P on a saver's [2] must preview that saver")
 	}
 	m = m.press("x", "1", "G", "2", "P")
-	if m.preview == nil || m.preview.clock.Time != "HH:MM" {
+	if m.preview == nil || m.preview.clock.Time != "HH MM" {
 		t.Fatal("P on preference must preview the active saver")
 	}
 	m = m.press("x", "1", "g", "g", "j", "2", " ")
@@ -224,7 +224,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 	if m.preview == nil {
 		t.Fatal("p did not start a preview")
 	}
-	if m.preview.clock.Time != "HH:MM:SS" {
+	if m.preview.clock.Time != "HH MM SS" {
 		t.Errorf("the preview shows %q, not the saver under the cursor", m.preview.clock.Time)
 	}
 	if m.cfg.Saver != "clock" {
@@ -242,11 +242,11 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
 	m = m.press("enter")
-	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "HH:MM" {
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "HH MM" {
 		t.Fatal("options must open on the current value")
 	}
-	m = m.press("j", "j", "enter")
-	if m.cfg.Savers[0].Time != "HH:MM:SS" || saved(t).Savers[0].Time != "HH:MM:SS" {
+	m = m.press("j", "enter")
+	if m.cfg.Savers[0].Time != "HH MM SS" || saved(t).Savers[0].Time != "HH MM SS" {
 		t.Errorf("time %q", m.cfg.Savers[0].Time)
 	}
 	// size: large.

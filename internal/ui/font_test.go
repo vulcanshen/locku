@@ -19,11 +19,14 @@ func TestFontIsWellFormed(t *testing.T) {
 			continue
 		}
 		w := len(g[0])
-		if w < 1 || w > fontW {
+		if w < 1 || w > 5 {
 			t.Errorf("%q is %d wide", r, w)
 		}
-		if strings.ContainsRune("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", r) && w != fontW {
+		if strings.ContainsRune("0123456789ABCDEFGHIJKLNOPQRSTUVXYZ", r) && w != fontW {
 			t.Errorf("%q is %d wide; digits and letters are %d", r, w, fontW)
+		}
+		if (r == 'M' || r == 'W') && w != 5 {
+			t.Errorf("%q is %d wide; M and W need 5", r, w)
 		}
 		for y, row := range g {
 			if len(row) != w {
@@ -50,7 +53,7 @@ func TestFontIsWellFormed(t *testing.T) {
 	}
 	// The punctuation is narrow: that is what keeps a clock within reach
 	// of the large size.
-	if glyphW(':') != 1 || glyphW(' ') != 2 || glyphW('-') != 3 || glyphW('7') != 5 || glyphW('?') != fontW {
+	if glyphW(':') != 1 || glyphW(' ') != 2 || glyphW('-') != 3 || glyphW('7') != 3 || glyphW('?') != fontW {
 		t.Errorf("widths: : %d, space %d, - %d, 7 %d, unknown %d", glyphW(':'), glyphW(' '), glyphW('-'), glyphW('7'), glyphW('?'))
 	}
 }
