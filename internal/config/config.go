@@ -41,8 +41,9 @@ const (
 // is the object, the one thing that has a name and can be made). Saver
 // says which; the rest is how it shows, and the two colours its board is
 // drawn in — the colours are the profile's own, not a global setting.
+// A saver's defaults are a Profile too, with no name.
 type Profile struct {
-	Name  string `yaml:"name"`
+	Name  string `yaml:"name,omitempty"`
 	Saver string `yaml:"saver"`
 	// The clock's own: its shapes and its size. A dino leaves them out
 	// of the file — it has no size; the canvas draws it as large as the
@@ -58,10 +59,6 @@ type Profile struct {
 	// leaves them out of the file.
 	Runner string `yaml:"runner,omitempty"`
 	Scene  string `yaml:"scene,omitempty"`
-
-	// OldType is the key before 2026-09-24, when a profile was a "saver"
-	// and its saver a "type": read, carried into Saver, never written.
-	OldType string `yaml:"type,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -76,37 +73,50 @@ func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 
 // Config is config.yaml, one field per key.
 type Config struct {
-	Auth           string    `yaml:"auth"`
-	PINHash        string    `yaml:"pin_hash"`
-	Profile        string    `yaml:"profile"`
-	Profiles       []Profile `yaml:"profiles"`
-	ShowStatus     bool      `yaml:"show_status"`
-	PromptTimeout  int       `yaml:"prompt_timeout"`
-	LockoutAfter   int       `yaml:"lockout_after"`
-	LockoutSeconds int       `yaml:"lockout_seconds"`
+	Auth     string    `yaml:"auth"`
+	PINHash  string    `yaml:"pin_hash"`
+	Profile  string    `yaml:"profile"`
+	Profiles []Profile `yaml:"profiles"`
+	// Savers is each saver's defaults, by kind: what a profile of it is
+	// made as from now on, and what [p] on the saver previews (user,
+	// 2026-09-24). Changing one changes no profile already made. Before
+	// that day the key held the list of profiles; carryOver tells the
+	// two shapes apart.
+	Savers         map[string]Profile `yaml:"savers"`
+	ShowStatus     bool               `yaml:"show_status"`
+	PromptTimeout  int                `yaml:"prompt_timeout"`
+	LockoutAfter   int                `yaml:"lockout_after"`
+	LockoutSeconds int                `yaml:"lockout_seconds"`
 	// TmuxConf and ScreenConf are the files `locku setup` writes into, as
 	// the user typed them — "~/…" allowed. Empty is not set, and setup
 	// refuses rather than guesses (user, 2026-09-24).
 	TmuxConf   string `yaml:"tmux_conf"`
 	ScreenConf string `yaml:"screen_conf"`
+}
 
-	// The keys before 2026-09-24 — `saver` named the active profile and
-	// `savers` listed them: read, carried over, never written.
-	OldSaver  string    `yaml:"saver,omitempty"`
-	OldSavers []Profile `yaml:"savers,omitempty"`
+// NewProfile is a profile called name of the saver kind as the program
+// itself makes it: the built-in defaults (user, 2026-09-24) — the clock
+// large, in the short face, with its seconds and the full date; the run
+// with its first runner and scene. A file's own defaults for the kind
+// come first: see Config.NewProfile.
+func NewProfile(name, kind string) Profile {
+	if kind == saver.KindDino {
+		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+	}
+	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
 
 // DefaultProfile is the profile a fresh install has, and the one drawn
 // when the file names none that exists.
 func DefaultProfile() Profile { return NewProfile("clock", saver.KindClock) }
 
-// NewProfile is a profile called name of the saver kind, with that
-// saver's defaults and nothing of the other's.
-func NewProfile(name, kind string) Profile {
-	if kind == saver.KindDino {
-		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+// builtinSavers is every kind's built-in defaults.
+func builtinSavers() map[string]Profile {
+	out := map[string]Profile{}
+	for _, k := range saver.Kinds {
+		out[k] = NewProfile("", k)
 	}
-	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "medium", Font: "3x7", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
+	return out
 }
 
 // Default is the file as it would be with every key left out.
@@ -115,11 +125,37 @@ func Default() Config {
 		Auth:           AuthPIN,
 		Profile:        "clock",
 		Profiles:       []Profile{DefaultProfile()},
+		Savers:         builtinSavers(),
 		ShowStatus:     true,
 		PromptTimeout:  30,
 		LockoutAfter:   0,
 		LockoutSeconds: 30,
 	}
+}
+
+// Saver is the kind's defaults: the file's, or the built-in.
+func (cfg Config) Saver(kind string) Profile {
+	if p, ok := cfg.Savers[kind]; ok {
+		return p
+	}
+	return NewProfile("", kind)
+}
+
+// SetSaver is new defaults for the kind, for profiles made from now on.
+func (cfg *Config) SetSaver(kind string, p Profile) {
+	if cfg.Savers == nil {
+		cfg.Savers = map[string]Profile{}
+	}
+	p.Name = ""
+	cfg.Savers[kind] = p
+}
+
+// NewProfile is a profile called name made of the saver kind, from the
+// file's defaults for it.
+func (cfg Config) NewProfile(name, kind string) Profile {
+	p := cfg.Saver(kind)
+	p.Name = name
+	return p
 }
 
 // Dir is where config.yaml lives: $LOCKU_CONFIG, else $XDG_CONFIG_HOME/locku,
@@ -157,12 +193,21 @@ func LoadFile(path string) (Config, string) {
 	if err != nil {
 		return Default(), "config unreadable: " + err.Error()
 	}
-	// Unmarshal only touches the keys the file has, so what it leaves out
-	// keeps its default — except the profile keys, cleared first so the
-	// old names can stand in for them when the file still has those.
-	cfg.Profile, cfg.Profiles = "", nil
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	// The document is read as a tree first, so the keys from before
+	// 2026-09-24 can be renamed in place and one decode reads either
+	// shape. Decode only touches the keys the file has, so what it leaves
+	// out keeps its default — except the profile and saver keys, cleared
+	// first so an absent one is told from a present one.
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return Default(), "config.yaml: " + firstLine(err.Error())
+	}
+	carryOver(&doc)
+	cfg.Profile, cfg.Profiles, cfg.Savers = "", nil, nil
+	if doc.Kind != 0 {
+		if err := doc.Decode(&cfg); err != nil {
+			return Default(), "config.yaml: " + firstLine(err.Error())
+		}
 	}
 	// A pin_hash that is not bcrypt could never match anything: that is a
 	// lock with no key, and the file is treated as absent (function.md §4.3).
@@ -171,40 +216,112 @@ func LoadFile(path string) (Config, string) {
 			return Default(), "pin_hash is not a bcrypt hash"
 		}
 	}
-	cfg.carryOver()
-	return cfg.sanitized()
-}
-
-// carryOver takes the old keys into the new ones — `saver` into profile,
-// `savers` into profiles, a profile's `type` into its saver — and drops
-// them, so the next save writes only the new names. A file with neither
-// key has the default profile, as before.
-func (cfg *Config) carryOver() {
-	if cfg.Profiles == nil && cfg.OldSavers != nil {
-		cfg.Profiles = cfg.OldSavers
-	}
 	if cfg.Profiles == nil {
 		cfg.Profiles = Default().Profiles
 	}
 	if cfg.Profile == "" {
-		cfg.Profile = cfg.OldSaver
-	}
-	if cfg.Profile == "" {
 		cfg.Profile = Default().Profile
 	}
-	for i := range cfg.Profiles {
-		if cfg.Profiles[i].Saver == "" {
-			cfg.Profiles[i].Saver = cfg.Profiles[i].OldType
-		}
-		cfg.Profiles[i].OldType = ""
+	return cfg.sanitized()
+}
+
+// carryOver renames the keys from before 2026-09-24 in the parsed
+// document: `saver` to `profile`, a `savers` LIST to `profiles` (a
+// `savers` map is the savers' defaults and stays), and each profile's
+// `type` to `saver`. The next save writes only the new names.
+func carryOver(doc *yaml.Node) {
+	root := doc
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
 	}
-	cfg.OldSaver, cfg.OldSavers = "", nil
+	if root.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(root.Content); i += 2 {
+		k, v := root.Content[i], root.Content[i+1]
+		switch {
+		case k.Value == "saver" && !hasKey(root, "profile"):
+			k.Value = "profile"
+		case k.Value == "savers" && v.Kind == yaml.SequenceNode:
+			if hasKey(root, "profiles") {
+				k.Value = "old_savers" // both: the new key wins, this one is ignored
+				continue
+			}
+			k.Value = "profiles"
+			for _, p := range v.Content {
+				renameKey(p, "type", "saver")
+			}
+		}
+	}
+}
+
+func hasKey(m *yaml.Node, key string) bool {
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return true
+		}
+	}
+	return false
+}
+
+func renameKey(m *yaml.Node, from, to string) {
+	if m.Kind != yaml.MappingNode || hasKey(m, to) {
+		return
+	}
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == from {
+			m.Content[i].Value = to
+		}
+	}
+}
+
+// tidy brings a profile — or a saver's defaults — of the saver kind to
+// something the rest of locku can rely on: the kind's absent keys are
+// its built-in defaults, the other kind's keys are not its business and
+// go, and a colour that is not "#rrggbb" is quietly its default (ui.md
+// §1.1).
+func tidy(p Profile, kind string) Profile {
+	p.Saver = kind
+	d := NewProfile(p.Name, kind)
+	if kind == saver.KindDino {
+		if p.Runner == "" {
+			p.Runner = d.Runner
+		}
+		if p.Scene == "" {
+			p.Scene = d.Scene
+		}
+		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
+	} else {
+		if p.Layout == "" {
+			p.Layout = d.Layout
+		}
+		if p.Size == "" {
+			p.Size = d.Size
+		}
+		if p.Font == "" {
+			p.Font = d.Font
+		}
+		if p.Time == "" {
+			p.Time = d.Time
+		}
+		if p.Date == "" {
+			p.Date = d.Date
+		}
+		p.Runner, p.Scene = "", ""
+	}
+	if !ValidHex(p.BG) {
+		p.BG = DefaultBG
+	}
+	if !ValidHex(p.FG) {
+		p.FG = DefaultFG
+	}
+	p.BG, p.FG = strings.ToLower(p.BG), strings.ToLower(p.FG)
+	return p
 }
 
 // sanitized brings a parsed file to something the rest of locku can rely
 // on, and says what it had to correct. Only the profile reference is
-// worth a note (function.md §7): a colour or a number out of range is
-// quietly its default (ui.md §1.1).
+// worth a note (function.md §7).
 func (cfg Config) sanitized() (Config, string) {
 	note := ""
 	if cfg.Auth == "" {
@@ -221,44 +338,7 @@ func (cfg Config) sanitized() (Config, string) {
 		if p.Saver == "" {
 			p.Saver = saver.KindClock
 		}
-		// A saver's absent keys are its defaults; the other saver's keys
-		// are not its business and are dropped.
-		d := NewProfile(p.Name, p.Saver)
-		if p.Saver == saver.KindDino {
-			if p.Runner == "" {
-				p.Runner = d.Runner
-			}
-			if p.Scene == "" {
-				p.Scene = d.Scene
-			}
-			p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
-		} else {
-			if p.Layout == "" {
-				p.Layout = d.Layout
-			}
-			if p.Size == "" {
-				p.Size = d.Size
-			}
-			if p.Font == "" {
-				p.Font = d.Font
-			}
-			if p.Time == "" {
-				p.Time = d.Time
-			}
-			if p.Date == "" {
-				p.Date = d.Date
-			}
-			p.Runner, p.Scene = "", ""
-		}
-		// A colour that is not "#rrggbb" is quietly its default (ui.md §1.1).
-		if !ValidHex(p.BG) {
-			p.BG = DefaultBG
-		}
-		if !ValidHex(p.FG) {
-			p.FG = DefaultFG
-		}
-		p.BG, p.FG = strings.ToLower(p.BG), strings.ToLower(p.FG)
-		profiles = append(profiles, p)
+		profiles = append(profiles, tidy(p, p.Saver))
 	}
 	cfg.Profiles = profiles
 	switch {
@@ -269,6 +349,15 @@ func (cfg Config) sanitized() (Config, string) {
 	case !seen[cfg.Profile]:
 		note = fmt.Sprintf("profile %q not found", cfg.Profile)
 	}
+	// Every kind has its defaults in the file, whole: the file's where it
+	// has them, the built-in for the rest.
+	savers := map[string]Profile{}
+	for _, k := range saver.Kinds {
+		p := tidy(cfg.Savers[k], k)
+		p.Name = ""
+		savers[k] = p
+	}
+	cfg.Savers = savers
 	if cfg.PromptTimeout < 0 {
 		cfg.PromptTimeout = Default().PromptTimeout
 	}

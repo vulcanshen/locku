@@ -18,11 +18,11 @@ import (
 type AppModel struct {
 	cfg     config.Config
 	problem string // Load's note: told once, as a toast
-	// drafts holds a profile's colours as its sliders have them, by name,
-	// while they differ from the file's (user, 2026-09-24: a slider that
-	// wrote at once could not be put back). [S] Save writes one, [R]
-	// Reset drops it, and a rename carries it along.
-	drafts map[string]config.Style
+	// drafts holds a profile's — or a saver's defaults' — colours as its
+	// sliders have them, while they differ from the file's (user,
+	// 2026-09-24: a slider that wrote at once could not be put back). [S]
+	// Save writes one, [R] Reset drops it, and a rename carries it along.
+	drafts map[draftKey]config.Style
 
 	width, height int
 	focus         panel
@@ -63,7 +63,7 @@ func NewApp(cfg config.Config, problem string) AppModel {
 	return AppModel{
 		cfg:     cfg,
 		problem: problem,
-		drafts:  map[string]config.Style{},
+		drafts:  map[draftKey]config.Style{},
 		focus:   panelSide,
 		cur1:    profileItem(max(0, cfg.Index(cfg.Profile))),
 		menu:    newSpaceMenu(),

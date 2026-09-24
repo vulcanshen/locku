@@ -43,7 +43,7 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 
 | cursor 在 | item operation |
 |---|---|
-| saver（class：clock、dino） | `[Enter] Edit`（焦點送到 `[2]`，看它的說明）、`[n] New`（name popup，提議 saver 的名字、用了就加號碼；確認後生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
+| saver（class：clock、dino） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，提議 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
 | profile | `[Enter] Edit`（焦點送到 `[2]`）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled 並說明） |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
@@ -51,10 +51,10 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 
 | cursor 在 | item operation | panel operation |
 |---|---|---|
-| saver 的說明（沒有停靠點） | `[n] New` | 無 |
-| name | `[Enter] Rename` | `[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
+| saver 的說明列 | 唯讀，不可停 | saver 上：`[n] New`、`[P] Preview`（用預設值）、`[S] Save`、`[R] Reset`（預設值的顏色草稿） |
+| name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
-| layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列只有 runner / scene） | 同上 |
+| layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列只有 runner / scene；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
@@ -240,10 +240,10 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 `P` preview · `q` quit · `1` / `2` 直達面板
 
 ### `[1]` 側欄
-saver 上 `n` new profile · profile 上 `Enter` edit · `p` preview this profile · `D` duplicate · `r` rename · `X` delete
+saver 上 `n` new profile · `p` preview the defaults · profile 上 `Enter` edit · `p` preview this profile · `D` duplicate · `r` rename · `X` delete
 
 ### `[2]` 明細
-`Enter` rename / choose / toggle / pick / set PIN / change PIN（含 remove） · saver 上 `n` new profile · profile 上 `P` preview this profile · `S` save colours · `R` reset colours
+`Enter` rename / choose / toggle / pick / set PIN / change PIN（含 remove） · saver 上 `n` new profile · saver / profile 上 `P` preview · `S` save colours · `R` reset colours
 
 ### 鎖定畫布
 任何鍵 開 prompt · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 刪一字

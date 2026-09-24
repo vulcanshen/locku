@@ -40,9 +40,45 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 	if !ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
 	}
-	// A profile's absent keys are the defaults too.
-	if s.Saver != "clock" || s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Font != "3x7" || s.Time != "HH MM" || s.Date != "off" {
+	// A profile's absent keys are the built-in defaults too.
+	if s.Saver != "clock" || s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "large" || s.Font != "3x5" || s.Time != "HH MM SS" || s.Date != "YYYY-MM-DD" {
 		t.Errorf("profile %+v", s)
+	}
+	// And every saver has its defaults, whole, the built-in ones here.
+	if len(cfg.Savers) != 2 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "trex" {
+		t.Errorf("savers %+v", cfg.Savers)
+	}
+}
+
+// The file's own defaults for a saver come first — a new profile is made
+// of them — and go back whole; a saver the file says nothing about has
+// the built-in ones.
+func TestSaverDefaultsAreTheFilesOwn(t *testing.T) {
+	p := write(t, "savers:\n  clock:\n    size: medium\n    fg: \"#ffffff\"\n    runner: cat\n")
+	cfg, note := LoadFile(p)
+	if note != "" {
+		t.Errorf("note %q", note)
+	}
+	c := cfg.Saver("clock")
+	if c.Size != "medium" || c.FG != "#ffffff" || c.Font != "3x5" || c.Runner != "" || c.Name != "" || c.Saver != "clock" {
+		t.Errorf("clock defaults %+v", c)
+	}
+	if cfg.Saver("dino").Scene != "grassland" {
+		t.Errorf("dino defaults %+v", cfg.Saver("dino"))
+	}
+	if n := cfg.NewProfile("x", "clock"); n.Name != "x" || n.Size != "medium" || n.FG != "#ffffff" {
+		t.Errorf("new profile %+v", n)
+	}
+	if err := SaveFile(p, cfg); err != nil {
+		t.Fatal(err)
+	}
+	body, _ := os.ReadFile(p)
+	if s := string(body); !strings.Contains(s, "savers:\n    clock:") || !strings.Contains(s, "        size: medium") || !strings.Contains(s, "    dino:") {
+		t.Errorf("saved:\n%s", s)
+	}
+	back, _ := LoadFile(p)
+	if back.Saver("clock") != c {
+		t.Errorf("round trip %+v", back.Saver("clock"))
 	}
 }
 
@@ -74,7 +110,7 @@ func TestProfileNotFoundIsNoted(t *testing.T) {
 	if s, ok := cfg.Active(); ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
 	}
-	if len(cfg.Profiles) != 1 || cfg.Profiles[0].Time != "HH MM" || cfg.Profiles[0].Date != "off" {
+	if len(cfg.Profiles) != 1 || cfg.Profiles[0].Time != "HH MM SS" || cfg.Profiles[0].Date != "YYYY-MM-DD" {
 		t.Errorf("profiles %+v", cfg.Profiles)
 	}
 }
@@ -103,7 +139,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	// Each saver's keys are its own: a dino has no size or shapes, a
 	// clock no runner.
-	if d, c := cfg.Profiles[0], cfg.Profiles[1]; d.Size != "" || d.Layout != "" || c.Runner != "" || c.Size != "medium" {
+	if d, c := cfg.Profiles[0], cfg.Profiles[1]; d.Size != "" || d.Layout != "" || c.Runner != "" || c.Size != "large" {
 		t.Errorf("dino %+v clock %+v", d, c)
 	}
 	if err := SaveFile(p, cfg); err != nil {
@@ -111,7 +147,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
-		strings.Contains(s, "savers:") || strings.Contains(s, "type:") {
+		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") {
 		t.Errorf("saved with the old keys:\n%s", s)
 	}
 }

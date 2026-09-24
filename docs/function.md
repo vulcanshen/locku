@@ -166,8 +166,17 @@ time 兩種：`HH MM`、`HH MM SS`（24 時制）。date 四種：`YYYY-MM-DD`�
 profile 規則：
 
 - name 唯一，是 config 裡 `profile` 指向的鍵。
-- 預設一個 profile `clock`（saver clock，layout row，size medium，time `HH MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `profiles` 時用它。
+- 預設一個 profile `clock`，就是 clock saver 的預設值生的。config 缺 `profiles` 時用它。
 - 新增（`[1]` 的 Savers 區塊在一種 saver 上按 `n`：要名字，提議 saver 自己的名字、用了就加號碼；以那種 saver 的預設值生出來）、duplicate（複製參數、要求新 name）、rename（連動 `profile` 指向）、delete。啟用中的不可刪，最後一個不可刪。
+
+saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 `savers` 有一組預設值，欄位跟它的 profile 一樣、只是沒有名字。它決定**之後**用這種 saver 新增的 profile 長什麼樣，改它不影響任何已存在的 profile；cursor 在 saver 上時 `[p]` 就用預設值跑一個臨時 profile 預覽。內建值（config 沒寫時）：
+
+| saver | 預設值 |
+|---|---|
+| clock | layout row、size large、font 3x5、time `HH MM SS`、date `YYYY-MM-DD`、bg `#313244`、fg `#f2b753` |
+| dino | runner trex、scene grassland、bg / fg 同上 |
+
+`[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`）。
 - profile 的 saver 建立後不可改：class 就是 class，要換就新增一個 profile（2026-09-24 定案；同一天曾短暫讓 type 可在 `[2]` 改，那是 dino 剛加進來、還沒有 New 時的權宜）。
 - 兩種 saver：clock、dino。新 saver 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text saver 已移除（2026-09-24），內容不可控。
 
@@ -232,6 +241,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`。原因：screen 的 LOCKPRG �
 
 - 設定或更改 PIN：輸入兩次確認，已有 PIN 時先驗舊的。
 - 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24，原本是另一個 `x` 熱鍵加 confirm）。
+- saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
 - profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：layout、time、date……，以及 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（修訂 2026-09-24：使用者調歪過一次調不回來）。
 - preference：啟用中的 profile（`profile`）、show_status、prompt_timeout、lockout 兩個值、`tmux_conf` / `screen_conf`（`locku setup` 要寫的檔案，2026-09-24）。設為啟用在這裡，側欄的 `●` 只顯示。兩個路徑是 locku 唯二的自由輸入，用 webu 的 input 作法：框裡先 dim 顯示一個**提議**——目前值，沒有就是慣例的 `~/.tmux.conf` / `~/.screenrc`——Tab 接手編輯、Backspace 拒絕、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改。
 - 試鎖：從 TUI 直接進入 `locku lock` 的流程，解鎖後回到 TUI；全域 `P` 看啟用中的 saver，側欄 saver 上的 `p` 看那一個，兩者都帶著顏色草稿。
@@ -286,6 +296,22 @@ profiles:
     scene: grassland      # dino 才有：場景，目前只有 grassland
     bg: "#313244"
     fg: "#f2b753"
+savers:                # 每種 saver 的預設值：之後新增的 profile 長這樣，改它不動既有的 profile（2026-09-24）
+  clock:
+    saver: clock
+    layout: row
+    size: large
+    font: 3x5
+    time: "HH MM SS"
+    date: YYYY-MM-DD
+    bg: "#313244"
+    fg: "#f2b753"
+  dino:
+    saver: dino
+    runner: trex
+    scene: grassland
+    bg: "#313244"
+    fg: "#f2b753"
 show_status: true      # 狀態列 user@hostname · 鎖定於 HH:MM，見 5.4
 prompt_timeout: 30     # prompt 連續幾秒無按鍵就收起，每次按鍵重算，0 = 永不收起
 lockout_after: 0       # 連續錯幾次進冷卻，0 = 關閉，見 4.4
@@ -294,7 +320,7 @@ tmux_conf: "~/.tmux.conf"   # locku setup tmux 寫的檔；空 = 未設定，set
 screen_conf: "~/.screenrc"  # locku setup screen 寫的檔，同上；shell rc 另由 $SHELL 決定
 ```
 
-修訂（2026-09-24）：頂層 `style` 拿掉，顏色是每個 profile 自己的 `bg` / `fg`。同日 key 改名：`saver` → `profile`、`savers` → `profiles`、每個 profile 的 `type` → `saver`（saver 是 class、profile 是 object）；舊 key 讀進來自動轉，下一次寫檔就只剩新 key。
+修訂（2026-09-24）：頂層 `style` 拿掉，顏色是每個 profile 自己的 `bg` / `fg`。同日 key 改名：`saver` → `profile`、`savers` → `profiles`、每個 profile 的 `type` → `saver`（saver 是 class、profile 是 object）；舊 key 讀進來自動轉（讀檔先解析成樹、改名再 decode），下一次寫檔就只剩新 key。`savers` 這個 key 隨後給了 saver 預設值：它是清單就是舊的 profiles，是對照表就是預設值，兩種寫法都認。
 
 - 無 history、無 cache、無 session。
 - config 是 profile 的唯一來源，命令列不提供覆蓋。
@@ -366,7 +392,8 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 23. （2026-09-24 修訂）側欄 profile 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 profile）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu；saver 的是 `[Enter] Edit`（看說明）、`[n] New`。
 24. （2026-09-24 修訂）`[2]` 在 profile 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 profile，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 profile 的 `[2]` 上就是這個 profile，其他地方是啟用中的。
 26. （2026-09-24）第二種 saver `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死、不記分；參數 `runner`（先只有 trex）、`scene`（先只有 grassland）、bg / fg，沒有 size（畫布取塞得下的最大倍率）。每 70 ms 一幀整張換，不做 reveal。
-27. （2026-09-24，使用者定案）側欄分三個區塊，順序 Profiles → Savers → Settings：**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是唯讀說明，唯一動作 `[n] New`；**Settings › preference**。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
+27. （2026-09-24，使用者定案）側欄分三個區塊，順序 Profiles → Savers → Settings：**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是說明加預設值，動作 `[n] New`、`[p] Preview`；**Settings › preference**。
+28. （2026-09-24，使用者定案）每種 saver 有一組預設值存在 config 的 `savers`，欄位同它的 profile；只影響之後新增的 profile，不動既有的；`[p]` 在 saver 上用預設值預覽。內建：clock 是 row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`，dino 是 trex / grassland，顏色同 splash。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
 25. （2026-09-24）preference 多兩列 `tmux_conf` / `screen_conf`，是 locku 唯二的自由輸入，用 webu 的 input 作法：提議（目前值，沒有就是慣例路徑）dim 顯示，Tab 接手、Backspace 拒絕、Enter 照打的存、沒碰提議不改；只收絕對路徑或 `~/` 開頭。
 
 ## 11. 待決清單

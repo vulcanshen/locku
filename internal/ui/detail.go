@@ -10,16 +10,18 @@ import (
 )
 
 // Panel [2] (ui.md §1.1): the detail of whatever [1]'s cursor is on, shown
-// at once — there is no Enter to open it. A saver is what it is and what
-// it can be set to, read-only, with [n] New the one thing to do about it.
-// A profile is its fields and its two colours, each a swatch and three
-// channel sliders; preference is the PIN, the active profile and the
-// settings. Every key config.yaml has is a row here, except `profiles`,
-// which IS panel [1].
+// at once — there is no Enter to open it. A profile is its fields and its
+// two colours, each a swatch and three channel sliders. A saver is what
+// it is, which profiles are of it, and then its DEFAULTS — the same
+// fields and colours a profile has, which a profile made of it from now
+// on starts as, and which [p] previews; changing them changes no profile
+// already made (user, 2026-09-24). Preference is the PIN, the active
+// profile and the settings. Every key config.yaml has is a row here,
+// except `profiles`, which IS panel [1].
 //
-// A profile's colours edit a DRAFT (user, 2026-09-24): the sliders move a
-// copy, the swatch row shows the saved colour and, when it differs, the
-// draft beside it, and nothing reaches the file until [S] Save; [R] Reset
+// Colours edit a DRAFT (user, 2026-09-24): the sliders move a copy, the
+// swatch row shows the saved colour and, when it differs, the draft
+// beside it, and nothing reaches the file until [S] Save; [R] Reset
 // drops the draft. Every other row writes at once.
 
 type rowKind int
@@ -66,36 +68,109 @@ type row struct {
 // widest label, lockout_seconds, is fifteen, and a value wants air.
 const labelW = 18
 
-// about is what [2] says of a saver: what it is, and what a profile of
-// it can set.
-var about = map[string][2]string{
-	saver.KindClock: {"the time and the date, on the LED board", "layout, size, font, time, date, bg, fg"},
-	saver.KindDino:  {"the offline dino run, jumping by itself, for ever", "runner, scene, bg, fg"},
+// about is what [2] says of a saver.
+var about = map[string]string{
+	saver.KindClock: "the time and the date, on the LED board",
+	saver.KindDino:  "the offline dino run, jumping by itself, for ever",
 }
 
-// draftOf is a profile's colours as the sliders have them: the draft when
-// one is up, the file's otherwise.
-func (m AppModel) draftOf(p config.Profile) config.Style {
-	if d, ok := m.drafts[p.Name]; ok {
+// draftKey names whose colours a draft holds: a profile's, by name, or
+// a saver's defaults, by kind. The two namespaces never meet — a profile
+// may well be called clock.
+type draftKey struct {
+	saver bool
+	name  string
+}
+
+func profileKey(name string) draftKey { return draftKey{name: name} }
+func saverKey(kind string) draftKey   { return draftKey{saver: true, name: kind} }
+
+// subject is what [2] edits under the cursor — a profile, or a saver's
+// defaults — with its draft key; ok is false on preference.
+func (m AppModel) subject() (p config.Profile, key draftKey, ok bool) {
+	switch it := m.sideAt(); it.kind {
+	case sideProfile:
+		p = m.cfg.Profiles[it.ref]
+		return p, profileKey(p.Name), true
+	case sideSaver:
+		kind := saver.Kinds[it.ref]
+		return m.cfg.Saver(kind), saverKey(kind), true
+	}
+	return config.Profile{}, draftKey{}, false
+}
+
+// draftOf is p's colours as the sliders have them: the draft under key
+// when one is up, p's own otherwise.
+func (m AppModel) draftOf(key draftKey, p config.Profile) config.Style {
+	if d, ok := m.drafts[key]; ok {
 		return d
 	}
 	return p.Colours()
 }
 
-// dirtyOf reports whether a profile has a draft that differs from the file.
-func (m AppModel) dirtyOf(p config.Profile) bool {
-	d, ok := m.drafts[p.Name]
+// dirtyOf reports whether the draft under key differs from p's colours.
+func (m AppModel) dirtyOf(key draftKey, p config.Profile) bool {
+	d, ok := m.drafts[key]
 	return ok && d != p.Colours()
 }
 
-// anyDirty reports whether any profile has unsaved colours.
+// anyDirty reports whether any profile or saver has unsaved colours.
 func (m AppModel) anyDirty() bool {
 	for _, p := range m.cfg.Profiles {
-		if m.dirtyOf(p) {
+		if m.dirtyOf(profileKey(p.Name), p) {
+			return true
+		}
+	}
+	for _, k := range saver.Kinds {
+		if m.dirtyOf(saverKey(k), m.cfg.Saver(k)) {
 			return true
 		}
 	}
 	return false
+}
+
+// fieldRows is a saver's own settings for p: the clock's shapes and
+// size, or the run's runner and scene.
+func fieldRows(p config.Profile) []row {
+	value := valueColor
+	if p.Saver == saver.KindDino {
+		// No size: the run is drawn as large as the terminal allows
+		// (user, 2026-09-24).
+		return []row{
+			{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
+			{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true},
+		}
+	}
+	return []row{
+		{kind: rowLayout, label: "layout", value: p.Layout, color: value, stop: true},
+		{kind: rowSize, label: "size", value: p.Size, color: value, stop: true},
+		{kind: rowFont, label: "font", value: p.Font, color: value, stop: true},
+		{kind: rowTime, label: "time", value: p.Time, color: value, stop: true},
+		{kind: rowDate, label: "date", value: p.Date, color: value, stop: true},
+	}
+}
+
+// colourRows is the two colours of p: each a swatch row — the saved
+// colour, and the draft under key when it differs — and three channels.
+func (m AppModel) colourRows(key draftKey, p config.Profile) []row {
+	var out []row
+	saved, draft := p.Colours(), m.draftOf(key, p)
+	for which, c := range []struct {
+		label, saved, draft string
+	}{{"bg", saved.BG, draft.BG}, {"fg", saved.FG, draft.FG}} {
+		sw := row{kind: rowSwatch, label: c.label, value: c.saved, color: dimColor, which: which, hex: c.saved}
+		if c.draft != c.saved {
+			sw.draft = c.draft
+			sw.value += "  →  " + c.draft
+		}
+		out = append(out, sw)
+		r, g, b := config.RGB(c.draft)
+		for ch, v := range []int{r, g, b} {
+			out = append(out, row{kind: rowChannel, label: "  " + string("RGB"[ch]), value: itoa(v),
+				color: valueColor, stop: true, which: which, ch: ch, num: v})
+		}
+	}
+	return out
 }
 
 // rows is panel [2] for the current selection.
@@ -114,14 +189,17 @@ func (m AppModel) rows() []row {
 		if used == "" {
 			used = "none yet"
 		}
-		return []row{
+		p, key, _ := m.subject()
+		out := []row{
 			{kind: rowAbout, label: "saver", value: kind, color: value},
-			{kind: rowAbout, label: "what", value: about[kind][0], color: value},
-			{kind: rowAbout, label: "settings", value: about[kind][1], color: value},
+			{kind: rowAbout, label: "what", value: about[kind], color: value},
 			{kind: rowAbout, label: "profiles", value: used, color: value},
+			{kind: rowAbout, label: "defaults", value: "for profiles made of it from now on", color: dimColor},
 		}
+		out = append(out, fieldRows(p)...)
+		return append(out, m.colourRows(key, p)...)
 	case sideProfile:
-		p := m.cfg.Profiles[it.ref]
+		p, key, _ := m.subject()
 		// The saver is the profile's class: shown, not changed — a profile
 		// of another saver is a new profile (user, 2026-09-24). The rows
 		// under it are the saver's own.
@@ -129,37 +207,8 @@ func (m AppModel) rows() []row {
 			{kind: rowName, label: "name", value: p.Name, color: value, stop: true},
 			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
 		}
-		if p.Saver == saver.KindDino {
-			// No size: the run is drawn as large as the terminal allows
-			// (user, 2026-09-24).
-			out = append(out,
-				row{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
-				row{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true})
-		} else {
-			out = append(out,
-				row{kind: rowLayout, label: "layout", value: p.Layout, color: value, stop: true},
-				row{kind: rowSize, label: "size", value: p.Size, color: value, stop: true},
-				row{kind: rowFont, label: "font", value: p.Font, color: value, stop: true},
-				row{kind: rowTime, label: "time", value: p.Time, color: value, stop: true},
-				row{kind: rowDate, label: "date", value: p.Date, color: value, stop: true})
-		}
-		saved, draft := p.Colours(), m.draftOf(p)
-		for which, c := range []struct {
-			label, saved, draft string
-		}{{"bg", saved.BG, draft.BG}, {"fg", saved.FG, draft.FG}} {
-			sw := row{kind: rowSwatch, label: c.label, value: c.saved, color: dimColor, which: which, hex: c.saved}
-			if c.draft != c.saved {
-				sw.draft = c.draft
-				sw.value += "  →  " + c.draft
-			}
-			out = append(out, sw)
-			r, g, b := config.RGB(c.draft)
-			for ch, v := range []int{r, g, b} {
-				out = append(out, row{kind: rowChannel, label: "  " + string("RGB"[ch]), value: itoa(v),
-					color: value, stop: true, which: which, ch: ch, num: v})
-			}
-		}
-		return out
+		out = append(out, fieldRows(p)...)
+		return append(out, m.colourRows(key, p)...)
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
@@ -211,7 +260,7 @@ func (m AppModel) stops() []int {
 }
 
 // rowAt is the row under [2]'s cursor, or a rowNone row when the panel
-// has no stops — a saver's.
+// has no stops.
 func (m AppModel) rowAt() row {
 	rows, stops := m.rows(), m.stops()
 	if len(stops) == 0 {
@@ -232,18 +281,20 @@ func sliderBar(v int) string {
 }
 
 // detailTitle is panel [2]'s chip: a saver's name with ` · saver`, a
-// profile's name — with ` · unsaved` while its colour draft differs
-// (ui.md §B) — or preference.
+// profile's name, or preference — with ` · unsaved` while a colour
+// draft differs (ui.md §B).
 func (m AppModel) detailTitle() string {
 	switch it := m.sideAt(); it.kind {
-	case sideSaver:
-		return "[2] " + saver.Kinds[it.ref] + " · saver"
-	case sideProfile:
-		p := m.cfg.Profiles[it.ref]
-		if m.dirtyOf(p) {
-			return "[2] " + p.Name + " · unsaved"
+	case sideSaver, sideProfile:
+		p, key, _ := m.subject()
+		title := "[2] " + p.Name
+		if it.kind == sideSaver {
+			title = "[2] " + saver.Kinds[it.ref] + " · saver"
 		}
-		return "[2] " + p.Name
+		if m.dirtyOf(key, p) {
+			title += " · unsaved"
+		}
+		return title
 	}
 	return "[2] preference"
 }
