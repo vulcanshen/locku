@@ -147,9 +147,10 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 
 | type | 參數 | 內容 | tick |
 |---|---|---|---|
-| clock | `layout` row / column；`time` 四選一；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`（12 時制多一行 `PM`），日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
+| clock | `layout` row / column；`size` small / medium / large；`time` 四選一；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`（12 時制多一行 `PM`），日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
 
 修訂（2026-09-24，使用者實機試用後）：`layout` 新增，column 讓每行只有 2 到 4 個字，字因此大好幾倍；
+`size` 新增，一個字型像素佔 1 × 1 / 2 × 2 / 3 × 3 格，預設 medium，塞不下怎麼退見 5.3；
 點陣板的 `bg` / `fg` 從全域 style 搬進每個 saver，每個實例自己一組顏色，沒有全域顏色設定。
 
 time 四種：`HH:MM`（24 時制）、`HH:MM AM/PM`（12 時制）、`HH:MM:SS`、`HH:MM:SS AM/PM`。date 四種：`YYYY-MM-DD`、`YYYY-MMM-DD`、`MM-DD`、`MMM-DD`，MMM 是英文月份縮寫大寫（JAN 到 DEC）。時間與日期各自設定。
@@ -159,7 +160,7 @@ time 四種：`HH:MM`（24 時制）、`HH:MM AM/PM`（12 時制）、`HH:MM:SS`
 實例規則：
 
 - name 唯一，是 config 裡 `saver` 指向的鍵。
-- 預設一個實例 `clock`（type clock，layout row，time `HH:MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `savers` 時用它。
+- 預設一個實例 `clock`（type clock，layout row，size medium，time `HH:MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `savers` 時用它。
 - 可 duplicate（複製參數、要求新 name）、rename（連動 `saver` 指向）、delete。啟用中的不可刪，最後一個不可刪。type 建立後不可改，要換 type 就 duplicate 另一個。
 - v1 只有 clock 一個 type。type 欄位保留：新 type 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text type 已移除（2026-09-24），內容不可控。
 
@@ -173,7 +174,7 @@ Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬�
 
 1. 內容最長一行 n 字、共 m 行 → 像素寬 5n + (n − 1)，像素高 7m + 2(m − 1)。
 2. 可用區 = 終端機寬減 4 欄邊距，高減 1 列狀態列再減 2 列邊距。
-3. 橫向倍數 kx = min(可用寬 ÷ (像素寬 × 2), 可用高 ÷ 像素高) 取整；縱向倍數 ky = min(可用高 ÷ 像素高, kx + kx ÷ 2)，也就是在列數允許時把像素拉高到 1.5 倍（修訂 2026-09-24：使用者看預覽覺得數字還有空間再大，kx 被寬度量化卡住時，上下的空列拿來把數字拉高，像時鐘的字；只拉高不拉寬）。kx ≥ 1 以 kx × ky 畫，每個字型像素放大成 kx 寬 ky 高；kx < 1 先退階（下述），退到底才把內容改用一般文字以 fg 色置中疊在板上，點陣板照鋪。
+3. 倍數 k 由 saver 的 `size` 決定：small 1、medium 2、large 3，每個字型像素放大成 k × k 格（修訂 2026-09-24：原本 k 是「塞得下的最大整數」，使用者要的是明確的大小選項，不是計算結果）。塞不下的順序：先照退階梯砍內容（下述），內容砍到底還塞不下才把 k 降一級再從完整內容試起；k = 1 也塞不下才把內容改用一般文字以 fg 色置中疊在板上，點陣板照鋪。所以 large 在寬終端機配 column 排版正好，在窄終端機會自己退成 medium 或 small，不會爆框。
 4. 整個畫布（狀態列以外的所有列）都是像素格，像 LED 點陣板：每格一個 glyph 加空格，沒亮的用該 saver 的 bg（預設 surface0 #313244），亮的用它的 fg（預設 gold #f2b753）。內容置中。終端機寬為奇數時最右一欄留白。splash 的名字、版本、開發者不出現，只取 glyph 畫法。
 
 退階：k < 1 時依序換內容再算 k，config 不改，視窗變大就回來。時間永遠最後犧牲。
@@ -249,6 +250,7 @@ savers:
   - name: clock
     type: clock
     layout: row           # row / column（依分隔符拆行）
+    size: medium          # small / medium / large：一個字型像素佔 1 / 2 / 3 格見方
     time: "HH:MM"          # HH:MM / HH:MM AM/PM / HH:MM:SS / HH:MM:SS AM/PM
     date: off             # off / YYYY-MM-DD / YYYY-MMM-DD / MM-DD / MMM-DD
     bg: "#313244"          # 這個 saver 的點陣板暗格，預設 surface0
@@ -317,10 +319,10 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 9. 驗證 v1 只做自家 PIN，PAM 留 `auth: pam` 擴充位，shadow 不做。
 10. 未設定 PIN 或 config 缺失、損毀時進入無 PIN 模式：照常顯示 saver，任何按鍵解鎖，畫面標明未設定 PIN。fail open。
 11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤鎖定由 config 的 lockout_after / lockout_seconds 控制，預設 0 關閉。
-12. saver 分 type 與具名實例：v1 type 只有 clock，參數 layout row / column、time 四選一、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
+12. saver 分 type 與具名實例：v1 type 只有 clock，參數 layout row / column、size small / medium / large、time 四選一、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
 13. 狀態列 user@hostname 與鎖定時間預設顯示，show_status 可關；未設定 PIN 提示不可關。
 14. prompt_timeout 預設 30 秒，以最後一次按鍵起算，0 為永不收起。
-15. 畫布只有一種樣式：整面 LED 點陣板，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依格數整數倍縮放，縱向可拉高到 1.5 倍，kx < 1 退化為一般文字疊在板上。saver 只決定內容與顏色。
+15. 畫布只有一種樣式：整面 LED 點陣板，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依 saver 的 size 放大 1 / 2 / 3 倍，塞不下先砍內容再降一級，1 倍也塞不下退化為一般文字疊在板上。saver 決定內容、大小與顏色。
 16. 內容全由固定選項產生；字元集 39 個（數字、冒號、減號、空白、大寫字母）。
 17. Nerd Font 必裝，與家族相同；字型在使用者本機終端機，SSH 不影響。
 18. 第一幀不動畫；之後內容變更只對有變的像素做 splash 式 shuffle 揭露。
@@ -329,6 +331,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 21. 整合設定是 CLI：`locku setup [tmux|screen]` 直接寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用；不做 TUI popup。
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver；設為啟用在 preference › saver，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 saver 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 saver）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu。
+24. （2026-09-24 修訂）`[2]` 在 saver 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 saver，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 saver 的 `[2]` 上就是這個 saver，其他地方是啟用中的。
 
 ## 11. 待決清單
 

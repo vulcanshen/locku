@@ -218,17 +218,24 @@ func TestViewIsExactlyTheTerminal(t *testing.T) {
 }
 
 func TestResizeRedrawsWhole(t *testing.T) {
+	// The default saver asks for medium: 2 where it fits, 1 where it must.
 	m := testLock(t, "1234", nil)
-	if m.kx != 1 || m.ky != 1 {
-		t.Fatalf("80x24 %dx%d", m.kx, m.ky)
+	if m.k != 1 {
+		t.Fatalf("80x24 k=%d", m.k)
 	}
 	m, _ = m.step(tea.WindowSizeMsg{Width: 200, Height: 60})
-	if m.kx != 3 || m.ky != 4 || m.rev != nil || m.shown.w != 100 || m.shown.h != 59 {
-		t.Errorf("after resize: %dx%d rev=%v board %dx%d", m.kx, m.ky, m.rev != nil, m.shown.w, m.shown.h)
+	if m.k != 2 || m.rev != nil || m.shown.w != 100 || m.shown.h != 59 {
+		t.Errorf("after resize: k=%d rev=%v board %dx%d", m.k, m.rev != nil, m.shown.w, m.shown.h)
 	}
 	m, _ = m.step(tea.WindowSizeMsg{Width: 40, Height: 12})
-	if m.kx != 0 || !strings.Contains(m.View(), "21:05") {
-		t.Errorf("40x12 must fall back to plain text: kx=%d", m.kx)
+	if m.k != 0 || !strings.Contains(m.View(), "21:05") {
+		t.Errorf("40x12 must fall back to plain text: k=%d", m.k)
+	}
+	// A large saver gets 3 there.
+	big := testLock(t, "1234", func(c *config.Config) { c.Savers[0].Size = "large" })
+	big, _ = big.step(tea.WindowSizeMsg{Width: 200, Height: 60})
+	if big.k != 3 {
+		t.Errorf("large at 200x60: k=%d", big.k)
 	}
 }
 
@@ -246,7 +253,7 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 	if m.rev != nil {
 		t.Fatal("reveal never finished")
 	}
-	want := paint([]string{"21:06"}, 2, 3, 120, 39)
+	want := paint([]string{"21:06"}, 2, 120, 39)
 	for i := range want.lit {
 		if want.lit[i] != m.shown.lit[i] {
 			t.Fatal("the board does not show 21:06")

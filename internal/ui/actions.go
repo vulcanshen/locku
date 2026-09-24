@@ -59,6 +59,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this saver", run: (*AppModel).renameSaver})
 	case rowLayout:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "a row, or a column of parts", run: (*AppModel).chooseLayout})
+	case rowSize:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "small, medium or large digits", run: (*AppModel).chooseSize})
 	case rowTime:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one of four shapes", run: (*AppModel).chooseTime})
 	case rowDate:
@@ -91,9 +93,20 @@ func (m AppModel) actions() []action {
 			save.disabled, save.hint = true, "nothing to save"
 			reset.disabled, reset.hint = true, "nothing changed"
 		}
-		out = append(out, save, reset)
+		out = append(out,
+			action{key: "P", label: "Preview", hint: "the lock, showing this saver with its draft", panelOp: true, run: (*AppModel).previewSaver},
+			save, reset)
 	}
 	return out
+}
+
+// previewHere is the global P: on a saver's [2], that saver; anywhere
+// else, the active one (user, 2026-09-24).
+func (m *AppModel) previewHere() tea.Cmd {
+	if m.focus == panelDetail && m.sideAt().kind == sideSaver {
+		return m.previewSaver()
+	}
+	return m.startPreview(m.previewCfg())
 }
 
 // dispatch runs the action bound to key, or says why it cannot.
@@ -178,6 +191,11 @@ func (m *AppModel) chooseLayout() tea.Cmd {
 	return m.openOptions("layout", saver.Layouts, s.Layout, 0)
 }
 
+func (m *AppModel) chooseSize() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("size", saver.Sizes, s.Size, 0)
+}
+
 func (m *AppModel) chooseTime() tea.Cmd {
 	s := m.cfg.Savers[m.sideAt().saver]
 	return m.openOptions("time", saver.TimeFormats, s.Time, 0)
@@ -233,6 +251,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 	switch r := m.optionsFor; r.kind {
 	case rowLayout:
 		m.cfg.Savers[m.sideAt().saver].Layout = v
+	case rowSize:
+		m.cfg.Savers[m.sideAt().saver].Size = v
 	case rowTime:
 		m.cfg.Savers[m.sideAt().saver].Time = v
 	case rowDate:

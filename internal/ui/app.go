@@ -222,7 +222,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	case " ":
 		return m, m.openMenu()
 	case "P":
-		return m, m.startPreview(m.previewCfg())
+		return m, m.previewHere()
 	case "V":
 		return m, m.splash.show()
 	case "tab":

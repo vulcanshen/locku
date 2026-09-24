@@ -63,7 +63,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ```
 
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
-`[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`S` 存顏色草稿、`R` 丟掉；
+`[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`P` 預覽這個 saver、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：`x` clear。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
 
 ## 文件
@@ -82,8 +82,8 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、time 四選一（24 / 12 時制 × 有無秒）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
-- **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依格數整數倍放大，列數允許時縱向拉高到 1.5 倍；塞不下依序去年 → 去秒 → 去日期 → 一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
+- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、time 四選一（24 / 12 時制 × 有無秒）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依 size 放大；塞不下先依序去年 → 去秒 → 去日期，還不行才降一級 size，最後才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 - **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿改草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。
 - **screen 的 LOCKPRG 只能走 shell 環境**（2026-09-24 實測）：`.screenrc` 的 `setenv` 對 lock 無效，因為 lock 是 attacher 呼叫 `getenv`，`.screenrc` 只有後端讀。`locku setup screen` 因此寫 `~/.zshrc` / `~/.bashrc` / fish 的受管區塊，新開 shell 生效；已在跑的 session detach 後從新 shell `screen -r` 即可。
 - **Enter = 設為啟用 / 編輯 / 送出，Esc 只做取消，`x` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。

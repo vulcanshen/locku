@@ -86,83 +86,78 @@ func pixelSize(lines []string) (w, h int) {
 	return n*fontW + (n-1)*gapX, m*fontH + (m-1)*gapY
 }
 
-// scaleFor is the scale at which lines fit a canvas of cols × rows inside
-// the margins: kx, the largest whole factor that fits both ways, and ky,
-// the same factor stretched taller — up to half again — where the rows
-// allow it. A pixel is two columns by one row, near enough square, so
-// kx = ky draws the font as designed; the extra height makes the digits
-// tall, the way a clock's are, instead of leaving the rows above and
-// below empty (user, 2026-09-24). Pixels are never made wider than tall.
-// (0, 0) when even 1 × 1 does not fit. rows is the canvas: the terminal's
-// height less the status row.
-func scaleFor(lines []string, cols, rows int) (kx, ky int) {
+// fitsAt reports whether lines fit a canvas of cols × rows at scale k,
+// inside the margins. A pixel is two columns by one row, near enough
+// square, so k × k draws the font as designed. rows is the canvas: the
+// terminal's height less the status row.
+func fitsAt(lines []string, k, cols, rows int) bool {
 	pw, ph := pixelSize(lines)
-	if pw == 0 {
-		return 0, 0
+	if pw == 0 || k < 1 {
+		return false
 	}
 	availPx := (cols - marginCols) / 2
 	availRows := rows - marginRows
-	if availPx <= 0 || availRows <= 0 {
-		return 0, 0
-	}
-	kx = min(availPx/pw, availRows/ph)
-	if kx < 1 {
-		return 0, 0
-	}
-	ky = min(availRows/ph, kx+kx/2)
-	return kx, ky
+	return pw*k <= availPx && ph*k <= availRows
 }
 
-// fit walks the saver down its degrade ladder until its lines fit, and
-// says at what scale. kx == 0 means the ladder ran out: the lines it ends
-// on are drawn as plain text over the board (function.md §5.3 step 4).
-func fit(s saver.Saver, now time.Time, cols, rows int) (lines []string, kx, ky int) {
-	for {
-		lines = s.Lines(now)
-		if kx, ky = scaleFor(lines, cols, rows); kx >= 1 {
-			return lines, kx, ky
+// fit finds what to draw and how big (function.md §5.3): the size the
+// saver asks for — small, medium, large: 1, 2, 3 — is kept as long as
+// some of the content fits at it, the content stepping down the degrade
+// ladder (the year, the seconds, the date); only when nothing fits at
+// that size does the size step down, and only when nothing fits at 1 do
+// the lines come back with k == 0, to be drawn as plain text over the
+// board (user, 2026-09-24: the size is a choice, not a computation).
+func fit(s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k int) {
+	for k = max(1, size); k >= 1; k-- {
+		sv := s
+		for {
+			lines = sv.Lines(now)
+			if fitsAt(lines, k, cols, rows) {
+				return lines, k
+			}
+			next, ok := sv.Degrade()
+			if !ok {
+				break
+			}
+			sv = next
 		}
-		next, ok := s.Degrade()
-		if !ok {
-			return lines, 0, 0
-		}
-		s = next
 	}
+	return lines, 0
 }
 
-// paint lights lines at scale kx × ky on a fresh board for a cols × rows
-// canvas, the block centred, each line centred within the block in whole
-// font pixels. kx < 1 gives an empty board.
-func paint(lines []string, kx, ky, cols, rows int) board {
+// paint lights lines at scale k on a fresh board for a cols × rows canvas,
+// the block centred, each line centred within the block in whole font
+// pixels. k < 1 gives an empty board.
+func paint(lines []string, k, cols, rows int) board {
 	b := newBoard(cols/2, rows)
-	if kx < 1 || ky < 1 {
+	if k < 1 {
 		return b
 	}
 	pw, ph := pixelSize(lines)
-	ox := (b.w - pw*kx) / 2
-	oy := (b.h - ph*ky) / 2
+	ox := (b.w - pw*k) / 2
+	oy := (b.h - ph*k) / 2
 	for i, line := range lines {
 		runes := []rune(line)
 		if len(runes) == 0 {
 			continue
 		}
 		lineW := len(runes)*fontW + (len(runes)-1)*gapX
-		lx := ox + (pw-lineW)/2*kx
-		ly := oy + i*(fontH+gapY)*ky
+		lx := ox + (pw-lineW)/2*k
+		ly := oy + i*(fontH+gapY)*k
 		for j, r := range runes {
 			g, ok := font[r]
 			if !ok {
 				continue
 			}
-			gx := lx + j*(fontW+gapX)*kx
+			gx := lx + j*(fontW+gapX)*k
 			for fy := 0; fy < fontH; fy++ {
 				for fx := 0; fx < fontW; fx++ {
 					if g[fy][fx] != '#' {
 						continue
 					}
-					for dy := 0; dy < ky; dy++ {
-						for dx := 0; dx < kx; dx++ {
-							b.set(gx+fx*kx+dx, ly+fy*ky+dy)
+					for dy := 0; dy < k; dy++ {
+						for dx := 0; dx < k; dx++ {
+							b.set(gx+fx*k+dx, ly+fy*k+dy)
 						}
 					}
 				}

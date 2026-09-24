@@ -94,6 +94,7 @@ func saved(t *testing.T) config.Config {
 const (
 	stopName = iota
 	stopLayout
+	stopSize
 	stopTime
 	stopDate
 	stopBgR
@@ -201,6 +202,23 @@ func TestDeleteRules(t *testing.T) {
 	}
 }
 
+func TestDetailPreviewsThatSaver(t *testing.T) {
+	// P on [2] of clock2 previews clock2 although clock is active; P on
+	// preference previews the active one.
+	m := newTestApp(t).press("j", "2", "P")
+	if m.preview == nil || m.preview.clock.Time != "HH:MM:SS" {
+		t.Fatal("P on a saver's [2] must preview that saver")
+	}
+	m = m.press("x", "1", "G", "2", "P")
+	if m.preview == nil || m.preview.clock.Time != "HH:MM" {
+		t.Fatal("P on preference must preview the active saver")
+	}
+	m = m.press("x", "1", "g", "g", "j", "2", " ")
+	if hotkeyIndex(m.menu.menuKeys(), "P") < 0 {
+		t.Error("[P] Preview must be a row of the saver's [2] menu")
+	}
+}
+
 func TestSidebarPreviewsThatSaver(t *testing.T) {
 	m := newTestApp(t).press("j", "p")
 	if m.preview == nil {
@@ -219,7 +237,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 }
 
 func TestDetailChoosesAndToggles(t *testing.T) {
-	m := newTestApp(t).press("2", "j", "j") // [2] on time (name, [type], layout, time)
+	m := newTestApp(t).press("2", "j", "j", "j") // [2] on time (name, [type], layout, size, time)
 	if m.rowAt().kind != rowTime {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
@@ -230,6 +248,15 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	m = m.press("j", "j", "enter")
 	if m.cfg.Savers[0].Time != "HH:MM:SS" || saved(t).Savers[0].Time != "HH:MM:SS" {
 		t.Errorf("time %q", m.cfg.Savers[0].Time)
+	}
+	// size: large.
+	m = m.press("k", "enter")
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "medium" {
+		t.Fatal("size options must open on medium")
+	}
+	m = m.press("j", "enter")
+	if m.cfg.Savers[0].Size != "large" || saved(t).Savers[0].Size != "large" {
+		t.Errorf("size %q", m.cfg.Savers[0].Size)
 	}
 	// layout: a column.
 	m = m.press("k", "enter")
