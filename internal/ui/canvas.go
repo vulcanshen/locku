@@ -93,80 +93,150 @@ func pixelSize(f face, lines []string) (w, h int) {
 	return w, m*f.h + (m-1)*gapY
 }
 
-// fitsAt reports whether lines fit a canvas of cols × rows at scale k,
-// inside the margins. A pixel is two columns by one row, near enough
-// square, so k × k draws the font as designed. rows is the canvas: the
-// terminal's height less the status row.
-func fitsAt(f face, lines []string, k, cols, rows int) bool {
+// fitsIn reports whether lines at scale k fit availPx pixels across and
+// availRows down. A pixel is two columns by one row, near enough square,
+// so k × k draws the font as designed.
+func fitsIn(f face, lines []string, k, availPx, availRows int) bool {
 	pw, ph := pixelSize(f, lines)
 	if pw == 0 || k < 1 {
 		return false
 	}
-	availPx := (cols - marginCols) / 2
-	availRows := rows - marginRows
 	return pw*k <= availPx && ph*k <= availRows
 }
 
-// fit finds what to draw and how big (function.md §5.3): the size the
-// saver asks for — small, medium, large: 1, 2, 3 — is kept as long as
-// some of the content fits at it, the content tried in the saver's order
-// of preference (the whole of it, then the year gone, then the seconds,
-// then the date with the seconds back, then the seconds too); only when
-// nothing fits at that size does the size step down, and only when
-// nothing fits at 1 do the least lines come back with k == 0, to be drawn
-// as plain text over the board (user, 2026-09-24: the size is a choice,
-// not a computation).
-func fit(f face, s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k int) {
-	steps := s.Steps()
-	for k = max(1, size); k >= 1; k-- {
-		for _, sv := range steps {
-			lines = sv.Lines(now)
-			if fitsAt(f, lines, k, cols, rows) {
-				return lines, k
-			}
-		}
-	}
-	return lines, 0
+// placed is one block as it will be drawn: its lines, at its scale.
+type placed struct {
+	lines []string
+	k     int
 }
 
-// paint lights lines at scale k on a fresh board for a cols × rows canvas,
-// the block centred, each line centred within the block in whole font
-// pixels. k < 1 gives an empty board.
-func paint(f face, lines []string, k, cols, rows int) board {
-	b := newBoard(cols/2, rows)
-	if k < 1 {
-		return b
-	}
-	pw, ph := pixelSize(f, lines)
-	ox := (b.w - pw*k) / 2
-	oy := (b.h - ph*k) / 2
-	for i, line := range lines {
-		if line == "" {
-			continue
+// layout is what the board draws: the blocks in the order they sit, one
+// under the other, or — beside — left to right.
+type layout struct {
+	blocks []placed
+	beside bool
+}
+
+// gapBeside is the room between two blocks sitting side by side, in font
+// pixels of the block on the left: about a hyphen's width.
+const gapBeside = 3
+
+// fit lays the saver's blocks out, each on its own (function.md §5.3):
+// the time first, in the whole canvas; the date in what is left — under
+// the time in the row layout, beside it in the column layout, where the
+// date takes the left and the time the right. For each block the size
+// the saver asks for — small, medium, large: 1, 2, 3 — is tried first and
+// stepped down before any of the block's content goes: the whole variant
+// at every size, then the next variant at every size (user, 2026-09-24:
+// a date too wide for its size shrinks, and the time keeps its own). A
+// later block that fits at nothing is left out. The first block fitting
+// at nothing is the fallback: its least lines come back as plain, to be
+// drawn as text over the board. rows is the canvas: the terminal's height
+// less the status row.
+func fit(f face, s saver.Saver, now time.Time, cols, rows, size int) (layout, []string) {
+	l := layout{beside: s.Beside()}
+	pxLeft := (cols - marginCols) / 2
+	rowsLeft := rows - marginRows
+	for i, b := range s.Blocks(now) {
+		var got *placed
+		for _, v := range b.Variants {
+			for k := max(1, size); k >= 1 && got == nil; k-- {
+				if fitsIn(f, v, k, pxLeft, rowsLeft) {
+					got = &placed{lines: v, k: k}
+				}
+			}
+			if got != nil {
+				break
+			}
 		}
-		lx := ox + (pw-lineW(f, line))/2*k
-		ly := oy + i*(f.h+gapY)*k
-		x := 0 // in font pixels along the line
-		for _, r := range line {
-			g, ok := f.g[r]
-			if !ok {
-				x += fontW + gapX
+		if got == nil {
+			if i == 0 {
+				return layout{}, b.Variants[len(b.Variants)-1]
+			}
+			break
+		}
+		pw, ph := pixelSize(f, got.lines)
+		if l.beside {
+			// The time is fitted first and drawn last: the date goes to
+			// its left.
+			l.blocks = append([]placed{*got}, l.blocks...)
+			pxLeft -= (pw + gapBeside) * got.k
+		} else {
+			l.blocks = append(l.blocks, *got)
+			rowsLeft -= (ph + gapY) * got.k
+		}
+	}
+	return l, nil
+}
+
+// paint lights a layout on a fresh board for a cols × rows canvas. Blocks
+// under each other: the stack centred, each block centred across, a gap
+// of one of the upper block's pixels between two. Blocks beside each
+// other: the row centred, each block centred up and down on its own, a
+// gap of gapBeside of the left block's pixels between two. Within a
+// block each line is centred in whole font pixels.
+func paint(f face, l layout, cols, rows int) board {
+	b := newBoard(cols/2, rows)
+	// The stack's extent along the axis the blocks follow.
+	total := 0
+	for i, p := range l.blocks {
+		pw, ph := pixelSize(f, p.lines)
+		if l.beside {
+			total += pw * p.k
+		} else {
+			total += ph * p.k
+		}
+		if i < len(l.blocks)-1 {
+			if l.beside {
+				total += gapBeside * p.k
+			} else {
+				total += gapY * p.k
+			}
+		}
+	}
+	x0, y0 := 0, (b.h-total)/2
+	if l.beside {
+		x0, y0 = (b.w-total)/2, 0
+	}
+	for _, p := range l.blocks {
+		pw, ph := pixelSize(f, p.lines)
+		ox, oy := (b.w-pw*p.k)/2, y0
+		if l.beside {
+			ox, oy = x0, (b.h-ph*p.k)/2
+		}
+		for i, line := range p.lines {
+			if line == "" {
 				continue
 			}
-			gx := lx + x*k
-			for fy := 0; fy < f.h; fy++ {
-				for fx := 0; fx < len(g[fy]); fx++ {
-					if g[fy][fx] != '#' {
-						continue
-					}
-					for dy := 0; dy < k; dy++ {
-						for dx := 0; dx < k; dx++ {
-							b.set(gx+fx*k+dx, ly+fy*k+dy)
+			lx := ox + (pw-lineW(f, line))/2*p.k
+			ly := oy + i*(f.h+gapY)*p.k
+			x := 0 // in font pixels along the line
+			for _, r := range line {
+				g, ok := f.g[r]
+				if !ok {
+					x += fontW + gapX
+					continue
+				}
+				gx := lx + x*p.k
+				for fy := 0; fy < f.h; fy++ {
+					for fx := 0; fx < len(g[fy]); fx++ {
+						if g[fy][fx] != '#' {
+							continue
+						}
+						for dy := 0; dy < p.k; dy++ {
+							for dx := 0; dx < p.k; dx++ {
+								b.set(gx+fx*p.k+dx, ly+fy*p.k+dy)
+							}
 						}
 					}
 				}
+				x += f.glyphW(r) + gapX
 			}
-			x += f.glyphW(r) + gapX
+		}
+		if l.beside {
+			x0 += (pw + gapBeside) * p.k
+		} else {
+			y0 += (ph + gapY) * p.k
 		}
 	}
 	return b

@@ -56,7 +56,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 | time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列 |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
-| R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道與數字用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
+| R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道與數字用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；底色反向，0 時全白、255 時全黑，暗的值才看得見（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 
 顏色走**草稿**（修訂 2026-09-24，使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
 panel operation `[P] Preview` 預覽這個 saver、`[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走
@@ -107,7 +107,7 @@ splash 底下的名字、版本、開發者都不出現，只取它的 glyph 畫
 | 狀態列 | 最後一列，左起 1 欄 | `user@host · locked since HH:MM`；`show_status: false` 時整列空白 |
 | 無 PIN 提示 | 狀態列右側接續 | `· no PIN · any key unlocks`，Yellow，不受 show_status 影響 |
 | config 錯誤 | 同上 | `· config error: <reason>`，Red，取代無 PIN 提示 |
-| 退階 | | 塞不下時依偏好取第一個塞得下的：去年 → 去秒（日期留著）→ 去日期（秒回來）→ 去秒 → 一般文字，`function.md` §5.3 |
+| 區塊 | 時間先、日期後 | 兩個獨立區塊：row 日期在時間下面，column 日期一欄在左、時間一欄在右；各自先降 size 再去單位，日期塞不下就不畫，`function.md` §5.3 |
 
 resize：重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式
 shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
