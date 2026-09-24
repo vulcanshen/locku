@@ -83,9 +83,15 @@ func TestEveryLineIsMarked(t *testing.T) {
 	}
 	// No key is bound: the lock is a command alias, and the hooks and
 	// the alias sit at locku's own index.
+	// The lock command is this binary by its absolute path — not "locku",
+	// which the client's shell may not find — told the socket.
 	joined := strings.Join(tmuxLines(300), "\n")
-	if !strings.Contains(joined, `set -gF lock-command "locku lock -S '#{socket_path}'"`) {
-		t.Errorf("the lock command must be told the socket:\n%s", joined)
+	if !strings.Contains(joined, `set -gF lock-command "/`) || !strings.Contains(joined, ` lock -S '#{socket_path}'"`) ||
+		strings.Contains(joined, `"locku lock`) {
+		t.Errorf("the lock command must be absolute and told the socket:\n%s", joined)
+	}
+	if !strings.HasPrefix(tmuxSet(300)[0][3], "/") || !strings.HasSuffix(tmuxSet(300)[0][3], " lock -S '#{socket_path}'") {
+		t.Errorf("live lock command: %q", tmuxSet(300)[0][3])
 	}
 	if strings.Contains(joined, "bind ") || !strings.Contains(joined, `command-alias[90]" "locku=lock-session"`) ||
 		!strings.Contains(joined, `client-attached[90]`) || !strings.Contains(joined, `client-session-changed[90]`) ||

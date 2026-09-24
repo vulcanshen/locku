@@ -107,8 +107,9 @@ def setup(*a):
 
 print(setup("tmux"))
 text = open(conf).read()
-check("the block is in the file, every line marked", "# >>> locku >>>" in text and "client-attached[90]" in text
-      and "socket_path" in text and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
+check("the block is in the file, every line marked, the lock command absolute", "# >>> locku >>>" in text
+      and "client-attached[90]" in text and 'lock-command "/' in text and "socket_path" in text
+      and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
 
 subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.DEVNULL)
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
