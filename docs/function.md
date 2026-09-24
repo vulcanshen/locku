@@ -257,7 +257,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 
 | 目標 | 檔案 | 區塊內容 |
 |---|---|---|
-| tmux | preference 的 `tmux_conf`（使用者輸入，`~/` 可用，不存在就建；沒設就報錯不猜，2026-09-24） | `set -gF lock-command "locku lock -S '#{socket_path}'"`、`set -g lock-after-time 300`、`set -s "command-alias[90]" "locku=lock-session"`、`set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"`、`set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client"`；每一行尾巴都有 `# locku` 註解 |
+| tmux | preference 的 `tmux_conf`（使用者輸入，`~/` 可用，不存在就建；沒設就報錯不猜，2026-09-24） | `set -gF lock-command "<locku 的絕對路徑> lock -S '#{socket_path}'"`、`set -g lock-after-time <idle_lock>`、`set -s "command-alias[90]" "locku=lock-session"`、`set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"`、`set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client"`；每一行尾巴都有 `# locku` 註解 |
 | screen | preference 的 `screen_conf`（同上），加上 shell rc：`$SHELL` 是 zsh 寫 `~/.zshrc`、bash 寫 `~/.bashrc`、fish 寫 `~/.config/fish/config.fish` | `.screenrc`：`idle 300 lockscreen`；shell rc：`export LOCKPRG=<絕對路徑>`（fish 是 `set -gx LOCKPRG <絕對路徑>`） |
 
 區塊標記：
@@ -273,6 +273,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 - tmux 那五行的道理（2026-09-24，使用者定案，全部以 pty 實測 tmux 3.7c）：
   - **不綁熱鍵**。用戶既然在用 tmux 就有自己一套 bind，`bind L` 會撞。改用 command alias：`prefix :` 然後打 `locku`，就是 `lock-session`；shell 裡 `tmux lock-session` 也一樣。
   - **每行尾巴 `# locku`**，加上受管區塊的頭尾標記，手動要移也認得出來；alias 與 hook 放在陣列的 90 號，不碰使用者自己的 0 號。
+  - **lock-command 寫絕對路徑**：tmux client 是用它自己的 shell 環境跑 `sh -c`，`locku` 不一定在那個 PATH 上——找不到就是「畫面閃一下」（使用者 2026-09-24 實際踩到）。setup 寫的是 `Binary()`：PATH 上的 locku（brew 的 symlink）優先，否則就是執行 setup 的這個檔，跟 screen 的 LOCKPRG 同一套。所以從 repo 跑 `./locku setup tmux` 寫的就是 repo 那個 binary。
   - **lock-command 帶 socket**：lock-command 在 client 進程裡以 `system()` 跑，環境裡沒有 `TMUX`，被鎖的 client 也不在 `list-clients` 裡；`set -gF` 在讀檔時把 `#{socket_path}` 展開進去，`locku lock -S <socket>` 才知道要跟哪個 server 講話（`-L` 開的 server 也對）。locku 用 `tty` 拿自己的 tty，`tmux -S <socket> display -p -t <tty> '#{session_id}'` 反查 session；用 id 不用名字，名字有冒號會被當 window。
   - **`@locked` 由 locku 設與清**：解鎖沒有 hook（3.7c 的 MSG_UNLOCK 只清 flag），所以 `locku lock` 啟動時 `set -t <id> @locked 1`、正常解鎖結束前 `set -t <id> -u @locked`，tty 消失不清。兩個 hook 看到 `@locked` 就 `lock-client`（attach 與 switch-client 都驗過會觸發）。
   - 這些 tmux 呼叫都有 2 秒 timeout、失敗一律靜默：不可能讓鎖起不來或掉下來。裸 tty、screen、沒有 tmux 時 `Session()` 回空字串，什麼都不做。
@@ -347,7 +348,7 @@ tmux，寫進 preference 的 `tmux_conf`（慣例 `~/.tmux.conf`）：
 
 ```
 # >>> locku >>>
-set -gF lock-command "locku lock -S '#{socket_path}'"                       # locku
+set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: idle_lock; 0 never
 set -s "command-alias[90]" "locku=lock-session"                             # locku: prefix : locku
 set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client

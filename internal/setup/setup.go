@@ -146,14 +146,19 @@ const (
 	hookCmd   = `if -F "#{@locked}" lock-client`
 )
 
+// lockCmd is the lock command tmux runs: this binary by its absolute
+// path — the client's shell may well not have locku on its PATH, and a
+// command not found is a lock that flashes and is gone (user,
+// 2026-09-24) — told the server's socket: set -F expands #{socket_path}
+// when the line is read, since the lock runs in the client's process,
+// where nothing else says which server it belongs to.
+func lockCmd() string { return shellQuote(Binary()) + " lock -S '#{socket_path}'" }
+
 // tmuxLines is the block tmux.conf gets, with preference's idle_lock as
-// lock-after-time. The lock command is told the server's socket — set -F
-// expands #{socket_path} when the file is read — since the lock runs in
-// the client's process, where nothing else says which server it belongs
-// to.
+// lock-after-time.
 func tmuxLines(idle int) []string {
 	return []string{
-		`set -gF lock-command "locku lock -S '#{socket_path}'"                       # locku`,
+		`set -gF lock-command "` + lockCmd() + `"  # locku`,
 		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: idle_lock; 0 never`,
 		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-session"                             # locku: prefix : locku`,
 		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client`,
@@ -165,7 +170,7 @@ func tmuxLines(idle int) []string {
 // for one.
 func tmuxSet(idle int) [][]string {
 	return [][]string{
-		{"set", "-gF", "lock-command", "locku lock -S '#{socket_path}'"},
+		{"set", "-gF", "lock-command", lockCmd()},
 		{"set", "-g", "lock-after-time", itoa(idle)},
 		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-session"},
 		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
