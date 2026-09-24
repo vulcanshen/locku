@@ -18,9 +18,16 @@ func TestFontIsWellFormed(t *testing.T) {
 			t.Errorf("no glyph for %q", r)
 			continue
 		}
+		w := len(g[0])
+		if w < 1 || w > fontW {
+			t.Errorf("%q is %d wide", r, w)
+		}
+		if strings.ContainsRune("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", r) && w != fontW {
+			t.Errorf("%q is %d wide; digits and letters are %d", r, w, fontW)
+		}
 		for y, row := range g {
-			if len(row) != fontW {
-				t.Errorf("%q row %d is %d wide", r, y, len(row))
+			if len(row) != w {
+				t.Errorf("%q row %d is %d wide, row 0 is %d", r, y, len(row), w)
 			}
 			if strings.Trim(row, "#.") != "" {
 				t.Errorf("%q row %d has a stray cell: %q", r, y, row)
@@ -32,7 +39,7 @@ func TestFontIsWellFormed(t *testing.T) {
 			t.Errorf("glyph %q is not in the charset", r)
 		}
 	}
-	// Every glyph but the space and the punctuation lights something.
+	// Every glyph but the space lights something.
 	for r, g := range font {
 		if r == ' ' {
 			continue
@@ -40,6 +47,11 @@ func TestFontIsWellFormed(t *testing.T) {
 		if strings.Count(strings.Join(g[:], ""), "#") == 0 {
 			t.Errorf("%q is blank", r)
 		}
+	}
+	// The punctuation is narrow: that is what keeps a clock within reach
+	// of the large size.
+	if glyphW(':') != 1 || glyphW(' ') != 2 || glyphW('-') != 3 || glyphW('7') != 5 || glyphW('?') != fontW {
+		t.Errorf("widths: : %d, space %d, - %d, 7 %d, unknown %d", glyphW(':'), glyphW(' '), glyphW('-'), glyphW('7'), glyphW('?'))
 	}
 }
 

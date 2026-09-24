@@ -3,7 +3,6 @@ package ui
 import (
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -20,8 +19,8 @@ import (
 // glyph or a position.
 
 const (
-	gapX       = 1 // pixels between two letters
-	gapY       = 2 // pixels between two lines
+	gapX       = 1 // pixels between two glyphs
+	gapY       = 1 // pixels between two lines (2 until 2026-09-24: a column's lines are rows the large size cannot spare)
 	marginCols = 4 // two columns of margin either side
 	marginRows = 2 // one row above and below
 )
@@ -67,23 +66,31 @@ func (b board) count() int {
 	return n
 }
 
-// widest is the longest line in runes.
-func widest(lines []string) int {
-	n := 0
-	for _, l := range lines {
-		n = max(n, utf8.RuneCountInString(l))
+// lineW is a line's width in font pixels: its glyphs and a gap between
+// each two.
+func lineW(line string) int {
+	w := 0
+	for i, r := range line {
+		if i > 0 {
+			w += gapX
+		}
+		w += glyphW(r)
 	}
-	return n
+	return w
 }
 
-// pixelSize is the block lines need in font pixels, before scaling: n
-// letters cost 5n + (n − 1), m lines 7m + 2(m − 1) (function.md §5.3).
+// pixelSize is the block lines need in font pixels, before scaling: the
+// widest line, and m lines at 7 rows each with a gap between (function.md
+// §5.3).
 func pixelSize(lines []string) (w, h int) {
-	n, m := widest(lines), len(lines)
-	if n == 0 || m == 0 {
+	m := len(lines)
+	for _, l := range lines {
+		w = max(w, lineW(l))
+	}
+	if w == 0 || m == 0 {
 		return 0, 0
 	}
-	return n*fontW + (n-1)*gapX, m*fontH + (m-1)*gapY
+	return w, m*fontH + (m-1)*gapY
 }
 
 // fitsAt reports whether lines fit a canvas of cols × rows at scale k,
@@ -137,21 +144,21 @@ func paint(lines []string, k, cols, rows int) board {
 	ox := (b.w - pw*k) / 2
 	oy := (b.h - ph*k) / 2
 	for i, line := range lines {
-		runes := []rune(line)
-		if len(runes) == 0 {
+		if line == "" {
 			continue
 		}
-		lineW := len(runes)*fontW + (len(runes)-1)*gapX
-		lx := ox + (pw-lineW)/2*k
+		lx := ox + (pw-lineW(line))/2*k
 		ly := oy + i*(fontH+gapY)*k
-		for j, r := range runes {
+		x := 0 // in font pixels along the line
+		for _, r := range line {
 			g, ok := font[r]
 			if !ok {
+				x += fontW + gapX
 				continue
 			}
-			gx := lx + j*(fontW+gapX)*k
+			gx := lx + x*k
 			for fy := 0; fy < fontH; fy++ {
-				for fx := 0; fx < fontW; fx++ {
+				for fx := 0; fx < len(g[fy]); fx++ {
 					if g[fy][fx] != '#' {
 						continue
 					}
@@ -162,6 +169,7 @@ func paint(lines []string, k, cols, rows int) board {
 					}
 				}
 			}
+			x += glyphW(r) + gapX
 		}
 	}
 	return b

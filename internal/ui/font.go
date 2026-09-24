@@ -1,20 +1,34 @@
 package ui
 
-// The pixel font: 5 × 7, one glyph for each of the 39 characters a saver can
-// produce — the digits, the colon, the hyphen, the space, and the capitals
-// (function.md §5.2 / §10.16). There is no second font and no lower case:
-// the content is made of fixed choices, so this is the whole alphabet.
+// The pixel font: 7 rows high, one glyph for each of the 39 characters a
+// saver can produce — the digits, the colon, the hyphen, the space, and the
+// capitals (function.md §5.2 / §10.16). There is no second font and no
+// lower case: the content is made of fixed choices, so this is the whole
+// alphabet.
 //
-// A row is five cells, '#' lit and '.' dark, top to bottom.
+// Digits and letters are five cells wide. The punctuation is as wide as
+// it needs to be — the colon one cell, the space two, the hyphen three —
+// because a colon on a five-cell slot cost a clock four pixels it had no
+// use for, and those pixels are what put the large size out of reach of
+// an ordinary terminal (user, 2026-09-24). A row is '#' lit and '.' dark,
+// top to bottom; every row of a glyph is the same width.
 
 const (
-	fontW = 5
+	fontW = 5 // a digit or a letter
 	fontH = 7
 )
 
 // Charset is every rune the font can draw, which is every rune a saver may
 // emit; TestSaverStaysInTheFont holds the two together.
 const Charset = "0123456789:- ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// glyphW is a glyph's width in font pixels.
+func glyphW(r rune) int {
+	if g, ok := font[r]; ok {
+		return len(g[0])
+	}
+	return fontW
+}
 
 var font = map[rune][fontH]string{
 	'0': {".###.", "#...#", "#..##", "#.#.#", "##..#", "#...#", ".###."},
@@ -27,9 +41,9 @@ var font = map[rune][fontH]string{
 	'7': {"#####", "....#", "...#.", "..#..", ".#...", ".#...", ".#..."},
 	'8': {".###.", "#...#", "#...#", ".###.", "#...#", "#...#", ".###."},
 	'9': {".###.", "#...#", "#...#", ".####", "....#", "...#.", ".##.."},
-	':': {".....", "..#..", "..#..", ".....", "..#..", "..#..", "....."},
-	'-': {".....", ".....", ".....", "#####", ".....", ".....", "....."},
-	' ': {".....", ".....", ".....", ".....", ".....", ".....", "....."},
+	':': {".", "#", "#", ".", "#", "#", "."},
+	'-': {"...", "...", "...", "###", "...", "...", "..."},
+	' ': {"..", "..", "..", "..", "..", "..", ".."},
 	'A': {".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"},
 	'B': {"####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."},
 	'C': {".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."},
