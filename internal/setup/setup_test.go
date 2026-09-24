@@ -37,7 +37,7 @@ func TestTmuxWritesTheFile(t *testing.T) {
 	t.Setenv("HOME", h)
 	t.Setenv("PATH", t.TempDir()) // no tmux
 	var out bytes.Buffer
-	if err := Tmux(&out); err != nil {
+	if err := Tmux(&out, filepath.Join(h, ".tmux.conf")); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(filepath.Join(h, ".tmux.conf"))
@@ -53,26 +53,27 @@ func TestTmuxWritesTheFile(t *testing.T) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	out.Reset()
-	if err := Tmux(&out); err != nil {
+	if err := Tmux(&out, filepath.Join(h, ".tmux.conf")); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "already up to date") {
 		t.Errorf("second run:\n%s", out.String())
 	}
-	// ~/.config/tmux/tmux.conf wins only when ~/.tmux.conf is absent.
+	// No path is a refusal, not a guess; a relative one too. A path
+	// under ~ is expanded, the directory made.
+	if err := Tmux(&out, ""); err == nil || !strings.Contains(err.Error(), "tmux_conf is not set") {
+		t.Errorf("empty path: %v", err)
+	}
+	if err := Tmux(&out, "tmux.conf"); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
+		t.Errorf("relative path: %v", err)
+	}
 	h2 := t.TempDir()
 	t.Setenv("HOME", h2)
-	alt := filepath.Join(h2, ".config", "tmux", "tmux.conf")
-	os.MkdirAll(filepath.Dir(alt), 0o755)
-	os.WriteFile(alt, []byte("set -g mouse on\n"), 0o644)
-	if err := Tmux(&out); err != nil {
+	if err := Tmux(&out, "~/.config/tmux/tmux.conf"); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(alt); !strings.Contains(string(b), "set -g mouse on") || !strings.Contains(string(b), blockBegin) {
-		t.Errorf("alt file:\n%s", b)
-	}
-	if _, err := os.Stat(filepath.Join(h2, ".tmux.conf")); err == nil {
-		t.Error("~/.tmux.conf was created although the alt file existed")
+	if b, _ := os.ReadFile(filepath.Join(h2, ".config", "tmux", "tmux.conf")); !strings.Contains(string(b), blockBegin) {
+		t.Errorf("~ was not expanded:\n%s", b)
 	}
 }
 
@@ -88,7 +89,7 @@ func TestScreenWritesRCAndShellRC(t *testing.T) {
 	} {
 		t.Setenv("SHELL", c.shell)
 		var out bytes.Buffer
-		if err := Screen(&out); err != nil {
+		if err := Screen(&out, filepath.Join(h, ".screenrc")); err != nil {
 			t.Fatal(err)
 		}
 		b, err := os.ReadFile(filepath.Join(h, c.rc))
@@ -105,6 +106,15 @@ func TestScreenWritesRCAndShellRC(t *testing.T) {
 	b, _ := os.ReadFile(filepath.Join(h, ".screenrc"))
 	if !strings.Contains(string(b), "idle 300 lockscreen") || strings.Contains(string(b), "setenv") {
 		t.Errorf(".screenrc:\n%s", b)
+	}
+	// Unset, nothing is written — not even the shell rc.
+	h3 := t.TempDir()
+	t.Setenv("HOME", h3)
+	if err := Screen(new(bytes.Buffer), ""); err == nil || !strings.Contains(err.Error(), "screen_conf is not set") {
+		t.Errorf("empty path: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(h3, ".profile")); err == nil {
+		t.Error("the shell rc was written although screen_conf is not set")
 	}
 }
 

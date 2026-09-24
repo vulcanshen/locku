@@ -74,6 +74,8 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | prompt_timeout | 數字 | input popup，型別 `number` |
 | lockout_after | 數字，0 顯示 `0 (off)` | 同上 |
 | lockout_seconds | 數字 | 同上 |
+| tmux_conf | 路徑照存的樣子；未設 `not set`（Yellow），`locku setup tmux` 會報錯 | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1）（2026-09-24） |
+| screen_conf | 同上 | 同上 |
 
 `savers` 這個 key 不成列：它就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。

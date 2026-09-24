@@ -23,8 +23,9 @@ const usage = `locku — a screensaver with a PIN, for the terminal
 
   locku                      settings: the PIN, the savers, the colours
   locku lock                 lock this terminal — what tmux and screen run
-  locku setup [tmux|screen]  write the lock into ~/.tmux.conf, ~/.screenrc and
-                             the shell rc; both without an argument
+  locku setup [tmux|screen]  write the lock into the files preference names as
+                             tmux_conf and screen_conf, and the shell rc; both
+                             without an argument
   locku version              the version
   locku help                 this
 `
@@ -90,8 +91,14 @@ func runLock() int {
 	}
 }
 
-// runSetup is `locku setup [tmux|screen]`: both without an argument.
+// runSetup is `locku setup [tmux|screen]`: both without an argument. The
+// files are the ones preference names; setup with one unset says so and
+// writes nothing (user, 2026-09-24).
 func runSetup(args []string) int {
+	cfg, problem := config.Load()
+	if problem != "" {
+		fmt.Fprintf(os.Stderr, "locku: %s\n", problem)
+	}
 	targets := args
 	if len(targets) == 0 {
 		targets = []string{"tmux", "screen"}
@@ -101,9 +108,9 @@ func runSetup(args []string) int {
 		var err error
 		switch t {
 		case "tmux":
-			err = setup.Tmux(os.Stdout)
+			err = setup.Tmux(os.Stdout, cfg.TmuxConf)
 		case "screen":
-			err = setup.Screen(os.Stdout)
+			err = setup.Screen(os.Stdout, cfg.ScreenConf)
 		default:
 			fmt.Fprintf(os.Stderr, "locku: setup takes tmux or screen, not %q\n", t)
 			return 2

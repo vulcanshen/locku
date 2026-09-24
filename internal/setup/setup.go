@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/vulcanshen/locku/internal/config"
 )
 
 const (
@@ -68,9 +70,18 @@ func home() string {
 	return h
 }
 
-func exists(p string) bool {
-	_, err := os.Stat(p)
-	return err == nil
+// confPath is a preference's path as a file to write: expanded, and
+// refused when it is not set or not absolute (user, 2026-09-24: setup
+// writes where the user said, and says so when they have not said).
+func confPath(p, key string) (string, error) {
+	if p == "" {
+		return "", fmt.Errorf("%s is not set: run locku, preference › %s", key, key)
+	}
+	abs, ok := config.AbsPath(p)
+	if !ok {
+		return "", fmt.Errorf("%s is %q, not an absolute path", key, p)
+	}
+	return abs, nil
 }
 
 func report(w io.Writer, path string, changed bool) {
@@ -88,13 +99,13 @@ var tmuxLines = []string{
 	`bind L lock-session`,
 }
 
-// Tmux writes the block into ~/.tmux.conf — or ~/.config/tmux/tmux.conf
-// when only that exists — and, when a server is running, sets the same
-// three things on it now.
-func Tmux(w io.Writer) error {
-	path := filepath.Join(home(), ".tmux.conf")
-	if alt := filepath.Join(home(), ".config", "tmux", "tmux.conf"); !exists(path) && exists(alt) {
-		path = alt
+// Tmux writes the block into the file at path — preference's tmux_conf,
+// "~/…" allowed — and, when a server is running, sets the same three
+// things on it now.
+func Tmux(w io.Writer, path string) error {
+	path, err := confPath(path, "tmux_conf")
+	if err != nil {
+		return err
 	}
 	changed, err := write(path, tmuxLines)
 	if err != nil {
@@ -125,13 +136,16 @@ func Tmux(w io.Writer) error {
 	return nil
 }
 
-// Screen writes `idle 300 lockscreen` into ~/.screenrc and LOCKPRG into
-// the shell's rc file. LOCKPRG has to be in the environment of the shell
-// that runs `screen` — screen's front end reads it, and .screenrc's own
-// `setenv` never reaches that process (function.md §6.2, measured
-// 2026-09-24) — so the rc file it is.
-func Screen(w io.Writer) error {
-	rc := filepath.Join(home(), ".screenrc")
+// Screen writes `idle 300 lockscreen` into the file at rc — preference's
+// screen_conf — and LOCKPRG into the shell's rc file. LOCKPRG has to be
+// in the environment of the shell that runs `screen` — screen's front
+// end reads it, and .screenrc's own `setenv` never reaches that process
+// (function.md §6.2, measured 2026-09-24) — so the rc file it is.
+func Screen(w io.Writer, rc string) error {
+	rc, err := confPath(rc, "screen_conf")
+	if err != nil {
+		return err
+	}
 	changed, err := write(rc, []string{"idle 300 lockscreen"})
 	if err != nil {
 		return err

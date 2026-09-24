@@ -301,6 +301,77 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	}
 }
 
+// tmux_conf and screen_conf are typed, webu's way: the box opens on an
+// OFFER — the value, or the usual file when nothing is set — that Tab
+// takes and Backspace declines; Enter on an untouched offer changes
+// nothing; a relative path is refused (user, 2026-09-24).
+func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
+	m := newTestApp(t).press("G", "2", "G") // preference, last row
+	if m.rowAt().kind != rowScreenConf {
+		t.Fatalf("the last row is %v, not screen_conf", m.rowAt().kind)
+	}
+	m = m.press("k")
+	if m.rowAt().kind != rowTmuxConf || !strings.Contains(m.View(), "not set") {
+		t.Fatalf("tmux_conf row: %+v", m.rowAt())
+	}
+	m = m.press("enter")
+	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
+		t.Fatalf("box %+v", m.input)
+	}
+	if !strings.Contains(m.View(), "~/.tmux.conf") || !strings.Contains(m.View(), "Tab") {
+		t.Errorf("the offer and the Tab hint must show:\n%s", m.View())
+	}
+	// Enter on the untouched offer: the box closes, nothing changes.
+	m = m.press("enter")
+	if m.input.isActive() || m.cfg.TmuxConf != "" {
+		t.Errorf("an offer nobody took must change nothing: %q", m.cfg.TmuxConf)
+	}
+	// Tab takes it; Enter saves it.
+	m = m.press("enter", "tab")
+	if m.input.value != "~/.tmux.conf" || m.input.placeholder != "" {
+		t.Fatalf("Tab: %+v", m.input)
+	}
+	m = m.press("enter")
+	if m.cfg.TmuxConf != "~/.tmux.conf" || saved(t).TmuxConf != "~/.tmux.conf" {
+		t.Errorf("tmux_conf %q", m.cfg.TmuxConf)
+	}
+	if !strings.Contains(m.View(), "~/.tmux.conf") {
+		t.Error("the row must show the path")
+	}
+	// The value is now the offer; typing starts fresh over it, a relative
+	// path is refused, an absolute one saved.
+	m = m.press("enter")
+	if m.input.placeholder != "~/.tmux.conf" {
+		t.Fatalf("offer %q", m.input.placeholder)
+	}
+	m = m.typed("tmux.conf").press("enter")
+	if m.input.suffix != " · absolute or ~/ path" {
+		t.Fatalf("suffix %q", m.input.suffix)
+	}
+	m = m.press("ctrl+u").typed("/etc/tmux.conf").press("enter")
+	if m.cfg.TmuxConf != "/etc/tmux.conf" || saved(t).TmuxConf != "/etc/tmux.conf" {
+		t.Errorf("tmux_conf %q", m.cfg.TmuxConf)
+	}
+	// Backspace declines the offer; Enter on the empty line unsets.
+	m = m.press("enter", "backspace")
+	if m.input.placeholder != "" || m.input.value != "" {
+		t.Fatalf("Backspace: %+v", m.input)
+	}
+	m = m.press("enter")
+	if m.cfg.TmuxConf != "" || saved(t).TmuxConf != "" {
+		t.Errorf("unset: %q", m.cfg.TmuxConf)
+	}
+	// screen_conf, with its own usual file.
+	m = m.press("j", "enter")
+	if m.input.placeholder != "~/.screenrc" {
+		t.Fatalf("offer %q", m.input.placeholder)
+	}
+	m = m.press("tab", "enter")
+	if m.cfg.ScreenConf != "~/.screenrc" || saved(t).ScreenConf != "~/.screenrc" {
+		t.Errorf("screen_conf %q", m.cfg.ScreenConf)
+	}
+}
+
 func TestPINSetChangeClear(t *testing.T) {
 	m := newTestApp(t).press("G", "2") // preference, PIN row
 	if m.rowAt().kind != rowPIN {

@@ -13,9 +13,9 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：每個 saver 的 layout / time / date 與 bg / fg 顏色，preference 的 PIN、啟用中的 saver、show_status、prompt_timeout、lockout。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
+| `locku` | 設定 TUI：每個 saver 的 layout / time / date 與 bg / fg 顏色，preference 的 PIN、啟用中的 saver、show_status、prompt_timeout、lockout、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
-| `locku setup [tmux\|screen]` | 把整合設定寫進 `~/.tmux.conf`（有 server 在跑就即時套用）與 `~/.screenrc` 加 shell rc；不帶參數兩個都做。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，冪等 |
+| `locku setup [tmux\|screen]` | 把整合設定寫進 preference 填的 `tmux_conf`（有 server 在跑就即時套用）與 `screen_conf` 加 shell rc；路徑沒填就報錯、不猜；不帶參數兩個都做。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，冪等 |
 | `locku version` | 版本 |
 
 argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是 execl、不能帶參數。
@@ -26,8 +26,8 @@ argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是
 git clone https://github.com/vulcanshen/locku.git
 cd locku
 make build      # → ./locku（CGO_ENABLED=0 靜態）
-./locku setup   # 寫 tmux / screen 的整合設定
-./locku         # 設 PIN（可省略：不設就是純螢幕保護）
+./locku         # preference 填 tmux_conf / screen_conf；設 PIN（可省略：不設就是純螢幕保護）
+./locku setup   # 寫 tmux / screen 的整合設定（路徑沒填就報錯）
 ./locku lock    # 現在就鎖
 ```
 
@@ -65,6 +65,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`P` 預覽這個 saver、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：`x` clear。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
+`tmux_conf` / `screen_conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。
 
 ## 文件
 

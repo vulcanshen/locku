@@ -71,6 +71,11 @@ type Config struct {
 	PromptTimeout  int     `yaml:"prompt_timeout"`
 	LockoutAfter   int     `yaml:"lockout_after"`
 	LockoutSeconds int     `yaml:"lockout_seconds"`
+	// TmuxConf and ScreenConf are the files `locku setup` writes into, as
+	// the user typed them — "~/…" allowed. Empty is not set, and setup
+	// refuses rather than guesses (user, 2026-09-24).
+	TmuxConf   string `yaml:"tmux_conf"`
+	ScreenConf string `yaml:"screen_conf"`
 }
 
 // DefaultSaver is the instance a fresh install has, and the one drawn when
@@ -205,7 +210,26 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.LockoutSeconds <= 0 {
 		cfg.LockoutSeconds = Default().LockoutSeconds
 	}
+	cfg.TmuxConf = strings.TrimSpace(cfg.TmuxConf)
+	cfg.ScreenConf = strings.TrimSpace(cfg.ScreenConf)
 	return cfg, note
+}
+
+// AbsPath is p with a leading ~/ expanded to the home directory, and
+// whether p is a path setup can take: absolute, or under ~. A relative
+// path would land wherever setup happened to run.
+func AbsPath(p string) (string, bool) {
+	switch {
+	case strings.HasPrefix(p, "~/"):
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return p, false
+		}
+		return filepath.Join(home, p[2:]), true
+	case filepath.IsAbs(p):
+		return filepath.Clean(p), true
+	}
+	return p, false
 }
 
 // Active is the saver the file points at, and whether it exists. When it
