@@ -92,10 +92,14 @@ type Saver interface {
 	// Next is when the lines will next change, so the lock can sleep until
 	// then rather than poll (function.md §5.2 "tick").
 	Next(now time.Time) time.Time
-	// Degrade is the next step down when the lines do not fit
-	// (function.md §5.3): the same saver with less on it, or false when
-	// there is nothing left to drop.
-	Degrade() (Saver, bool)
+	// Steps is the content in order of preference, the whole of it first,
+	// then with less and less on it (function.md §5.3): the canvas draws
+	// the first step that fits. It is a list and not a chain, because
+	// what does not fit may be the height as well as the width, and a
+	// chain that drops the seconds on its way to dropping the date would
+	// lose them even when the date alone was the problem (user,
+	// 2026-09-24).
+	Steps() []Saver
 }
 
 // Clock is the one saver type: a time with or without seconds, a date in
@@ -176,22 +180,34 @@ func (c Clock) Next(now time.Time) time.Time {
 	return now.Truncate(time.Minute).Add(time.Minute)
 }
 
-// Degrade drops content in the order of function.md §5.3: the year, then
-// the seconds, then the date. The time is the last thing to go, and it
-// never goes here — after this ladder the canvas falls back to plain text.
-func (c Clock) Degrade() (Saver, bool) {
+// Steps is the clock with less and less on it (function.md §5.3): the
+// year goes first, then the seconds — the date is worth more than they
+// are — then the date, at which point the seconds come back, and last
+// the seconds alone. The time is the last thing to go, and it never goes
+// here: after these the canvas falls back to plain text.
+func (c Clock) Steps() []Saver {
 	c = c.Normalized()
-	switch {
-	case c.Date == DateYMD:
-		c.Date = DateMD
-	case c.Date == DateYMonD:
-		c.Date = DateMonD
-	case c.Time == TimeHMS:
-		c.Time = TimeHM
-	case c.Date != DateOff:
-		c.Date = DateOff
-	default:
-		return c, false
+	short := c.Date
+	switch c.Date {
+	case DateYMD:
+		short = DateMD
+	case DateYMonD:
+		short = DateMonD
 	}
-	return c, true
+	var out []Saver
+	add := func(t, d string) { out = append(out, Clock{Time: t, Date: d, Layout: c.Layout}) }
+	add(c.Time, c.Date) // everything
+	if short != c.Date {
+		add(c.Time, short) // the year goes
+	}
+	if c.Seconds() && c.Date != DateOff {
+		add(TimeHM, short) // the seconds go, the date stays
+	}
+	if c.Date != DateOff {
+		add(c.Time, DateOff) // the date goes, the seconds are back
+	}
+	if c.Seconds() {
+		add(TimeHM, DateOff) // the seconds go too
+	}
+	return out
 }

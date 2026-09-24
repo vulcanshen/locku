@@ -106,7 +106,7 @@ splash 底下的名字、版本、開發者都不出現，只取它的 glyph 畫
 | 狀態列 | 最後一列，左起 1 欄 | `user@host · locked since HH:MM`；`show_status: false` 時整列空白 |
 | 無 PIN 提示 | 狀態列右側接續 | `· no PIN · any key unlocks`，Yellow，不受 show_status 影響 |
 | config 錯誤 | 同上 | `· config error: <reason>`，Red，取代無 PIN 提示 |
-| 退階 | | 塞不下時去年 → 去秒 → 去日期 → 一般文字，`function.md` §5.3 |
+| 退階 | | 塞不下時依偏好取第一個塞得下的：去年 → 去秒（日期留著）→ 去日期（秒回來）→ 去秒 → 一般文字，`function.md` §5.3 |
 
 resize：重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式
 shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。

@@ -188,12 +188,16 @@ Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬�
 3. 倍數 k 由 saver 的 `size` 決定：small 1、medium 2、large 3，每個字型像素放大成 k × k 格（修訂 2026-09-24：原本 k 是「塞得下的最大整數」，使用者要的是明確的大小選項，不是計算結果）。塞不下的順序：先照退階梯砍內容（下述），內容砍到底還塞不下才把 k 降一級再從完整內容試起；k = 1 也塞不下才把內容改用一般文字以 fg 色置中疊在板上，點陣板照鋪。所以 large 在寬終端機配 column 排版正好，在窄終端機會自己退成 medium 或 small，不會爆框。
 4. 整個畫布（狀態列以外的所有列）都是像素格，像 LED 點陣板：每格一個 glyph 加空格，沒亮的用該 saver 的 bg（預設 surface0 #313244），亮的用它的 fg（預設 gold #f2b753）。內容置中。終端機寬為奇數時最右一欄留白。splash 的名字、版本、開發者不出現，只取 glyph 畫法。
 
-退階：k < 1 時依序換內容再算 k，config 不改，視窗變大就回來。時間永遠最後犧牲。
+退階：塞不下時依偏好順序換內容，取第一個塞得下的，config 不改，視窗變大就回來。時間永遠最後犧牲。
 
-1. date 帶年的去掉年：`YYYY-MM-DD` → `MM-DD`、`YYYY-MMM-DD` → `MMM-DD`。
-2. time 帶秒的去掉秒，時制不變。
-3. date 關掉。
-4. 一般文字。
+1. 完整內容。
+2. date 帶年的去掉年：`YYYY-MM-DD` → `MM-DD`、`YYYY-MMM-DD` → `MMM-DD`。
+3. time 帶秒的去掉秒，date 留著（日期比秒值錢）。
+4. date 關掉，秒回來。
+5. 秒也去掉。
+6. 一般文字。
+
+修訂（2026-09-24）：原本是單向鏈「去年 → 去秒 → 去日期」，塞不下的若是**高度**（兩行放不下、一行放得下），去秒對高度沒幫助但鏈已經走過去了，到去日期時秒已經沒了，使用者看到 `HH MM` 而不是明明塞得下的 `HH MM SS`。改成候選清單，第 4 步「去日期、秒回來」就是為這個情況加的。
 
 resize 重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式 shuffle 揭露，沒變的不動，一次變更 ≤ 400 ms。CPU 預算不變：閒置 < 1%。
 
@@ -338,7 +342,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 17. Nerd Font 必裝，與家族相同；字型在使用者本機終端機，SSH 不影響。
 18. 第一幀不動畫；之後內容變更只對有變的像素做 splash 式 shuffle 揭露。
 19. 顏色是每個 saver 自己的 bg / fg（修訂 2026-09-24，原為全域 Settings › style），bg 預設 surface0、fg 預設 gold；以 RGB slider 設定、config 存 hex；滑桿改草稿，`S` 存、`R` 丟，`q` 遇到未存草稿先問。
-20. 寬高塞不下時退階：去年 → 去秒 → 去日期 → 一般文字；config 不改。
+20. 寬高塞不下時退階，依偏好取第一個塞得下的：完整 → 去年 → 去秒（日期留著）→ 去日期（秒回來）→ 去秒 → 一般文字；config 不改。（2026-09-24 修訂：原為單向鏈，高度不夠時會白白丟掉秒。）
 21. 整合設定是 CLI：`locku setup [tmux|screen]` 直接寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用；不做 TUI popup。
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver；設為啟用在 preference › saver，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 saver 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 saver）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu。

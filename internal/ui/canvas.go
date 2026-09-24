@@ -109,24 +109,21 @@ func fitsAt(lines []string, k, cols, rows int) bool {
 
 // fit finds what to draw and how big (function.md §5.3): the size the
 // saver asks for — small, medium, large: 1, 2, 3 — is kept as long as
-// some of the content fits at it, the content stepping down the degrade
-// ladder (the year, the seconds, the date); only when nothing fits at
-// that size does the size step down, and only when nothing fits at 1 do
-// the lines come back with k == 0, to be drawn as plain text over the
-// board (user, 2026-09-24: the size is a choice, not a computation).
+// some of the content fits at it, the content tried in the saver's order
+// of preference (the whole of it, then the year gone, then the seconds,
+// then the date with the seconds back, then the seconds too); only when
+// nothing fits at that size does the size step down, and only when
+// nothing fits at 1 do the least lines come back with k == 0, to be drawn
+// as plain text over the board (user, 2026-09-24: the size is a choice,
+// not a computation).
 func fit(s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k int) {
+	steps := s.Steps()
 	for k = max(1, size); k >= 1; k-- {
-		sv := s
-		for {
+		for _, sv := range steps {
 			lines = sv.Lines(now)
 			if fitsAt(lines, k, cols, rows) {
 				return lines, k
 			}
-			next, ok := sv.Degrade()
-			if !ok {
-				break
-			}
-			sv = next
 		}
 	}
 	return lines, 0

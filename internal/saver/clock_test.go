@@ -35,28 +35,32 @@ func TestLines(t *testing.T) {
 	}
 }
 
-func TestDegradeLadder(t *testing.T) {
-	var steps []Clock
-	var s Saver = Clock{TimeHMS, DateYMonD, LayoutRow}
-	for {
-		steps = append(steps, s.(Clock))
-		next, ok := s.Degrade()
-		if !ok {
-			break
+func TestSteps(t *testing.T) {
+	steps := func(c Clock) []Clock {
+		var out []Clock
+		for _, s := range c.Steps() {
+			out = append(out, s.(Clock))
 		}
-		s = next
+		return out
 	}
 	want := []Clock{
 		{TimeHMS, DateYMonD, LayoutRow},
-		{TimeHMS, DateMonD, LayoutRow}, // the year first
-		{TimeHM, DateMonD, LayoutRow},  // then the seconds
-		{TimeHM, DateOff, LayoutRow},   // then the date
+		{TimeHMS, DateMonD, LayoutRow}, // the year goes
+		{TimeHM, DateMonD, LayoutRow},  // the seconds go, the date stays
+		{TimeHMS, DateOff, LayoutRow},  // the date goes, the seconds are back
+		{TimeHM, DateOff, LayoutRow},   // the seconds go too
 	}
-	if !reflect.DeepEqual(steps, want) {
-		t.Errorf("ladder %v, want %v", steps, want)
+	if got := steps(Clock{TimeHMS, DateYMonD, LayoutRow}); !reflect.DeepEqual(got, want) {
+		t.Errorf("steps %v, want %v", got, want)
 	}
-	if _, ok := (Clock{TimeHM, DateOff, LayoutRow}).Degrade(); ok {
-		t.Error("a bare HH MM has nothing to drop")
+	if got := steps(Clock{TimeHM, DateOff, LayoutRow}); !reflect.DeepEqual(got, []Clock{{TimeHM, DateOff, LayoutRow}}) {
+		t.Errorf("a bare HH MM has nothing to drop: %v", got)
+	}
+	if got := steps(Clock{TimeHMS, DateOff, LayoutColumn}); !reflect.DeepEqual(got, []Clock{{TimeHMS, DateOff, LayoutColumn}, {TimeHM, DateOff, LayoutColumn}}) {
+		t.Errorf("seconds alone: %v", got)
+	}
+	if got := steps(Clock{TimeHM, DateMD, LayoutRow}); !reflect.DeepEqual(got, []Clock{{TimeHM, DateMD, LayoutRow}, {TimeHM, DateOff, LayoutRow}}) {
+		t.Errorf("a short date alone: %v", got)
 	}
 }
 
