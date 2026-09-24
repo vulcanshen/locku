@@ -10,9 +10,10 @@ import (
 // completeness is the promise — a user who never read a README finds the
 // whole vocabulary here.
 //
-// One part of it is contextual after all: the glossary — what each setting
-// of preference, or of a tool, means. It comes at the end, and only on the
-// panel it is about (user, 2026-09-25: on preference, only preference's).
+// With one exception, the user's (2026-09-25): on [2] of preference, or of
+// a tool, ? is the glossary of THAT panel's settings and nothing else —
+// what each row means, wrapped, in place of the note that used to sit
+// under each row. The keys are a panel away, on [1].
 type helpPopup struct {
 	anim    popupAnimator
 	entries []helpEntry
@@ -27,13 +28,9 @@ func newHelpPopup() helpPopup { return helpPopup{anim: newPopupAnimator("help"),
 func (m helpPopup) isActive() bool      { return m.anim.isActive() }
 func (m helpPopup) isInteractive() bool { return m.anim.isInteractive() }
 
-// open shows the keys, then the glossary of where the cursor is, if it has one.
-func (m *helpPopup) open(layer int, here sideKind) tea.Cmd {
-	m.layer, m.top = layer, 0
-	m.entries = helpKeys
-	if g := helpGlossary[here]; g != nil {
-		m.entries = append(append([]helpEntry{}, helpKeys...), g...)
-	}
+// open shows entries: the keys, or one panel's glossary (AppModel.helpEntries).
+func (m *helpPopup) open(layer int, entries []helpEntry) tea.Cmd {
+	m.layer, m.top, m.entries = layer, 0, entries
 	return m.anim.open()
 }
 func (m *helpPopup) close() tea.Cmd   { return m.anim.close() }
@@ -51,7 +48,7 @@ var helpKeys = []helpEntry{
 	{"Enter", "[1]: the row's fields, in [2]; [2]: edit, choose, toggle, pick"},
 	{"Esc", "close the top float"},
 	{"Space", "what can I do here: the item, and the panel"},
-	{"?", "this help"},
+	{"?", "this help — on [2] of preference, or of tmux / screen, what each row means"},
 	{"", "Global"},
 	{"P", "preview: the lock with the active profile — on a profile's [2], that profile — drafts included; unlock to come back"},
 	{"q", "quit — asks first when colours are unsaved"},
@@ -77,16 +74,16 @@ var helpKeys = []helpEntry{
 }
 
 // helpGlossary is what each setting means, by the sidebar item whose [2]
-// shows it; the items without one have none.
+// shows it; the items without one have none, and ? on their [2] is the keys.
 var helpGlossary = map[sideKind][]helpEntry{
 	sideTool: {
-		{"", "[2] tmux / screen — what each is"},
-		{"conf", "the file the block goes into; ~/ allowed"},
-		{"idle_lock", "idle seconds before the tool locks by itself; 0 never — setup again after a change"},
+		{"", "[2] tmux / screen — what each row is"},
+		{"conf", "the file locku's block is written into by S and taken out of by X; ~/ allowed"},
+		{"idle_lock", "idle seconds before the tool locks by itself: tmux's lock-after-time, screen's idle; 0 never — S again after a change"},
 		{"status", "whether the block is in the file now"},
 	},
 	sidePreference: {
-		{"", "[2] preference — what each is"},
+		{"", "[2] preference — what each row is"},
 		{"PIN", "what the lock asks for; with none, any key unlocks"},
 		{"profile", "the profile the lock shows"},
 		{"show_status", "user@host and the time, on the lock's last row"},
@@ -100,37 +97,51 @@ func (m *helpPopup) update(msg tea.KeyMsg) {
 	if !m.anim.isInteractive() {
 		return
 	}
-	m.top = moveScroll(m.top, max(0, len(m.entries)-m.visible()), msg.String(), m.visible())
+	_, _, lines := m.layout()
+	vis := m.visible(len(lines))
+	m.top = moveScroll(m.top, max(0, len(lines)-vis), msg.String(), vis)
 }
 
-// visible is how many content lines fit; the box costs 6 rows of chrome.
-func (m helpPopup) visible() int { return max(1, min(len(m.entries), m.screenH-6)) }
+// visible is how many of n lines fit; the box costs 6 rows of chrome.
+func (m helpPopup) visible(n int) int { return max(1, min(n, m.screenH-6)) }
 
-func (m helpPopup) view() string {
-	keyW := 0
+// layout is the key column's width, the box's inner width, and every
+// line: a description longer than its column wraps under itself, with
+// the key on its first line only (user, 2026-09-25: the glossary must
+// wrap, not be cut).
+func (m helpPopup) layout() (keyW, innerW int, lines []string) {
 	for _, e := range m.entries {
 		keyW = max(keyW, dispW(e.key))
 	}
-	innerW := popupInnerW(m.screenW, keyW+64)
+	innerW = popupInnerW(m.screenW, keyW+64)
+	descW := max(1, innerW-keyW-4)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(handColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 
-	vis := m.visible()
-	end := min(len(m.entries), m.top+vis)
-	rows := make([]string, 0, vis)
-	for _, e := range m.entries[m.top:end] {
+	for _, e := range m.entries {
 		if e.key == "" {
-			rows = append(rows, dim.Render(padRight(" "+e.desc, innerW)))
+			lines = append(lines, dim.Render(padRight(" "+e.desc, innerW)))
 			continue
 		}
-		rows = append(rows, key.Render(padRight("  "+e.key, keyW+4))+
-			txt.Render(padRight(e.desc, innerW-keyW-4)))
+		k := "  " + e.key
+		for _, l := range wrap(e.desc, descW) {
+			lines = append(lines, key.Render(padRight(k, keyW+4))+txt.Render(padRight(l, descW)))
+			k = ""
+		}
 	}
+	return keyW, innerW, lines
+}
+
+func (m helpPopup) view() string {
+	_, innerW, lines := m.layout()
+	vis := m.visible(len(lines))
+	end := min(len(lines), m.top+vis)
+	rows := lines[m.top:end]
 
 	pairs := [][2]string{{"Esc", "close"}}
-	if len(m.entries) > vis {
+	if len(lines) > vis {
 		pairs = append([][2]string{{"j/k", "scroll"}}, pairs...)
 	}
 	return drawPopupBox(popupLayerColor(m.layer), " "+glyphHelp+" Help ", hintLegend(pairs),

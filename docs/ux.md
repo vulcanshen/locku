@@ -83,9 +83,10 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）；以�
 全域字母在浮層開著、打字中兩種狀態下不作用。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
 按鍵（ISIG 已關，`function.md` §2.1）。
 
-help 的內容：鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、navigate）到哪裡都一樣；最後一段是**說明**——
-每個設定是什麼——只在 cursor 在有說明的項目上才出現：preference 上是 PIN 到 wrong_pin_attempt_cooldown 六列，tmux / screen 上是
-conf、idle_lock、status，profile / saver 上沒有（2026-09-25，使用者：focus 在 preference 只要 preference 的說明）。
+help 的內容看 focus 在哪：`[1]`，以及 profile / saver 的 `[2]`，是鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、
+navigate）；preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
+conf、idle_lock、status 的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
+preference 時只要 preference 的說明，只要）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
 
