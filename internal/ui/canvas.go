@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -289,8 +288,8 @@ func fitScene(size, cols, rows int) (k, w, h int) {
 }
 
 // paintScene lights a game's frame at scale k — every scene pixel k × k
-// cells, the odd cells left over at the edges dark — and letters its
-// score top right in the short face, as the game does.
+// cells, the odd cells left over at the edges dark. Nothing is lettered
+// over it: no score, no clock (user, 2026-09-24).
 func paintScene(sc saver.Scene, k, cols, rows int) board {
 	b := newBoard(cols/2, rows)
 	ox, oy := (b.w-sc.W*k)/2, (b.h-sc.H*k)/2
@@ -306,8 +305,6 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 			}
 		}
 	}
-	score := fmt.Sprintf("%05d", sc.Score%100000)
-	stampLine(&b, faceShort, score, k, ox+sc.W*k-lineW(faceShort, score, k)-2*k, oy+k)
 	return b
 }
 
