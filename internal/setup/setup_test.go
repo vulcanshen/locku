@@ -53,17 +53,37 @@ func TestRemoveUndoesApply(t *testing.T) {
 	}
 }
 
+// idle_lock is handed to both tmux and screen as it is, 0 included —
+// which turns the idle lock off in both (user, 2026-09-24: one value
+// for every tool that runs locku as its screensaver).
+func TestIdleLockIsHandedOn(t *testing.T) {
+	for _, c := range []struct {
+		idle         int
+		tmux, screen string
+	}{{300, "set -g lock-after-time 300 ", "idle 300 lockscreen"}, {0, "set -g lock-after-time 0 ", "idle 0 lockscreen"}, {45, "set -g lock-after-time 45 ", "idle 45 lockscreen"}} {
+		if l := strings.Join(tmuxLines(c.idle), "\n"); !strings.Contains(l, c.tmux) {
+			t.Errorf("idle %d, tmux:\n%s", c.idle, l)
+		}
+		if l := screenLines(c.idle)[0]; !strings.HasPrefix(l, c.screen) {
+			t.Errorf("idle %d, screen: %q", c.idle, l)
+		}
+		if s := tmuxSet(c.idle)[1]; s[2] != "lock-after-time" || s[3] != itoa(c.idle) {
+			t.Errorf("idle %d, live: %v", c.idle, s)
+		}
+	}
+}
+
 // Every line locku writes says so at its end, so it reads as locku's
 // when met on its own (user, 2026-09-24: it has to be easy to take out).
 func TestEveryLineIsMarked(t *testing.T) {
-	for _, l := range append(append([]string{}, tmuxLines...), screenLines...) {
+	for _, l := range append(append([]string{}, tmuxLines(300)...), screenLines(300)...) {
 		if !strings.Contains(l, "# locku") {
 			t.Errorf("unmarked: %q", l)
 		}
 	}
 	// No key is bound: the lock is a command alias, and the hooks and
 	// the alias sit at locku's own index.
-	joined := strings.Join(tmuxLines, "\n")
+	joined := strings.Join(tmuxLines(300), "\n")
 	if !strings.Contains(joined, `set -gF lock-command "locku lock -S '#{socket_path}'"`) {
 		t.Errorf("the lock command must be told the socket:\n%s", joined)
 	}
@@ -73,12 +93,12 @@ func TestEveryLineIsMarked(t *testing.T) {
 		t.Errorf("tmux block:\n%s", joined)
 	}
 	// What is set on a live server is what is unset, one for one.
-	if len(tmuxSet) != len(tmuxUnset) {
-		t.Errorf("%d set, %d unset", len(tmuxSet), len(tmuxUnset))
+	if len(tmuxSet(300)) != len(tmuxUnset) {
+		t.Errorf("%d set, %d unset", len(tmuxSet(300)), len(tmuxUnset))
 	}
-	for i := range tmuxSet {
-		if tmuxSet[i][2] != tmuxUnset[i][2] {
-			t.Errorf("set %v, unset %v", tmuxSet[i], tmuxUnset[i])
+	for i := range tmuxSet(300) {
+		if tmuxSet(300)[i][2] != tmuxUnset[i][2] {
+			t.Errorf("set %v, unset %v", tmuxSet(300)[i], tmuxUnset[i])
 		}
 	}
 }
@@ -90,14 +110,14 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	path := filepath.Join(h, ".tmux.conf")
 	os.WriteFile(path, []byte("set -g mouse on\n"), 0o644)
 	var out bytes.Buffer
-	if err := Tmux(&out, path); err != nil {
+	if err := Tmux(&out, path, 300); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range tmuxLines {
+	for _, want := range tmuxLines(300) {
 		if !strings.Contains(string(body), want) {
 			t.Errorf("missing %q in\n%s", want, body)
 		}
@@ -106,7 +126,7 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	out.Reset()
-	if err := Tmux(&out, path); err != nil {
+	if err := Tmux(&out, path, 300); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "already up to date") {
@@ -139,15 +159,15 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	}
 	// No path is a refusal, not a guess; a relative one too. A path
 	// under ~ is expanded, the directory made.
-	if err := Tmux(&out, ""); err == nil || !strings.Contains(err.Error(), "tmux_conf is not set") {
+	if err := Tmux(&out, "", 300); err == nil || !strings.Contains(err.Error(), "tmux_conf is not set") {
 		t.Errorf("empty path: %v", err)
 	}
-	if err := Tmux(&out, "tmux.conf"); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
+	if err := Tmux(&out, "tmux.conf", 300); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
 		t.Errorf("relative path: %v", err)
 	}
 	h2 := t.TempDir()
 	t.Setenv("HOME", h2)
-	if err := Tmux(&out, "~/.config/tmux/tmux.conf"); err != nil {
+	if err := Tmux(&out, "~/.config/tmux/tmux.conf", 300); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(filepath.Join(h2, ".config", "tmux", "tmux.conf")); !strings.Contains(string(b), blockBegin) {
@@ -167,7 +187,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	} {
 		t.Setenv("SHELL", c.shell)
 		var out bytes.Buffer
-		if err := Screen(&out, filepath.Join(h, ".screenrc")); err != nil {
+		if err := Screen(&out, filepath.Join(h, ".screenrc"), 300); err != nil {
 			t.Fatal(err)
 		}
 		b, err := os.ReadFile(filepath.Join(h, c.rc))
@@ -187,7 +207,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 		if b, _ := os.ReadFile(filepath.Join(h, c.rc)); strings.Contains(string(b), "LOCKPRG") {
 			t.Errorf("%s after undo:\n%s", c.shell, b)
 		}
-		if err := Screen(&out, filepath.Join(h, ".screenrc")); err != nil {
+		if err := Screen(&out, filepath.Join(h, ".screenrc"), 300); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -204,7 +224,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	// Unset, nothing is written — not even the shell rc.
 	h3 := t.TempDir()
 	t.Setenv("HOME", h3)
-	if err := Screen(new(bytes.Buffer), ""); err == nil || !strings.Contains(err.Error(), "screen_conf is not set") {
+	if err := Screen(new(bytes.Buffer), "", 300); err == nil || !strings.Contains(err.Error(), "screen_conf is not set") {
 		t.Errorf("empty path: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(h3, ".profile")); err == nil {

@@ -62,7 +62,7 @@ type LockModel struct {
 type (
 	clockTickMsg   struct{ gen int }
 	revealTickMsg  struct{ gen int }
-	promptIdleMsg  struct{ gen int } // prompt_timeout ran out
+	promptIdleMsg  struct{ gen int } // pin_prompt_timeout ran out
 	wrongOverMsg   struct{ gen int } // the second of "wrong" is over
 	lockoutTickMsg struct{ gen int } // once a second while locked out
 )
@@ -260,8 +260,8 @@ func (m LockModel) check() (LockModel, tea.Cmd) {
 	}
 	m.failures++
 	m.promptGen++
-	if m.cfg.LockoutAfter > 0 && m.failures >= m.cfg.LockoutAfter {
-		m.lockoutUntil = m.now().Add(time.Duration(m.cfg.LockoutSeconds) * time.Second)
+	if m.cfg.WrongPINAttempts > 0 && m.failures >= m.cfg.WrongPINAttempts {
+		m.lockoutUntil = m.now().Add(time.Duration(m.cfg.WrongPINCooldown) * time.Second)
 		m.prompt.until = m.lockoutUntil
 		m.prompt.state = promptLockout
 		return m, m.lockoutTick()
@@ -331,14 +331,14 @@ func (m LockModel) revealTick() tea.Cmd {
 	return tea.Tick(revealStep, func(time.Time) tea.Msg { return revealTickMsg{gen} })
 }
 
-// armTimeout starts prompt_timeout over; 0 means the prompt stays.
+// armTimeout starts pin_prompt_timeout over; 0 means the prompt stays.
 func (m *LockModel) armTimeout() tea.Cmd {
 	m.promptGen++
-	if m.cfg.PromptTimeout <= 0 {
+	if m.cfg.PINPromptTimeout <= 0 {
 		return nil
 	}
 	gen := m.promptGen
-	d := time.Duration(m.cfg.PromptTimeout) * time.Second
+	d := time.Duration(m.cfg.PINPromptTimeout) * time.Second
 	return tea.Tick(d, func(time.Time) tea.Msg { return promptIdleMsg{gen} })
 }
 

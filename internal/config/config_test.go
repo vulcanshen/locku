@@ -23,7 +23,7 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q for a missing file", note)
 	}
-	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PromptTimeout != 30 {
+	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.IdleLock != 300 {
 		t.Errorf("not the defaults: %+v", cfg)
 	}
 }
@@ -33,7 +33,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if cfg.PromptTimeout != 5 || !cfg.ShowStatus {
+	if cfg.PINPromptTimeout != 5 || !cfg.ShowStatus {
 		t.Errorf("%+v", cfg)
 	}
 	s, ok := cfg.Active()
@@ -125,17 +125,20 @@ func TestEmptyProfilesAreTheDefault(t *testing.T) {
 	}
 }
 
-// The keys before 2026-09-24 — saver, savers, a saver's type — are read
-// into profile, profiles and a profile's saver, and the next save writes
-// only the new names.
+// The keys before 2026-09-24 — saver, savers, a saver's type, the
+// prompt and lockout settings — are read as the new names, and the next
+// save writes only those.
 func TestOldKeysAreCarriedOver(t *testing.T) {
-	p := write(t, "saver: run\nsavers:\n  - name: run\n    type: dino\n  - name: clock\n")
+	p := write(t, "saver: run\nsavers:\n  - name: run\n    type: dino\n  - name: clock\nprompt_timeout: 5\nlockout_after: 3\nlockout_seconds: 9\n")
 	cfg, note := LoadFile(p)
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
 	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "trex" || cfg.Profiles[1].Saver != "clock" {
 		t.Errorf("%+v", cfg)
+	}
+	if cfg.PINPromptTimeout != 5 || cfg.WrongPINAttempts != 3 || cfg.WrongPINCooldown != 9 {
+		t.Errorf("the settings under their old names: %+v", cfg)
 	}
 	// Each saver's keys are its own: a dino has no size or shapes, a
 	// clock no runner.
@@ -147,7 +150,8 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
-		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") {
+		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
+		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") {
 		t.Errorf("saved with the old keys:\n%s", s)
 	}
 }
@@ -157,7 +161,7 @@ func TestBadValuesAreDefaults(t *testing.T) {
 	if s := cfg.Profiles[0]; s.BG != DefaultBG || s.FG != "#abcdef" {
 		t.Errorf("colours %+v", s.Colours())
 	}
-	if cfg.PromptTimeout != 30 || cfg.LockoutSeconds != 30 {
+	if cfg.PINPromptTimeout != 30 || cfg.WrongPINCooldown != 30 {
 		t.Errorf("%+v", cfg)
 	}
 }

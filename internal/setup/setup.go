@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/vulcanshen/locku/internal/config"
@@ -145,54 +146,78 @@ const (
 	hookCmd   = `if -F "#{@locked}" lock-client`
 )
 
-// tmuxLines is the block tmux.conf gets. The lock command is told the
-// server's socket — set -F expands #{socket_path} when the file is read
-// — since the lock runs in the client's process, where nothing else says
-// which server it belongs to.
-var tmuxLines = []string{
-	`set -gF lock-command "locku lock -S '#{socket_path}'"                       # locku`,
-	`set -g lock-after-time 300                                                  # locku: seconds idle before the lock; 0 never`,
-	`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-session"                             # locku: prefix : locku`,
-	`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client`,
-	`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching into one`,
+// tmuxLines is the block tmux.conf gets, with preference's idle_lock as
+// lock-after-time. The lock command is told the server's socket — set -F
+// expands #{socket_path} when the file is read — since the lock runs in
+// the client's process, where nothing else says which server it belongs
+// to.
+func tmuxLines(idle int) []string {
+	return []string{
+		`set -gF lock-command "locku lock -S '#{socket_path}'"                       # locku`,
+		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: idle_lock; 0 never`,
+		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-session"                             # locku: prefix : locku`,
+		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client`,
+		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching into one`,
+	}
 }
 
-// tmuxSet and tmuxUnset are the same on a running server, and its undoing.
-var (
-	tmuxSet = [][]string{
+// tmuxSet is the same on a running server; tmuxUnset its undoing, one
+// for one.
+func tmuxSet(idle int) [][]string {
+	return [][]string{
 		{"set", "-gF", "lock-command", "locku lock -S '#{socket_path}'"},
-		{"set", "-g", "lock-after-time", "300"},
+		{"set", "-g", "lock-after-time", itoa(idle)},
 		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-session"},
 		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
 		{"set-hook", "-g", "client-session-changed[" + tmuxIndex + "]", hookCmd},
 	}
-	tmuxUnset = [][]string{
-		{"set", "-gu", "lock-command"},
-		{"set", "-gu", "lock-after-time"},
-		{"set", "-su", "command-alias[" + tmuxIndex + "]"},
-		{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
-		{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
+}
+
+var tmuxUnset = [][]string{
+	{"set", "-gu", "lock-command"},
+	{"set", "-gu", "lock-after-time"},
+	{"set", "-su", "command-alias[" + tmuxIndex + "]"},
+	{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
+	{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
+}
+
+func itoa(n int) string { return strconv.Itoa(n) }
+
+// pad is s followed by spaces to w, so the comments line up.
+func pad(s string, w int) string {
+	for len(s) < w {
+		s += " "
 	}
-)
+	return s
+}
 
 // Tmux writes the block into the file at path — preference's tmux_conf,
-// "~/…" allowed — and, when a server is running, sets the same things on
-// it now.
-func Tmux(w io.Writer, path string) error {
+// "~/…" allowed — with idle seconds of idleness before tmux locks by
+// itself (0: never), and, when a server is running, sets the same
+// things on it now.
+func Tmux(w io.Writer, path string, idle int) error {
 	path, err := confPath(path, "tmux_conf")
 	if err != nil {
 		return err
 	}
-	changed, err := write(path, tmuxLines)
+	changed, err := write(path, tmuxLines(idle))
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "wrote")
-	if !tmuxLive(w, tmuxSet) {
+	if !tmuxLive(w, tmuxSet(idle)) {
 		return nil
 	}
-	fmt.Fprintln(w, "applied to the running tmux server: prefix : locku locks, 5 idle minutes lock, attaching to a locked session locks")
+	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku locks, %s, attaching to a locked session locks\n", idleSays(idle))
 	return nil
+}
+
+// idleSays is idle_lock in words, for what setup reports.
+func idleSays(idle int) string {
+	if idle <= 0 {
+		return "no idle lock"
+	}
+	return itoa(idle) + " idle seconds lock"
 }
 
 // TmuxUndo takes the block out of the file at path and, when a server is
@@ -234,20 +259,23 @@ func tmuxLive(w io.Writer, cmds [][]string) bool {
 	return true
 }
 
-// screenLines is the block .screenrc gets.
-var screenLines = []string{"idle 300 lockscreen   # locku: seconds idle before the lock"}
+// screenLines is the block .screenrc gets: preference's idle_lock as
+// screen's idle (0 turns it off there too).
+func screenLines(idle int) []string {
+	return []string{"idle " + itoa(idle) + " lockscreen   # locku: idle_lock; 0 never"}
+}
 
-// Screen writes `idle 300 lockscreen` into the file at rc — preference's
+// Screen writes `idle N lockscreen` into the file at rc — preference's
 // screen_conf — and LOCKPRG into the shell's rc file. LOCKPRG has to be
 // in the environment of the shell that runs `screen` — screen's front
 // end reads it, and .screenrc's own `setenv` never reaches that process
 // (function.md §6.2, measured 2026-09-24) — so the rc file it is.
-func Screen(w io.Writer, rc string) error {
+func Screen(w io.Writer, rc string, idle int) error {
 	rc, err := confPath(rc, "screen_conf")
 	if err != nil {
 		return err
 	}
-	changed, err := write(rc, screenLines)
+	changed, err := write(rc, screenLines(idle))
 	if err != nil {
 		return err
 	}

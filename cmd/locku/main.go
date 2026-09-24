@@ -137,11 +137,11 @@ func runSetup(args []string) int {
 		case t == "tmux" && undo:
 			err = setup.TmuxUndo(os.Stdout, cfg.TmuxConf)
 		case t == "tmux":
-			err = setup.Tmux(os.Stdout, cfg.TmuxConf)
+			err = setup.Tmux(os.Stdout, cfg.TmuxConf, cfg.IdleLock)
 		case t == "screen" && undo:
 			err = setup.ScreenUndo(os.Stdout, cfg.ScreenConf)
 		case t == "screen":
-			err = setup.Screen(os.Stdout, cfg.ScreenConf)
+			err = setup.Screen(os.Stdout, cfg.ScreenConf, cfg.IdleLock)
 		default:
 			fmt.Fprintf(os.Stderr, "locku: setup takes tmux or screen, not %q\n", t)
 			return 2

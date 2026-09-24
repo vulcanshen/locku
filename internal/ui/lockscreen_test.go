@@ -119,7 +119,7 @@ func TestEscBackToSaverLeavesTheBoardTicking(t *testing.T) {
 }
 
 func TestLockout(t *testing.T) {
-	m := openPrompt(t, testLock(t, "1234", func(c *config.Config) { c.LockoutAfter = 2; c.LockoutSeconds = 30 }))
+	m := openPrompt(t, testLock(t, "1234", func(c *config.Config) { c.WrongPINAttempts = 2; c.WrongPINCooldown = 30 }))
 	m, _ = m.step(keyRunes("0000"))
 	m, _ = m.step(keyEnter)
 	m, _ = m.step(wrongOverMsg{gen: m.promptGen})

@@ -21,7 +21,7 @@ import (
 //	PIN                       idle: the layer colour, enter unlock · esc back
 //	PIN · wrong               red for a second, the row cleared, every key swallowed
 //	PIN · try again in 27 s   red, counting down, every key but Esc swallowed
-//	PIN · closing             prompt_timeout ran out: the ordinary closing animation
+//	PIN · closing             pin_prompt_timeout ran out: the ordinary closing animation
 //
 // Red is an override colour (VTP §2.4): it says "wrong", not "deeper".
 type promptState int
@@ -43,7 +43,7 @@ type pinPrompt struct {
 	state promptState
 	// until is when a lockout ends; the title counts down to it.
 	until time.Time
-	// timedOut marks a close that prompt_timeout caused, for the title.
+	// timedOut marks a close that pin_prompt_timeout caused, for the title.
 	timedOut bool
 	screenW  int
 	screenH  int

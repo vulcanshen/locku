@@ -89,12 +89,14 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the profile the lock shows", run: (*AppModel).chooseProfile})
 	case rowShowStatus:
 		out = append(out, action{key: "enter", label: "[Enter] Toggle", hint: "user@host and the time, on the lock", run: (*AppModel).toggleStatus})
-	case rowPromptTimeout:
+	case rowPINPromptTimeout:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds until the prompt closes; 0 never", run: (*AppModel).editNumber})
-	case rowLockoutAfter:
+	case rowWrongPINAttempts:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "wrong PINs before a cooldown; 0 off", run: (*AppModel).editNumber})
-	case rowLockoutSeconds:
+	case rowWrongPINCooldown:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
+	case rowIdleLock:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds idle before tmux or screen locks; 0 never — then run locku setup", run: (*AppModel).editNumber})
 	case rowTmuxConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup tmux writes", run: (*AppModel).editPath})
 	case rowScreenConf:
@@ -415,12 +417,14 @@ func (m *AppModel) editNumber() tea.Cmd {
 	m.editKind = r.kind
 	cur := ""
 	switch r.kind {
-	case rowPromptTimeout:
-		cur = itoa(m.cfg.PromptTimeout)
-	case rowLockoutAfter:
-		cur = itoa(m.cfg.LockoutAfter)
-	case rowLockoutSeconds:
-		cur = itoa(m.cfg.LockoutSeconds)
+	case rowPINPromptTimeout:
+		cur = itoa(m.cfg.PINPromptTimeout)
+	case rowWrongPINAttempts:
+		cur = itoa(m.cfg.WrongPINAttempts)
+	case rowWrongPINCooldown:
+		cur = itoa(m.cfg.WrongPINCooldown)
+	case rowIdleLock:
+		cur = itoa(m.cfg.IdleLock)
 	}
 	return m.input.ask(inputPopup{title: "number", prompt: r.label + " — empty for the default",
 		value: cur, accept: "save", action: inputNumber}, m.layer())
@@ -555,21 +559,26 @@ func (m *AppModel) commitInput() tea.Cmd {
 		}
 		before := m.snapshot()
 		switch m.editKind {
-		case rowPromptTimeout:
+		case rowPINPromptTimeout:
 			if v == "" {
-				n = def.PromptTimeout
+				n = def.PINPromptTimeout
 			}
-			m.cfg.PromptTimeout = n
-		case rowLockoutAfter:
+			m.cfg.PINPromptTimeout = n
+		case rowWrongPINAttempts:
 			if v == "" {
-				n = def.LockoutAfter
+				n = def.WrongPINAttempts
 			}
-			m.cfg.LockoutAfter = n
-		case rowLockoutSeconds:
+			m.cfg.WrongPINAttempts = n
+		case rowWrongPINCooldown:
 			if v == "" || n == 0 {
-				n = def.LockoutSeconds
+				n = def.WrongPINCooldown
 			}
-			m.cfg.LockoutSeconds = n
+			m.cfg.WrongPINCooldown = n
+		case rowIdleLock:
+			if v == "" {
+				n = def.IdleLock
+			}
+			m.cfg.IdleLock = n
 		}
 		return tea.Batch(m.input.close(), m.save(before))
 

@@ -82,11 +82,16 @@ type Config struct {
 	// 2026-09-24). Changing one changes no profile already made. Before
 	// that day the key held the list of profiles; carryOver tells the
 	// two shapes apart.
-	Savers         map[string]Profile `yaml:"savers"`
-	ShowStatus     bool               `yaml:"show_status"`
-	PromptTimeout  int                `yaml:"prompt_timeout"`
-	LockoutAfter   int                `yaml:"lockout_after"`
-	LockoutSeconds int                `yaml:"lockout_seconds"`
+	Savers           map[string]Profile `yaml:"savers"`
+	ShowStatus       bool               `yaml:"show_status"`
+	PINPromptTimeout int                `yaml:"pin_prompt_timeout"`
+	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
+	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
+	// IdleLock is how many seconds idle before the lock comes up by
+	// itself: one value for every tool that runs locku as its
+	// screensaver — `locku setup` hands it to tmux's lock-after-time and
+	// screen's idle (user, 2026-09-24). 0 is never.
+	IdleLock int `yaml:"idle_lock"`
 	// TmuxConf and ScreenConf are the files `locku setup` writes into, as
 	// the user typed them — "~/…" allowed. Empty is not set, and setup
 	// refuses rather than guesses (user, 2026-09-24).
@@ -122,14 +127,15 @@ func builtinSavers() map[string]Profile {
 // Default is the file as it would be with every key left out.
 func Default() Config {
 	return Config{
-		Auth:           AuthPIN,
-		Profile:        "clock",
-		Profiles:       []Profile{DefaultProfile()},
-		Savers:         builtinSavers(),
-		ShowStatus:     true,
-		PromptTimeout:  30,
-		LockoutAfter:   0,
-		LockoutSeconds: 30,
+		Auth:             AuthPIN,
+		Profile:          "clock",
+		Profiles:         []Profile{DefaultProfile()},
+		Savers:           builtinSavers(),
+		ShowStatus:       true,
+		PINPromptTimeout: 30,
+		WrongPINAttempts: 0,
+		WrongPINCooldown: 30,
+		IdleLock:         300,
 	}
 }
 
@@ -225,10 +231,20 @@ func LoadFile(path string) (Config, string) {
 	return cfg.sanitized()
 }
 
+// renamed is every top-level key that changed its name on 2026-09-24,
+// and what it is now; a file with the old one and not the new is read
+// as if it had the new, and the next save writes only that.
+var renamed = map[string]string{
+	"saver":           "profile",
+	"prompt_timeout":  "pin_prompt_timeout",
+	"lockout_after":   "wrong_pin_attempts",
+	"lockout_seconds": "wrong_pin_attempt_cooldown",
+}
+
 // carryOver renames the keys from before 2026-09-24 in the parsed
-// document: `saver` to `profile`, a `savers` LIST to `profiles` (a
-// `savers` map is the savers' defaults and stays), and each profile's
-// `type` to `saver`. The next save writes only the new names.
+// document: the renamed ones, a `savers` LIST to `profiles` (a `savers`
+// map is the savers' defaults and stays), and each profile's `type` to
+// `saver`. The next save writes only the new names.
 func carryOver(doc *yaml.Node) {
 	root := doc
 	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
@@ -240,8 +256,8 @@ func carryOver(doc *yaml.Node) {
 	for i := 0; i+1 < len(root.Content); i += 2 {
 		k, v := root.Content[i], root.Content[i+1]
 		switch {
-		case k.Value == "saver" && !hasKey(root, "profile"):
-			k.Value = "profile"
+		case renamed[k.Value] != "" && !hasKey(root, renamed[k.Value]):
+			k.Value = renamed[k.Value]
 		case k.Value == "savers" && v.Kind == yaml.SequenceNode:
 			if hasKey(root, "profiles") {
 				k.Value = "old_savers" // both: the new key wins, this one is ignored
@@ -358,14 +374,17 @@ func (cfg Config) sanitized() (Config, string) {
 		savers[k] = p
 	}
 	cfg.Savers = savers
-	if cfg.PromptTimeout < 0 {
-		cfg.PromptTimeout = Default().PromptTimeout
+	if cfg.PINPromptTimeout < 0 {
+		cfg.PINPromptTimeout = Default().PINPromptTimeout
 	}
-	if cfg.LockoutAfter < 0 {
-		cfg.LockoutAfter = 0
+	if cfg.WrongPINAttempts < 0 {
+		cfg.WrongPINAttempts = 0
 	}
-	if cfg.LockoutSeconds <= 0 {
-		cfg.LockoutSeconds = Default().LockoutSeconds
+	if cfg.WrongPINCooldown <= 0 {
+		cfg.WrongPINCooldown = Default().WrongPINCooldown
+	}
+	if cfg.IdleLock < 0 {
+		cfg.IdleLock = Default().IdleLock
 	}
 	cfg.TmuxConf = strings.TrimSpace(cfg.TmuxConf)
 	cfg.ScreenConf = strings.TrimSpace(cfg.ScreenConf)

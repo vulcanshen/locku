@@ -60,7 +60,7 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
 | profile | `[Enter] Choose`（列出所有 profile） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
-| prompt_timeout / lockout_after / lockout_seconds | `[Enter] Edit` | 無 |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / idle_lock | `[Enter] Edit` | 無 |
 | tmux_conf / screen_conf | `[Enter] Edit` | 無 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
@@ -123,7 +123,7 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 | name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
 | layout / size / font / time / date / runner / scene / profile | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
-| prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / idle_lock | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | tmux_conf / screen_conf | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，`locku setup` 會說未設定）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear` |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
@@ -148,8 +148,8 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 | Backspace | 刪一字 |
 | Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 邊框 ` · wrong` Red 1 秒、吞掉所有輸入、清空 |
 | Esc | 回 saver、輸入丟掉 |
-| 連錯 `lockout_after` 次（0 = 關） | 邊框 ` · try again in N s` Red 倒數、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
-| `prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
+| 連錯 `wrong_pin_attempts` 次（0 = 關） | 邊框 ` · try again in N s` Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
+| `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中 |
 
 無 PIN 模式沒有 prompt：任何鍵直接結束進程。
