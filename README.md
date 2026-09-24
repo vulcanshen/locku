@@ -15,7 +15,7 @@
 |---|---|
 | `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、prompt_timeout、lockout、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
-| `locku setup [tmux\|screen]` | 把整合設定寫進 preference 填的 `tmux_conf`（有 server 在跑就即時套用）與 `screen_conf` 加 shell rc；路徑沒填就報錯、不猜；不帶參數兩個都做。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，冪等 |
+| `locku setup [-d] [tmux\|screen]` | 把整合設定寫進 preference 填的 `tmux_conf`（有 server 在跑就即時套用）與 `screen_conf` 加 shell rc；路徑沒填就報錯、不猜；不帶名字兩個都做；`-d` 拿掉。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，每行尾巴 `# locku`，冪等 |
 | `locku version` | 版本 |
 
 argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是 execl、不能帶參數。
@@ -85,6 +85,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ## 決定摘要
 
 - **鎖在 tmux / screen 之外，不在 pane 內。** pane 內的程式永遠看不到 prefix；tmux 的 lock-command 由 client 進程以 `system()` 同步執行、期間不讀任何鍵，screen 的 LOCKPRG 同理。這是唯一正確的 hook。
+- **tmux：不綁熱鍵，鎖著的 session 誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-session`（command alias，不跟你的 bind 撞）；tmux 本身沒有「session 鎖著」的狀態，locku 在 `locku lock` 啟動時把 session 的 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`，PIN 對了才清掉，tty 消失不清。lock-command 由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
@@ -108,7 +109,8 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死、PAM / shadow 進 v1、自由文字 saver、strftime 自由格式、
 跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
 `locku init`、只印不寫的 setup、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
-側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形。
+側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形、
+tmux 的 `bind L`（跟使用者既有熱鍵撞，改 command alias）。
 
 ## 目錄
 
@@ -129,6 +131,7 @@ locku/
 make check                                       # fmt-check + vet + test
 LOCKU_DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的畫面
 make lock                                        # 編譯並鎖住這個終端機
+make e2e                                         # 在真的 tmux 上跑端到端（e2e/tmux_attach.py，自己的 socket，不碰你的 server）
 ```
 
 TUI 行為全部用 programmatic model test 驗證（不需要 tty）；tmux / screen 整合的驗收（`docs/function.md` §12）

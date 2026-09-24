@@ -49,6 +49,9 @@ type LockModel struct {
 	// an unlock hands control back rather than ending the process.
 	preview  bool
 	unlocked bool
+	// gone: the terminal went away under the lock; the process ends, but
+	// nothing was unlocked — a tmux session stays marked locked.
+	gone bool
 
 	now func() time.Time
 }
@@ -129,6 +132,7 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		m.shown = m.refit()
 		return m, m.clockTick()
 	case TTYGoneMsg:
+		m.gone = true
 		return m, tea.Quit
 	case clockTickMsg:
 		if msg.gen != m.tickGen {
@@ -266,6 +270,10 @@ func (m LockModel) check() (LockModel, tea.Cmd) {
 	gen := m.promptGen
 	return m, tea.Tick(wrongHold, func(time.Time) tea.Msg { return wrongOverMsg{gen} })
 }
+
+// TTYGone reports whether the lock ended because the terminal went away
+// rather than because it was unlocked.
+func (m LockModel) TTYGone() bool { return m.gone }
 
 // unlock is the way out: the process ends, or, in a preview, the settings
 // screen takes over again.
