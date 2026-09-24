@@ -163,7 +163,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | Space menu | menu | `[1]` saver 的 item region；`[2]` 欄位的 item region；`[2]` 在 saver 上另有 panel region（Save / Reset）— 兩個 region 各有 header，只有一個就扁平 |
 | `?` help | viewport | 全域動作表 |
 | input | input | **邊框寫型別**（`name`、`number`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值 |
-| PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；輸入顯示 `●` |
+| PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
 | options | menu | layout / time / date / saver 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | message | Delete saver、Quit（有未存的顏色草稿時） |
 | toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
@@ -176,7 +176,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，遮罩，寬固定 48 欄置中，框內上下各留一列；`●` 從框的橫向中央開始、向兩側長（2026-09-24：原本 32 欄、靠左） | 唯一的 popup |
+| PIN prompt | input，遮罩，寬固定 48 欄置中，框內上下各留一列；`●` 之間空一格，從框的橫向中央開始、向兩側長；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
 
 四個狀態，全部只改**邊框**與 title，框內一行不變：
 

@@ -102,13 +102,20 @@ func (p pinPrompt) view(now time.Time) string {
 		hint = hintLegend([][2]string{{"Esc", "back"}})
 	default:
 		hint = hintLegend([][2]string{{"Enter", "unlock"}, {"Esc", "back"}})
-		dots := strings.Repeat("●", len(p.value))
-		edit := lipgloss.NewStyle().Foreground(editColor)
-		cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
-		shown := truncateHead(dots, innerW-3)
-		// The dots and the cursor sit in the middle of the box, and grow
-		// out both ways as the PIN is typed.
-		row = spaces((innerW-dispW(shown)-1)/2) + edit.Render(shown) + cur.Render(" ")
+		row = pinRow(len(p.value), innerW)
 	}
 	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row}), innerW)
+}
+
+// pinRow is the masked line every PIN box shares — the lock's prompt and
+// the settings screen's current / new / confirm boxes (ui.md §3.2): one
+// dot a character with a space between, the cursor after, the whole of
+// it in the middle of the box and growing out both ways as the PIN is
+// typed (user, 2026-09-24: a PIN looks the same wherever it is typed).
+func pinRow(n, innerW int) string {
+	edit := lipgloss.NewStyle().Foreground(editColor)
+	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
+	dots := strings.Repeat("● ", n)
+	shown := truncateHead(dots, innerW-2)
+	return spaces((innerW-dispW(shown)-1)/2) + edit.Render(shown) + cur.Render(" ")
 }
