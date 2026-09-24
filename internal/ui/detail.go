@@ -25,6 +25,7 @@ const (
 	rowName rowKind = iota
 	rowType
 	rowLayout
+	rowSize
 	rowTime
 	rowDate
 	rowSwatch
@@ -90,6 +91,7 @@ func (m AppModel) rows() []row {
 			{kind: rowName, label: "name", value: s.Name, color: value, stop: true},
 			{kind: rowType, label: "type", value: s.Type, color: dimColor},
 			{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
+			{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
 			{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
 			{kind: rowDate, label: "date", value: s.Date, color: value, stop: true},
 		}
@@ -198,7 +200,10 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(pixelGlyph)
 	}
 
-	lw := min(labelW, max(4, innerW/3))
+	// The label column gives way only when the panel is too narrow to hold
+	// it and a value; a third of the panel was too little on an ordinary
+	// terminal (user, 2026-09-24: lockout_seconds touched its value).
+	lw := min(labelW, max(4, innerW-12))
 	out := make([]string, 0, len(rows))
 	for i, r := range rows {
 		label := padRight(" "+r.label, lw)

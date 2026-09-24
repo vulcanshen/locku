@@ -50,9 +50,9 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 
 | cursor 在 | item operation | panel operation |
 |---|---|---|
-| name | `[Enter] Rename` | `[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
+| name | `[Enter] Rename` | `[P] Preview`（這個 saver，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
 | type | 唯讀，不可停 | 同上 |
-| layout / time / date | `[Enter] Choose` | 同上 |
+| layout / size / time / date | `[Enter] Choose` | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`、`[x] Clear PIN`（current PIN → confirm） | 無 |
@@ -68,7 +68,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 
 | 全域動作 | 鍵 |
 |---|---|
-| Preview（整個畫面被鎖定畫布取代，顯示啟用中的 saver、帶著顏色草稿，解鎖後回來） | `P` |
+| Preview（整個畫面被鎖定畫布取代，帶著顏色草稿，解鎖後回來；在 saver 的 `[2]` 上是那個 saver，其他地方是啟用中的） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
 | 離開 | `q`（浮層內不作用；有未存的顏色草稿時先 confirm）、`Ctrl+C` 硬退 |
 | splash 彩蛋 | `V`（不揭露） |
@@ -117,7 +117,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | 欄位 | 行為 |
 |---|---|
 | name（rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
-| layout / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / size / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
@@ -177,10 +177,10 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 | 全域 | `P`、`q`、`?`、`V`（彩蛋）、`Tab`、`1` / `2` |
 | `[1]` item | `p` `D` `r` `X` |
 | `[2]` item | `x`（只在 PIN 列） |
-| `[2]` panel（saver 上） | `S` `R` |
+| `[2]` panel（saver 上） | `P` `S` `R` |
 | 導覽 | `j` `k` `u` `d` `gg` `G` |
 
-撞字檢查（2026-09-24 修訂）：`p` 只在 `[1]`、`P` 全域，同 webu 的 `n` / `N`；`D` / `X` 只在 `[1]`，`x` 在 `[2]`
+撞字檢查（2026-09-24 修訂）：`p` 只在 `[1]`、`P` 全域且在 saver 的 `[2]` 上就是那個 saver（同一件事，不撞），同 webu 的 `n` / `N`；`D` / `X` 只在 `[1]`，`x` 在 `[2]`
 只有 PIN 列一處，語意都是「刪 / 清」；`r` 只在 `[1]`、`R` 只在 `[2]` saver 上；`S` 沒有小寫對手；`V` 與 `v`
 不衝突（沒有 `v`）；`d` 是半頁不是 delete，同 webu。
 
@@ -239,7 +239,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 `Enter` edit · `p` preview this saver · `D` duplicate · `r` rename · `X` delete
 
 ### `[2]` 明細
-`Enter` rename / choose / toggle / pick / set PIN / change PIN · `x` clear PIN · saver 上 `S` save colours · `R` reset colours
+`Enter` rename / choose / toggle / pick / set PIN / change PIN · `x` clear PIN · saver 上 `P` preview this saver · `S` save colours · `R` reset colours
 
 ### 鎖定畫布
 任何鍵 開 prompt · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 刪一字

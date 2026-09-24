@@ -29,7 +29,8 @@ type LockModel struct {
 
 	width, height int
 	lines         []string // what the board spells now
-	kx, ky        int      // its scale; kx 0 draws the lines as text
+	k             int      // its scale; 0 draws the lines as text
+	scale         int      // the scale the saver asks for: 1, 2 or 3
 	shown         board    // the board on screen
 	rev           *reveal  // the change in progress, if one is
 	tickGen       int      // a clock or reveal tick from before a change carries an older gen
@@ -77,6 +78,7 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		cfg:     cfg,
 		problem: problem,
 		clock:   saver.Clock{Time: s.Time, Date: s.Date, Layout: s.Layout}.Normalized(),
+		scale:   saver.Scale(s.Size),
 		style:   s.Colours(),
 		noPIN:   !cfg.HasPIN(),
 		prompt:  newPinPrompt(),
@@ -272,8 +274,8 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 // board it makes, setting lines and k on the way.
 func (m *LockModel) refit() board {
 	rows := m.height - 1
-	m.lines, m.kx, m.ky = fit(m.clock, m.now(), m.width, rows)
-	return paint(m.lines, m.kx, m.ky, m.width, rows)
+	m.lines, m.k = fit(m.clock, m.now(), m.width, rows, m.scale)
+	return paint(m.lines, m.k, m.width, rows)
 }
 
 // redraw moves the board to now: by a reveal when only some pixels change,
@@ -329,7 +331,7 @@ func (m LockModel) View() string {
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
-		if m.kx >= 1 {
+		if m.k >= 1 {
 			out = boardRows(m.shown, bg, fg, m.width, dimmed)
 		} else {
 			out = plainRows(m.lines, bg, fg, m.width, rows, dimmed)

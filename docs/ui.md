@@ -51,14 +51,17 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
 | type | `clock` | 唯讀，dim；v1 只有這一個 type |
 | layout | `row` / `column` | options popup，cursor 在目前值 |
+| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值 |
 | time | `HH:MM` / `HH:MM AM/PM` / `HH:MM:SS` / `HH:MM:SS AM/PM` | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列 |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值 | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 
 顏色走**草稿**（修訂 2026-09-24，使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
-panel operation `[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走（rename 帶走、delete 一起丟）。
-`P` / `p` 預覽帶著草稿。其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
+panel operation `[P] Preview` 預覽這個 saver、`[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走
+（rename 帶走、delete 一起丟）。預覽都帶著草稿。其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
+label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修訂 2026-09-24：原本上限是面板寬的三分之一，
+一般寬度的終端機就把 `lockout_seconds` 壓到貼著值）。
 
 `[2]` 在 `preference` 上：
 
@@ -92,14 +95,14 @@ panel operation `[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 save
 整個終端機是一塊 LED 點陣板：狀態列以外的每一格都是 nf-fa-square 加空格，沒亮的用 saver 的 bg，亮的用
 它的 fg，字由亮格組出來。沒有邊框、沒有 title chip、沒有 footer。footer 在這裡沒有意義：唯一的動作是
 「按任何鍵」，不需要揭露。**只有一種畫法**：saver 給幾行 ASCII（row 一到兩行，column 依分隔符拆行），渲染器
-（`function.md` §5.3）選最大的整數倍 kx 讓它塞進格數、列數允許時把像素拉高到 ky ≤ 1.5 kx，置中。
+（`function.md` §5.3）依 saver 的 size 以 1 / 2 / 3 倍畫，塞不下先砍內容再降一級，置中。
 splash 底下的名字、版本、開發者都不出現，只取它的 glyph 畫法。
 
 | 元素 | 位置 | 規則 |
 |---|---|---|
 | 點陣板 | 狀態列以外全部 | 每格一個 glyph 加空格；終端機寬為奇數時最右一欄留白 |
 | 暗格 | 沒亮的格 | saver 的 bg，預設 surface0 |
-| 內容 | 點陣板置中 | 亮格 saver 的 fg，預設 gold；kx < 1 時點陣板照鋪，內容改用一般文字以 fg 色置中疊在板上 |
+| 內容 | 點陣板置中 | 亮格 saver 的 fg，預設 gold；1 倍也塞不下時點陣板照鋪，內容改用一般文字以 fg 色置中疊在板上 |
 | 狀態列 | 最後一列，左起 1 欄 | `user@host · locked since HH:MM`；`show_status: false` 時整列空白 |
 | 無 PIN 提示 | 狀態列右側接續 | `· no PIN · any key unlocks`，Yellow，不受 show_status 影響 |
 | config 錯誤 | 同上 | `· config error: <reason>`，Red，取代無 PIN 提示 |

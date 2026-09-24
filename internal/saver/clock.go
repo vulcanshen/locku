@@ -29,15 +29,38 @@ const (
 	// the digits come out several times bigger (user, 2026-09-24).
 	LayoutRow    = "row"
 	LayoutColumn = "column"
+
+	// The size is how many board cells one font pixel takes on a side:
+	// small is one, medium two by two, large three by three (user,
+	// 2026-09-24). It is the scale the canvas asks for; what does not fit
+	// steps down (canvas.go fit).
+	SizeSmall  = "small"
+	SizeMedium = "medium"
+	SizeLarge  = "large"
 )
 
-// TimeFormats, DateFormats and Layouts are the options in the order the
-// settings screen lists them.
+// TimeFormats, DateFormats, Layouts and Sizes are the options in the
+// order the settings screen lists them.
 var (
 	TimeFormats = []string{TimeHM, TimeHM12, TimeHMS, TimeHMS12}
 	DateFormats = []string{DateOff, DateYMD, DateYMonD, DateMD, DateMonD}
 	Layouts     = []string{LayoutRow, LayoutColumn}
+	Sizes       = []string{SizeSmall, SizeMedium, SizeLarge}
 )
+
+// Scale is the whole factor a size names; anything else is medium.
+func Scale(size string) int {
+	switch size {
+	case SizeSmall:
+		return 1
+	case SizeLarge:
+		return 3
+	}
+	return 2
+}
+
+// ValidSize says whether s is one of the sizes.
+func ValidSize(s string) bool { return s == SizeSmall || s == SizeMedium || s == SizeLarge }
 
 var timeLayout = map[string]string{
 	TimeHM:    "15:04",
