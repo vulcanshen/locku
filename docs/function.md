@@ -168,6 +168,8 @@ profile 規則：
 - name 唯一，是 config 裡 `profile` 指向的鍵。
 - 預設一個 profile `clock`，就是 clock saver 的預設值生的。config 缺 `profiles` 時用它。
 - 新增（`[1]` 的 Savers 區塊在一種 saver 上按 `n`：要名字，提議 saver 自己的名字、用了就加號碼；以那種 saver 的預設值生出來）、duplicate（複製參數、要求新 name）、rename（連動 `profile` 指向）、delete。啟用中的不可刪，最後一個不可刪。
+- profile 的 saver 建立後不可改：class 就是 class，要換就新增一個 profile（2026-09-24 定案；同一天曾短暫讓 type 可在 `[2]` 改，那是 dino 剛加進來、還沒有 New 時的權宜）。
+- 兩種 saver：clock、dino。新 saver 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text saver 已移除（2026-09-24），內容不可控。
 
 saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 `savers` 有一組預設值，欄位跟它的 profile 一樣、只是沒有名字。它決定**之後**用這種 saver 新增的 profile 長什麼樣，改它不影響任何已存在的 profile；cursor 在 saver 上時 `[p]` 就用預設值跑一個臨時 profile 預覽。內建值（config 沒寫時）：
 
@@ -177,8 +179,6 @@ saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 
 | dino | runner trex、scene grassland、bg / fg 同上 |
 
 `[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`）。
-- profile 的 saver 建立後不可改：class 就是 class，要換就新增一個 profile（2026-09-24 定案；同一天曾短暫讓 type 可在 `[2]` 改，那是 dino 剛加進來、還沒有 New 時的權宜）。
-- 兩種 saver：clock、dino。新 saver 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text saver 已移除（2026-09-24），內容不可控。
 
 ### 5.3 畫布渲染器
 
