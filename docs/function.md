@@ -1,0 +1,350 @@
+# locku — 功能定義
+
+> v1.0 定案，2026-09-24
+> 本文件只談「做什麼、怎麼達成」。版面放 ui.md，按鍵與流程放 ux.md。
+
+## 0. 定位
+
+一句話：跑在真實終端機上的螢幕保護程式加密碼鎖。啟動後任何按鍵都不轉發，只會彈出密碼輸入，驗證通過才把終端機還回去。
+
+### 0.1 是什麼、不是什麼
+
+- 是 u-family 第五個成員（kbu / filu / sshu / webu / locku），同一套 Go + Bubble Tea 技術棧與 VTP 操作原則。
+- 是 tmux 的 lock-command、screen 的 LOCKPRG，也可以在裸 tty（teletype，這裡泛指任何終端機裝置）直接執行。
+- 不是安全邊界。同一使用者另開一條 SSH 就能 `tmux attach -d`、`kill -9`。定位是防路人、防誤觸、好看。
+- 不是 pane 內的攔截器。原因見 0.2。
+
+### 0.2 為什麼不能在 pane 內做
+
+按鍵流向：實體終端機 → tmux client 進程 → tmux server 進程 → 該 pane 的 PTY（pseudo terminal，虛擬終端）→ pane 內的程式。prefix 在 tmux server 就被消化，那個 byte 永遠不會進到 pane。screen 的 Ctrl+a 同理。所以「在 pane 內攔 prefix」在架構上不可能，locku 必須站在 tmux/screen 之外，由它們把 tty 交出來。
+
+### 0.3 與既有工具比較
+
+| | vlock | lock -np（BSD） | screen 內建 | locku |
+|---|---|---|---|---|
+| 驗證 | PAM 系統密碼 | 系統密碼 | 系統密碼 | 自家 PIN |
+| 畫面 | 純文字提示 | 純文字提示 | 純文字提示 | 螢幕保護動畫 + popup |
+| VT 切換鎖 | 有，需 root | 無 | 無 | 不做 |
+| tmux 整合 | 手動設 lock-command | tmux 預設值 | 不適用 | 文件提供設定 |
+| macOS | 無 | 無 | 有 | 有 |
+
+PAM 是 Pluggable Authentication Modules，Linux/macOS 的系統驗證框架。VT 是 virtual terminal，Linux 的實體主控台 Alt+F1 到 F7。
+
+## 1. 執行模型
+
+### 1.1 三種進入點
+
+| 進入點 | 誰啟動 | tty 從哪來 | 結束後 |
+|---|---|---|---|
+| tmux lock-command | tmux client 進程用 `sh -c` 執行 | client 自己的真實 tty | client 送 MSG_UNLOCK，tmux 重繪 |
+| screen LOCKPRG | screen 以使用者 uid/gid 直接 execl，不經 shell、不帶參數，argv[0] 為 SCREEN-LOCK | display 的 tty | screen 恢復接受命令鍵 |
+| 裸 tty | 使用者在 shell 打 `locku lock` | shell 的 tty | 回到 shell |
+
+三者對 locku 完全相同：拿到的 stdin/stdout 是一個 tty，全權擁有，直到進程結束。
+
+tmux 的細節：server 呼叫前已自行切到 alternate screen 並清屏，client 進程停止讀 tty、以 `system()` 同步等待 locku 結束，期間不處理任何按鍵；結束後 tmux 自己重繪整個畫面。locku 不必替 tmux 保存或還原任何狀態。
+
+### 1.2 契約
+
+1. 進程活著等於鎖著，進程結束等於解鎖。tmux/screen 不看 exit code。
+2. 因此任何錯誤都不得讓進程結束。panic 一律 recover 後回到保護畫面。
+3. 只有三種情況可以結束：密碼驗證通過；無 PIN 模式下收到任何按鍵（4.3）；tty 已經消失（read 得到 EOF 或 EIO），此時已無東西可保護。
+4. 執行期間不建立子進程、不開網路，只碰 tty 與唯讀的設定檔。
+
+### 1.3 多 client
+
+tmux `lock-session` 對每個 attach 中的 client 各跑一份 locku，彼此獨立，A 解鎖不影響 B。這是 tmux 的行為，locku 不需要知道其他實例存在。
+
+## 2. 輸入與訊號
+
+### 2.1 終端機模式
+
+- raw mode：關 ICANON、ECHO、ISIG。ISIG 關掉後 Ctrl+C、Ctrl+Z、Ctrl+\ 變成普通 byte 進到程式，不再產生 SIGINT、SIGTSTP、SIGQUIT。
+- alternate screen：避免捲動緩衝區露出鎖定前的內容。
+- 不開 mouse tracking：滑鼠留給終端機本身做文字選取，無害。
+
+### 2.2 訊號表
+
+| 訊號 | 來源 | 處理 |
+|---|---|---|
+| SIGINT / SIGTERM / SIGQUIT | kill 預設、ISIG | 忽略 |
+| SIGHUP | tty 掛斷 | 忽略，交由 read EOF 決定是否結束 |
+| SIGTSTP / SIGTTIN / SIGTTOU | Ctrl+Z、背景讀寫 | 忽略 |
+| SIGWINCH | 視窗大小改變 | 接收並重繪 |
+| SIGKILL / SIGSTOP | kill -9 | 無法攔截，範圍外 |
+
+Bubble Tea 實作注意：預設會安裝 SIGINT/SIGTERM handler 讓程式結束，必須用 `tea.WithoutSignalHandler()` 並自行 `signal.Ignore`。Ctrl+C 會以 KeyMsg 進來，當成一般按鍵處理即可。
+
+### 2.3 攔不到的東西（範圍外，README 要說清楚）
+
+- ssh client 端的 `~.`：在本機端處理，byte 不會過線。
+- Linux VT 的 Alt+F1 到 F7 切換、SysRq：需要 VT_LOCKSWITCH ioctl 與 root，vlock 的領域，不做。
+- 另一條 SSH：`tmux attach -d`、`tmux kill-server`、`kill -9`。
+- 終端機模擬器自身的快捷鍵：iTerm2 分頁切換、Cmd+W 等。
+
+## 3. 狀態機
+
+```
+        任何按鍵
+saver ───────────▶ prompt ── Enter 且正確 ──▶ exit 0
+  ▲                  │
+  │  Esc             │  Enter 且錯誤：顯示錯誤、清空輸入、留在 prompt
+  │  閒置 N 秒       │
+  └──────────────────┘
+```
+
+無 PIN 模式（4.3）：saver ── 任何按鍵 ──▶ exit 0，沒有 prompt。
+
+- saver：畫保護內容，吞掉所有按鍵。第一個按鍵只負責切到 prompt，不當作密碼輸入。
+- prompt：密碼輸入 popup，輸入不回顯。
+- 錯誤處理：每次錯誤固定 1 秒 debounce，連續錯誤鎖定可設定，見 4.4。
+- 閒置回 saver：prompt 內連續 `prompt_timeout` 秒沒有任何按鍵就收起回 saver，每次按鍵重算，所以輸入到一半不會消失。收起時清空已輸入內容。預設 30，0 表示永不收起。
+
+## 4. 驗證
+
+### 4.1 選項
+
+| 方式 | 做法 | 優點 | 代價 |
+|---|---|---|---|
+| A. 自家 PIN | 在 `locku` 設定 TUI 設定，bcrypt 存 config | 純 Go、零依賴、單檔 static binary | 與系統帳號無關 |
+| B. PAM | cgo + libpam，pam_authenticate | 用系統密碼 | cgo、需 libpam-dev、macOS 走不同 PAM、無法 static build |
+| C. 讀 /etc/shadow | crypt 比對 | 純 Go 可做 | 需 root 或 shadow 群組，macOS 沒有 shadow |
+
+已決（2026-09-24）：v1 只做 A。理由：0.1 已定位為非安全邊界；B 會讓整個 binary 變 cgo，不能 static、跨平台要 C 工具鏈、brew 要拉 libpam，所有使用者一起付代價；C 需 root 或 shadow 群組，macOS 沒有 shadow。config 保留 `auth: pin` 欄位，將來要 B 再以 `auth: pam` 加入，格式不變。C 不做。
+
+### 4.2 PIN 規格
+
+- 長度 4 到 64 字元，任意可列印字元。
+- bcrypt cost 10，存於 config，檔案權限 600。
+- 修改：在 `locku` 設定 TUI 內操作，需先輸入舊 PIN。忘記則手動刪 config 重設，這在非安全邊界的定位下可接受。
+
+### 4.3 未設定 PIN、config 缺失或損毀
+
+已決（2026-09-24）：一律進入「無 PIN 模式」，畫面照常顯示 saver，任何按鍵直接結束（等同解鎖），沒有 prompt。locku 因此不設定也能當純螢幕保護程式用，PIN 是加購。
+
+- config 不存在：用預設值（saver clock），無 PIN。
+- config 存在但 `pin_hash` 為空或缺欄位：依 config 的 saver，無 PIN。
+- config YAML 解析失敗或 `pin_hash` 不是合法 bcrypt：視同不存在，fail open。理由同 0.1，非安全邊界，鎖死的代價比誤放大。
+- 無 PIN 模式的 saver 畫面必須有一行狀態文字標明「未設定 PIN」，避免使用者誤以為有鎖。解析失敗時該行改顯示錯誤原因。
+
+### 4.4 錯誤 PIN 的節流
+
+已決（2026-09-24）：兩層。
+
+- debounce，固定不可設定：每次錯誤後 1 秒內顯示錯誤訊息並吞掉所有輸入，之後清空輸入回到可輸入。目的是明確的「錯了」回饋，且不能用連打 Enter 閃過訊息。
+- 連續錯誤鎖定，config 設定，預設關閉：連續錯 `lockout_after` 次後進入冷卻 `lockout_seconds` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`lockout_after: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。
+
+## 5. 螢幕保護內容
+
+### 5.1 兩層：saver 出內容，畫布出畫法
+
+已決（2026-09-24）：saver 只決定「顯示什麼」，畫布只有一種畫法。
+
+- **saver** 是具名實例：`type` 決定它怎麼產生內容，參數決定內容細節。輸出永遠是幾行 ASCII 文字，不帶任何樣式。
+- **畫布**把這幾行文字用 u-family splash 的像素風格畫出來，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置。
+
+### 5.2 saver 型別與實例
+
+| type | 參數 | 內容 | tick |
+|---|---|---|---|
+| clock | `time` 四選一；`date` off 或四選一 | 一列時間；date 不是 off 時第二列日期 | time 含秒為 1 秒，否則對齊整分每 60 秒 |
+
+time 四種：`HH:MM`（24 時制）、`HH:MM AM/PM`（12 時制）、`HH:MM:SS`、`HH:MM:SS AM/PM`。date 四種：`YYYY-MM-DD`、`YYYY-MMM-DD`、`MM-DD`、`MMM-DD`，MMM 是英文月份縮寫大寫（JAN 到 DEC）。時間與日期各自設定。
+
+沒有自由輸入：所有內容由這兩個選項產生，字元集只有 0 到 9、冒號、減號、空白、大寫 A 到 Z，點陣字只畫這 39 個。
+
+實例規則：
+
+- name 唯一，是 config 裡 `saver` 指向的鍵。
+- 預設一個實例 `clock`（type clock，time `HH:MM`，date off）。config 缺 `savers` 時用它。
+- 可 duplicate（複製參數、要求新 name）、rename（連動 `saver` 指向）、delete。啟用中的不可刪，最後一個不可刪。type 建立後不可改，要換 type 就 duplicate 另一個。
+- v1 只有 clock 一個 type。type 欄位保留：新 type 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text type 已移除（2026-09-24），內容不可控。
+
+### 5.3 畫布渲染器
+
+只有一種樣式：splash 的像素風格。一個像素 = Nerd Font 的方塊 glyph（nf-fa-square，``）加一個空格，佔 2 欄 1 列，在螢幕上接近正方形。字型是 5 × 7 點陣字，字距 1 像素，行距 2 像素。
+
+Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬器，不在 server，經 SSH 不受影響。
+
+縮放：
+
+1. 內容最長一行 n 字、共 m 行 → 像素寬 5n + (n − 1)，像素高 7m + 2(m − 1)。
+2. 可用區 = 終端機寬減 4 欄邊距，高減 1 列狀態列再減 2 列邊距。
+3. 倍數 k = min(可用寬 ÷ (像素寬 × 2), 可用高 ÷ 像素高) 取整。k ≥ 1 以 k 倍畫，每個字型像素放大成 k × k 個像素；k < 1 先退階（下述），退到底才把內容改用一般文字以 fg 色置中疊在板上，點陣板照鋪。
+4. 整個畫布（狀態列以外的所有列）都是像素格，像 LED 點陣板：每格一個 glyph 加空格，沒亮的用 style.bg（預設 surface0 #313244），亮的用 style.fg（預設 gold #f2b753）。內容置中。終端機寬為奇數時最右一欄留白。splash 的名字、版本、開發者不出現，只取 glyph 畫法。
+
+退階：k < 1 時依序換內容再算 k，config 不改，視窗變大就回來。時間永遠最後犧牲。
+
+1. date 帶年的去掉年：`YYYY-MM-DD` → `MM-DD`、`YYYY-MMM-DD` → `MMM-DD`。
+2. time 帶秒的去掉秒，時制不變。
+3. date 關掉。
+4. 一般文字。
+
+resize 重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式 shuffle 揭露，沒變的不動，一次變更 ≤ 400 ms。CPU 預算不變：閒置 < 1%。
+
+### 5.4 狀態列
+
+已決（2026-09-24）：所有 saver 共用一行狀態列，內容 `user@hostname · 鎖定於 HH:MM`，user 是啟動 `locku lock` 的使用者。預設顯示，config `show_status: false` 可關。管多台 server 時靠它分辨機器與帳號，回來時知道離開多久。
+
+4.3 的「未設定 PIN」提示與解析錯誤原因也在這一列，但不受 show_status 影響，永遠顯示。
+
+## 6. CLI
+
+| 指令 | 作用 |
+|---|---|
+| `locku` | 開啟設定 TUI，見 6.1。不會鎖 |
+| `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
+| `locku setup [tmux\|screen]` | 直接把整合設定寫進 tmux / screen 的設定檔，見 6.2；不帶參數兩個都做 |
+| `locku version` | 版本 |
+
+argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`。原因：screen 的 LOCKPRG 由 screen 直接 execl，不經 shell、不能帶參數，argv[0] 固定為 SCREEN-LOCK（macOS /usr/bin/screen 二進位內可見此字串）。這是 screen 唯一能把「要鎖」這個意圖傳給 locku 的通道。execl 也不搜 PATH，所以 LOCKPRG 必須是絕對路徑。
+
+### 6.1 設定 TUI 的職責
+
+裸指令 `locku` 開一個 TUI，只做設定：
+
+- 設定或更改 PIN：輸入兩次確認，已有 PIN 時先驗舊的。
+- 清除 PIN：回到無 PIN 模式，需先驗舊的。
+- saver 實例管理：設為啟用、duplicate、rename、delete、編輯參數（5.2）。
+- 一般設定：show_status、prompt_timeout、lockout 兩個值。
+- style：點陣板的 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。
+- 試鎖：從 TUI 直接進入 `locku lock` 的流程，解鎖後回到 TUI。
+- 寫出 `~/.config/locku/config.yaml`，權限 600。
+
+TUI 的版面與按鍵放 ui.md / ux.md。
+
+### 6.2 `locku setup` 怎麼寫
+
+只寫受管區塊，區塊外一個字都不動；重跑就是替換區塊，冪等。不帶參數兩個都做。
+
+| 目標 | 檔案 | 區塊內容 |
+|---|---|---|
+| tmux | `~/.tmux.conf`；它不存在而 `~/.config/tmux/tmux.conf` 存在就用後者；都沒有就建 `~/.tmux.conf` | `set -g lock-command "locku lock"`、`set -g lock-after-time 300`、`bind L lock-session` |
+| screen | `~/.screenrc`，加上 shell rc：`$SHELL` 是 zsh 寫 `~/.zshrc`、bash 寫 `~/.bashrc`、fish 寫 `~/.config/fish/config.fish` | `.screenrc`：`idle 300 lockscreen`；shell rc：`export LOCKPRG=<絕對路徑>`（fish 是 `set -gx LOCKPRG <絕對路徑>`） |
+
+區塊標記：
+
+```
+# >>> locku >>>
+...
+# <<< locku <<<
+```
+
+- tmux 有 server 在跑時同時即時套用：`tmux set -g lock-command "locku lock"`、`tmux set -g lock-after-time 300`、`tmux bind L lock-session`。沒有 tmux 或沒有 server 就跳過並說明。
+- screen 的 LOCKPRG 只能走 shell 環境（實測 2026-09-24，macOS screen 4.00.03，以探針程式經 pty 驗證）。原本想走 `.screenrc` 的 `setenv LOCKPRG` 一個檔搞定，實測不通：按 `C-a x` 出現的是 screen 內建的 `Key:` 鎖，探針沒被呼叫。原因是 `lockscreen` 由 attacher（接著終端機的前端進程）呼叫 `getenv`，而 `.screenrc` 只有後端讀、`setenv` 改的是後端與視窗內 shell 的環境；attacher 的環境在 `screen` 或 `screen -r` 執行那一刻就固定了。環境變數路線則完全符合設計：LOCKPRG 被 execl、`argv[0]` 是 `SCREEN-LOCK`、stdin 是 tty。所以 setup 寫 shell rc 的受管區塊，並提示：新開 shell 才有這個變數；已在跑的 session 不必重啟，detach 後從新 shell `screen -r` 即可，因為 attacher 是新進程。
+- 絕對路徑偏好 PATH 上找到的那個（通常是 brew 的 symlink），不用解析 symlink 後的 Cellar 路徑，升級版本後才不會失效。
+- 執行後印出改了哪個檔、有沒有即時套用、還需要做什麼（screen：新開 shell；已在跑的 session detach 後從新 shell 重新 attach）。
+- 不備份、不刪除、沒有 unsetup：要移除就手動刪區塊。
+## 7. 設定與儲存
+
+只有一個檔：`~/.config/locku/config.yaml`
+
+```yaml
+auth: pin              # v1 只有 pin，保留給 pam 擴充
+pin_hash: "$2a$10$..."   # 空或缺欄位 = 未設定 PIN，見 4.3
+saver: clock           # 啟用的 saver name，必須存在於 savers
+savers:
+  - name: clock
+    type: clock
+    time: "HH:MM"          # HH:MM / HH:MM AM/PM / HH:MM:SS / HH:MM:SS AM/PM
+    date: off             # off / YYYY-MM-DD / YYYY-MMM-DD / MM-DD / MMM-DD
+show_status: true      # 狀態列 user@hostname · 鎖定於 HH:MM，見 5.4
+prompt_timeout: 30     # prompt 連續幾秒無按鍵就收起，每次按鍵重算，0 = 永不收起
+lockout_after: 0       # 連續錯幾次進冷卻，0 = 關閉，見 4.4
+lockout_seconds: 30    # 冷卻秒數
+style:
+  bg: "#313244"        # 點陣板暗格，預設 surface0
+  fg: "#f2b753"        # 點陣板亮格，預設 splash gold
+```
+
+- 無 history、無 cache、無 session。
+- config 是 saver 的唯一來源，命令列不提供覆蓋。
+- `saver` 指向不存在的 name、或 `savers` 為空：用內建預設 clock，狀態列顯示 config error，不算損毀。
+- 讀取失敗的處理見 4.3。
+- 閒置多久自動鎖是 tmux 的 lock-after-time、screen 的 idle，不是 locku 的設定。
+
+## 8. 安裝與整合（README 要交付的內容）
+
+順序不限：不設定就是純螢幕保護，任何鍵解鎖；要密碼再執行 `locku` 設 PIN。
+
+`locku setup tmux` / `locku setup screen` / `locku setup` 直接寫進設定檔，做法見 6.2。以下是它寫的內容，手動設定也是同一份：
+
+tmux，寫進 `~/.tmux.conf`：
+
+```
+set -g lock-command "locku lock"
+set -g lock-after-time 300
+bind L lock-session
+```
+
+screen，`~/.screenrc`：
+
+```
+idle 300 lockscreen
+```
+
+加上 shell rc（`~/.zshrc` 或 `~/.bashrc`；fish 用 `set -gx`），因為只有 attacher 的環境會被 lock 讀到（6.2）：
+
+```
+export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
+```
+
+裸 tty：直接執行 `locku lock`。
+
+分發：vulcanshen/homebrew-tap formula；GitHub release 附 static binary（linux amd64 / arm64、darwin arm64）。
+
+## 9. 技術選型
+
+- Go，Bubble Tea + Lipgloss，與 kbu / filu / sshu / webu 同棧。
+- `golang.org/x/crypto/bcrypt`。
+- 無 cgo。
+- 測試：狀態機與驗證邏輯單元測試；tmux / screen 整合走手動 checklist（第 12 節）。
+
+## 10. 決定清單（2026-09-24）
+
+1. 名稱 locku。
+2. 進入點是 tmux lock-command、screen LOCKPRG、裸 tty。不在 pane 內攔截。
+3. 非安全邊界，定位為螢幕保護與防誤觸。
+4. 進程結束等於解鎖，任何錯誤不得導致進程結束。
+5. 不做 VT 切換鎖。
+6. 不開 mouse tracking。
+7. 自動鎖定的閒置計時交給 tmux / screen，locku 不自己計時。
+8. 裸指令 `locku` 開設定 TUI，`locku lock` 才鎖定，與 kbu / filu / sshu 裸指令即 TUI 的慣例一致。screen 經 argv[0] SCREEN-LOCK 辨識。
+9. 驗證 v1 只做自家 PIN，PAM 留 `auth: pam` 擴充位，shadow 不做。
+10. 未設定 PIN 或 config 缺失、損毀時進入無 PIN 模式：照常顯示 saver，任何按鍵解鎖，畫面標明未設定 PIN。fail open。
+11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤鎖定由 config 的 lockout_after / lockout_seconds 控制，預設 0 關閉。
+12. saver 分 type 與具名實例：v1 type 只有 clock，參數 time 四選一、date off 或四選一，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
+13. 狀態列 user@hostname 與鎖定時間預設顯示，show_status 可關；未設定 PIN 提示不可關。
+14. prompt_timeout 預設 30 秒，以最後一次按鍵起算，0 為永不收起。
+15. 畫布只有一種樣式：整面 LED 點陣板，暗格 style.bg、亮格 style.fg，5 × 7 點陣字依格數整數倍縮放，k < 1 退化為一般文字疊在板上。saver 只決定內容。
+16. 內容全由固定選項產生；字元集 39 個（數字、冒號、減號、空白、大寫字母）。
+17. Nerd Font 必裝，與家族相同；字型在使用者本機終端機，SSH 不影響。
+18. 第一幀不動畫；之後內容變更只對有變的像素做 splash 式 shuffle 揭露。
+19. 顏色在 Settings › style 設定，bg 預設 surface0、fg 預設 gold；以 RGB slider 設定、config 存 hex；只有這兩個顏色可設，saver 碰不到。
+20. 寬高塞不下時退階：去年 → 去秒 → 去日期 → 一般文字；config 不改。
+21. 整合設定是 CLI：`locku setup [tmux|screen]` 直接寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用；不做 TUI popup。
+
+## 11. 待決清單
+
+無。2026-09-24 全部定案。
+
+## 12. MVP 驗收
+
+- tmux 內 `lock-session` 後：prefix+d、prefix+&、prefix+c、prefix+x 皆無反應。
+- Ctrl+C、Ctrl+Z、Ctrl+\ 無反應。
+- 錯誤 PIN 留在 prompt；正確 PIN 後 tmux 畫面完整恢復，pane 內程式狀態未變。
+- 錯誤 PIN 後 1 秒內的輸入被吞掉。lockout_after 設 3 時，第 3 次錯誤後顯示倒數，倒數期間輸入無效，結束後可再試。
+- 鎖定中 resize 視窗，畫面重繪不破。
+- screen 內 `lockscreen` 同上。
+- 裸 ssh 內執行同上。
+- clock saver 連續執行 8 小時，CPU 平均 < 1%，記憶體不成長。
+- 渲染器在 80×24、120×40、200×60 下對 `HH:MM` 各選到預期的 k；80×24 配 `HH:MM:SS` + `YYYY-MM-DD` 退成 `HH:MM` + `MM-DD`；40×12 退化為一般文字。
+- 內容變更只動有變的像素，以 shuffle 揭露，沒變的像素輸出不變。
+- saver name 重複被擋。
+- style 任一 channel 改動後立即寫檔，Preview 反映；手改 config 的非法 hex 視同預設。
+- config 不存在時進入無 PIN 模式：saver 照常顯示、標明未設定 PIN、任何按鍵結束。
+- 設定 TUI 寫出的 config 能被 `locku lock` 讀取。
+- LOCKPRG 指向 locku 本體時，screen `lockscreen` 進入鎖定而不是設定 TUI。
+- `locku setup tmux` 跑兩次，設定檔內容相同；有 server 時 `tmux show -g lock-command` 立即是 `locku lock`。
+- shell 環境有 LOCKPRG 時 `C-a x` 進的是 locku（2026-09-24 以探針實測通過；`.screenrc` 的 `setenv` 路線實測不通，6.2 已改為 shell rc）。
+- tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix+d、prefix+c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix+d 才 detach）。
