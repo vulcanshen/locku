@@ -49,12 +49,14 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
-| type | `clock` | 唯讀，dim；v1 只有這一個 type |
-| layout | `row` / `column` | options popup，cursor 在目前值 |
+| type | `clock` / `dino` | options popup，cursor 在目前值（2026-09-24：原本唯讀）；底下的列跟著 type 換 |
+| layout | `row` / `column` | options popup，cursor 在目前值（clock） |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值 |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
 | time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
-| date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列 |
+| date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
+| runner | `trex`（dino；目前唯一） | options popup（2026-09-24） |
+| scene | `grassland`（dino；目前唯一） | options popup（2026-09-24） |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；軌道底色反向，0 時全白、255 時全黑，暗的值才看得見；數字是 Mauve、沒有底色，跟其他列的值一樣（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 
@@ -164,7 +166,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | `?` help | viewport | 全域動作表 |
 | input | input | **邊框寫型別**（`name`、`number`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
-| options | menu | layout / time / date / saver 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
+| options | menu | type / layout / size / font / time / date / runner / scene / saver 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | message | Delete saver、Quit（有未存的顏色草稿時） |
 | toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
 

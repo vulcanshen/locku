@@ -1,6 +1,7 @@
-// Package saver produces what the lock screen shows: a few lines of plain
-// text, nothing else (function.md §5.1). The canvas decides how they are
-// drawn; a saver decides only what they say. v1 has one type, the clock.
+// Package saver produces what the lock screen shows, with no style of its
+// own (function.md §5.1): the clock, a few lines of plain text, and the
+// dino run, a bitmap in its own pixels (dino.go). The canvas decides how
+// either is drawn; a saver decides only what it says.
 package saver
 
 import (

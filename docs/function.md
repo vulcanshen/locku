@@ -140,14 +140,15 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 
 已決（2026-09-24）：saver 只決定「顯示什麼」，畫布只有一種畫法。
 
-- **saver** 是具名實例：`type` 決定它怎麼產生內容，參數決定內容細節。輸出永遠是幾行 ASCII 文字，不帶任何樣式。
-- **畫布**把這幾行文字用 u-family splash 的像素風格畫出來，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置。
+- **saver** 是具名實例：`type` 決定它怎麼產生內容，參數決定內容細節。輸出不帶任何樣式：clock 是幾行 ASCII 文字；dino 是一張自己像素座標的點陣圖（2026-09-24 加入第二個 type）。
+- **畫布**把文字用 u-family splash 的像素風格畫出來、把點陣圖依 size 放大鋪滿，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置。
 
 ### 5.2 saver 型別與實例
 
 | type | 參數 | 內容 | tick |
 |---|---|---|---|
 | clock | `layout` row / column；`size` small / medium / large；`font` 3x7 / 3x5；`time` `HH MM` / `HH MM SS`；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`，日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
+| dino（2026-09-24） | `size` small / medium / large；`runner` 跑者，目前只有 `trex`（暴龍）；`scene` 場景，目前只有 `grassland`（草原）；`bg` / `fg` 兩個顏色 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機（草原：仙人掌 1 / 2 / 3 株、高仙人掌），間距隨機 44 到 100 px；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，前面沒東西時偶爾也無故跳一下；雲以三分之一速度飄。右上角以 3x5 字型畫分數（走過的 px ÷ 10）。場景像素：跑者 12 × 14、跳躍弧 16 幀最高 8 px、每幀走 2 px，最小場景 40 × 25 | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
 
 修訂（2026-09-24，第四輪）：`font` 新增，3x7 之外多一套 3x5（同樣直角、同樣 3 格寬，只有 5 列高），使用者要試；原本「第二套 3 × 5 字型」是在 5 × 7 時代否決的，那時它會是第二種畫法，現在字形已經是七段式，5 列只是把直線縮短，兩套並列讓使用者比，決定後留一套或都留。
 
@@ -165,8 +166,8 @@ time 兩種：`HH MM`、`HH MM SS`（24 時制）。date 四種：`YYYY-MM-DD`�
 
 - name 唯一，是 config 裡 `saver` 指向的鍵。
 - 預設一個實例 `clock`（type clock，layout row，size medium，time `HH MM`，date off，bg surface0 `#313244`，fg gold `#f2b753`）。config 缺 `savers` 時用它。
-- 可 duplicate（複製參數、要求新 name）、rename（連動 `saver` 指向）、delete。啟用中的不可刪，最後一個不可刪。type 建立後不可改，要換 type 就 duplicate 另一個。
-- v1 只有 clock 一個 type。type 欄位保留：新 type 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text type 已移除（2026-09-24），內容不可控。
+- 可 duplicate（複製參數、要求新 name）、rename（連動 `saver` 指向）、delete。啟用中的不可刪，最後一個不可刪。type 在 `[2]` 直接選（2026-09-24 修訂：有第二個 type 之後，「type 建立後不可改、要換就 duplicate」沒有意義了；換成 dino 時 runner / scene 補第一個選項，換回 clock 時它們留在 config 不寫出）。
+- 兩個 type：clock、dino。新 type 只是多一個產內容的函式，不動畫布。使用者自由輸入的 text type 已移除（2026-09-24），內容不可控。
 
 ### 5.3 畫布渲染器
 
@@ -203,6 +204,8 @@ Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬�
 修訂史：原本是全部內容一條單向鏈「去年 → 去秒 → 去日期」、size 最後降；高度不夠時會白白丟掉秒，改成候選清單；再改成現在的兩區塊獨立、size 先於單位。
 
 resize 重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式 shuffle 揭露，沒變的不動，一次變更 ≤ 400 ms。CPU 預算不變：閒置 < 1%。
+
+dino 的畫法（2026-09-24）：場景是整塊板，k 由 size 決定、場景塞不下（40 × 25 px）就降一級到 1；場景 w × h = 板的格數 ÷ k，地面因此貼滿整寬，右邊 / 下面除不盡的格留暗。每幀整張換掉、不做 reveal——世界在移動，不是內容在變。14 fps 不是閒置，CPU 會比時鐘高，這是遊戲 saver 的代價。
 
 ### 5.4 狀態列
 
@@ -341,7 +344,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 9. 驗證 v1 只做自家 PIN，PAM 留 `auth: pam` 擴充位，shadow 不做。
 10. 未設定 PIN 或 config 缺失、損毀時進入無 PIN 模式：照常顯示 saver，任何按鍵解鎖，畫面標明未設定 PIN。fail open。
 11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤鎖定由 config 的 lockout_after / lockout_seconds 控制，預設 0 關閉。
-12. saver 分 type 與具名實例：v1 type 只有 clock，參數 layout row / column、size small / medium / large、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，2026-09-24 拿掉 AM/PM）、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪。
+12. saver 分 type 與具名實例：clock 的參數 layout row / column、size small / medium / large、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，2026-09-24 拿掉 AM/PM）、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設實例 clock；可 duplicate / rename / delete，啟用中與最後一個不可刪；type 在 `[2]` 直接選（2026-09-24 修訂）。
 13. 狀態列 user@hostname 與鎖定時間預設顯示，show_status 可關；未設定 PIN 提示不可關。
 14. prompt_timeout 預設 30 秒，以最後一次按鍵起算，0 為永不收起。
 15. 畫布只有一種樣式：整面 LED 點陣板，暗格 saver 的 bg、亮格它的 fg，點陣字依 saver 的 size 放大 1 / 2 / 3 倍；間隔是獨立的單元（size 1、2 是 1 格，3 是 2 格），隨顯示單元變大但不等比放大（2026-09-24 修訂，原本間隔跟著字型像素放大，large 大半是間隔）；退階見 20，1 倍也塞不下退化為一般文字疊在板上。saver 決定內容、大小與顏色。
@@ -354,6 +357,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver；設為啟用在 preference › saver，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 saver 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 saver）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu。
 24. （2026-09-24 修訂）`[2]` 在 saver 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 saver，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 saver 的 `[2]` 上就是這個 saver，其他地方是啟用中的。
+26. （2026-09-24）第二個 type `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死；參數 size、`runner`（先只有 trex）、`scene`（先只有 grassland）、bg / fg。每 70 ms 一幀整張換，不做 reveal。
 25. （2026-09-24）preference 多兩列 `tmux_conf` / `screen_conf`，是 locku 唯二的自由輸入，用 webu 的 input 作法：提議（目前值，沒有就是慣例路徑）dim 顯示，Tab 接手、Backspace 拒絕、Enter 照打的存、沒碰提議不改；只收絕對路徑或 `~/` 開頭。
 
 ## 11. 待決清單

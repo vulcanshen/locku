@@ -57,6 +57,12 @@ func (m AppModel) actions() []action {
 	switch r := m.rowAt(); r.kind {
 	case rowName:
 		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this saver", run: (*AppModel).renameSaver})
+	case rowType:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the clock, or the dino run", run: (*AppModel).chooseType})
+	case rowRunner:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseRunner})
+	case rowScene:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "where it runs", run: (*AppModel).chooseScene})
 	case rowLayout:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "a row, or a column of parts", run: (*AppModel).chooseLayout})
 	case rowSize:
@@ -190,6 +196,21 @@ func (m *AppModel) deleteSaver() tea.Cmd {
 
 // ---- panel [2]
 
+func (m *AppModel) chooseType() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("type", saver.Types, s.Type, 0)
+}
+
+func (m *AppModel) chooseRunner() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("runner", saver.Runners, s.Runner, 0)
+}
+
+func (m *AppModel) chooseScene() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("scene", saver.Scenes, s.Scene, 0)
+}
+
 func (m *AppModel) chooseLayout() tea.Cmd {
 	s := m.cfg.Savers[m.sideAt().saver]
 	return m.openOptions("layout", saver.Layouts, s.Layout, 0)
@@ -258,6 +279,21 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 	v := strings.TrimPrefix(key, "v:")
 	before := m.snapshot()
 	switch r := m.optionsFor; r.kind {
+	case rowType:
+		s := &m.cfg.Savers[m.sideAt().saver]
+		s.Type = v
+		// A run has a runner and a scene; a saver that never was one
+		// gets the first of each.
+		if s.Runner == "" {
+			s.Runner = saver.Runners[0]
+		}
+		if s.Scene == "" {
+			s.Scene = saver.Scenes[0]
+		}
+	case rowRunner:
+		m.cfg.Savers[m.sideAt().saver].Runner = v
+	case rowScene:
+		m.cfg.Savers[m.sideAt().saver].Scene = v
 	case rowLayout:
 		m.cfg.Savers[m.sideAt().saver].Layout = v
 	case rowSize:
