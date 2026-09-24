@@ -14,5 +14,6 @@
 - The status row: `user@host · locked since HH:MM`, `show_status: false` to hide it.
 - Signals are ignored, the tty is held raw, a panic puts the lock back up; the process ends only for the right PIN, any key with no PIN, or the terminal going away.
 - `locku`: the settings screen — a saver's layout, time and date shapes, and its two colours by RGB sliders (a draft until `S` saves it, `R` drops it, `q` asks when one is unsaved); savers duplicated, renamed, deleted, previewed one by one with `p`; preference: the PIN (set, change, clear), the active saver, `show_status`, `prompt_timeout`, the lockout. Everything but the colours is written at once. `P` previews the lock in place.
-- `locku setup [tmux|screen]`: a managed block in `~/.tmux.conf` (applied to a running server too) and in `~/.screenrc` plus `LOCKPRG` in the shell rc.
+- `locku setup [tmux|screen]`: a managed block in the file preference names as `tmux_conf` (applied to a running server too) and in the one named as `screen_conf`, plus `LOCKPRG` in the shell rc. With either unset, setup says so and writes nothing rather than guessing where the file is.
+- Preference has `tmux_conf` and `screen_conf`, typed on an offer the way webu's settings are: the value, or the usual file, shown dim; `Tab` takes it, `Backspace` declines it, `Enter` on an untouched offer changes nothing.
 - `SCREEN-LOCK` as argv[0] runs the lock, which is how LOCKPRG is called by screen.

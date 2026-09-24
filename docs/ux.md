@@ -59,6 +59,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | saver | `[Enter] Choose`（列出所有 saver） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
 | prompt_timeout / lockout_after / lockout_seconds | `[Enter] Edit` | 無 |
+| tmux_conf / screen_conf | `[Enter] Edit` | 無 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
@@ -121,6 +122,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | layout / size / font / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
+| tmux_conf / screen_conf | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，`locku setup` 會說未設定）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear` |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 

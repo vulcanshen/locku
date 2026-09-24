@@ -87,6 +87,10 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "wrong PINs before a cooldown; 0 off", run: (*AppModel).editNumber})
 	case rowLockoutSeconds:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
+	case rowTmuxConf:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup tmux writes", run: (*AppModel).editPath})
+	case rowScreenConf:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup screen writes", run: (*AppModel).editPath})
 	}
 	if it := m.sideAt(); it.kind == sideSaver {
 		save := action{key: "S", label: "Save", hint: "write the colour draft to config.yaml", panelOp: true, run: (*AppModel).saveColours}
@@ -332,6 +336,26 @@ func (m *AppModel) editNumber() tea.Cmd {
 		value: cur, accept: "save", action: inputNumber}, m.layer())
 }
 
+// editPath is Enter on tmux_conf or screen_conf: webu's settings box.
+// The current value — or the usual file when there is none — is an
+// OFFER, shown dim: Tab takes it into the line to edit, Backspace
+// declines it, typing starts fresh over it; Enter commits the line as
+// typed, and an offer nobody took changes nothing (user, 2026-09-24:
+// webu's way of taking a value).
+func (m *AppModel) editPath() tea.Cmd {
+	r := m.rowAt()
+	m.editKind = r.kind
+	offer, usual := m.cfg.TmuxConf, "~/.tmux.conf"
+	if r.kind == rowScreenConf {
+		offer, usual = m.cfg.ScreenConf, "~/.screenrc"
+	}
+	if offer == "" {
+		offer = usual
+	}
+	return m.input.ask(inputPopup{title: "path", prompt: r.label + " — the file locku setup writes; Backspace then Enter to unset",
+		placeholder: offer, accept: "save", action: inputPath}, m.layer())
+}
+
 // ---- the PIN (ux.md §2.2): one box at a time, one question each.
 
 func (m *AppModel) setPIN() tea.Cmd {
@@ -417,6 +441,23 @@ func (m *AppModel) commitInput() tea.Cmd {
 				n = def.LockoutSeconds
 			}
 			m.cfg.LockoutSeconds = n
+		}
+		return tea.Batch(m.input.close(), m.save(before))
+
+	case inputPath:
+		if v == "" && m.input.placeholder != "" {
+			return m.input.close() // the offer was neither taken nor declined
+		}
+		v = strings.TrimSpace(v)
+		if _, ok := config.AbsPath(v); v != "" && !ok {
+			m.input.suffix = " · absolute or ~/ path"
+			return nil
+		}
+		before := m.snapshot()
+		if m.editKind == rowScreenConf {
+			m.cfg.ScreenConf = v
+		} else {
+			m.cfg.TmuxConf = v
 		}
 		return tea.Batch(m.input.close(), m.save(before))
 

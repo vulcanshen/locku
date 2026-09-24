@@ -37,6 +37,8 @@ const (
 	rowPromptTimeout
 	rowLockoutAfter
 	rowLockoutSeconds
+	rowTmuxConf
+	rowScreenConf
 )
 
 // row is one line of panel [2].
@@ -131,6 +133,15 @@ func (m AppModel) rows() []row {
 		if m.cfg.LockoutAfter == 0 {
 			after = "0 (off)"
 		}
+		// The files `locku setup` writes: unset is said, in yellow, since
+		// setup refuses without them (user, 2026-09-24).
+		pathRow := func(kind rowKind, label, p string) row {
+			r := row{kind: kind, label: label, value: p, color: value, stop: true}
+			if p == "" {
+				r.value, r.color = "not set", yellowColor
+			}
+			return r
+		}
 		return []row{
 			pin,
 			active,
@@ -138,6 +149,8 @@ func (m AppModel) rows() []row {
 			{kind: rowPromptTimeout, label: "prompt_timeout", value: itoa(m.cfg.PromptTimeout), color: value, stop: true},
 			{kind: rowLockoutAfter, label: "lockout_after", value: after, color: value, stop: true},
 			{kind: rowLockoutSeconds, label: "lockout_seconds", value: itoa(m.cfg.LockoutSeconds), color: value, stop: true},
+			pathRow(rowTmuxConf, "tmux_conf", m.cfg.TmuxConf),
+			pathRow(rowScreenConf, "screen_conf", m.cfg.ScreenConf),
 		}
 	}
 }

@@ -18,6 +18,7 @@ const (
 	inputRename                 // a saver's new name
 	inputDuplicate              // a copy's name
 	inputNumber                 // prompt_timeout / lockout_after / lockout_seconds
+	inputPath                   // tmux_conf / screen_conf, on an offer
 	inputPINCurrent             // the PIN in force, before a change or a clear
 	inputPINNew                 // the new PIN
 	inputPINConfirm             // the new PIN again
@@ -39,6 +40,10 @@ type inputPopup struct {
 	action inputAction
 	accept string // the verb on the Enter hint
 	masked bool   // a PIN: dots, never the characters
+	// placeholder is shown dim in the empty box: an offer Tab takes and
+	// Backspace declines (webu's settings box; ux.md §2.1). An offer
+	// nobody took is not a value: the caller sees "" and does nothing.
+	placeholder string
 	// frozen swallows every key: the second after a wrong current PIN
 	// (ux.md §2.2), the same beat the lock screen keeps.
 	frozen    bool
@@ -94,9 +99,15 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 	}
 	m.suffix = ""
 	switch msg.Type {
+	case tea.KeyTab:
+		if m.value == "" && m.placeholder != "" {
+			m.value, m.placeholder = m.placeholder, ""
+		}
 	case tea.KeyBackspace:
 		if r := []rune(m.value); len(r) > 0 {
 			m.value = string(r[:len(r)-1])
+		} else {
+			m.placeholder = ""
 		}
 	case tea.KeyCtrlU:
 		m.value = ""
@@ -108,7 +119,7 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 }
 
 func (m inputPopup) view() string {
-	innerW := popupInnerW(m.screenW, max(40, dispW(m.value)+8, dispW(m.prompt)+3))
+	innerW := popupInnerW(m.screenW, max(40, dispW(m.value)+8, dispW(m.placeholder)+8, dispW(m.prompt)+3))
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
@@ -119,6 +130,12 @@ func (m inputPopup) view() string {
 	}
 	value := truncateHead(shown, innerW-3)
 	line := " " + edit.Render(value) + cur.Render(" ") + spaces(max(0, innerW-2-dispW(value)))
+	offered := m.value == "" && m.placeholder != ""
+	if offered {
+		// The offer, dim, after the cursor: not typed, so not lavender.
+		ph := truncate(m.placeholder, innerW-3)
+		line = " " + cur.Render(" ") + dim.Render(ph) + spaces(max(0, innerW-2-dispW(ph)))
+	}
 	rows := []string{
 		dim.Render(padRight(" "+m.prompt, innerW)),
 		spaces(innerW),
@@ -128,7 +145,11 @@ func (m inputPopup) view() string {
 	if m.suffix != "" {
 		bc = warnColor
 	}
-	hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
+	pairs := [][2]string{{"Enter", m.accept}}
+	if offered {
+		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Bksp", "clear"})
+	}
+	hint := hintLegend(append(pairs, [2]string{"Esc", "cancel"}))
 	if m.frozen {
 		hint = ""
 	}
