@@ -15,6 +15,7 @@ import (
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/setup"
+	"github.com/vulcanshen/locku/internal/tmux"
 	"github.com/vulcanshen/locku/internal/ui"
 	"github.com/vulcanshen/locku/internal/version"
 )
@@ -22,10 +23,13 @@ import (
 const usage = `locku — a screensaver with a PIN, for the terminal
 
   locku                      settings: the PIN, the savers, the colours
-  locku lock                 lock this terminal — what tmux and screen run
+  locku lock [-S socket]     lock this terminal — what tmux and screen run;
+                             -S is the tmux server's socket, which setup's
+                             lock-command passes
   locku setup [tmux|screen]  write the lock into the files preference names as
                              tmux_conf and screen_conf, and the shell rc; both
-                             without an argument
+                             without a name. -d takes it out again
+  locku setup -d [tmux|screen]
   locku version              the version
   locku help                 this
 `
@@ -34,14 +38,14 @@ func main() {
 	// screen runs LOCKPRG by execl with argv[0] set to SCREEN-LOCK and no
 	// arguments: that name is the whole message (function.md §6).
 	if filepath.Base(os.Args[0]) == "SCREEN-LOCK" {
-		os.Exit(runLock())
+		os.Exit(runLock(""))
 	}
 	args := os.Args[1:]
 	switch {
 	case len(args) == 0:
 		os.Exit(runSettings())
 	case args[0] == "lock":
-		os.Exit(runLock())
+		os.Exit(runLock(socketArg(args[1:])))
 	case args[0] == "setup":
 		os.Exit(runSetup(args[1:]))
 	case args[0] == "version":
@@ -54,15 +58,31 @@ func main() {
 	}
 }
 
+// socketArg is the -S after `lock`: the tmux server's socket, or "".
+func socketArg(args []string) string {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == "-S" {
+			return args[i+1]
+		}
+	}
+	return ""
+}
+
 // runLock is `locku lock`. The process is the lock (function.md §1.2): it
 // ends for the right PIN, for any key when there is no PIN, and for a
 // terminal that has gone away — and for nothing else. Signals are ignored
 // rather than handled (§2.2), and a program that comes down for any other
 // reason, a panic included, goes straight back up.
-func runLock() int {
+func runLock(socket string) int {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
 		syscall.SIGTSTP, syscall.SIGTTIN, syscall.SIGTTOU)
 	cfg, problem := config.Load()
+	// Under tmux the session is marked locked for as long as this runs,
+	// so a client attaching meanwhile is locked too (function.md §6.2);
+	// a terminal that goes away leaves the mark, and the next client in
+	// meets the lock.
+	session := tmux.Session(socket)
+	tmux.SetLocked(socket, session, true)
 	quick := 0
 	for {
 		started := time.Now()
@@ -73,7 +93,10 @@ func runLock() int {
 			tea.WithoutSignalHandler(),
 			tea.WithInput(in),
 		)
-		if _, err := p.Run(); err == nil {
+		if m, err := p.Run(); err == nil {
+			if lm, ok := m.(ui.LockModel); !ok || !lm.TTYGone() {
+				tmux.SetLocked(socket, session, false)
+			}
 			return 0
 		}
 		// Bubble Tea has restored the terminal; the lock goes back up. A
@@ -91,13 +114,17 @@ func runLock() int {
 	}
 }
 
-// runSetup is `locku setup [tmux|screen]`: both without an argument. The
-// files are the ones preference names; setup with one unset says so and
-// writes nothing (user, 2026-09-24).
+// runSetup is `locku setup [-d] [tmux|screen]`: both without a name; -d
+// takes locku out again (user, 2026-09-24). The files are the ones
+// preference names; setup with one unset says so and writes nothing.
 func runSetup(args []string) int {
 	cfg, problem := config.Load()
 	if problem != "" {
 		fmt.Fprintf(os.Stderr, "locku: %s\n", problem)
+	}
+	undo := false
+	if len(args) > 0 && args[0] == "-d" {
+		undo, args = true, args[1:]
 	}
 	targets := args
 	if len(targets) == 0 {
@@ -106,10 +133,14 @@ func runSetup(args []string) int {
 	code := 0
 	for _, t := range targets {
 		var err error
-		switch t {
-		case "tmux":
+		switch {
+		case t == "tmux" && undo:
+			err = setup.TmuxUndo(os.Stdout, cfg.TmuxConf)
+		case t == "tmux":
 			err = setup.Tmux(os.Stdout, cfg.TmuxConf)
-		case "screen":
+		case t == "screen" && undo:
+			err = setup.ScreenUndo(os.Stdout, cfg.ScreenConf)
+		case t == "screen":
 			err = setup.Screen(os.Stdout, cfg.ScreenConf)
 		default:
 			fmt.Fprintf(os.Stderr, "locku: setup takes tmux or screen, not %q\n", t)

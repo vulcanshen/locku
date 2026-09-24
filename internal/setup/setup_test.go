@@ -32,15 +32,68 @@ func TestApplyIsIdempotentAndKeepsTheRest(t *testing.T) {
 	}
 }
 
-func TestTmuxWritesTheFile(t *testing.T) {
+// Remove is Apply's undo: the block goes, and the blank line put before
+// it, and nothing else; a file with no block is left alone.
+func TestRemoveUndoesApply(t *testing.T) {
+	for _, before := range []string{"set -g mouse on\n", "", "x", "before\nafter\n"} {
+		with := Apply(before, []string{"a", "b"})
+		want := before
+		if before == "x" {
+			want = "x\n" // the newline Apply had to add stays: the file is still whole
+		}
+		if got := Remove(with); got != want {
+			t.Errorf("%q: after apply and remove %q", before, got)
+		}
+	}
+	if got := Remove("before\n# >>> locku >>>\nold\n# <<< locku <<<\nafter\n"); got != "before\nafter\n" {
+		t.Errorf("middle: %q", got)
+	}
+	if got := Remove("nothing of ours\n"); got != "nothing of ours\n" {
+		t.Errorf("no block: %q", got)
+	}
+}
+
+// Every line locku writes says so at its end, so it reads as locku's
+// when met on its own (user, 2026-09-24: it has to be easy to take out).
+func TestEveryLineIsMarked(t *testing.T) {
+	for _, l := range append(append([]string{}, tmuxLines...), screenLines...) {
+		if !strings.Contains(l, "# locku") {
+			t.Errorf("unmarked: %q", l)
+		}
+	}
+	// No key is bound: the lock is a command alias, and the hooks and
+	// the alias sit at locku's own index.
+	joined := strings.Join(tmuxLines, "\n")
+	if !strings.Contains(joined, `set -gF lock-command "locku lock -S '#{socket_path}'"`) {
+		t.Errorf("the lock command must be told the socket:\n%s", joined)
+	}
+	if strings.Contains(joined, "bind ") || !strings.Contains(joined, `command-alias[90]" "locku=lock-session"`) ||
+		!strings.Contains(joined, `client-attached[90]`) || !strings.Contains(joined, `client-session-changed[90]`) ||
+		!strings.Contains(joined, `#{@locked}`) {
+		t.Errorf("tmux block:\n%s", joined)
+	}
+	// What is set on a live server is what is unset, one for one.
+	if len(tmuxSet) != len(tmuxUnset) {
+		t.Errorf("%d set, %d unset", len(tmuxSet), len(tmuxUnset))
+	}
+	for i := range tmuxSet {
+		if tmuxSet[i][2] != tmuxUnset[i][2] {
+			t.Errorf("set %v, unset %v", tmuxSet[i], tmuxUnset[i])
+		}
+	}
+}
+
+func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	h := t.TempDir()
 	t.Setenv("HOME", h)
 	t.Setenv("PATH", t.TempDir()) // no tmux
+	path := filepath.Join(h, ".tmux.conf")
+	os.WriteFile(path, []byte("set -g mouse on\n"), 0o644)
 	var out bytes.Buffer
-	if err := Tmux(&out, filepath.Join(h, ".tmux.conf")); err != nil {
+	if err := Tmux(&out, path); err != nil {
 		t.Fatal(err)
 	}
-	body, err := os.ReadFile(filepath.Join(h, ".tmux.conf"))
+	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,11 +106,36 @@ func TestTmuxWritesTheFile(t *testing.T) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	out.Reset()
-	if err := Tmux(&out, filepath.Join(h, ".tmux.conf")); err != nil {
+	if err := Tmux(&out, path); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "already up to date") {
 		t.Errorf("second run:\n%s", out.String())
+	}
+	// -d: the block goes, the user's line stays; again, nothing to do.
+	out.Reset()
+	if err := TmuxUndo(&out, path); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); string(b) != "set -g mouse on\n" {
+		t.Errorf("after undo:\n%s", b)
+	}
+	if !strings.Contains(out.String(), "removed") {
+		t.Errorf("undo output:\n%s", out.String())
+	}
+	out.Reset()
+	if err := TmuxUndo(&out, path); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "nothing of locku's") {
+		t.Errorf("second undo:\n%s", out.String())
+	}
+	// Undo on a file that is not there makes none.
+	if err := TmuxUndo(&out, filepath.Join(h, "none.conf")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(h, "none.conf")); err == nil {
+		t.Error("undo created the file")
 	}
 	// No path is a refusal, not a guess; a relative one too. A path
 	// under ~ is expanded, the directory made.
@@ -77,7 +155,7 @@ func TestTmuxWritesTheFile(t *testing.T) {
 	}
 }
 
-func TestScreenWritesRCAndShellRC(t *testing.T) {
+func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	h := t.TempDir()
 	t.Setenv("HOME", h)
 	t.Setenv("PATH", t.TempDir())
@@ -96,16 +174,32 @@ func TestScreenWritesRCAndShellRC(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: %v", c.shell, err)
 		}
-		if !strings.Contains(string(b), blockBegin+"\n"+c.prefix) {
+		if !strings.Contains(string(b), blockBegin+"\n"+c.prefix) || !strings.Contains(string(b), "# locku") {
 			t.Errorf("%s:\n%s", c.shell, b)
 		}
 		if !strings.Contains(out.String(), "new shell") {
 			t.Errorf("%s output:\n%s", c.shell, out.String())
 		}
+		out.Reset()
+		if err := ScreenUndo(&out, filepath.Join(h, ".screenrc")); err != nil {
+			t.Fatal(err)
+		}
+		if b, _ := os.ReadFile(filepath.Join(h, c.rc)); strings.Contains(string(b), "LOCKPRG") {
+			t.Errorf("%s after undo:\n%s", c.shell, b)
+		}
+		if err := Screen(&out, filepath.Join(h, ".screenrc")); err != nil {
+			t.Fatal(err)
+		}
 	}
 	b, _ := os.ReadFile(filepath.Join(h, ".screenrc"))
 	if !strings.Contains(string(b), "idle 300 lockscreen") || strings.Contains(string(b), "setenv") {
 		t.Errorf(".screenrc:\n%s", b)
+	}
+	if err := ScreenUndo(new(bytes.Buffer), filepath.Join(h, ".screenrc")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(h, ".screenrc")); strings.Contains(string(b), "lockscreen") {
+		t.Errorf(".screenrc after undo:\n%s", b)
 	}
 	// Unset, nothing is written — not even the shell rc.
 	h3 := t.TempDir()
