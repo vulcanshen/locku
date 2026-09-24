@@ -490,6 +490,55 @@ func TestNewProfileOfASaver(t *testing.T) {
 	}
 }
 
+// The panels loop like the menus do (user, 2026-09-24): k on the first
+// row is the last, j on the last is the first; u and d still stop.
+func TestPanelsLoop(t *testing.T) {
+	m := newTestApp(t).press("g", "g", "k")
+	if m.sideAt().kind != sidePreference {
+		t.Errorf("k on the first row must reach the last, not %+v", m.sideAt())
+	}
+	m = m.press("j")
+	if it := m.sideAt(); it.kind != sideProfile || it.ref != 0 {
+		t.Errorf("j on the last row must reach the first, not %+v", it)
+	}
+	m = m.press("d", "d", "d")
+	if m.sideAt().kind != sidePreference {
+		t.Error("d stops at the end")
+	}
+	m = m.press("2", "k")
+	if m.rowAt().kind != rowScreenConf {
+		t.Errorf("[2] loops too: k on the first row is %v", m.rowAt().kind)
+	}
+}
+
+// Every preference row has a dim line under it saying what it is; the
+// notes are not stops, and the rows scroll with the cursor when they
+// outgrow the panel.
+func TestPreferenceExplainsItself(t *testing.T) {
+	m := newTestApp(t).press("G", "2")
+	rows := m.rows()
+	if len(rows) != 18 {
+		t.Fatalf("%d rows", len(rows))
+	}
+	for i := 0; i < len(rows); i += 2 {
+		if !rows[i].stop || rows[i+1].kind != rowNote || rows[i+1].stop || rows[i+1].value == "" {
+			t.Errorf("rows %d, %d: %+v %+v", i, i+1, rows[i], rows[i+1])
+		}
+	}
+	v := m.View()
+	for _, want := range []string{"any key unlocks", "0 never", "setup again after", "writes its block into"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("note %q missing:\n%s", want, v)
+		}
+	}
+	// On a short terminal the last rows are off the panel until the
+	// cursor gets there, and its note comes along.
+	m = m.size(60, 12).press("G")
+	if v := m.View(); !strings.Contains(v, "screen_conf") || !strings.Contains(v, "the file locku setup screen") || strings.Contains(v, "PIN  ") {
+		t.Errorf("the last row and its note must be on screen, the first rows off it:\n%s", v)
+	}
+}
+
 func TestPINSetChangeClear(t *testing.T) {
 	m := newTestApp(t).press("G", "2") // preference, PIN row
 	if m.rowAt().kind != rowPIN {
