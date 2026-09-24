@@ -13,7 +13,7 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `conf`（設定檔）與 `idle_lock`（閒置幾秒自動鎖），`S` 把整合設定寫進去、`X` 拿掉。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
+| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `conf`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`），`S` 把整合設定寫進去、`X` 拿掉。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku version` | 版本 |
 
@@ -36,7 +36,7 @@ brew formula 與 install.sh 在 v0.1.0 發版後可用。**Nerd Font 必裝**：
 
 任何鍵開 PIN prompt，那個鍵不算輸入；`Enter` 送出、`Esc` 回 saver、`Backspace` 刪一字。
 錯誤 PIN 邊框變紅 1 秒並吞掉所有輸入；連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數；
-`pin_prompt_timeout` 秒沒按鍵 prompt 自動收起。閒置 `idle_lock` 秒自動鎖（tmux、screen 各自一個，Setup 填給它們，預設 300，0 關）。狀態列 `user@host · locked since HH:MM`，沒設 PIN 時標明 `no PIN · any key unlocks`。
+`pin_prompt_timeout` 秒沒按鍵 prompt 自動收起。閒置幾秒自動鎖由 tmux 的 `lock-after-time`、screen 的 `idle` 決定（各自一個，Setup 原樣填進去，預設 300，0 關）。狀態列 `user@host · locked since HH:MM`，沒設 PIN 時標明 `no PIN · any key unlocks`。
 
 Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。
 進程只在三種情況結束：PIN 正確、無 PIN 模式任意鍵、tty 消失。
@@ -47,18 +47,18 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
-║ Profiles               ║│ name              clock                          │
-║ ● clock                ║│ saver             clock                          │
-║   clock2               ║│ layout            row                            │
-║   dino                 ║│ size              medium                         │
-║ Savers                 ║│ time              HH MM                          │
-║   clock                ║│ date              off                            │
-║   dino                 ║│ bg                ■ #313244  →  ■ #ff3244        │
-║ Integration            ║│   R               ───────────● 255               │
-║   tmux                 ║│   G               ──●───────── 50                │
-║   screen               ║│   B               ───●──────── 68                │
-║ Settings               ║│ fg                ■ #f2b753                      │
-║   preference           ║│                                                  │
+║ Profiles               ║│ Properties        Value                          │
+║ ● clock                ║│ name              clock                          │
+║   clock2               ║│ saver             clock                          │
+║   dino                 ║│ layout            row                            │
+║ Savers                 ║│ size              medium                         │
+║   clock                ║│ time              HH MM                          │
+║   dino                 ║│ date              off                            │
+║ Integration            ║│ bg                ■ #313244  →  ■ #ff3244        │
+║   tmux                 ║│   R               ───────────● 255               │
+║   screen               ║│   G               ──●───────── 50                │
+║ Settings               ║│   B               ───●──────── 68                │
+║   preference           ║│ fg                ■ #f2b753                      │
 ╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
  space menu   ? help   tab/1-2 panels   q quit
 ```
@@ -70,7 +70,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`n` new profile、`p` 預覽預設值；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile / saver 上：`P` 預覽、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
-**Integration** 的 tmux / screen 各有 `conf`（要寫的設定檔）與 `idle_lock`（閒置幾秒自動鎖，各自獨立），`[2]` 多一列唯讀 `status`（`installed` / `not installed`）說區塊在不在檔案裡；`S` 寫進去、`X` 拿掉（confirm）。`conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
+**Integration** 的 tmux / screen 各有 `conf`（要寫的設定檔）與閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——`[2]` 多一列唯讀 `status`（`installed` / `not installed`）說區塊在不在檔案裡；`S` 寫進去、`X` 拿掉（confirm）。每個 `[2]` 第一列是 `Properties` / `Value` 表頭。`conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
 
 ## 文件
 

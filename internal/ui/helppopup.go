@@ -73,24 +73,27 @@ var helpKeys = []helpEntry{
 	{"gg · G", "first / last"},
 }
 
-// helpGlossary is what each setting means, by the sidebar item whose [2]
-// shows it; the items without one have none, and ? on their [2] is the keys.
-var helpGlossary = map[sideKind][]helpEntry{
-	sideTool: {
-		{"", "[2] tmux / screen — what each row is"},
+// helpPreference is what each of preference's rows means; ? on a [2]
+// without a glossary — a profile's, a saver's — is the keys.
+var helpPreference = []helpEntry{
+	{"", "[2] preference — what each row is"},
+	{"PIN", "what the lock asks for; with none, any key unlocks"},
+	{"profile", "the profile the lock shows"},
+	{"show_status", "user@host and the time, on the lock's last row"},
+	{"pin_prompt_timeout", "seconds without a key before the PIN box closes; 0 never"},
+	{"wrong_pin_attempts", "wrong PINs in a row before a cooldown; 0 off"},
+	{"wrong_pin_attempt_cooldown", "seconds the cooldown lasts"},
+}
+
+// helpTool is what each of a tool's rows means, the idle time under the
+// tool's own name for it.
+func helpTool(name string) []helpEntry {
+	return []helpEntry{
+		{"", "[2] " + name + " — what each row is"},
 		{"conf", "the file locku's block is written into by S and taken out of by X; ~/ allowed"},
-		{"idle_lock", "idle seconds before the tool locks by itself: tmux's lock-after-time, screen's idle; 0 never — S again after a change"},
+		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never — S again after a change"},
 		{"status", "whether the block is in the file now"},
-	},
-	sidePreference: {
-		{"", "[2] preference — what each row is"},
-		{"PIN", "what the lock asks for; with none, any key unlocks"},
-		{"profile", "the profile the lock shows"},
-		{"show_status", "user@host and the time, on the lock's last row"},
-		{"pin_prompt_timeout", "seconds without a key before the PIN box closes; 0 never"},
-		{"wrong_pin_attempts", "wrong PINs in a row before a cooldown; 0 off"},
-		{"wrong_pin_attempt_cooldown", "seconds the cooldown lasts"},
-	},
+	}
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {

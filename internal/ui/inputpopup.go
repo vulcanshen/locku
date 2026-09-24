@@ -17,7 +17,7 @@ const (
 	inputNew                    // a new profile's name, of the saver at editRef
 	inputRename                 // a profile's new name
 	inputDuplicate              // a copy's name
-	inputNumber                 // pin_prompt_timeout, wrong_pin_attempts, wrong_pin_attempt_cooldown, idle_lock
+	inputNumber                 // pin_prompt_timeout, wrong_pin_attempts, wrong_pin_attempt_cooldown, a tool's idle time
 	inputPath                   // tmux_conf / screen_conf, on an offer
 	inputPINCurrent             // the PIN in force, before a change or a clear
 	inputPINNew                 // the new PIN

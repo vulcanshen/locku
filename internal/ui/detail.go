@@ -22,7 +22,9 @@ import (
 // 2026-09-25). Preference is the PIN, the active profile and the lock's
 // settings. What each setting means is in the ? help, on that panel.
 // Every key config.yaml has is a row here, except `profiles` and
-// `savers`, which ARE panel [1].
+// `savers`, which ARE panel [1]; a tool's idle time under the tool's
+// own name for it. The first row of every [2] is the table's header,
+// Properties and Value (user, 2026-09-25).
 //
 // Colours edit a DRAFT (user, 2026-09-24): the sliders move a copy, the
 // swatch row shows the saved colour and, when it differs, the draft
@@ -33,6 +35,7 @@ type rowKind int
 
 const (
 	rowNone rowKind = iota // no row: a panel with nothing to stop on
+	rowHead                // the table's header: Properties, Value
 	rowName
 	rowSaver // a profile's saver: the class, read-only
 	rowLayout
@@ -51,9 +54,9 @@ const (
 	rowPINPromptTimeout
 	rowWrongPINAttempts
 	rowWrongPINCooldown
-	rowConf     // a tool's file
-	rowIdleLock // a tool's idle time
-	rowStatus   // whether locku's block is in the tool's file, read-only
+	rowConf   // a tool's file
+	rowIdle   // a tool's idle time, under the tool's own name for it
+	rowStatus // whether locku's block is in the tool's file, read-only
 )
 
 // row is one line of panel [2].
@@ -85,6 +88,11 @@ var about = map[string]string{
 // box when nothing is set.
 var usualConf = map[string]string{"tmux": "~/.tmux.conf", "screen": "~/.screenrc"}
 
+// toolIdle is each tool's own name for its idle time: the row's label,
+// and the file's key (user, 2026-09-25: tmux's row says lock-after-time,
+// as tmux does).
+var toolIdle = map[string]string{"tmux": "lock-after-time", "screen": "idle"}
+
 // draftKey names whose colours a draft holds: a profile's, by name, or
 // a saver's defaults, by kind. The two namespaces never meet — a profile
 // may well be called clock.
@@ -112,10 +120,8 @@ func (m AppModel) subject() (p config.Profile, key draftKey, ok bool) {
 
 // tool is the tool under the cursor — tmux or screen — and its settings.
 func (m AppModel) tool() (name string, t config.Tool) {
-	if m.sideAt().ref == toolScreen {
-		return tools[toolScreen], m.cfg.Screen
-	}
-	return tools[toolTmux], m.cfg.Tmux
+	name = tools[m.sideAt().ref]
+	return name, m.cfg.Tool(name)
 }
 
 // draftOf is p's colours as the sliders have them: the draft under key
@@ -203,6 +209,7 @@ func offOr(n int) string {
 // rows is panel [2] for the current selection.
 func (m AppModel) rows() []row {
 	value := valueColor
+	head := row{kind: rowHead, label: "Properties", value: "Value"}
 	switch it := m.sideAt(); it.kind {
 	case sideSaver:
 		kind := saver.Kinds[it.ref]
@@ -218,6 +225,7 @@ func (m AppModel) rows() []row {
 		}
 		p, key, _ := m.subject()
 		out := []row{
+			head,
 			{kind: rowAbout, label: "saver", value: kind, color: value},
 			{kind: rowAbout, label: "what", value: about[kind], color: value},
 			{kind: rowAbout, label: "profiles", value: used, color: value},
@@ -231,13 +239,14 @@ func (m AppModel) rows() []row {
 		// of another saver is a new profile (user, 2026-09-24). The rows
 		// under it are the saver's own.
 		out := []row{
+			head,
 			{kind: rowName, label: "name", value: p.Name, color: value, stop: true},
 			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
 		}
 		out = append(out, fieldRows(p)...)
 		return append(out, m.colourRows(key, p)...)
 	case sideTool:
-		_, t := m.tool()
+		name, t := m.tool()
 		conf := row{kind: rowConf, label: "conf", value: t.Conf, color: value, stop: true}
 		if t.Conf == "" {
 			conf.value, conf.color = "not set", yellowColor
@@ -251,8 +260,9 @@ func (m AppModel) rows() []row {
 			status.value, status.color = "installed", liveColor
 		}
 		return []row{
+			head,
 			conf,
-			{kind: rowIdleLock, label: "idle_lock", value: offOr(t.IdleLock), color: value, stop: true},
+			{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true},
 			status,
 		}
 	default:
@@ -269,6 +279,7 @@ func (m AppModel) rows() []row {
 			status.value, status.color = "on", liveColor
 		}
 		return []row{
+			head,
 			pin,
 			active,
 			status,
@@ -343,6 +354,7 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
+	head := lipgloss.NewStyle().Foreground(focusColor)
 	swatch := func(hex string) string {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(pixelGlyph)
 	}
@@ -359,6 +371,11 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 		label := padRight(" "+r.label, lw)
 		var plain, styled string
 		switch r.kind {
+		case rowHead:
+			// The table's header, in the colour of the sidebar's group
+			// titles, so both panels are read the same way.
+			plain = padRight(label+r.value, innerW)
+			styled = head.Render(plain)
 		case rowSwatch:
 			// The saved colour, and the draft after an arrow when it differs.
 			plain = padRight(label+"  "+r.value, innerW)

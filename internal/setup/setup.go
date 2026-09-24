@@ -170,12 +170,12 @@ const (
 // where nothing else says which server it belongs to.
 func lockCmd() string { return shellQuote(Binary()) + " lock -S '#{socket_path}'" }
 
-// tmuxLines is the block tmux.conf gets, with preference's idle_lock as
-// lock-after-time.
+// tmuxLines is the block tmux.conf gets, with Integration › tmux's
+// lock-after-time as it is.
 func tmuxLines(idle int) []string {
 	return []string{
 		`set -gF lock-command "` + lockCmd() + `"  # locku`,
-		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: idle_lock; 0 never`,
+		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: 0 never`,
 		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-server"                              # locku: prefix : locku locks every client`,
 		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client`,
 		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions`,
@@ -236,7 +236,7 @@ func Tmux(w io.Writer, path string, idle int) error {
 	return nil
 }
 
-// idleSays is idle_lock in words, for what setup reports.
+// idleSays is the idle time in words, for what setup reports.
 func idleSays(idle int) string {
 	if idle <= 0 {
 		return "no idle lock"
@@ -283,14 +283,14 @@ func tmuxLive(w io.Writer, cmds [][]string) bool {
 	return true
 }
 
-// screenLines is the block .screenrc gets: preference's idle_lock as
+// screenLines is the block .screenrc gets: the idle time as
 // screen's idle (0 turns it off there too).
 func screenLines(idle int) []string {
-	return []string{"idle " + itoa(idle) + " lockscreen   # locku: idle_lock; 0 never"}
+	return []string{"idle " + itoa(idle) + " lockscreen   # locku: 0 never"}
 }
 
-// Screen writes `idle N lockscreen` into the file at rc — preference's
-// screen_conf — and LOCKPRG into the shell's rc file. LOCKPRG has to be
+// Screen writes `idle N lockscreen` into the file at rc — Integration ›
+// screen's conf — and LOCKPRG into the shell's rc file. LOCKPRG has to be
 // in the environment of the shell that runs `screen` — screen's front
 // end reads it, and .screenrc's own `setenv` never reaches that process
 // (function.md §6.2, measured 2026-09-24) — so the rc file it is.

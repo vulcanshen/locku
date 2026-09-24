@@ -53,10 +53,9 @@ func TestRemoveUndoesApply(t *testing.T) {
 	}
 }
 
-// idle_lock is handed to both tmux and screen as it is, 0 included —
-// which turns the idle lock off in both (user, 2026-09-24: one value
-// for every tool that runs locku as its screensaver).
-func TestIdleLockIsHandedOn(t *testing.T) {
+// A tool's idle time — tmux's lock-after-time, screen's idle — is
+// handed on as it is, 0 included, which turns the idle lock off.
+func TestIdleTimeIsHandedOn(t *testing.T) {
 	for _, c := range []struct {
 		idle         int
 		tmux, screen string

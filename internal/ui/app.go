@@ -403,8 +403,11 @@ func foldHome(p string) string {
 // else the keys (user, 2026-09-25: "only the preference items").
 func (m AppModel) helpEntries() []helpEntry {
 	if m.focus == panelDetail {
-		if g := helpGlossary[m.sideAt().kind]; g != nil {
-			return g
+		switch it := m.sideAt(); it.kind {
+		case sidePreference:
+			return helpPreference
+		case sideTool:
+			return helpTool(tools[it.ref])
 		}
 	}
 	return helpKeys

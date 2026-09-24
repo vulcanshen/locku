@@ -33,9 +33,9 @@ const (
 	PINMin = 4
 	PINMax = 64
 
-	// DefaultIdleLock is how long a tool waits idle before it locks by
+	// DefaultIdle is how long a tool waits idle before it locks by
 	// itself, until the user says otherwise.
-	DefaultIdleLock = 300
+	DefaultIdle = 300
 
 	bcryptCost = 10
 )
@@ -75,14 +75,44 @@ type Style struct {
 // Colours is the profile's pair.
 func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 
-// Tool is one tool's integration (function.md §6.2; user, 2026-09-25:
-// tmux and screen each their own): the file locku's block is written
-// into, as the user typed it — "~/…" allowed, empty is not set — and the
-// seconds the tool waits idle before it locks by itself, which is tmux's
-// lock-after-time and screen's idle; 0 is never.
+// Tmux and Screen are each tool's integration in the file (function.md
+// §6.2; user, 2026-09-25: each its own): the file locku's block is
+// written into, as the user typed it — "~/…" allowed, empty is not set —
+// and the seconds the tool waits idle before it locks by itself, under
+// the tool's own name for that setting (user, 2026-09-25): tmux's
+// lock-after-time, screen's idle; 0 is never.
+type Tmux struct {
+	Conf          string `yaml:"conf"`
+	LockAfterTime int    `yaml:"lock-after-time"`
+}
+
+type Screen struct {
+	Conf string `yaml:"conf"`
+	Idle int    `yaml:"idle"`
+}
+
+// Tool is either tool's integration as the screen and setup take it:
+// the file, and the idle seconds, whatever the tool calls them.
 type Tool struct {
-	Conf     string `yaml:"conf"`
-	IdleLock int    `yaml:"idle_lock"`
+	Conf string
+	Idle int
+}
+
+// Tool is the tool called name — "tmux" or "screen" — as a Tool.
+func (c Config) Tool(name string) Tool {
+	if name == "screen" {
+		return Tool{Conf: c.Screen.Conf, Idle: c.Screen.Idle}
+	}
+	return Tool{Conf: c.Tmux.Conf, Idle: c.Tmux.LockAfterTime}
+}
+
+// SetTool stores t as the tool called name.
+func (c *Config) SetTool(name string, t Tool) {
+	if name == "screen" {
+		c.Screen = Screen{Conf: t.Conf, Idle: t.Idle}
+		return
+	}
+	c.Tmux = Tmux{Conf: t.Conf, LockAfterTime: t.Idle}
 }
 
 // Config is config.yaml, one field per key.
@@ -102,8 +132,8 @@ type Config struct {
 	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
 	// The tools that run locku as their screensaver, each its own.
-	Tmux   Tool `yaml:"tmux"`
-	Screen Tool `yaml:"screen"`
+	Tmux   Tmux   `yaml:"tmux"`
+	Screen Screen `yaml:"screen"`
 }
 
 // NewProfile is a profile called name of the saver kind as the program
@@ -142,8 +172,8 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
-		Tmux:             Tool{IdleLock: DefaultIdleLock},
-		Screen:           Tool{IdleLock: DefaultIdleLock},
+		Tmux:             Tmux{LockAfterTime: DefaultIdle},
+		Screen:           Screen{Idle: DefaultIdle},
 	}
 }
 
@@ -255,8 +285,15 @@ var renamed = map[string]string{
 var nested = []struct{ old, parent, child string }{
 	{"tmux_conf", "tmux", "conf"},
 	{"screen_conf", "screen", "conf"},
-	{"idle_lock", "tmux", "idle_lock"},
-	{"idle_lock", "screen", "idle_lock"},
+	{"idle_lock", "tmux", "lock-after-time"},
+	{"idle_lock", "screen", "idle"},
+}
+
+// nestedRenamed is a key renamed inside a tool's mapping: the idle time
+// took the tool's own name for it later the same day (2026-09-25).
+var nestedRenamed = []struct{ parent, old, new string }{
+	{"tmux", "idle_lock", "lock-after-time"},
+	{"screen", "idle_lock", "idle"},
 }
 
 // carryOver rewrites the keys from before in the parsed document: the
@@ -285,6 +322,11 @@ func carryOver(doc *yaml.Node) {
 			for _, p := range v.Content {
 				renameKey(p, "type", "saver")
 			}
+		}
+	}
+	for _, n := range nestedRenamed {
+		if parent := mappingOf(root, n.parent); parent != nil {
+			renameKey(parent, n.old, n.new)
 		}
 	}
 	for _, n := range nested {
@@ -396,8 +438,8 @@ func tidy(p Profile, kind string) Profile {
 // tidyTool is a tool's integration as the rest of locku can rely on it.
 func tidyTool(t Tool) Tool {
 	t.Conf = strings.TrimSpace(t.Conf)
-	if t.IdleLock < 0 {
-		t.IdleLock = DefaultIdleLock
+	if t.Idle < 0 {
+		t.Idle = DefaultIdle
 	}
 	return t
 }
@@ -450,7 +492,9 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.WrongPINCooldown <= 0 {
 		cfg.WrongPINCooldown = Default().WrongPINCooldown
 	}
-	cfg.Tmux, cfg.Screen = tidyTool(cfg.Tmux), tidyTool(cfg.Screen)
+	for _, n := range []string{"tmux", "screen"} {
+		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
+	}
 	return cfg, note
 }
 
