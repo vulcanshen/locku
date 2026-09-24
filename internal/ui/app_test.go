@@ -319,8 +319,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowConf {
 		t.Fatalf("tmux, conf row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "no file set") {
-		t.Errorf("tmux's rows:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "not installed") || strings.Contains(v, "tool ") {
+		t.Errorf("tmux's rows are conf, idle_lock, status:\n%s", v)
 	}
 	m = m.press("enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
@@ -398,7 +398,7 @@ func TestSetupAndRemoveFromTheScreen(t *testing.T) {
 	}
 	conf := filepath.Join(t.TempDir(), "tmux.conf")
 	m = m.expireToast().press("2", "enter", "ctrl+u").typed(conf).press("enter")
-	if m.cfg.Tmux.Conf != conf || !strings.Contains(m.View(), "not in the file") {
+	if m.cfg.Tmux.Conf != conf || !strings.Contains(m.View(), "not installed") {
 		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
 	}
 	m = m.press("S")
@@ -406,7 +406,7 @@ func TestSetupAndRemoveFromTheScreen(t *testing.T) {
 	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") {
 		t.Fatalf("after Setup: %v\n%s", err, b)
 	}
-	if !strings.Contains(m.toast.msg, "wrote") || !strings.Contains(m.View(), "in the file") {
+	if !strings.Contains(m.toast.msg, "wrote") || !strings.Contains(m.View(), " installed") || strings.Contains(m.View(), "not installed") {
 		t.Errorf("toast %q, screen:\n%s", m.toast.msg, m.View())
 	}
 	// Setup and Remove sit in [2]'s menu as panel operations.
@@ -423,23 +423,39 @@ func TestSetupAndRemoveFromTheScreen(t *testing.T) {
 	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "locku") {
 		t.Errorf("after Remove:\n%s", b)
 	}
-	if !strings.Contains(m.toast.msg, "removed") || !strings.Contains(m.View(), "not in the file") {
+	if !strings.Contains(m.toast.msg, "removed") || !strings.Contains(m.View(), "not installed") {
 		t.Errorf("toast %q, screen:\n%s", m.toast.msg, m.View())
 	}
 }
 
 // What each preference setting means is in the help, not on the panel
 // (user, 2026-09-25).
-func TestHelpExplainsThePreferences(t *testing.T) {
-	m := newTestApp(t).press("?", "G") // the preferences are the last section: scroll to the end
-	v := m.View()
-	for _, want := range []string{"wrong_pin_attempt_cooldown", "pin_prompt_timeout", "idle_lock", "Integration"} {
-		if !strings.Contains(v, want) {
-			t.Errorf("help lacks %q:\n%s", want, v)
+// The help's glossary is the panel's own: on preference the preference
+// settings, on a tool its conf and idle_lock, on a profile none — and
+// the keys, Integration's included, everywhere (user, 2026-09-25).
+func TestHelpExplainsThePanelsSettings(t *testing.T) {
+	has := func(v string, want ...string) []string {
+		var missing []string
+		for _, w := range want {
+			if !strings.Contains(v, w) {
+				missing = append(missing, w)
+			}
 		}
+		return missing
 	}
-	if pv := m.press("?", "G", "2").View(); strings.Contains(pv, "any key unlocks") {
-		t.Errorf("preference must not carry the notes:\n%s", pv)
+	m := newTestApp(t)
+	if v := m.press("?", "G").View(); len(has(v, "Integration", "duplicate")) != 0 || strings.Contains(v, "what each is") {
+		t.Errorf("on a profile: the keys, no glossary:\n%s", v)
+	}
+	// The last sidebar row is preference; G in the help scrolls to its end.
+	if v := m.press("G", "?", "G").View(); len(has(v, "[2] preference", "wrong_pin_attempt_cooldown", "pin_prompt_timeout", "any key unlocks")) != 0 || strings.Contains(v, "idle_lock") {
+		t.Errorf("on preference: its glossary and no other:\n%s", v)
+	}
+	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
+		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
+	}
+	if v := m.press("G", "k", "k", "?", "G").View(); len(has(v, "[2] tmux / screen", "conf", "idle_lock", "status")) != 0 || strings.Contains(v, "any key unlocks") {
+		t.Errorf("on tmux: its glossary and no other:\n%s", v)
 	}
 }
 

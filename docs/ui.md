@@ -95,8 +95,8 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | wrong_pin_attempts | 數字，0 顯示 `0 (off)` | 同上 |
 | wrong_pin_attempt_cooldown | 數字 | 同上 |
 
-每一列是什麼，在 `?` help 的 preference 段說（2026-09-25：原本每列下面接一列 dim 說明，2026-09-24 加的，使用者要搬到 help；
-`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
+每一列是什麼，在 `?` help 最後的 preference 段說，那一段只在 cursor 在 preference 時出現（2026-09-25：原本每列下面接一列 dim 說明，
+2026-09-24 加的，使用者要搬到 help，而且 preference 上只要 preference 的；`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
 show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a key before the PIN box
 closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
 cooldown lasts`。列數超過面板時跟著 cursor 捲。
@@ -105,13 +105,13 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
-| tool | dim 的工具名，唯讀，不可停 | 無 |
 | conf | 路徑照存的樣子；未設 `not set`（Yellow），Setup / Remove 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc` |
 | idle_lock | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，Setup 填給 tmux 的 lock-after-time / screen 的 idle，各工具一份 | input popup，型別 `number`，清空 = 300 |
-| block | 唯讀，不可停：`in the file` / `not in the file: S sets it up`（Yellow）/ `no file set`（Yellow），每次畫都讀一次 conf | 無 |
+| status | 唯讀，不可停：`installed`（Green）/ `not installed`（Yellow），區塊在不在 conf 裡，每次畫都讀一次 | 無 |
 
-`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；`?` help 的
-Integration 段說 S 與 X 各做什麼、tmux / screen 段說 conf 與 idle_lock。
+就是 property / value 兩欄，跟 profile 一樣（2026-09-25 修訂：原本第一列是 dim 的 `tool tmux`、最後一列叫 `block`、值是 `in the
+file`，使用者看不懂）。`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；
+`?` help 的 Integration 段說 S 與 X 各做什麼，tmux / screen 段說 conf、idle_lock、status，後者只在 cursor 在 tmux / screen 時出現。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。

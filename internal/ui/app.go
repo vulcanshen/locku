@@ -165,7 +165,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		return m, nil
 	}
 	if k == "?" {
-		return m, m.help.open(m.layer())
+		return m, m.help.open(m.layer(), m.sideAt().kind)
 	}
 	if m.confirm.anim.owns() {
 		switch k {
