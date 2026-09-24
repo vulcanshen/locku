@@ -20,12 +20,14 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
 ║ Savers                 ║│ name              clock                          │
-║ ● clock                ║│ type              clock                          │
-║   clock2               ║│ layout            row                            │
-║ Settings               ║│ time              HH MM                          │
-║   preference           ║│ date              off                            │
-║                        ║│ bg                ■ #313244  →  ■ #ff3244        │
-║                        ║│   R               ───────────● 255               │
+║   clock                ║│ saver             clock                          │
+║   dino                 ║│ layout            row                            │
+║ Profiles               ║│ size              medium                         │
+║ ● clock                ║│ font              3x7                            │
+║   clock2               ║│ time              HH MM                          │
+║   dino                 ║│ date              off                            │
+║ Settings               ║│ bg                ■ #313244  →  ■ #ff3244        │
+║   preference           ║│   R               ───────────● 255               │
 ║                        ║│   G               ──●───────── 50                │
 ║                        ║│   B               ───●──────── 68                │
 ║                        ║│ fg                ■ #f2b753                      │
@@ -36,20 +38,31 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
-左 `[1]` 側欄兩個區塊：**Savers** 列出所有 saver 實例，**Settings** 一項：`preference`。區塊標題 Blue、是
-分隔，不可停，區塊之間不空列（修訂 2026-09-24）；cursor 只在項目之間走。啟用中的 saver 前面一顆 Green `●`，
-是側欄唯一的綠色；它只顯示，設為啟用在 `preference › saver`。
+左 `[1]` 側欄三個區塊（2026-09-24 定案，使用者以 OOP 分：saver 是 class、profile 是 object）：**Savers** 列出
+有哪幾種 saver（clock、dino），它們沒有名字、名字就是自己，不能新增刪除；**Profiles** 列出使用者設定好的、有名字的
+saver 實例，新增（從 Savers 的一種按 `n`）、複製、改名、刪除都在這裡；**Settings** 一項：`preference`。區塊標題 Blue、是
+分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
+是側欄唯一的綠色；它只顯示，設為啟用在 `preference › profile`。
 
-右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上就是那個 saver
-的欄位與顏色；在 `preference` 上是一般設定的列。title chip 跟著換成 `[2] clock`、`[2] preference`；saver 的顏色草稿
-未存時尾綴 ` · unsaved`。
+右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明
+（唯讀）；在 profile 上就是那個 profile 的欄位與顏色；在 `preference` 上是一般設定的列。title chip 跟著換成
+`[2] clock · saver`、`[2] clock`、`[2] preference`；profile 的顏色草稿未存時尾綴 ` · unsaved`。
 
-`[2]` 在 saver 上：
+`[2]` 在 saver 上（全部唯讀、沒有停靠點，唯一的動作是 `[n] New`）：
+
+| 列 | 值 |
+|---|---|
+| saver | `clock` / `dino` |
+| what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever |
+| settings | 這種 saver 的 profile 能設什麼 |
+| profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
+
+`[2]` 在 profile 上：
 
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
-| type | `clock` / `dino` | options popup，cursor 在目前值（2026-09-24：原本唯讀）；底下的列跟著 type 換 |
+| saver | `clock` / `dino` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值 |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
@@ -71,7 +84,7 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | 列 | 值的呈現 | Enter |
 |---|---|---|
 | PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：current PIN 之後選 `New PIN` / `Remove PIN`（2026-09-24，取消併進同一條流程） |
-| saver | 啟用中的 saver 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 saver、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
+| profile | 啟用中的 profile 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 profile、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
 | show_status | `on` / `off` | 原地翻轉，不開 popup |
 | prompt_timeout | 數字 | input popup，型別 `number` |
 | lockout_after | 數字，0 顯示 `0 (off)` | 同上 |
@@ -132,8 +145,8 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 ### 2.1 `[1]` 側欄
 
-- 每一列的 Enter 都只是把焦點送到 `[2]`，saver 也一樣（修訂 2026-09-24，原為 saver 上 Enter = 設為啟用；
-  設為啟用改在 `preference › saver`，`●` 純顯示）。preview / duplicate / rename / delete 在 Space menu 的
+- 每一列的 Enter 都只是把焦點送到 `[2]`，saver 與 profile 也一樣（修訂 2026-09-24，原為 profile 上 Enter = 設為啟用；
+  設為啟用改在 `preference › profile`，`●` 純顯示；saver 上的新增是 `n`，不佔用 Enter）。preview / duplicate / rename / delete 在 Space menu 的
   item region。
 - **Preview** 有兩個入口：全域 `P` 看啟用中的 saver（`?` 揭露）；側欄 saver 上的 `[p] Preview` 看游標那一個，
   不改啟用（修訂 2026-09-24）。整合設定不在 TUI 裡，是 `locku setup`。
@@ -162,15 +175,16 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| Space menu | menu | `[1]` saver 的 item region；`[2]` 欄位的 item region；`[2]` 在 saver 上另有 panel region（Save / Reset）— 兩個 region 各有 header，只有一個就扁平 |
+| Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 上另有 panel region（Preview / Save / Reset）— 兩個 region 各有 header，只有一個就扁平；saver 的 `[2]` 只有 `[n] New` |
 | `?` help | viewport | 全域動作表 |
-| input | input | **邊框寫型別**（`name`、`number`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值 |
+| input | input | **邊框寫型別**（`name`、`number`、`path`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
-| options | menu | type / layout / size / font / time / date / runner / scene / saver 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
-| confirm | message | Delete saver、Quit（有未存的顏色草稿時） |
+| options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
+| confirm | message | Delete profile、Quit（有未存的顏色草稿時） |
 | toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
 
-duplicate 是 `name` input popup：提議值是原名加 `2`，確認後複製參數並把 cursor 移到新實例。
+new 與 duplicate 都是 `name` input popup：new 提議 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
+profile；duplicate 提議原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
 PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`），
 一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
 
@@ -228,7 +242,7 @@ Blue 不出現在那裡。
 
 | 件 | 設定畫面 | 鎖定畫布 |
 |---|---|---|
-| Border title chip | `[1] locku`、`[2] <saver name>`（顏色草稿未存時 ` · unsaved`）/ `[2] preference` | 無 |
+| Border title chip | `[1] locku`、`[2] <saver> · saver`、`[2] <profile name>`（顏色草稿未存時 ` · unsaved`）/ `[2] preference` | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | `[2]` 下框右側：config 路徑 | 無 |
 | footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |

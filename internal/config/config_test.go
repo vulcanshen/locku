@@ -23,13 +23,13 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q for a missing file", note)
 	}
-	if cfg.HasPIN() || cfg.Saver != "clock" || !cfg.ShowStatus || cfg.PromptTimeout != 30 {
+	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PromptTimeout != 30 {
 		t.Errorf("not the defaults: %+v", cfg)
 	}
 }
 
 func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
-	cfg, note := LoadFile(write(t, "prompt_timeout: 5\nsavers:\n  - name: clock\n    bg: \"#000000\"\n"))
+	cfg, note := LoadFile(write(t, "prompt_timeout: 5\nprofiles:\n  - name: clock\n    bg: \"#000000\"\n"))
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
@@ -40,9 +40,9 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 	if !ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
 	}
-	// A saver's absent keys are the defaults too.
-	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Font != "3x7" || s.Time != "HH MM" || s.Date != "off" {
-		t.Errorf("saver %+v", s)
+	// A profile's absent keys are the defaults too.
+	if s.Saver != "clock" || s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Font != "3x7" || s.Time != "HH MM" || s.Date != "off" {
+		t.Errorf("profile %+v", s)
 	}
 }
 
@@ -66,32 +66,54 @@ func TestBadHashFailsOpen(t *testing.T) {
 	}
 }
 
-func TestSaverNotFoundIsNoted(t *testing.T) {
-	cfg, note := LoadFile(write(t, "saver: nope\nsavers:\n  - name: a\n    type: clock\n"))
-	if note != `saver "nope" not found` {
+func TestProfileNotFoundIsNoted(t *testing.T) {
+	cfg, note := LoadFile(write(t, "profile: nope\nprofiles:\n  - name: a\n    saver: clock\n"))
+	if note != `profile "nope" not found` {
 		t.Errorf("note %q", note)
 	}
 	if s, ok := cfg.Active(); ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
 	}
-	if len(cfg.Savers) != 1 || cfg.Savers[0].Time != "HH MM" || cfg.Savers[0].Date != "off" {
-		t.Errorf("savers %+v", cfg.Savers)
+	if len(cfg.Profiles) != 1 || cfg.Profiles[0].Time != "HH MM" || cfg.Profiles[0].Date != "off" {
+		t.Errorf("profiles %+v", cfg.Profiles)
 	}
 }
 
-func TestEmptySaversAreTheDefault(t *testing.T) {
-	cfg, note := LoadFile(write(t, "savers: []\n"))
-	if note != "no savers" {
+func TestEmptyProfilesAreTheDefault(t *testing.T) {
+	cfg, note := LoadFile(write(t, "profiles: []\n"))
+	if note != "no profiles" {
 		t.Errorf("note %q", note)
 	}
-	if len(cfg.Savers) != 1 || cfg.Saver != "clock" {
+	if len(cfg.Profiles) != 1 || cfg.Profile != "clock" {
 		t.Errorf("%+v", cfg)
 	}
 }
 
+// The keys before 2026-09-24 — saver, savers, a saver's type — are read
+// into profile, profiles and a profile's saver, and the next save writes
+// only the new names.
+func TestOldKeysAreCarriedOver(t *testing.T) {
+	p := write(t, "saver: run\nsavers:\n  - name: run\n    type: dino\n  - name: clock\n")
+	cfg, note := LoadFile(p)
+	if note != "" {
+		t.Errorf("note %q", note)
+	}
+	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "trex" || cfg.Profiles[1].Saver != "clock" {
+		t.Errorf("%+v", cfg)
+	}
+	if err := SaveFile(p, cfg); err != nil {
+		t.Fatal(err)
+	}
+	body, _ := os.ReadFile(p)
+	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
+		strings.Contains(s, "savers:") || strings.Contains(s, "type:") {
+		t.Errorf("saved with the old keys:\n%s", s)
+	}
+}
+
 func TestBadValuesAreDefaults(t *testing.T) {
-	cfg, _ := LoadFile(write(t, "savers:\n  - name: clock\n    bg: red\n    fg: \"#ABCDEF\"\nprompt_timeout: -1\nlockout_seconds: 0\n"))
-	if s := cfg.Savers[0]; s.BG != DefaultBG || s.FG != "#abcdef" {
+	cfg, _ := LoadFile(write(t, "profiles:\n  - name: clock\n    bg: red\n    fg: \"#ABCDEF\"\nprompt_timeout: -1\nlockout_seconds: 0\n"))
+	if s := cfg.Profiles[0]; s.BG != DefaultBG || s.FG != "#abcdef" {
 		t.Errorf("colours %+v", s.Colours())
 	}
 	if cfg.PromptTimeout != 30 || cfg.LockoutSeconds != 30 {
@@ -102,8 +124,8 @@ func TestBadValuesAreDefaults(t *testing.T) {
 func TestSaveRoundTrip(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "deep", "config.yaml")
 	cfg := Default()
-	cfg.Savers = append(cfg.Savers, Saver{Name: "big", Type: "clock", Time: "HH MM SS", Date: "YYYY-MM-DD"})
-	cfg.Saver = "big"
+	cfg.Profiles = append(cfg.Profiles, Profile{Name: "big", Saver: "clock", Time: "HH MM SS", Date: "YYYY-MM-DD"})
+	cfg.Profile = "big"
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
 	}

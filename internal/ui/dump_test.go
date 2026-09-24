@@ -22,9 +22,9 @@ func TestDump(t *testing.T) {
 	}
 	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
-	second := config.DefaultSaver()
+	second := config.DefaultProfile()
 	second.Name, second.Time, second.Date = "clock2", "HH MM SS", "YYYY-MMM-DD"
-	cfg.Savers = append(cfg.Savers, second)
+	cfg.Profiles = append(cfg.Profiles, second)
 	show := func(label string, v string) {
 		fmt.Printf("===== %s =====\n%s\n", label, v)
 	}
@@ -71,7 +71,7 @@ func TestDump(t *testing.T) {
 	show("lock 80x24", lk.View())
 	lk2, _ := lk.step(tea.WindowSizeMsg{Width: 120, Height: 40})
 	show("lock 120x40 with prompt", openPrompt(t, lk2).View())
-	full := testLock(t, "1234", func(c *config.Config) { c.Savers[0].Time = "HH MM SS"; c.Savers[0].Date = "YYYY-MM-DD" })
+	full := testLock(t, "1234", func(c *config.Config) { c.Profiles[0].Time = "HH MM SS"; c.Profiles[0].Date = "YYYY-MM-DD" })
 	show("lock 80x24 HH MM SS + YYYY-MM-DD (degrades)", full.View())
 	small, _ := testLock(t, "", nil).step(tea.WindowSizeMsg{Width: 40, Height: 12})
 	show("lock 40x12 no PIN (plain text)", small.View())

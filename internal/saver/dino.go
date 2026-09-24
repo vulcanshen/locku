@@ -16,17 +16,19 @@ import (
 //
 // Everything here is in the scene's own pixels; the canvas scales them.
 
-// The saver types, and the dino's runners and scenes.
+// The kinds of saver there are — the classes, in the user's word (2026-09-24);
+// a profile is one of them set up under a name — and the dino's runners
+// and scenes.
 const (
-	TypeClock = "clock"
-	TypeDino  = "dino"
+	KindClock = "clock"
+	KindDino  = "dino"
 
 	RunnerTRex = "trex"
 	SceneGrass = "grassland"
 )
 
 var (
-	Types   = []string{TypeClock, TypeDino}
+	Kinds   = []string{KindClock, KindDino}
 	Runners = []string{RunnerTRex}
 	Scenes  = []string{SceneGrass}
 )

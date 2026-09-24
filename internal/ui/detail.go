@@ -10,12 +10,14 @@ import (
 )
 
 // Panel [2] (ui.md §1.1): the detail of whatever [1]'s cursor is on, shown
-// at once — there is no Enter to open it. A saver is its fields and its
-// two colours, each a swatch and three channel sliders; preference is the
-// PIN, the active saver and the four settings. Every key config.yaml has
-// is a row here, except `savers`, which IS panel [1].
+// at once — there is no Enter to open it. A saver is what it is and what
+// it can be set to, read-only, with [n] New the one thing to do about it.
+// A profile is its fields and its two colours, each a swatch and three
+// channel sliders; preference is the PIN, the active profile and the
+// settings. Every key config.yaml has is a row here, except `profiles`,
+// which IS panel [1].
 //
-// A saver's colours edit a DRAFT (user, 2026-09-24): the sliders move a
+// A profile's colours edit a DRAFT (user, 2026-09-24): the sliders move a
 // copy, the swatch row shows the saved colour and, when it differs, the
 // draft beside it, and nothing reaches the file until [S] Save; [R] Reset
 // drops the draft. Every other row writes at once.
@@ -23,25 +25,27 @@ import (
 type rowKind int
 
 const (
-	rowName rowKind = iota
-	rowType
+	rowNone rowKind = iota // no row: a panel with nothing to stop on
+	rowName
+	rowSaver // a profile's saver: the class, read-only
 	rowLayout
 	rowSize
 	rowFont
 	rowTime
 	rowDate
+	rowRunner
+	rowScene
 	rowSwatch
 	rowChannel
+	rowAbout // a saver's description, read-only
 	rowPIN
-	rowSaver
+	rowProfile // preference's active profile
 	rowShowStatus
 	rowPromptTimeout
 	rowLockoutAfter
 	rowLockoutSeconds
 	rowTmuxConf
 	rowScreenConf
-	rowRunner
-	rowScene
 )
 
 // row is one line of panel [2].
@@ -62,25 +66,32 @@ type row struct {
 // widest label, lockout_seconds, is fifteen, and a value wants air.
 const labelW = 18
 
-// draftOf is a saver's colours as the sliders have them: the draft when
+// about is what [2] says of a saver: what it is, and what a profile of
+// it can set.
+var about = map[string][2]string{
+	saver.KindClock: {"the time and the date, on the LED board", "layout, size, font, time, date, bg, fg"},
+	saver.KindDino:  {"the offline dino run, jumping by itself, for ever", "size, runner, scene, bg, fg"},
+}
+
+// draftOf is a profile's colours as the sliders have them: the draft when
 // one is up, the file's otherwise.
-func (m AppModel) draftOf(s config.Saver) config.Style {
-	if d, ok := m.drafts[s.Name]; ok {
+func (m AppModel) draftOf(p config.Profile) config.Style {
+	if d, ok := m.drafts[p.Name]; ok {
 		return d
 	}
-	return s.Colours()
+	return p.Colours()
 }
 
-// dirtyOf reports whether a saver has a draft that differs from the file.
-func (m AppModel) dirtyOf(s config.Saver) bool {
-	d, ok := m.drafts[s.Name]
-	return ok && d != s.Colours()
+// dirtyOf reports whether a profile has a draft that differs from the file.
+func (m AppModel) dirtyOf(p config.Profile) bool {
+	d, ok := m.drafts[p.Name]
+	return ok && d != p.Colours()
 }
 
-// anyDirty reports whether any saver has unsaved colours.
+// anyDirty reports whether any profile has unsaved colours.
 func (m AppModel) anyDirty() bool {
-	for _, s := range m.cfg.Savers {
-		if m.dirtyOf(s) {
+	for _, p := range m.cfg.Profiles {
+		if m.dirtyOf(p) {
 			return true
 		}
 	}
@@ -92,28 +103,46 @@ func (m AppModel) rows() []row {
 	value := valueColor
 	switch it := m.sideAt(); it.kind {
 	case sideSaver:
-		s := m.cfg.Savers[it.saver]
-		// The type is a choice like any other (2026-09-24: there is a
-		// second one), and the rows under it are the type's own: the
-		// clock's shapes, or the run's runner and scene.
-		out := []row{
-			{kind: rowName, label: "name", value: s.Name, color: value, stop: true},
-			{kind: rowType, label: "type", value: s.Type, color: value, stop: true},
+		kind := saver.Kinds[it.ref]
+		var names []string
+		for _, p := range m.cfg.Profiles {
+			if p.Saver == kind {
+				names = append(names, p.Name)
+			}
 		}
-		if s.Type == saver.TypeDino {
+		used := strings.Join(names, ", ")
+		if used == "" {
+			used = "none yet"
+		}
+		return []row{
+			{kind: rowAbout, label: "saver", value: kind, color: value},
+			{kind: rowAbout, label: "what", value: about[kind][0], color: value},
+			{kind: rowAbout, label: "settings", value: about[kind][1], color: value},
+			{kind: rowAbout, label: "profiles", value: used, color: value},
+		}
+	case sideProfile:
+		p := m.cfg.Profiles[it.ref]
+		// The saver is the profile's class: shown, not changed — a profile
+		// of another saver is a new profile (user, 2026-09-24). The rows
+		// under it are the saver's own.
+		out := []row{
+			{kind: rowName, label: "name", value: p.Name, color: value, stop: true},
+			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
+		}
+		if p.Saver == saver.KindDino {
 			out = append(out,
-				row{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
-				row{kind: rowRunner, label: "runner", value: s.Runner, color: value, stop: true},
-				row{kind: rowScene, label: "scene", value: s.Scene, color: value, stop: true})
+				row{kind: rowSize, label: "size", value: p.Size, color: value, stop: true},
+				row{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
+				row{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true})
 		} else {
 			out = append(out,
-				row{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
-				row{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
-				row{kind: rowFont, label: "font", value: s.Font, color: value, stop: true},
-				row{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
-				row{kind: rowDate, label: "date", value: s.Date, color: value, stop: true})
+				row{kind: rowLayout, label: "layout", value: p.Layout, color: value, stop: true},
+				row{kind: rowSize, label: "size", value: p.Size, color: value, stop: true},
+				row{kind: rowFont, label: "font", value: p.Font, color: value, stop: true},
+				row{kind: rowTime, label: "time", value: p.Time, color: value, stop: true},
+				row{kind: rowDate, label: "date", value: p.Date, color: value, stop: true})
 		}
-		saved, draft := s.Colours(), m.draftOf(s)
+		saved, draft := p.Colours(), m.draftOf(p)
 		for which, c := range []struct {
 			label, saved, draft string
 		}{{"bg", saved.BG, draft.BG}, {"fg", saved.FG, draft.FG}} {
@@ -135,9 +164,9 @@ func (m AppModel) rows() []row {
 		if m.cfg.HasPIN() {
 			pin.value, pin.color = "set", liveColor
 		}
-		active := row{kind: rowSaver, label: "saver", value: m.cfg.Saver, color: value, stop: true}
+		active := row{kind: rowProfile, label: "profile", value: m.cfg.Profile, color: value, stop: true}
 		if _, ok := m.cfg.Active(); !ok {
-			active.value, active.color = m.cfg.Saver+" (missing)", yellowColor
+			active.value, active.color = m.cfg.Profile+" (missing)", yellowColor
 		}
 		status := row{kind: rowShowStatus, label: "show_status", value: "off", color: value, stop: true}
 		if m.cfg.ShowStatus {
@@ -180,7 +209,8 @@ func (m AppModel) stops() []int {
 	return out
 }
 
-// rowAt is the row under [2]'s cursor.
+// rowAt is the row under [2]'s cursor, or a rowNone row when the panel
+// has no stops — a saver's.
 func (m AppModel) rowAt() row {
 	rows, stops := m.rows(), m.stops()
 	if len(stops) == 0 {
@@ -200,18 +230,21 @@ func sliderBar(v int) string {
 	return strings.Repeat("─", at) + "●" + strings.Repeat("─", sliderW-1-at)
 }
 
-// detailTitle is panel [2]'s chip: the saver's name — with ` · unsaved`
-// while its colour draft differs (ui.md §B) — or preference.
+// detailTitle is panel [2]'s chip: a saver's name with ` · saver`, a
+// profile's name — with ` · unsaved` while its colour draft differs
+// (ui.md §B) — or preference.
 func (m AppModel) detailTitle() string {
-	it := m.sideAt()
-	if it.kind != sideSaver {
-		return "[2] preference"
+	switch it := m.sideAt(); it.kind {
+	case sideSaver:
+		return "[2] " + saver.Kinds[it.ref] + " · saver"
+	case sideProfile:
+		p := m.cfg.Profiles[it.ref]
+		if m.dirtyOf(p) {
+			return "[2] " + p.Name + " · unsaved"
+		}
+		return "[2] " + p.Name
 	}
-	s := m.cfg.Savers[it.saver]
-	if m.dirtyOf(s) {
-		return "[2] " + s.Name + " · unsaved"
-	}
-	return "[2] " + s.Name
+	return "[2] preference"
 }
 
 // detailBody draws panel [2]'s rows at innerW × innerH.
@@ -273,7 +306,7 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			if !r.stop {
 				ls = dim
 			}
-			styled = ls.Render(label) + lipgloss.NewStyle().Foreground(r.color).Render(padRight(r.value, innerW-lw))
+			styled = ls.Render(label) + lipgloss.NewStyle().Foreground(r.color).Render(padRight(truncate(r.value, innerW-lw), innerW-lw))
 		}
 		switch {
 		case i == curRow && m.focus == panelDetail:

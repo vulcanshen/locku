@@ -194,7 +194,7 @@ func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 // A dino saver is the run: a frame every DinoFrame, the board replaced
 // whole with no reveal, the world moved on.
 func TestDinoLockRunsFrameByFrame(t *testing.T) {
-	m := testLock(t, "", func(c *config.Config) { c.Savers[0].Type = saver.TypeDino })
+	m := testLock(t, "", func(c *config.Config) { c.Profiles[0].Saver = saver.KindDino })
 	if m.game == nil {
 		t.Fatal("a dino saver must run the game")
 	}
@@ -280,7 +280,7 @@ func TestResizeRedrawsWhole(t *testing.T) {
 		t.Errorf("30x8 must fall back to plain text: k=%d", scale(m))
 	}
 	// A large saver gets 3 there.
-	big := testLock(t, "1234", func(c *config.Config) { c.Savers[0].Size = "large" })
+	big := testLock(t, "1234", func(c *config.Config) { c.Profiles[0].Size = "large" })
 	big, _ = big.step(tea.WindowSizeMsg{Width: 200, Height: 60})
 	if scale(big) != 3 {
 		t.Errorf("large at 200x60: k=%d", scale(big))
