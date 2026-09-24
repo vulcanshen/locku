@@ -43,11 +43,10 @@ type AppModel struct {
 	pendingG bool // the first half of gg
 
 	// what an open box is about
-	editRef    int        // the saver a name box edits
-	editKind   rowKind    // the setting a number box edits
-	optionsFor row        // the row an options list is for
-	pinAfter   pinPurpose // what happens once the current PIN is right
-	pinNew     string     // the new PIN, awaiting its confirmation
+	editRef    int     // the saver a name box edits
+	editKind   rowKind // the setting a number or path box edits
+	optionsFor row     // the row an options list is for
+	pinNew     string  // the new PIN, awaiting its confirmation
 }
 
 type panel int
@@ -55,14 +54,6 @@ type panel int
 const (
 	panelSide   panel = 1
 	panelDetail panel = 2
-)
-
-type pinPurpose int
-
-const (
-	pinSet pinPurpose = iota
-	pinChange
-	pinClear
 )
 
 // NewApp is the settings screen over cfg. problem is Load's note.

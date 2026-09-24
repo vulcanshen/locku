@@ -11,7 +11,6 @@ type confirmAction int
 const (
 	confirmNone        confirmAction = iota
 	confirmDeleteSaver               // remove the saver at ref
-	confirmClearPIN                  // back to "any key unlocks"
 	confirmQuit                      // leave with the colour draft unsaved
 )
 

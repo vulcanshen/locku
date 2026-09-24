@@ -68,7 +68,7 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 
 | 列 | 值的呈現 | Enter |
 |---|---|---|
-| PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：更改流程。清除走 Space menu |
+| PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：current PIN 之後選 `New PIN` / `Remove PIN`（2026-09-24，取消併進同一條流程） |
 | saver | 啟用中的 saver 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 saver、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
 | show_status | `on` / `off` | 原地翻轉，不開 popup |
 | prompt_timeout | 數字 | input popup，型別 `number` |
@@ -147,7 +147,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ### 2.3 鎖定畫布
 
 單一職責：畫內容與狀態列。所有按鍵（含 Ctrl 組合，`function.md` §2.1）只做一件事：開 PIN popup；
-無 PIN 模式則結束進程。PIN popup 開著時 saver 停 tick，亮格改畫 Surface2、暗格不變，當 backdrop，一次重畫、不再動。
+無 PIN 模式則結束進程。PIN popup 開著時亮格改畫 Surface2、暗格不變，當 backdrop；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。
 
 ---
 
@@ -164,19 +164,19 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | `?` help | viewport | 全域動作表 |
 | input | input | **邊框寫型別**（`name`、`number`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；輸入顯示 `●` |
-| options | menu | layout / time / date / saver 的清單；R G B 的 0–255 清單 10 列一窗 |
-| confirm | message | Delete saver、Clear PIN、Quit（有未存的顏色草稿時） |
+| options | menu | layout / time / date / saver 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
+| confirm | message | Delete saver、Quit（有未存的顏色草稿時） |
 | toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
 
 duplicate 是 `name` input popup：提議值是原名加 `2`，確認後複製參數並把 cursor 移到新實例。
-PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → `new PIN` → `confirm PIN`），一次只問一件事，
-錯在哪一步就停在哪一步。
+PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`），
+一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
 
 ### 3.2 鎖定畫布
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，遮罩，寬固定 32 欄置中 | 唯一的 popup |
+| PIN prompt | input，遮罩，寬固定 48 欄置中，框內上下各留一列；`●` 從框的橫向中央開始、向兩側長（2026-09-24：原本 32 欄、靠左） | 唯一的 popup |
 
 四個狀態，全部只改**邊框**與 title，框內一行不變：
 

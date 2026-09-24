@@ -13,8 +13,10 @@ import (
 )
 
 // pinPrompt is the lock screen's one popup (ui.md §3.2): a masked line,
-// 32 columns, centred. It has four looks and they differ only in the
-// border and its title — the row inside never moves:
+// 48 columns, centred, a row of air above and below, the dots growing
+// out from the middle of the box (user, 2026-09-24: bigger, and the
+// input starting from the centre). It has four looks and they differ
+// only in the border and its title — the row inside never moves:
 //
 //	PIN                       idle: the layer colour, enter unlock · esc back
 //	PIN · wrong               red for a second, the row cleared, every key swallowed
@@ -31,7 +33,7 @@ const (
 )
 
 const (
-	pinPromptW = 32 // the whole box, borders included
+	pinPromptW = 48 // the whole box, borders included (32 until 2026-09-24)
 	wrongHold  = time.Second
 )
 
@@ -82,7 +84,7 @@ func (p pinPrompt) remaining(now time.Time) int {
 }
 
 func (p pinPrompt) view(now time.Time) string {
-	// 32 columns, or what a smaller terminal can hold.
+	// 48 columns, or what a smaller terminal can hold.
 	innerW := popupInnerW(p.screenW, pinPromptW-2)
 	bc := popupLayerColor(1)
 	title := " " + glyphLock + " PIN "
@@ -104,7 +106,9 @@ func (p pinPrompt) view(now time.Time) string {
 		edit := lipgloss.NewStyle().Foreground(editColor)
 		cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
 		shown := truncateHead(dots, innerW-3)
-		row = " " + edit.Render(shown) + cur.Render(" ")
+		// The dots and the cursor sit in the middle of the box, and grow
+		// out both ways as the PIN is typed.
+		row = spaces((innerW-dispW(shown)-1)/2) + edit.Render(shown) + cur.Render(" ")
 	}
-	return drawPopupBoxPad(bc, title, hint, animRows(p.anim, []string{row}), innerW, false)
+	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row}), innerW)
 }

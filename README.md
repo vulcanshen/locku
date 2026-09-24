@@ -64,7 +64,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`P` 預覽這個 saver、`S` 存顏色草稿、`R` 丟掉；
-`[2]` preference 的 PIN 列：`x` clear。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
+`[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
 `tmux_conf` / `screen_conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。
 
 ## 文件
