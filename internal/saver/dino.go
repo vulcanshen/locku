@@ -36,12 +36,12 @@ var (
 // DinoFrame is the time between two frames: fourteen a second.
 const DinoFrame = 70 * time.Millisecond
 
-// Scene is one frame: a bitmap in the game's own pixels, row by row, and
-// the score for the canvas to letter into a corner.
+// Scene is one frame: a bitmap in the game's own pixels, row by row.
+// Nothing else — no score, no clock (user, 2026-09-24): it is a
+// screensaver, not a game being played.
 type Scene struct {
-	W, H  int
-	Pix   []bool
-	Score int
+	W, H int
+	Pix  []bool
 }
 
 func (s *Scene) set(x, y int) {
@@ -185,7 +185,7 @@ type Dino struct {
 	scene  sceneArt
 	w, h   int // the scene as last drawn; nothing runs before the first draw
 	t      int // frames run
-	dist   int // pixels the world has moved: the score is a tenth of it
+	dist   int // pixels the world has moved: the ground's tufts scroll by it
 	air    int // -1 on the ground, else how far into the arc
 	obs    []obstacle
 	gap    int // pixels until the next obstacle
@@ -334,7 +334,7 @@ func (d *Dino) Draw(w, h int) Scene {
 	if w != d.w || h != d.h {
 		d.resize(w, h)
 	}
-	sc := Scene{W: w, H: h, Pix: make([]bool, w*h), Score: d.dist / 10}
+	sc := Scene{W: w, H: h, Pix: make([]bool, w*h)}
 	gy := d.groundY()
 	for x := 0; x < w; x++ {
 		sc.set(x, gy)

@@ -243,7 +243,7 @@ func TestPaintCentresTheBlocks(t *testing.T) {
 }
 
 // A game scene is the whole board at the largest scale that leaves it
-// room to be played, and its score sits top right.
+// room to be played, and nothing is lettered over it.
 func TestSceneFitsAndPaints(t *testing.T) {
 	for _, c := range []struct{ size, cols, rows, k, w, h int }{
 		{3, 152, 31, 1, 76, 31}, // the user's terminal: 31 rows hold one scale
@@ -271,21 +271,16 @@ func TestSceneFitsAndPaints(t *testing.T) {
 			t.Fatalf("ground missing at %d", x)
 		}
 	}
-	// The score is lettered top right: something lit in the top-right
-	// corner, nothing in the top-left.
-	tl, tr := 0, 0
-	for y := 0; y < 12; y++ {
-		for x := 0; x < 40; x++ {
-			if b.at(x, y) {
-				tl++
-			}
-			if b.at(b.w-1-x, y) {
-				tr++
-			}
+	// The board is the scene and nothing more: exactly the scene's lit
+	// pixels, each four cells.
+	lit := 0
+	for _, p := range sc.Pix {
+		if p {
+			lit++
 		}
 	}
-	if tr == 0 || tl != 0 {
-		t.Errorf("score: %d lit top right, %d top left", tr, tl)
+	if b.count() != lit*4 {
+		t.Errorf("%d cells lit for %d scene pixels: something lettered over the scene", b.count(), lit)
 	}
 }
 
