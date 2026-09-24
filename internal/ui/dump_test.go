@@ -52,8 +52,8 @@ func TestDump(t *testing.T) {
 		}
 		return sb.String()
 	}
-	show("board 120x40 k=2 21:05 as text", ascii(paint([]string{"21 05"}, 2, 120, 39)))
-	show("board 200x60 k=1 the whole font", ascii(paint([]string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1, 200, 59)))
+	show("board 120x40 k=2 21:05 as text", ascii(paint(faceTall, []string{"21 05"}, 2, 120, 39)))
+	show("board 200x60 k=1 the whole font", ascii(paint(faceTall, []string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1, 200, 59)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }

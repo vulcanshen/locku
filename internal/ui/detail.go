@@ -26,6 +26,7 @@ const (
 	rowType
 	rowLayout
 	rowSize
+	rowFont
 	rowTime
 	rowDate
 	rowSwatch
@@ -92,6 +93,7 @@ func (m AppModel) rows() []row {
 			{kind: rowType, label: "type", value: s.Type, color: dimColor},
 			{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
 			{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
+			{kind: rowFont, label: "font", value: s.Font, color: value, stop: true},
 			{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
 			{kind: rowDate, label: "date", value: s.Date, color: value, stop: true},
 		}
@@ -220,10 +222,17 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			}
 			styled = clipANSI(styled, innerW) + spaces(innerW-min(used, innerW))
 		case rowChannel:
+			// The track and the number wear the channel's own colour at
+			// its value — the R slider is #RR0000, the G one #00GG00, the
+			// B one #0000BB — so the slider shows what it is setting
+			// (user, 2026-09-24).
 			bar := sliderBar(r.num)
+			ch := [3]int{}
+			ch[r.ch] = r.num
+			tint := lipgloss.NewStyle().Foreground(lipgloss.Color(config.Hex(ch[0], ch[1], ch[2])))
 			plain = padRight(label+bar+" "+r.value, innerW)
-			styled = txt.Render(label) + dim.Render(bar) + " " +
-				lipgloss.NewStyle().Foreground(r.color).Render(padRight(r.value, innerW-lw-sliderW-1))
+			styled = txt.Render(label) + tint.Render(bar) + " " +
+				tint.Render(padRight(r.value, innerW-lw-sliderW-1))
 		default:
 			plain = padRight(label+r.value, innerW)
 			ls := txt

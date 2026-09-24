@@ -41,16 +41,25 @@ const (
 	SizeSmall  = "small"
 	SizeMedium = "medium"
 	SizeLarge  = "large"
+
+	// The font is the glyphs' height: seven rows, or five (user,
+	// 2026-09-24: try the short one). Both are three wide.
+	FontTall  = "3x7"
+	FontShort = "3x5"
 )
 
-// TimeFormats, DateFormats, Layouts and Sizes are the options in the
-// order the settings screen lists them.
+// TimeFormats, DateFormats, Layouts, Sizes and Fonts are the options in
+// the order the settings screen lists them.
 var (
 	TimeFormats = []string{TimeHM, TimeHMS}
 	DateFormats = []string{DateOff, DateYMD, DateYMonD, DateMD, DateMonD}
 	Layouts     = []string{LayoutRow, LayoutColumn}
 	Sizes       = []string{SizeSmall, SizeMedium, SizeLarge}
+	Fonts       = []string{FontTall, FontShort}
 )
+
+// ValidFont says whether s is one of the fonts.
+func ValidFont(s string) bool { return s == FontTall || s == FontShort }
 
 var timeLayout = map[string]string{
 	TimeHM:  "15 04",
