@@ -11,8 +11,9 @@ import (
 // what is coming, at a random moment inside the window that clears it,
 // and now and then there is a jump for nothing when the way is clear
 // (user, 2026-09-24: endless, random obstacles, random jumps). Two of
-// its settings pick the art — the runner and the scene — each with one
-// choice so far: the T-Rex, and grassland.
+// its settings pick the art — the runner and the scene. Runners: the
+// T-Rex, or two of them one behind the other, each jumping on its own.
+// Scenes: grassland, with cacti; the desert, with pyramids.
 //
 // Everything here is in the scene's own pixels; the canvas scales them.
 
@@ -23,14 +24,16 @@ const (
 	KindClock = "clock"
 	KindDino  = "dino"
 
-	RunnerTRex = "trex"
-	SceneGrass = "grassland"
+	RunnerTRex    = "trex"
+	RunnerTwoTRex = "two-trex"
+	SceneGrass    = "grassland"
+	SceneDesert   = "desert"
 )
 
 var (
 	Kinds   = []string{KindClock, KindDino}
-	Runners = []string{RunnerTRex}
-	Scenes  = []string{SceneGrass}
+	Runners = []string{RunnerTRex, RunnerTwoTRex}
+	Scenes  = []string{SceneGrass, SceneDesert}
 )
 
 // DinoFrame is the time between two frames: fourteen a second.
@@ -62,17 +65,18 @@ func (s *Scene) blit(sp sprite, x, y int) {
 }
 
 const (
-	speed    = 2   // pixels the world moves a frame
-	groundH  = 2   // the ground line, and the row of tufts under it
-	minGap   = 44  // the least between two obstacles: a jump, and a landing
-	maxGap   = 100 // the most
-	firstGap = 60  // before the first
+	speed     = 2   // pixels the world moves a frame
+	groundH   = 2   // the ground line, and the row of tufts under it
+	minGap    = 44  // the least between two obstacles: a jump, and a landing
+	maxGap    = 100 // the most
+	firstGap  = 60  // before the first
+	runnerGap = 4   // between two runners, nose to tail
 )
 
 // arc is a jump: how far the runner is above the ground, frame by frame.
-// It is a slow, high jump — the widest obstacle is eleven pixels and the
-// runner twelve, and at two pixels a frame the two need ten frames or so
-// above the tallest cactus.
+// It is a slow, high jump — the widest obstacle is thirteen pixels and
+// the runner twelve, and at two pixels a frame the two need ten frames
+// or so above the tallest cactus.
 var arc = []int{2, 4, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 4, 2}
 
 // A sprite is rows of '#' lit and '.' dark, top to bottom, all one width.
@@ -106,16 +110,21 @@ func beside(gap int, parts ...sprite) sprite {
 	return out
 }
 
-// runnerArt is a runner: two running poses, and the one in the air.
+// runnerArt is a runner: two running poses and the one in the air, and
+// how many of them run — one behind the other, each jumping on its own
+// (user, 2026-09-24).
 type runnerArt struct {
-	run [2]sprite
-	air sprite
+	run   [2]sprite
+	air   sprite
+	count int
 }
 
-// sceneArt is a scene: what stands in the way, and what drifts by.
+// sceneArt is a scene: what stands in the way, what drifts by, and how
+// often the ground has a tuft.
 type sceneArt struct {
 	obstacles []sprite
 	cloud     sprite
+	tuftEvery uint32
 }
 
 // The T-Rex, facing the way it runs, twelve wide and fourteen tall.
@@ -134,13 +143,16 @@ var trexBody = sprite{
 	"....#####...",
 }
 
-var trex = runnerArt{
+var trexArt = runnerArt{
 	run: [2]sprite{
 		append(append(sprite{}, trexBody...), "....##.#....", "....#..##..."),
 		append(append(sprite{}, trexBody...), "....#.##....", "....##..#..."),
 	},
-	air: append(append(sprite{}, trexBody...), "....##.##...", "....#...#..."),
+	air:   append(append(sprite{}, trexBody...), "....##.##...", "....#...#..."),
+	count: 1,
 }
+
+var twoTRexArt = runnerArt{run: trexArt.run, air: trexArt.air, count: 2}
 
 var (
 	cactus = sprite{
@@ -159,6 +171,10 @@ var (
 		"..#..",
 		"..#..",
 	}
+	cloudArt = sprite{
+		"..##..###.",
+		"##########",
+	}
 	grassland = sceneArt{
 		obstacles: []sprite{
 			cactus,
@@ -166,27 +182,66 @@ var (
 			beside(1, cactus, cactus, cactus),
 			tallCactus,
 		},
-		cloud: sprite{
-			"..##..###.",
-			"##########",
+		cloud:     cloudArt,
+		tuftEvery: 5,
+	}
+
+	// The desert's pyramids: stepped, three to five high.
+	pyramid = sprite{
+		"..#..",
+		".###.",
+		"#####",
+	}
+	bigPyramid = sprite{
+		"...#...",
+		"..###..",
+		".#####.",
+		"#######",
+	}
+	greatPyramid = sprite{
+		"....#....",
+		"...###...",
+		"..#####..",
+		".#######.",
+		"#########",
+	}
+	desert = sceneArt{
+		obstacles: []sprite{
+			pyramid,
+			bigPyramid,
+			greatPyramid,
+			beside(1, pyramid, bigPyramid),
 		},
+		cloud:     cloudArt,
+		tuftEvery: 11, // sand: fewer specks
 	}
 )
 
 // runnerOf and sceneOf are the art a name picks; an unknown name is the
 // first choice, as a saver with no such setting would be.
-func runnerOf(string) runnerArt { return trex }
-func sceneOf(string) sceneArt   { return grassland }
+func runnerOf(name string) runnerArt {
+	if name == RunnerTwoTRex {
+		return twoTRexArt
+	}
+	return trexArt
+}
+
+func sceneOf(name string) sceneArt {
+	if name == SceneDesert {
+		return desert
+	}
+	return grassland
+}
 
 // Dino is one run in progress.
 type Dino struct {
 	rng    *rand.Rand
 	runner runnerArt
 	scene  sceneArt
-	w, h   int // the scene as last drawn; nothing runs before the first draw
-	t      int // frames run
-	dist   int // pixels the world has moved: the ground's tufts scroll by it
-	air    int // -1 on the ground, else how far into the arc
+	w, h   int   // the scene as last drawn; nothing runs before the first draw
+	t      int   // frames run
+	dist   int   // pixels the world has moved: the ground's tufts scroll by it
+	air    []int // one a runner: -1 on the ground, else how far into the arc
 	obs    []obstacle
 	gap    int // pixels until the next obstacle
 	clouds []cloud
@@ -198,32 +253,39 @@ type cloud struct{ x, y int }
 // NewDino is a run from its first frame, with the art runner and scene
 // name. The same seed is the same run.
 func NewDino(seed uint64, runner, scene string) *Dino {
-	return &Dino{
+	d := &Dino{
 		rng:    rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
 		runner: runnerOf(runner),
 		scene:  sceneOf(scene),
-		air:    -1,
 		gap:    firstGap,
 	}
+	d.air = make([]int, d.runner.count)
+	for i := range d.air {
+		d.air[i] = -1
+	}
+	return d
 }
 
 // Next is when the next frame is due.
 func (d *Dino) Next(now time.Time) time.Time { return now.Add(DinoFrame) }
 
 func (d *Dino) groundY() int { return d.h - groundH }
-func (d *Dino) runnerX() int { return d.w / 6 }
 
-// lift is how far above the ground the runner is this frame.
-func (d *Dino) lift() int {
-	if d.air >= 0 {
-		return arc[d.air]
+// runnerX is where runner i stands: the first a sixth of the way in,
+// each next one a runner's width and a gap ahead of it.
+func (d *Dino) runnerX(i int) int { return d.w/6 + i*(d.runner.air.w()+runnerGap) }
+
+// lift is how far above the ground runner i is this frame.
+func (d *Dino) lift(i int) int {
+	if d.air[i] >= 0 {
+		return arc[d.air[i]]
 	}
 	return 0
 }
 
 // Step moves the world one frame on: the ground and the obstacles scroll,
-// one may come into view, the clouds drift, and the runner goes on with
-// its jump, lands, or decides to jump.
+// one may come into view, the clouds drift, and each runner goes on
+// with its jump, lands, or decides to jump.
 func (d *Dino) Step() {
 	if d.w == 0 {
 		return
@@ -249,45 +311,52 @@ func (d *Dino) Step() {
 			}
 		}
 	}
-	if d.air >= 0 {
-		if d.air++; d.air >= len(arc) {
-			d.air = -1
+	for i := range d.air {
+		d.step(i)
+	}
+}
+
+// step is runner i's frame: on with the jump, or the decision to jump.
+func (d *Dino) step(i int) {
+	if d.air[i] >= 0 {
+		if d.air[i]++; d.air[i] >= len(arc) {
+			d.air[i] = -1
 		}
 		return
 	}
-	if o, ok := d.ahead(); ok {
+	if o, ok := d.ahead(i); ok {
 		// Jump inside the window that clears it: at its last frame, or
-		// earlier by chance.
-		if d.clears(o, 0) && (!d.clears(o, 1) || d.rng.IntN(6) == 0) {
-			d.air = 0
+		// earlier by chance — each runner's own window, its own chance.
+		if d.clears(i, o, 0) && (!d.clears(i, o, 1) || d.rng.IntN(6) == 0) {
+			d.air[i] = 0
 		}
 		return
 	}
 	// Nothing coming, and nothing due before this jump would land: a jump
 	// for the fun of it.
 	if d.gap > len(arc)*speed+8 && d.rng.IntN(50) == 0 {
-		d.air = 0
+		d.air[i] = 0
 	}
 }
 
-// ahead is the nearest obstacle the runner has not passed.
-func (d *Dino) ahead() (obstacle, bool) {
+// ahead is the nearest obstacle runner i has not passed.
+func (d *Dino) ahead(i int) (obstacle, bool) {
 	var best obstacle
 	found := false
 	for _, o := range d.obs {
-		if o.x+d.scene.obstacles[o.kind].w() > d.runnerX() && (!found || o.x < best.x) {
+		if o.x+d.scene.obstacles[o.kind].w() > d.runnerX(i) && (!found || o.x < best.x) {
 			best, found = o, true
 		}
 	}
 	return best, found
 }
 
-// clears reports whether a jump begun delay frames from now takes the
-// runner over o and lands it past — with the runner's whole box, which
+// clears reports whether a jump runner i begins delay frames from now
+// takes it over o and lands it past — with the runner's whole box, which
 // is more careful than its shape.
-func (d *Dino) clears(o obstacle, delay int) bool {
+func (d *Dino) clears(i int, o obstacle, delay int) bool {
 	s := d.scene.obstacles[o.kind]
-	dx, dw := d.runnerX(), d.runner.air.w()
+	dx, dw := d.runnerX(i), d.runner.air.w()
 	for t := 0; ; t++ {
 		ox := o.x - speed*t
 		if ox+s.w() <= dx {
@@ -320,16 +389,18 @@ func (d *Dino) resize(w, h int) {
 	}
 }
 
-// tuft says whether the ground has a tuft at world position x: a hash,
-// so the tufts scroll with the ground and cost nothing to keep.
-func tuft(x int) bool {
+// tuft says whether the ground has a tuft at world position x, one in
+// every so many: a hash, so the tufts scroll with the ground and cost
+// nothing to keep.
+func tuft(x int, every uint32) bool {
 	h := uint32(x) * 2654435761
-	return h>>24%5 == 0
+	return h>>24%every == 0
 }
 
 // Draw is the current frame at w × h pixels: the ground along the
-// bottom, the clouds, the obstacles, and the runner where its jump has
-// it, in the pose its stride is at.
+// bottom, the clouds, the obstacles, and the runners where their jumps
+// have them, each in the pose its stride is at — the one behind half a
+// stride off the one in front.
 func (d *Dino) Draw(w, h int) Scene {
 	if w != d.w || h != d.h {
 		d.resize(w, h)
@@ -338,7 +409,7 @@ func (d *Dino) Draw(w, h int) Scene {
 	gy := d.groundY()
 	for x := 0; x < w; x++ {
 		sc.set(x, gy)
-		if tuft(x + d.dist) {
+		if tuft(x+d.dist, d.scene.tuftEvery) {
 			sc.set(x, gy+1)
 		}
 	}
@@ -349,10 +420,12 @@ func (d *Dino) Draw(w, h int) Scene {
 		s := d.scene.obstacles[o.kind]
 		sc.blit(s, o.x, gy-s.h())
 	}
-	pose := d.runner.air
-	if d.air < 0 {
-		pose = d.runner.run[d.t/3%2]
+	for i := range d.air {
+		pose := d.runner.air
+		if d.air[i] < 0 {
+			pose = d.runner.run[(d.t/3+i)%2]
+		}
+		sc.blit(pose, d.runnerX(i), gy-pose.h()-d.lift(i))
 	}
-	sc.blit(pose, d.runnerX(), gy-pose.h()-d.lift())
 	return sc
 }

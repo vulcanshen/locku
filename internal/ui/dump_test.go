@@ -65,6 +65,12 @@ func TestDump(t *testing.T) {
 		d.Step()
 	}
 	show("dino 152x32 k=1 after 68 frames", ascii(paintScene(d.Draw(76, 31), 1, 152, 31)))
+	two := saver.NewDino(5, saver.RunnerTwoTRex, saver.SceneDesert)
+	two.Draw(76, 31)
+	for i := 0; i < 90; i++ {
+		two.Step()
+	}
+	show("two-trex in the desert, 152x32 after 90 frames", ascii(paintScene(two.Draw(76, 31), 1, 152, 31)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }
