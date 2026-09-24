@@ -70,7 +70,7 @@ const labelW = 18
 // it can set.
 var about = map[string][2]string{
 	saver.KindClock: {"the time and the date, on the LED board", "layout, size, font, time, date, bg, fg"},
-	saver.KindDino:  {"the offline dino run, jumping by itself, for ever", "size, runner, scene, bg, fg"},
+	saver.KindDino:  {"the offline dino run, jumping by itself, for ever", "runner, scene, bg, fg"},
 }
 
 // draftOf is a profile's colours as the sliders have them: the draft when
@@ -130,8 +130,9 @@ func (m AppModel) rows() []row {
 			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
 		}
 		if p.Saver == saver.KindDino {
+			// No size: the run is drawn as large as the terminal allows
+			// (user, 2026-09-24).
 			out = append(out,
-				row{kind: rowSize, label: "size", value: p.Size, color: value, stop: true},
 				row{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
 				row{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true})
 		} else {

@@ -111,7 +111,7 @@ func TestSidebarEnterOpensTheDetail(t *testing.T) {
 	if m.focus != panelDetail || m.cfg.Profile != "clock" {
 		t.Errorf("Enter on a saver: focus %d, active %q", m.focus, m.cfg.Profile)
 	}
-	m = m.press("1", "j", "enter") // preference
+	m = m.press("1", "G", "enter") // preference, the last row
 	if m.focus != panelDetail || m.sideAt().kind != sidePreference {
 		t.Error("Enter on preference must go to [2]")
 	}
@@ -214,7 +214,7 @@ func TestDetailPreviewsThatSaver(t *testing.T) {
 	if m.preview == nil || m.preview.clock.Time != "HH MM" {
 		t.Fatal("P on preference must preview the active saver")
 	}
-	m = m.press("x", "1", "k", "2", " ") // back up from preference to clock2
+	m = m.press("x", "1", "g", "g", "j", "2", " ") // back to clock2, the second profile
 	if hotkeyIndex(m.menu.menuKeys(), "P") < 0 {
 		t.Error("[P] Preview must be a row of the profile's [2] menu")
 	}
@@ -380,9 +380,9 @@ func TestSaversAreReadOnlyClasses(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideProfile || it.ref != 0 || m.cfg.Profiles[0].Name != "clock" {
 		t.Fatalf("the cursor must start on the active profile, not %+v", it)
 	}
-	m = m.press("g", "g")
+	m = m.press("G", "k", "k") // under the profiles: the savers, then preference
 	if it := m.sideAt(); it.kind != sideSaver || it.ref != 0 {
-		t.Fatalf("gg must reach the first saver, not %+v", it)
+		t.Fatalf("the first saver sits under the profiles, not %+v", it)
 	}
 	v := m.View()
 	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, "[2] clock · saver") ||
@@ -404,7 +404,7 @@ func TestSaversAreReadOnlyClasses(t *testing.T) {
 // the saver's rows — a dino's size, runner and scene — lands under the
 // cursor, and previews as the run.
 func TestNewProfileOfASaver(t *testing.T) {
-	m := newTestApp(t).press("g", "g", "j", "n") // the dino saver
+	m := newTestApp(t).press("G", "k", "n") // the dino saver, just above preference
 	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "dino" {
 		t.Fatalf("new box: %+v", m.input)
 	}
@@ -425,8 +425,11 @@ func TestNewProfileOfASaver(t *testing.T) {
 	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "grassland") {
 		t.Errorf("a dino's rows:\n%s", v)
 	}
-	if got := len(m.stops()); got != 10 { // name, size, runner, scene, six channels
+	if got := len(m.stops()); got != 9 { // name, runner, scene, six channels — no size
 		t.Errorf("%d stops", got)
+	}
+	if p.Size != "" || p.Layout != "" || strings.Contains(v, "size") {
+		t.Errorf("a dino has no size or shapes: %+v", p)
 	}
 	m = m.press("P")
 	if m.preview == nil || m.preview.game == nil {
@@ -435,7 +438,7 @@ func TestNewProfileOfASaver(t *testing.T) {
 	m = m.press("x") // no PIN: any key hands back
 	// A second one of the same saver is offered the next free name, and
 	// the saver's [2] lists both.
-	m = m.press("1", "g", "g", "j", "n")
+	m = m.press("1", "G", "k", "n")
 	if m.input.value != "dino2" {
 		t.Errorf("offer %q", m.input.value)
 	}
@@ -668,7 +671,7 @@ func TestViewFitsTheTerminal(t *testing.T) {
 		check(t, m.press("G", "2"), "preference")
 		check(t, m.press("2", "G", "enter", "G", "enter"), "profile with a draft")
 		check(t, m.press("2", " "), "profile menu with regions")
-		check(t, m.press("g", "g", "2"), "a saver's detail")
+		check(t, m.press("G", "k", "2"), "a saver's detail")
 	}
 }
 

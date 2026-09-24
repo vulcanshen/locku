@@ -42,13 +42,16 @@ const (
 // says which; the rest is how it shows, and the two colours its board is
 // drawn in — the colours are the profile's own, not a global setting.
 type Profile struct {
-	Name   string `yaml:"name"`
-	Saver  string `yaml:"saver"`
-	Layout string `yaml:"layout"`
-	Size   string `yaml:"size"`
-	Font   string `yaml:"font"`
-	Time   string `yaml:"time"`
-	Date   string `yaml:"date"`
+	Name  string `yaml:"name"`
+	Saver string `yaml:"saver"`
+	// The clock's own: its shapes and its size. A dino leaves them out
+	// of the file — it has no size; the canvas draws it as large as the
+	// terminal allows (user, 2026-09-24).
+	Layout string `yaml:"layout,omitempty"`
+	Size   string `yaml:"size,omitempty"`
+	Font   string `yaml:"font,omitempty"`
+	Time   string `yaml:"time,omitempty"`
+	Date   string `yaml:"date,omitempty"`
 	BG     string `yaml:"bg"`
 	FG     string `yaml:"fg"`
 	// The dino run's own (2026-09-24): who runs, and where. A clock
@@ -95,8 +98,15 @@ type Config struct {
 
 // DefaultProfile is the profile a fresh install has, and the one drawn
 // when the file names none that exists.
-func DefaultProfile() Profile {
-	return Profile{Name: "clock", Saver: saver.KindClock, Layout: "row", Size: "medium", Font: "3x7", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
+func DefaultProfile() Profile { return NewProfile("clock", saver.KindClock) }
+
+// NewProfile is a profile called name of the saver kind, with that
+// saver's defaults and nothing of the other's.
+func NewProfile(name, kind string) Profile {
+	if kind == saver.KindDino {
+		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+	}
+	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "medium", Font: "3x7", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
 }
 
 // Default is the file as it would be with every key left out.
@@ -211,28 +221,34 @@ func (cfg Config) sanitized() (Config, string) {
 		if p.Saver == "" {
 			p.Saver = saver.KindClock
 		}
+		// A saver's absent keys are its defaults; the other saver's keys
+		// are not its business and are dropped.
+		d := NewProfile(p.Name, p.Saver)
 		if p.Saver == saver.KindDino {
 			if p.Runner == "" {
-				p.Runner = saver.Runners[0]
+				p.Runner = d.Runner
 			}
 			if p.Scene == "" {
-				p.Scene = saver.Scenes[0]
+				p.Scene = d.Scene
 			}
-		}
-		if p.Layout == "" {
-			p.Layout = DefaultProfile().Layout
-		}
-		if p.Size == "" {
-			p.Size = DefaultProfile().Size
-		}
-		if p.Font == "" {
-			p.Font = DefaultProfile().Font
-		}
-		if p.Time == "" {
-			p.Time = DefaultProfile().Time
-		}
-		if p.Date == "" {
-			p.Date = DefaultProfile().Date
+			p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
+		} else {
+			if p.Layout == "" {
+				p.Layout = d.Layout
+			}
+			if p.Size == "" {
+				p.Size = d.Size
+			}
+			if p.Font == "" {
+				p.Font = d.Font
+			}
+			if p.Time == "" {
+				p.Time = d.Time
+			}
+			if p.Date == "" {
+				p.Date = d.Date
+			}
+			p.Runner, p.Scene = "", ""
 		}
 		// A colour that is not "#rrggbb" is quietly its default (ui.md §1.1).
 		if !ValidHex(p.BG) {

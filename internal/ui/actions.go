@@ -466,15 +466,10 @@ func (m *AppModel) commitInput() tea.Cmd {
 		if !ok {
 			return nil
 		}
-		// A profile of the saver, with the defaults: the clock's shapes,
+		// A profile of the saver, with its defaults: the clock's shapes,
 		// or the run's first runner and scene.
-		p := config.DefaultProfile()
-		p.Name, p.Saver = name, saver.Kinds[m.editRef]
-		if p.Saver == saver.KindDino {
-			p.Runner, p.Scene = saver.Runners[0], saver.Scenes[0]
-		}
 		before := m.snapshot()
-		m.cfg.Profiles = append(m.cfg.Profiles, p)
+		m.cfg.Profiles = append(m.cfg.Profiles, config.NewProfile(name, saver.Kinds[m.editRef]))
 		m.cur1 = profileItem(len(m.cfg.Profiles) - 1)
 		m.cur2 = 0
 		m.focus = panelDetail
