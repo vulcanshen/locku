@@ -6,6 +6,7 @@
 - The time is `HH MM` or `HH MM SS`, twenty-four hours, its groups parted by a space rather than a colon; the date keeps its hyphens.
 - A saver's `font`: `3x7`, or `3x5` — the same right-angled alphabet five rows tall, so a column of `HH` / `MM` / `SS` at large fits 54 rows instead of 72.
 - The time and the date are laid out as two blocks, each on its own: the time first, in the whole canvas; the date in what is left — under the time in the row layout, to its left in the column layout. Each keeps its size while any of its content fits, stepping the size down before dropping a unit (the seconds, the year); a date that fits at nothing is left out.
+- The gap is its own unit: the dark between two glyphs, between two lines, and the space between two groups — one cell at small and medium, two at large — rather than a font pixel scaled with the digits. Large `HH MM SS` needs 148 columns rather than 178; the time and the date sit two gap units apart under each other, six beside.
 - The R, G and B sliders wear their channel's colour at its value, on a ground that runs the other way — white at 0, black at 255.
 - A saver's `layout`: `row` (the time on one line, the date on the next) or `column` (`HH` over `MM` over `SS`, the date's parts under them), which makes the digits several times bigger.
 - Any key raises the PIN prompt; the key itself is not input. `Enter` unlocks, `Esc` goes back; a wrong PIN holds the prompt red for a second; `lockout_after` wrong PINs in a row start a `lockout_seconds` countdown; `prompt_timeout` seconds of silence close the prompt.

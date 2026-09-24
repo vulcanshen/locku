@@ -57,7 +57,7 @@ func TestFontIsWellFormed(t *testing.T) {
 		}
 		// The punctuation is narrow: that is what keeps a clock within
 		// reach of the large size.
-		if f.glyphW(':') != 1 || f.glyphW(' ') != 2 || f.glyphW('-') != 3 || f.glyphW('7') != 3 || f.glyphW('?') != fontW {
+		if f.glyphW(':') != 1 || f.glyphW(' ') != 1 || f.glyphW('-') != 3 || f.glyphW('7') != 3 || f.glyphW('?') != fontW {
 			t.Errorf("%s widths: : %d, space %d, - %d, 7 %d, unknown %d", f.name,
 				f.glyphW(':'), f.glyphW(' '), f.glyphW('-'), f.glyphW('7'), f.glyphW('?'))
 		}
