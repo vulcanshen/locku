@@ -24,8 +24,8 @@ type LockModel struct {
 	cfg     config.Config
 	problem string
 	clock   saver.Clock
-	game    *saver.Dino  // the dino run, when that is the saver's type; the clock is idle then
-	style   config.Style // the active saver's colours
+	game    *saver.Dino  // the dino run, when that is the profile's saver; the clock is idle then
+	style   config.Style // the active profile's colours
 	noPIN   bool
 
 	width, height int
@@ -74,7 +74,7 @@ func NewLock(cfg config.Config, problem string) LockModel { return newLock(cfg, 
 func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	s, ok := cfg.Active()
 	if !ok && problem == "" {
-		problem = fmt.Sprintf("saver %q not found", cfg.Saver)
+		problem = fmt.Sprintf("profile %q not found", cfg.Profile)
 	}
 	m := LockModel{
 		cfg:     cfg,
@@ -88,7 +88,7 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		preview: preview,
 		now:     time.Now,
 	}
-	if s.Type == saver.TypeDino {
+	if s.Saver == saver.KindDino {
 		m.game = saver.NewDino(uint64(time.Now().UnixNano()), s.Runner, s.Scene)
 	}
 	m.lockedAt = m.now()

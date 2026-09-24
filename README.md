@@ -13,7 +13,7 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：每個 saver 的 layout / time / date 與 bg / fg 顏色，preference 的 PIN、啟用中的 saver、show_status、prompt_timeout、lockout、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
+| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、prompt_timeout、lockout、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku setup [tmux\|screen]` | 把整合設定寫進 preference 填的 `tmux_conf`（有 server 在跑就即時套用）與 `screen_conf` 加 shell rc；路徑沒填就報錯、不猜；不帶參數兩個都做。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，冪等 |
 | `locku version` | 版本 |
@@ -49,22 +49,26 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
 ║ Savers                 ║│ name              clock                          │
-║ ● clock                ║│ type              clock                          │
-║   clock2               ║│ layout            row                            │
-║ Settings               ║│ time              HH MM                          │
-║   preference           ║│ date              off                            │
-║                        ║│ bg                ■ #313244  →  ■ #ff3244        │
-║                        ║│   R               ───────────● 255               │
-║                        ║│   G               ──●───────── 50                │
+║   clock                ║│ saver             clock                          │
+║   dino                 ║│ layout            row                            │
+║ Profiles               ║│ size              medium                         │
+║ ● clock                ║│ time              HH MM                          │
+║   clock2               ║│ date              off                            │
+║   dino                 ║│ bg                ■ #313244  →  ■ #ff3244        │
+║ Settings               ║│   R               ───────────● 255               │
+║   preference           ║│   G               ──●───────── 50                │
 ║                        ║│   B               ───●──────── 68                │
 ║                        ║│ fg                ■ #f2b753                      │
 ╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
+**Savers** 是種類（class）：clock、dino，沒有名字、不能增刪，`[2]` 是說明，在上面按 `n` 生一個它的 profile。
+**Profiles** 是你設定好的、有名字的 saver（object）：new / duplicate / rename / delete 都在這裡，`●` 是啟用中的那個。
+
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
-`[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`P` 預覽這個 saver、`S` 存顏色草稿、`R` 丟掉；
-`[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
+`[1]` 的 saver：`n` new profile；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile 上：`P` 預覽這個 profile、`S` 存顏色草稿、`R` 丟掉；
+`[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
 `tmux_conf` / `screen_conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。
 
 ## 文件
@@ -83,7 +87,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是具名實例，兩個 type：clock 與 dino。** dino 是 Chrome 離線小恐龍遊戲當螢幕保護（2026-09-24）：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，右上角記分；參數 size、runner（先只有 trex）、scene（先只有 grassland）、bg / fg，每 70 ms 一幀。type 在 `[2]` 直接選。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是 class、profile 是 object（2026-09-24 定案）。** 兩種 saver：clock 與 dino；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，右上角記分；參數 size、runner（先只有 trex）、scene（先只有 grassland）、bg / fg，每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 
   各 size 需要的終端機（欄 × 列，3x7 / 3x5）：

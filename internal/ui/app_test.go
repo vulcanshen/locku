@@ -16,9 +16,9 @@ func newTestApp(t *testing.T) AppModel {
 	t.Helper()
 	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
-	second := config.DefaultSaver()
+	second := config.DefaultProfile()
 	second.Name, second.Time, second.Date = "clock2", "HH MM SS", "YYYY-MM-DD"
-	cfg.Savers = append(cfg.Savers, second)
+	cfg.Profiles = append(cfg.Profiles, second)
 	m := NewApp(cfg, "")
 	return m.size(100, 30)
 }
@@ -89,11 +89,10 @@ func saved(t *testing.T) config.Config {
 	return cfg
 }
 
-// A clock's stops in [2]: name, type, layout, size, font, time, date,
-// then bg R G B and fg R G B — thirteen rows.
+// A clock profile's stops in [2]: name, layout, size, font, time, date,
+// then bg R G B and fg R G B — twelve rows; the saver row is read-only.
 const (
 	stopName = iota
-	stopType
 	stopLayout
 	stopSize
 	stopFont
@@ -109,8 +108,8 @@ const (
 
 func TestSidebarEnterOpensTheDetail(t *testing.T) {
 	m := newTestApp(t).press("j", "enter")
-	if m.focus != panelDetail || m.cfg.Saver != "clock" {
-		t.Errorf("Enter on a saver: focus %d, active %q", m.focus, m.cfg.Saver)
+	if m.focus != panelDetail || m.cfg.Profile != "clock" {
+		t.Errorf("Enter on a saver: focus %d, active %q", m.focus, m.cfg.Profile)
 	}
 	m = m.press("1", "j", "enter") // preference
 	if m.focus != panelDetail || m.sideAt().kind != sidePreference {
@@ -123,7 +122,7 @@ func TestSidebarEnterOpensTheDetail(t *testing.T) {
 
 func TestPreferenceChoosesTheActiveSaver(t *testing.T) {
 	m := newTestApp(t).press("G", "2", "j") // preference › saver
-	if m.rowAt().kind != rowSaver {
+	if m.rowAt().kind != rowProfile {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
 	m = m.press("enter")
@@ -131,8 +130,8 @@ func TestPreferenceChoosesTheActiveSaver(t *testing.T) {
 		t.Fatal("the options must open on the active saver")
 	}
 	m = m.press("j", "enter")
-	if m.cfg.Saver != "clock2" || saved(t).Saver != "clock2" {
-		t.Errorf("active %q", m.cfg.Saver)
+	if m.cfg.Profile != "clock2" || saved(t).Profile != "clock2" {
+		t.Errorf("active %q", m.cfg.Profile)
 	}
 	if !strings.Contains(m.View(), "● clock2") {
 		t.Error("the dot did not move")
@@ -153,19 +152,19 @@ func TestRenameFollowsTheActiveNameAndTheDraft(t *testing.T) {
 		t.Fatalf("an empty name must be refused: %q", m.input.suffix)
 	}
 	m = m.typed("main").press("enter")
-	if m.cfg.Savers[0].Name != "main" || m.cfg.Saver != "main" {
-		t.Errorf("rename: %+v active %q", m.cfg.Savers, m.cfg.Saver)
+	if m.cfg.Profiles[0].Name != "main" || m.cfg.Profile != "main" {
+		t.Errorf("rename: %+v active %q", m.cfg.Profiles, m.cfg.Profile)
 	}
-	if s := saved(t); s.Saver != "main" {
+	if s := saved(t); s.Profile != "main" {
 		t.Error("not written")
 	}
 	// A colour draft follows the rename.
 	m = m.press("2").typed(strings.Repeat("j", stopBgR)).press("enter", "G", "enter")
-	if !m.dirtyOf(m.cfg.Savers[0]) {
+	if !m.dirtyOf(m.cfg.Profiles[0]) {
 		t.Fatal("no draft")
 	}
 	m = m.press("1", "r", "ctrl+u").typed("renamed").press("enter")
-	if !m.dirtyOf(m.cfg.Savers[0]) || m.drafts["renamed"].BG != "#ff3244" {
+	if !m.dirtyOf(m.cfg.Profiles[0]) || m.drafts["renamed"].BG != "#ff3244" {
 		t.Errorf("the draft did not follow the name: %v", m.drafts)
 	}
 }
@@ -180,8 +179,8 @@ func TestDuplicateLandsOnTheCopy(t *testing.T) {
 		t.Fatalf("clock2 exists: %q", m.input.suffix)
 	}
 	m = m.press("ctrl+u").typed("third").press("enter")
-	if len(m.cfg.Savers) != 3 || m.cfg.Savers[2].Name != "third" || m.cfg.Savers[2].Time != "HH MM" || m.cur1 != 2 {
-		t.Errorf("savers %+v cur1 %d", m.cfg.Savers, m.cur1)
+	if len(m.cfg.Profiles) != 3 || m.cfg.Profiles[2].Name != "third" || m.cfg.Profiles[2].Time != "HH MM" || m.cur1 != profileItem(2) {
+		t.Errorf("profiles %+v cur1 %d", m.cfg.Profiles, m.cur1)
 	}
 }
 
@@ -195,8 +194,8 @@ func TestDeleteRules(t *testing.T) {
 		t.Fatal("no confirm for a deletable saver")
 	}
 	m = m.press("enter")
-	if len(m.cfg.Savers) != 1 || len(saved(t).Savers) != 1 {
-		t.Errorf("not deleted: %+v", m.cfg.Savers)
+	if len(m.cfg.Profiles) != 1 || len(saved(t).Profiles) != 1 {
+		t.Errorf("not deleted: %+v", m.cfg.Profiles)
 	}
 	m = m.press("X")
 	if !strings.Contains(m.toast.msg, "last") {
@@ -215,9 +214,9 @@ func TestDetailPreviewsThatSaver(t *testing.T) {
 	if m.preview == nil || m.preview.clock.Time != "HH MM" {
 		t.Fatal("P on preference must preview the active saver")
 	}
-	m = m.press("x", "1", "g", "g", "j", "2", " ")
+	m = m.press("x", "1", "k", "2", " ") // back up from preference to clock2
 	if hotkeyIndex(m.menu.menuKeys(), "P") < 0 {
-		t.Error("[P] Preview must be a row of the saver's [2] menu")
+		t.Error("[P] Preview must be a row of the profile's [2] menu")
 	}
 }
 
@@ -229,7 +228,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 	if m.preview.clock.Time != "HH MM SS" {
 		t.Errorf("the preview shows %q, not the saver under the cursor", m.preview.clock.Time)
 	}
-	if m.cfg.Saver != "clock" {
+	if m.cfg.Profile != "clock" {
 		t.Error("previewing must not change the active saver")
 	}
 	m = m.press("x") // no PIN: any key unlocks
@@ -239,7 +238,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 }
 
 func TestDetailChoosesAndToggles(t *testing.T) {
-	m := newTestApp(t).press("2", "j", "j", "j", "j", "j") // [2] on time (name, type, layout, size, font, time)
+	m := newTestApp(t).press("2", "j", "j", "j", "j") // [2] on time (name, layout, size, font, time; saver is not a stop)
 	if m.rowAt().kind != rowTime {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
@@ -248,8 +247,8 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatal("options must open on the current value")
 	}
 	m = m.press("j", "enter")
-	if m.cfg.Savers[0].Time != "HH MM SS" || saved(t).Savers[0].Time != "HH MM SS" {
-		t.Errorf("time %q", m.cfg.Savers[0].Time)
+	if m.cfg.Profiles[0].Time != "HH MM SS" || saved(t).Profiles[0].Time != "HH MM SS" {
+		t.Errorf("time %q", m.cfg.Profiles[0].Time)
 	}
 	// font: the short one.
 	m = m.press("k", "enter")
@@ -257,8 +256,8 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatal("font options must open on 3x7")
 	}
 	m = m.press("j", "enter")
-	if m.cfg.Savers[0].Font != "3x5" || saved(t).Savers[0].Font != "3x5" {
-		t.Errorf("font %q", m.cfg.Savers[0].Font)
+	if m.cfg.Profiles[0].Font != "3x5" || saved(t).Profiles[0].Font != "3x5" {
+		t.Errorf("font %q", m.cfg.Profiles[0].Font)
 	}
 	// size: large.
 	m = m.press("k", "enter")
@@ -266,8 +265,8 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatal("size options must open on medium")
 	}
 	m = m.press("j", "enter")
-	if m.cfg.Savers[0].Size != "large" || saved(t).Savers[0].Size != "large" {
-		t.Errorf("size %q", m.cfg.Savers[0].Size)
+	if m.cfg.Profiles[0].Size != "large" || saved(t).Profiles[0].Size != "large" {
+		t.Errorf("size %q", m.cfg.Profiles[0].Size)
 	}
 	// layout: a column.
 	m = m.press("k", "enter")
@@ -275,8 +274,8 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatal("layout options must open on row")
 	}
 	m = m.press("j", "enter")
-	if m.cfg.Savers[0].Layout != "column" || saved(t).Savers[0].Layout != "column" {
-		t.Errorf("layout %q", m.cfg.Savers[0].Layout)
+	if m.cfg.Profiles[0].Layout != "column" || saved(t).Profiles[0].Layout != "column" {
+		t.Errorf("layout %q", m.cfg.Profiles[0].Layout)
 	}
 	// preference › show_status flips in place (PIN, saver, show_status).
 	m = m.press("1", "G", "2", "j", "j", "enter")
@@ -373,24 +372,60 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 	}
 }
 
-// The type is chosen like any field; a dino has its own rows — size,
-// runner, scene — in place of the clock's shapes, and previews as the
-// run (user, 2026-09-24).
-func TestDinoTypeHasItsOwnRows(t *testing.T) {
-	m := newTestApp(t).press("j", "2", "j", "enter") // clock2 › type
-	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "clock" {
-		t.Fatalf("type options: %+v", m.options.items)
+// The sidebar starts on the active profile; above the profiles sit the
+// savers — the kinds — whose [2] is read-only: what it is, what it can
+// be set to, which profiles are of it (user, 2026-09-24).
+func TestSaversAreReadOnlyClasses(t *testing.T) {
+	m := newTestApp(t)
+	if it := m.sideAt(); it.kind != sideProfile || it.ref != 0 || m.cfg.Profiles[0].Name != "clock" {
+		t.Fatalf("the cursor must start on the active profile, not %+v", it)
 	}
-	m = m.press("j", "enter")
-	s := m.cfg.Savers[1]
-	if s.Type != "dino" || s.Runner != "trex" || s.Scene != "grassland" || saved(t).Savers[1].Type != "dino" {
-		t.Fatalf("saver %+v", s)
+	m = m.press("g", "g")
+	if it := m.sideAt(); it.kind != sideSaver || it.ref != 0 {
+		t.Fatalf("gg must reach the first saver, not %+v", it)
+	}
+	v := m.View()
+	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, "[2] clock · saver") ||
+		!strings.Contains(v, "clock, clock2") || strings.Contains(v, "unsaved") {
+		t.Errorf("a saver's screen:\n%s", v)
+	}
+	if len(m.stops()) != 0 || m.rowAt().kind != rowNone {
+		t.Error("a saver has nothing to stop on")
+	}
+	// Enter goes to [2] as on every row; the menu there offers New alone.
+	m = m.press("enter", " ")
+	if m.focus != panelDetail || hotkeyIndex(m.menu.menuKeys(), "n") < 0 || hotkeyIndex(m.menu.menuKeys(), "enter") >= 0 {
+		t.Errorf("a saver's [2] menu: %v", m.menu.menuKeys())
+	}
+}
+
+// [n] on a saver makes a profile of it: the name box offers the saver's
+// own name while it is free, then a numbered one; the new profile has
+// the saver's rows — a dino's size, runner and scene — lands under the
+// cursor, and previews as the run.
+func TestNewProfileOfASaver(t *testing.T) {
+	m := newTestApp(t).press("g", "g", "j", "n") // the dino saver
+	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "dino" {
+		t.Fatalf("new box: %+v", m.input)
+	}
+	m = m.press("ctrl+u").typed("clock").press("enter")
+	if m.input.suffix != " · taken" {
+		t.Fatalf("a taken name must be refused: %q", m.input.suffix)
+	}
+	m = m.press("ctrl+u").typed("dino").press("enter")
+	p := m.cfg.Profiles[2]
+	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "trex" || p.Scene != "grassland" ||
+		len(saved(t).Profiles) != 3 || saved(t).Profiles[2].Saver != "dino" {
+		t.Fatalf("profiles %+v", m.cfg.Profiles)
+	}
+	if m.cur1 != profileItem(2) || m.focus != panelDetail || m.sideAt().kind != sideProfile {
+		t.Errorf("the cursor must land on the new profile's [2]: cur1 %d focus %d", m.cur1, m.focus)
 	}
 	v := m.View()
 	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "grassland") {
 		t.Errorf("a dino's rows:\n%s", v)
 	}
-	if got := len(m.stops()); got != 11 { // name, type, size, runner, scene, six channels
+	if got := len(m.stops()); got != 10 { // name, size, runner, scene, six channels
 		t.Errorf("%d stops", got)
 	}
 	m = m.press("P")
@@ -398,11 +433,15 @@ func TestDinoTypeHasItsOwnRows(t *testing.T) {
 		t.Fatal("the preview must run the dino")
 	}
 	m = m.press("x") // no PIN: any key hands back
-	// And back to a clock, from the type row the cursor is still on: its
-	// rows again.
-	m = m.press("enter", "k", "enter")
-	if m.cfg.Savers[1].Type != "clock" || !strings.Contains(m.View(), "layout") {
-		t.Errorf("back to a clock: %+v", m.cfg.Savers[1])
+	// A second one of the same saver is offered the next free name, and
+	// the saver's [2] lists both.
+	m = m.press("1", "g", "g", "j", "n")
+	if m.input.value != "dino2" {
+		t.Errorf("offer %q", m.input.value)
+	}
+	m = m.press("esc")
+	if rows := m.rows(); rows[3].label != "profiles" || rows[3].value != "dino" {
+		t.Errorf("the saver's profiles row: %+v", rows[3])
 	}
 }
 
@@ -484,8 +523,8 @@ func TestColourDraftSaveReset(t *testing.T) {
 	}
 	m = m.press("G", "enter")
 	// The draft moved; the file and the config did not.
-	clock := m.cfg.Savers[0]
-	if m.draftOf(clock).BG != "#ff3244" || clock.BG != config.DefaultBG || saved(t).Savers[0].BG != config.DefaultBG {
+	clock := m.cfg.Profiles[0]
+	if m.draftOf(clock).BG != "#ff3244" || clock.BG != config.DefaultBG || saved(t).Profiles[0].BG != config.DefaultBG {
 		t.Errorf("draft %q cfg %q", m.draftOf(clock).BG, clock.BG)
 	}
 	if v := m.View(); !m.dirtyOf(clock) || !strings.Contains(v, "· unsaved") ||
@@ -493,7 +532,7 @@ func TestColourDraftSaveReset(t *testing.T) {
 		t.Errorf("the draft is not shown:\n%s", v)
 	}
 	// The other saver is untouched, and its own panel says so.
-	if m.dirtyOf(m.cfg.Savers[1]) || strings.Contains(m.press("1", "j").View(), "unsaved") {
+	if m.dirtyOf(m.cfg.Profiles[1]) || strings.Contains(m.press("1", "j").View(), "unsaved") {
 		t.Error("the draft leaked to another saver")
 	}
 	// A preview runs on the draft.
@@ -503,9 +542,9 @@ func TestColourDraftSaveReset(t *testing.T) {
 	}
 	m = m.press("x")
 	// Reset drops it.
-	m = m.press("1", "k", "2", "R")
-	if m.dirtyOf(m.cfg.Savers[0]) || m.draftOf(m.cfg.Savers[0]).BG != config.DefaultBG {
-		t.Errorf("reset: draft %q", m.draftOf(m.cfg.Savers[0]).BG)
+	m = m.press("1", "2", "R")
+	if m.dirtyOf(m.cfg.Profiles[0]) || m.draftOf(m.cfg.Profiles[0]).BG != config.DefaultBG {
+		t.Errorf("reset: draft %q", m.draftOf(m.cfg.Profiles[0]).BG)
 	}
 	m = m.press("R")
 	if !strings.Contains(m.toast.msg, "nothing changed") {
@@ -513,13 +552,13 @@ func TestColourDraftSaveReset(t *testing.T) {
 	}
 	// Pick again, then Save writes it.
 	m = m.press("esc", "enter", "G", "enter", "S")
-	if m.dirtyOf(m.cfg.Savers[0]) || m.cfg.Savers[0].BG != "#ff3244" || saved(t).Savers[0].BG != "#ff3244" {
-		t.Errorf("save: dirty=%v bg %q", m.dirtyOf(m.cfg.Savers[0]), m.cfg.Savers[0].BG)
+	if m.dirtyOf(m.cfg.Profiles[0]) || m.cfg.Profiles[0].BG != "#ff3244" || saved(t).Profiles[0].BG != "#ff3244" {
+		t.Errorf("save: dirty=%v bg %q", m.dirtyOf(m.cfg.Profiles[0]), m.cfg.Profiles[0].BG)
 	}
 	// fg › B is the last stop; the swatch row shows one colour when clean.
 	m = m.press("G", "enter", "g", "g", "enter", "S")
-	if m.cfg.Savers[0].FG != "#f2b700" {
-		t.Errorf("fg %q", m.cfg.Savers[0].FG)
+	if m.cfg.Profiles[0].FG != "#f2b700" {
+		t.Errorf("fg %q", m.cfg.Profiles[0].FG)
 	}
 	if strings.Contains(m.View(), "→") || strings.Contains(m.View(), "unsaved") {
 		t.Error("a clean saver must show no arrow and no unsaved")
@@ -627,8 +666,9 @@ func TestViewFitsTheTerminal(t *testing.T) {
 		check(t, m.press("2", "j", "enter"), "options")
 		check(t, m.press("2"), "detail focused")
 		check(t, m.press("G", "2"), "preference")
-		check(t, m.press("2", "G", "enter", "G", "enter"), "saver with a draft")
-		check(t, m.press("2", " "), "saver menu with regions")
+		check(t, m.press("2", "G", "enter", "G", "enter"), "profile with a draft")
+		check(t, m.press("2", " "), "profile menu with regions")
+		check(t, m.press("g", "g", "2"), "a saver's detail")
 	}
 }
 

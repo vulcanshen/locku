@@ -36,14 +36,14 @@ const (
 	bcryptCost = 10
 )
 
-// Saver is one named instance (function.md §5.2): what it shows, how it
-// is laid out, and the two colours its board is drawn in — the colours
-// are the saver's own, not a global setting (user, 2026-09-24). Type is
-// kept for the day a second one exists; v1 draws every instance as a
-// clock.
-type Saver struct {
+// Profile is one named, configured saver (function.md §5.2; user,
+// 2026-09-24: a saver is the class — the clock, the dino — and a profile
+// is the object, the one thing that has a name and can be made). Saver
+// says which; the rest is how it shows, and the two colours its board is
+// drawn in — the colours are the profile's own, not a global setting.
+type Profile struct {
 	Name   string `yaml:"name"`
-	Type   string `yaml:"type"`
+	Saver  string `yaml:"saver"`
 	Layout string `yaml:"layout"`
 	Size   string `yaml:"size"`
 	Font   string `yaml:"font"`
@@ -55,47 +55,56 @@ type Saver struct {
 	// leaves them out of the file.
 	Runner string `yaml:"runner,omitempty"`
 	Scene  string `yaml:"scene,omitempty"`
+
+	// OldType is the key before 2026-09-24, when a profile was a "saver"
+	// and its saver a "type": read, carried into Saver, never written.
+	OldType string `yaml:"type,omitempty"`
 }
 
-// Style is a pair of board colours as "#rrggbb": a saver's, or a draft of
-// them on the settings screen.
+// Style is a pair of board colours as "#rrggbb": a profile's, or a draft
+// of them on the settings screen.
 type Style struct {
 	BG string
 	FG string
 }
 
-// Colours is the saver's pair.
-func (s Saver) Colours() Style { return Style{BG: s.BG, FG: s.FG} }
+// Colours is the profile's pair.
+func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 
 // Config is config.yaml, one field per key.
 type Config struct {
-	Auth           string  `yaml:"auth"`
-	PINHash        string  `yaml:"pin_hash"`
-	Saver          string  `yaml:"saver"`
-	Savers         []Saver `yaml:"savers"`
-	ShowStatus     bool    `yaml:"show_status"`
-	PromptTimeout  int     `yaml:"prompt_timeout"`
-	LockoutAfter   int     `yaml:"lockout_after"`
-	LockoutSeconds int     `yaml:"lockout_seconds"`
+	Auth           string    `yaml:"auth"`
+	PINHash        string    `yaml:"pin_hash"`
+	Profile        string    `yaml:"profile"`
+	Profiles       []Profile `yaml:"profiles"`
+	ShowStatus     bool      `yaml:"show_status"`
+	PromptTimeout  int       `yaml:"prompt_timeout"`
+	LockoutAfter   int       `yaml:"lockout_after"`
+	LockoutSeconds int       `yaml:"lockout_seconds"`
 	// TmuxConf and ScreenConf are the files `locku setup` writes into, as
 	// the user typed them — "~/…" allowed. Empty is not set, and setup
 	// refuses rather than guesses (user, 2026-09-24).
 	TmuxConf   string `yaml:"tmux_conf"`
 	ScreenConf string `yaml:"screen_conf"`
+
+	// The keys before 2026-09-24 — `saver` named the active profile and
+	// `savers` listed them: read, carried over, never written.
+	OldSaver  string    `yaml:"saver,omitempty"`
+	OldSavers []Profile `yaml:"savers,omitempty"`
 }
 
-// DefaultSaver is the instance a fresh install has, and the one drawn when
-// the file names none that exists.
-func DefaultSaver() Saver {
-	return Saver{Name: "clock", Type: "clock", Layout: "row", Size: "medium", Font: "3x7", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
+// DefaultProfile is the profile a fresh install has, and the one drawn
+// when the file names none that exists.
+func DefaultProfile() Profile {
+	return Profile{Name: "clock", Saver: saver.KindClock, Layout: "row", Size: "medium", Font: "3x7", Time: "HH MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
 }
 
 // Default is the file as it would be with every key left out.
 func Default() Config {
 	return Config{
 		Auth:           AuthPIN,
-		Saver:          "clock",
-		Savers:         []Saver{DefaultSaver()},
+		Profile:        "clock",
+		Profiles:       []Profile{DefaultProfile()},
 		ShowStatus:     true,
 		PromptTimeout:  30,
 		LockoutAfter:   0,
@@ -139,7 +148,9 @@ func LoadFile(path string) (Config, string) {
 		return Default(), "config unreadable: " + err.Error()
 	}
 	// Unmarshal only touches the keys the file has, so what it leaves out
-	// keeps its default.
+	// keeps its default — except the profile keys, cleared first so the
+	// old names can stand in for them when the file still has those.
+	cfg.Profile, cfg.Profiles = "", nil
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return Default(), "config.yaml: " + firstLine(err.Error())
 	}
@@ -150,70 +161,97 @@ func LoadFile(path string) (Config, string) {
 			return Default(), "pin_hash is not a bcrypt hash"
 		}
 	}
+	cfg.carryOver()
 	return cfg.sanitized()
 }
 
+// carryOver takes the old keys into the new ones — `saver` into profile,
+// `savers` into profiles, a profile's `type` into its saver — and drops
+// them, so the next save writes only the new names. A file with neither
+// key has the default profile, as before.
+func (cfg *Config) carryOver() {
+	if cfg.Profiles == nil && cfg.OldSavers != nil {
+		cfg.Profiles = cfg.OldSavers
+	}
+	if cfg.Profiles == nil {
+		cfg.Profiles = Default().Profiles
+	}
+	if cfg.Profile == "" {
+		cfg.Profile = cfg.OldSaver
+	}
+	if cfg.Profile == "" {
+		cfg.Profile = Default().Profile
+	}
+	for i := range cfg.Profiles {
+		if cfg.Profiles[i].Saver == "" {
+			cfg.Profiles[i].Saver = cfg.Profiles[i].OldType
+		}
+		cfg.Profiles[i].OldType = ""
+	}
+	cfg.OldSaver, cfg.OldSavers = "", nil
+}
+
 // sanitized brings a parsed file to something the rest of locku can rely
-// on, and says what it had to correct. Only the saver reference is worth
-// a note (function.md §7): a colour or a number out of range is quietly
-// its default (ui.md §1.1).
+// on, and says what it had to correct. Only the profile reference is
+// worth a note (function.md §7): a colour or a number out of range is
+// quietly its default (ui.md §1.1).
 func (cfg Config) sanitized() (Config, string) {
 	note := ""
 	if cfg.Auth == "" {
 		cfg.Auth = AuthPIN
 	}
-	var savers []Saver
+	var profiles []Profile
 	seen := map[string]bool{}
-	for _, s := range cfg.Savers {
-		s.Name = strings.TrimSpace(s.Name)
-		if s.Name == "" || seen[s.Name] {
+	for _, p := range cfg.Profiles {
+		p.Name = strings.TrimSpace(p.Name)
+		if p.Name == "" || seen[p.Name] {
 			continue
 		}
-		seen[s.Name] = true
-		if s.Type == "" {
-			s.Type = saver.TypeClock
+		seen[p.Name] = true
+		if p.Saver == "" {
+			p.Saver = saver.KindClock
 		}
-		if s.Type == saver.TypeDino {
-			if s.Runner == "" {
-				s.Runner = saver.Runners[0]
+		if p.Saver == saver.KindDino {
+			if p.Runner == "" {
+				p.Runner = saver.Runners[0]
 			}
-			if s.Scene == "" {
-				s.Scene = saver.Scenes[0]
+			if p.Scene == "" {
+				p.Scene = saver.Scenes[0]
 			}
 		}
-		if s.Layout == "" {
-			s.Layout = DefaultSaver().Layout
+		if p.Layout == "" {
+			p.Layout = DefaultProfile().Layout
 		}
-		if s.Size == "" {
-			s.Size = DefaultSaver().Size
+		if p.Size == "" {
+			p.Size = DefaultProfile().Size
 		}
-		if s.Font == "" {
-			s.Font = DefaultSaver().Font
+		if p.Font == "" {
+			p.Font = DefaultProfile().Font
 		}
-		if s.Time == "" {
-			s.Time = DefaultSaver().Time
+		if p.Time == "" {
+			p.Time = DefaultProfile().Time
 		}
-		if s.Date == "" {
-			s.Date = DefaultSaver().Date
+		if p.Date == "" {
+			p.Date = DefaultProfile().Date
 		}
 		// A colour that is not "#rrggbb" is quietly its default (ui.md §1.1).
-		if !ValidHex(s.BG) {
-			s.BG = DefaultBG
+		if !ValidHex(p.BG) {
+			p.BG = DefaultBG
 		}
-		if !ValidHex(s.FG) {
-			s.FG = DefaultFG
+		if !ValidHex(p.FG) {
+			p.FG = DefaultFG
 		}
-		s.BG, s.FG = strings.ToLower(s.BG), strings.ToLower(s.FG)
-		savers = append(savers, s)
+		p.BG, p.FG = strings.ToLower(p.BG), strings.ToLower(p.FG)
+		profiles = append(profiles, p)
 	}
-	cfg.Savers = savers
+	cfg.Profiles = profiles
 	switch {
-	case len(cfg.Savers) == 0:
-		note = "no savers"
-		cfg.Savers = []Saver{DefaultSaver()}
-		cfg.Saver = DefaultSaver().Name
-	case !seen[cfg.Saver]:
-		note = fmt.Sprintf("saver %q not found", cfg.Saver)
+	case len(cfg.Profiles) == 0:
+		note = "no profiles"
+		cfg.Profiles = []Profile{DefaultProfile()}
+		cfg.Profile = DefaultProfile().Name
+	case !seen[cfg.Profile]:
+		note = fmt.Sprintf("profile %q not found", cfg.Profile)
 	}
 	if cfg.PromptTimeout < 0 {
 		cfg.PromptTimeout = Default().PromptTimeout
@@ -246,21 +284,21 @@ func AbsPath(p string) (string, bool) {
 	return p, false
 }
 
-// Active is the saver the file points at, and whether it exists. When it
-// does not, the caller draws DefaultSaver and the status row says so.
-func (cfg Config) Active() (Saver, bool) {
-	for _, s := range cfg.Savers {
-		if s.Name == cfg.Saver {
-			return s, true
+// Active is the profile the file points at, and whether it exists. When
+// it does not, the caller draws DefaultProfile and the status row says so.
+func (cfg Config) Active() (Profile, bool) {
+	for _, p := range cfg.Profiles {
+		if p.Name == cfg.Profile {
+			return p, true
 		}
 	}
-	return DefaultSaver(), false
+	return DefaultProfile(), false
 }
 
-// Index is the position of the saver called name, or -1.
+// Index is the position of the profile called name, or -1.
 func (cfg Config) Index(name string) int {
-	for i, s := range cfg.Savers {
-		if s.Name == name {
+	for i, p := range cfg.Profiles {
+		if p.Name == name {
 			return i
 		}
 	}

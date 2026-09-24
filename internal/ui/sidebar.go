@@ -4,34 +4,47 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// Panel [1] (ui.md §1.1): two groups, Savers and Settings, their titles in
-// blue, one under the other with no gap (user, 2026-09-24). Every saver is
-// a row; the active one — the one preference › saver names — carries a
-// green dot, and the dot is all it is: it shows, it does not set. Settings
-// is one row, preference. The group titles are not stops.
+// Panel [1] (ui.md §1.1): three groups, their titles in blue, one under
+// the other with no gap. Savers are the kinds there are — the clock, the
+// dino: the classes, which have no name but their own and are not made
+// or deleted. Profiles are the ones the user has set up — named,
+// configured savers: the objects (user, 2026-09-24, who drew the line).
+// The active profile — the one preference › profile names — carries a
+// green dot, and the dot is all it is: it shows, it does not set.
+// Settings is one row, preference. The group titles are not stops.
 
 type sideKind int
 
 const (
-	sideSaver sideKind = iota
-	sidePreference
+	sideSaver      sideKind = iota // a kind of saver, by its index in saver.Kinds
+	sideProfile                    // a profile, by its index in cfg.Profiles
+	sidePreference                 // the one settings row
 )
 
-// sideItem is one stop of the cursor: a saver (by index) or preference.
+// sideItem is one stop of the cursor.
 type sideItem struct {
-	kind  sideKind
-	saver int
+	kind sideKind
+	ref  int
 }
 
+// sideItems is the stops in order: the savers, the profiles, preference.
 func (m AppModel) sideItems() []sideItem {
-	items := make([]sideItem, 0, len(m.cfg.Savers)+1)
-	for i := range m.cfg.Savers {
-		items = append(items, sideItem{kind: sideSaver, saver: i})
+	items := make([]sideItem, 0, len(saver.Kinds)+len(m.cfg.Profiles)+1)
+	for i := range saver.Kinds {
+		items = append(items, sideItem{kind: sideSaver, ref: i})
+	}
+	for i := range m.cfg.Profiles {
+		items = append(items, sideItem{kind: sideProfile, ref: i})
 	}
 	return append(items, sideItem{kind: sidePreference})
 }
+
+// profileItem is the cursor index of the profile at i.
+func profileItem(i int) int { return len(saver.Kinds) + i }
 
 // sideAt is the item under the cursor.
 func (m AppModel) sideAt() sideItem {
@@ -48,20 +61,24 @@ type sideLine struct {
 func (m AppModel) sideLines() []sideLine {
 	var out []sideLine
 	out = append(out, sideLine{text: "Savers", item: -1})
-	for i, s := range m.cfg.Savers {
+	for i, k := range saver.Kinds {
+		out = append(out, sideLine{text: "  " + k, item: i})
+	}
+	out = append(out, sideLine{text: "Profiles", item: -1})
+	for i, p := range m.cfg.Profiles {
 		mark := "  "
-		if s.Name == m.cfg.Saver {
+		if p.Name == m.cfg.Profile {
 			mark = "● "
 		}
-		out = append(out, sideLine{text: mark + s.Name, item: i})
+		out = append(out, sideLine{text: mark + p.Name, item: profileItem(i)})
 	}
 	out = append(out, sideLine{text: "Settings", item: -1})
-	out = append(out, sideLine{text: "  preference", item: len(m.cfg.Savers)})
+	out = append(out, sideLine{text: "  preference", item: profileItem(len(m.cfg.Profiles))})
 	return out
 }
 
 // sidebarBody draws panel [1]'s rows at innerW × innerH. The window follows
-// the cursor when the savers outgrow the panel.
+// the cursor when the rows outgrow the panel.
 func (m AppModel) sidebarBody(innerW, innerH int) []string {
 	lines := m.sideLines()
 	curRow := 0

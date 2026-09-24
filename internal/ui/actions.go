@@ -28,37 +28,43 @@ type action struct {
 
 // actions is the table for the current focus and cursor (ux.md §A.1).
 func (m AppModel) actions() []action {
+	it := m.sideAt()
 	if m.focus == panelSide {
 		// Enter on any row of [1] is the same thing: over to [2], where
-		// the row's fields are (user, 2026-09-24). The active saver is set
-		// on preference › saver, not here; the dot only shows.
+		// the row's rows are (user, 2026-09-24). The active profile is set
+		// on preference › profile, not here; the dot only shows.
 		edit := action{key: "enter", label: "[Enter] Edit", hint: "its rows, in [2]",
 			run: func(a *AppModel) tea.Cmd { a.focus = panelDetail; return nil }}
-		it := m.sideAt()
-		if it.kind != sideSaver {
+		switch it.kind {
+		case sideSaver:
+			// A saver is a class: nothing to edit, one thing to make.
+			edit.hint = "what it is, in [2]"
+			return []action{edit, m.newProfileAction()}
+		case sidePreference:
 			return []action{edit}
 		}
-		del := action{key: "X", label: "Delete", hint: "this saver", run: (*AppModel).deleteSaver}
+		del := action{key: "X", label: "Delete", hint: "this profile", run: (*AppModel).deleteProfile}
 		switch {
-		case len(m.cfg.Savers) == 1:
+		case len(m.cfg.Profiles) == 1:
 			del.disabled, del.hint = true, "cannot delete: last one"
-		case m.cfg.Savers[it.saver].Name == m.cfg.Saver:
+		case m.cfg.Profiles[it.ref].Name == m.cfg.Profile:
 			del.disabled, del.hint = true, "cannot delete: active"
 		}
 		return []action{
 			edit,
-			{key: "p", label: "Preview", hint: "the lock, showing this saver", run: (*AppModel).previewSaver},
-			{key: "D", label: "Duplicate", hint: "a copy, under a new name", run: (*AppModel).duplicateSaver},
-			{key: "r", label: "Rename", hint: "this saver", run: (*AppModel).renameSaver},
+			{key: "p", label: "Preview", hint: "the lock, showing this profile", run: (*AppModel).previewProfile},
+			{key: "D", label: "Duplicate", hint: "a copy, under a new name", run: (*AppModel).duplicateProfile},
+			{key: "r", label: "Rename", hint: "this profile", run: (*AppModel).renameProfile},
 			del,
 		}
+	}
+	if it.kind == sideSaver {
+		return []action{m.newProfileAction()}
 	}
 	var out []action
 	switch r := m.rowAt(); r.kind {
 	case rowName:
-		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this saver", run: (*AppModel).renameSaver})
-	case rowType:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the clock, or the dino run", run: (*AppModel).chooseType})
+		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this profile", run: (*AppModel).renameProfile})
 	case rowRunner:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseRunner})
 	case rowScene:
@@ -81,8 +87,8 @@ func (m AppModel) actions() []action {
 		} else {
 			out = append(out, action{key: "enter", label: "[Enter] Change PIN", hint: "after the current one: a new one, or none", run: (*AppModel).changePIN})
 		}
-	case rowSaver:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the saver the lock shows", run: (*AppModel).chooseSaver})
+	case rowProfile:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the profile the lock shows", run: (*AppModel).chooseProfile})
 	case rowShowStatus:
 		out = append(out, action{key: "enter", label: "[Enter] Toggle", hint: "user@host and the time, on the lock", run: (*AppModel).toggleStatus})
 	case rowPromptTimeout:
@@ -96,25 +102,32 @@ func (m AppModel) actions() []action {
 	case rowScreenConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup screen writes", run: (*AppModel).editPath})
 	}
-	if it := m.sideAt(); it.kind == sideSaver {
+	if it.kind == sideProfile {
 		save := action{key: "S", label: "Save", hint: "write the colour draft to config.yaml", panelOp: true, run: (*AppModel).saveColours}
 		reset := action{key: "R", label: "Reset", hint: "drop the draft: the saved colours again", panelOp: true, run: (*AppModel).resetColours}
-		if !m.dirtyOf(m.cfg.Savers[it.saver]) {
+		if !m.dirtyOf(m.cfg.Profiles[it.ref]) {
 			save.disabled, save.hint = true, "nothing to save"
 			reset.disabled, reset.hint = true, "nothing changed"
 		}
 		out = append(out,
-			action{key: "P", label: "Preview", hint: "the lock, showing this saver with its draft", panelOp: true, run: (*AppModel).previewSaver},
+			action{key: "P", label: "Preview", hint: "the lock, showing this profile with its draft", panelOp: true, run: (*AppModel).previewProfile},
 			save, reset)
 	}
 	return out
 }
 
-// previewHere is the global P: on a saver's [2], that saver; anywhere
+// newProfileAction is [n] on a saver: a profile of it (user, 2026-09-24:
+// a class has no name, an object does; what is made is a profile, and it
+// is made from a saver).
+func (m AppModel) newProfileAction() action {
+	return action{key: "n", label: "New", hint: "a profile of this saver, under a name", run: (*AppModel).newProfile}
+}
+
+// previewHere is the global P: on a profile's [2], that profile; anywhere
 // else, the active one (user, 2026-09-24).
 func (m *AppModel) previewHere() tea.Cmd {
-	if m.focus == panelDetail && m.sideAt().kind == sideSaver {
-		return m.previewSaver()
+	if m.focus == panelDetail && m.sideAt().kind == sideProfile {
+		return m.previewProfile()
 	}
 	return m.startPreview(m.previewCfg())
 }
@@ -134,10 +147,10 @@ func (m AppModel) dispatch(key string) (AppModel, tea.Cmd) {
 }
 
 // snapshot is a copy of the config a change can be undone to when the
-// write fails. The savers are cloned: the slice is what a rename edits.
+// write fails. The profiles are cloned: the slice is what a rename edits.
 func (m AppModel) snapshot() config.Config {
 	before := m.cfg
-	before.Savers = slices.Clone(m.cfg.Savers)
+	before.Profiles = slices.Clone(m.cfg.Profiles)
 	return before
 }
 
@@ -158,90 +171,98 @@ func (m *AppModel) save(before config.Config) tea.Cmd {
 // is for.
 func (m AppModel) previewCfg() config.Config {
 	cfg := m.snapshot()
-	for i, s := range cfg.Savers {
-		d := m.draftOf(s)
-		cfg.Savers[i].BG, cfg.Savers[i].FG = d.BG, d.FG
+	for i, p := range cfg.Profiles {
+		d := m.draftOf(p)
+		cfg.Profiles[i].BG, cfg.Profiles[i].FG = d.BG, d.FG
 	}
 	return cfg
 }
 
 // ---- panel [1]
 
-// previewSaver is [p] on a saver: the lock as it would look with THIS one
-// active, whether or not it is (user, 2026-09-24).
-func (m *AppModel) previewSaver() tea.Cmd {
+// previewProfile is [p] on a profile: the lock as it would look with THIS
+// one active, whether or not it is (user, 2026-09-24).
+func (m *AppModel) previewProfile() tea.Cmd {
 	cfg := m.previewCfg()
-	cfg.Saver = m.cfg.Savers[m.sideAt().saver].Name
+	cfg.Profile = m.cfg.Profiles[m.sideAt().ref].Name
 	return m.startPreview(cfg)
 }
 
-func (m *AppModel) duplicateSaver() tea.Cmd {
-	m.editRef = m.sideAt().saver
+// newProfile is [n] on a saver: a name for the profile to make of it,
+// offered as the saver's own name while that is free, then numbered.
+func (m *AppModel) newProfile() tea.Cmd {
+	m.editRef = m.sideAt().ref
+	kind := saver.Kinds[m.editRef]
+	name := kind
+	for i := 2; m.cfg.Index(name) >= 0; i++ {
+		name = kind + itoa(i)
+	}
+	return m.input.ask(inputPopup{title: "name", prompt: "name of the new " + kind + " profile",
+		value: name, accept: "create", action: inputNew}, m.layer())
+}
+
+func (m *AppModel) duplicateProfile() tea.Cmd {
+	m.editRef = m.sideAt().ref
 	return m.input.ask(inputPopup{title: "name", prompt: "name of the copy",
-		value: m.cfg.Savers[m.editRef].Name + "2", accept: "create", action: inputDuplicate}, m.layer())
+		value: m.cfg.Profiles[m.editRef].Name + "2", accept: "create", action: inputDuplicate}, m.layer())
 }
 
-func (m *AppModel) renameSaver() tea.Cmd {
-	m.editRef = m.sideAt().saver
+func (m *AppModel) renameProfile() tea.Cmd {
+	m.editRef = m.sideAt().ref
 	return m.input.ask(inputPopup{title: "name", prompt: "name",
-		value: m.cfg.Savers[m.editRef].Name, accept: "rename", action: inputRename}, m.layer())
+		value: m.cfg.Profiles[m.editRef].Name, accept: "rename", action: inputRename}, m.layer())
 }
 
-func (m *AppModel) deleteSaver() tea.Cmd {
-	ref := m.sideAt().saver
-	return m.confirm.ask(confirmPopup{title: "Delete saver", accept: "delete",
-		lines:  []string{"Delete " + m.cfg.Savers[ref].Name + "?", "the config is written at once"},
-		action: confirmDeleteSaver, ref: ref}, m.layer())
+func (m *AppModel) deleteProfile() tea.Cmd {
+	ref := m.sideAt().ref
+	return m.confirm.ask(confirmPopup{title: "Delete profile", accept: "delete",
+		lines:  []string{"Delete " + m.cfg.Profiles[ref].Name + "?", "the config is written at once"},
+		action: confirmDeleteProfile, ref: ref}, m.layer())
 }
 
 // ---- panel [2]
 
-func (m *AppModel) chooseType() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("type", saver.Types, s.Type, 0)
-}
-
 func (m *AppModel) chooseRunner() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("runner", saver.Runners, s.Runner, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("runner", saver.Runners, p.Runner, 0)
 }
 
 func (m *AppModel) chooseScene() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("scene", saver.Scenes, s.Scene, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("scene", saver.Scenes, p.Scene, 0)
 }
 
 func (m *AppModel) chooseLayout() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("layout", saver.Layouts, s.Layout, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("layout", saver.Layouts, p.Layout, 0)
 }
 
 func (m *AppModel) chooseSize() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("size", saver.Sizes, s.Size, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("size", saver.Sizes, p.Size, 0)
 }
 
 func (m *AppModel) chooseFont() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("font", saver.Fonts, s.Font, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("font", saver.Fonts, p.Font, 0)
 }
 
 func (m *AppModel) chooseTime() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("time", saver.TimeFormats, s.Time, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("time", saver.TimeFormats, p.Time, 0)
 }
 
 func (m *AppModel) chooseDate() tea.Cmd {
-	s := m.cfg.Savers[m.sideAt().saver]
-	return m.openOptions("date", saver.DateFormats, s.Date, 0)
+	p := m.cfg.Profiles[m.sideAt().ref]
+	return m.openOptions("date", saver.DateFormats, p.Date, 0)
 }
 
-func (m *AppModel) chooseSaver() tea.Cmd {
-	names := make([]string, len(m.cfg.Savers))
-	for i, s := range m.cfg.Savers {
-		names[i] = s.Name
+func (m *AppModel) chooseProfile() tea.Cmd {
+	names := make([]string, len(m.cfg.Profiles))
+	for i, p := range m.cfg.Profiles {
+		names[i] = p.Name
 	}
-	return m.openOptions("saver", names, m.cfg.Saver, 0)
+	return m.openOptions("profile", names, m.cfg.Profile, 0)
 }
 
 func (m *AppModel) pickChannel() tea.Cmd {
@@ -274,38 +295,27 @@ func (m *AppModel) openOptions(title string, values []string, current string, ro
 }
 
 // commitOptions is a value chosen from the options list. A colour channel
-// goes into the saver's draft; everything else goes into the file at once.
+// goes into the profile's draft; everything else goes into the file at once.
 func (m *AppModel) commitOptions(key string) tea.Cmd {
 	v := strings.TrimPrefix(key, "v:")
 	before := m.snapshot()
 	switch r := m.optionsFor; r.kind {
-	case rowType:
-		s := &m.cfg.Savers[m.sideAt().saver]
-		s.Type = v
-		// A run has a runner and a scene; a saver that never was one
-		// gets the first of each.
-		if s.Runner == "" {
-			s.Runner = saver.Runners[0]
-		}
-		if s.Scene == "" {
-			s.Scene = saver.Scenes[0]
-		}
 	case rowRunner:
-		m.cfg.Savers[m.sideAt().saver].Runner = v
+		m.cfg.Profiles[m.sideAt().ref].Runner = v
 	case rowScene:
-		m.cfg.Savers[m.sideAt().saver].Scene = v
+		m.cfg.Profiles[m.sideAt().ref].Scene = v
 	case rowLayout:
-		m.cfg.Savers[m.sideAt().saver].Layout = v
+		m.cfg.Profiles[m.sideAt().ref].Layout = v
 	case rowSize:
-		m.cfg.Savers[m.sideAt().saver].Size = v
+		m.cfg.Profiles[m.sideAt().ref].Size = v
 	case rowFont:
-		m.cfg.Savers[m.sideAt().saver].Font = v
+		m.cfg.Profiles[m.sideAt().ref].Font = v
 	case rowTime:
-		m.cfg.Savers[m.sideAt().saver].Time = v
+		m.cfg.Profiles[m.sideAt().ref].Time = v
 	case rowDate:
-		m.cfg.Savers[m.sideAt().saver].Date = v
-	case rowSaver:
-		m.cfg.Saver = v
+		m.cfg.Profiles[m.sideAt().ref].Date = v
+	case rowProfile:
+		m.cfg.Profile = v
 	case rowPIN:
 		// After the current PIN (ux.md §2.2): Remove is done on Enter, no
 		// confirm; New goes on to the new PIN and its confirmation.
@@ -319,8 +329,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		if err != nil {
 			return m.options.close()
 		}
-		s := m.cfg.Savers[m.sideAt().saver]
-		d := m.draftOf(s)
+		p := m.cfg.Profiles[m.sideAt().ref]
+		d := m.draftOf(p)
 		hex := &d.BG
 		if r.which == 1 {
 			hex = &d.FG
@@ -329,7 +339,7 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		c[0], c[1], c[2] = config.RGB(*hex)
 		c[r.ch] = n
 		*hex = config.Hex(c[0], c[1], c[2])
-		m.drafts[s.Name] = d
+		m.drafts[p.Name] = d
 		return m.options.close()
 	default:
 		return m.options.close()
@@ -337,22 +347,22 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 	return tea.Batch(m.options.close(), m.save(before))
 }
 
-// saveColours is [S] on a saver: its draft becomes the file's.
+// saveColours is [S] on a profile: its draft becomes the file's.
 func (m *AppModel) saveColours() tea.Cmd {
 	before := m.snapshot()
-	i := m.sideAt().saver
-	d := m.draftOf(m.cfg.Savers[i])
-	m.cfg.Savers[i].BG, m.cfg.Savers[i].FG = d.BG, d.FG
+	i := m.sideAt().ref
+	d := m.draftOf(m.cfg.Profiles[i])
+	m.cfg.Profiles[i].BG, m.cfg.Profiles[i].FG = d.BG, d.FG
 	cmd := m.save(before)
-	if m.cfg.Savers[i].Colours() == d {
-		delete(m.drafts, m.cfg.Savers[i].Name)
+	if m.cfg.Profiles[i].Colours() == d {
+		delete(m.drafts, m.cfg.Profiles[i].Name)
 	}
 	return cmd
 }
 
 // resetColours is [R]: the draft goes, and the file's colours show again.
 func (m *AppModel) resetColours() tea.Cmd {
-	delete(m.drafts, m.cfg.Savers[m.sideAt().saver].Name)
+	delete(m.drafts, m.cfg.Profiles[m.sideAt().ref].Name)
 	return nil
 }
 
@@ -433,25 +443,58 @@ func (m *AppModel) askPINAction() tea.Cmd {
 
 // ---- the input box's answer
 
+// takeName is a name typed for a profile — new, copied or renamed — or
+// why it will not do: the box says ` · empty` or ` · taken` and stays.
+func (m *AppModel) takeName(v string, self int) (string, bool) {
+	name := strings.TrimSpace(v)
+	if name == "" {
+		m.input.suffix = " · empty"
+		return "", false
+	}
+	if i := m.cfg.Index(name); i >= 0 && i != self {
+		m.input.suffix = " · taken"
+		return "", false
+	}
+	return name, true
+}
+
 func (m *AppModel) commitInput() tea.Cmd {
 	v := m.input.value
 	switch m.input.action {
-	case inputRename, inputDuplicate:
-		name := strings.TrimSpace(v)
-		if name == "" {
-			m.input.suffix = " · empty"
+	case inputNew:
+		name, ok := m.takeName(v, -1)
+		if !ok {
 			return nil
 		}
-		if i := m.cfg.Index(name); i >= 0 && !(m.input.action == inputRename && i == m.editRef) {
-			m.input.suffix = " · taken"
+		// A profile of the saver, with the defaults: the clock's shapes,
+		// or the run's first runner and scene.
+		p := config.DefaultProfile()
+		p.Name, p.Saver = name, saver.Kinds[m.editRef]
+		if p.Saver == saver.KindDino {
+			p.Runner, p.Scene = saver.Runners[0], saver.Scenes[0]
+		}
+		before := m.snapshot()
+		m.cfg.Profiles = append(m.cfg.Profiles, p)
+		m.cur1 = profileItem(len(m.cfg.Profiles) - 1)
+		m.cur2 = 0
+		m.focus = panelDetail
+		return tea.Batch(m.input.close(), m.save(before))
+
+	case inputRename, inputDuplicate:
+		self := -1
+		if m.input.action == inputRename {
+			self = m.editRef
+		}
+		name, ok := m.takeName(v, self)
+		if !ok {
 			return nil
 		}
 		before := m.snapshot()
 		if m.input.action == inputRename {
-			old := m.cfg.Savers[m.editRef].Name
-			m.cfg.Savers[m.editRef].Name = name
-			if m.cfg.Saver == old {
-				m.cfg.Saver = name
+			old := m.cfg.Profiles[m.editRef].Name
+			m.cfg.Profiles[m.editRef].Name = name
+			if m.cfg.Profile == old {
+				m.cfg.Profile = name
 			}
 			// The draft follows the name.
 			if d, ok := m.drafts[old]; ok {
@@ -459,10 +502,10 @@ func (m *AppModel) commitInput() tea.Cmd {
 				m.drafts[name] = d
 			}
 		} else {
-			s := m.cfg.Savers[m.editRef]
-			s.Name = name
-			m.cfg.Savers = append(m.cfg.Savers, s)
-			m.cur1 = len(m.cfg.Savers) - 1
+			p := m.cfg.Profiles[m.editRef]
+			p.Name = name
+			m.cfg.Profiles = append(m.cfg.Profiles, p)
+			m.cur1 = profileItem(len(m.cfg.Profiles) - 1)
 			m.cur2 = 0
 		}
 		return tea.Batch(m.input.close(), m.save(before))
@@ -550,14 +593,14 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 	c := m.confirm
 	before := m.snapshot()
 	switch c.action {
-	case confirmDeleteSaver:
-		if c.ref < 0 || c.ref >= len(m.cfg.Savers) {
+	case confirmDeleteProfile:
+		if c.ref < 0 || c.ref >= len(m.cfg.Profiles) {
 			break
 		}
-		delete(m.drafts, m.cfg.Savers[c.ref].Name)
-		m.cfg.Savers = slices.Delete(m.cfg.Savers, c.ref, c.ref+1)
-		// The cursor stays among the savers: the next one, or the new last.
-		m.cur1 = min(c.ref, len(m.cfg.Savers)-1)
+		delete(m.drafts, m.cfg.Profiles[c.ref].Name)
+		m.cfg.Profiles = slices.Delete(m.cfg.Profiles, c.ref, c.ref+1)
+		// The cursor stays among the profiles: the next one, or the new last.
+		m.cur1 = profileItem(min(c.ref, len(m.cfg.Profiles)-1))
 		m.cur2 = 0
 	case confirmQuit:
 		return tea.Quit

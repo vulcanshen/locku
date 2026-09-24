@@ -11,13 +11,14 @@ import (
 )
 
 // AppModel is the settings screen, the bare `locku` (ui.md §1.1): panel
-// [1], the savers and preference; panel [2], the detail of whatever [1]'s
-// cursor is on. Every change is written to config.yaml the moment it is
-// made, except a saver's colours: those move a draft until [S] Save.
+// [1], the savers, the profiles and preference; panel [2], the detail of
+// whatever [1]'s cursor is on. Every change is written to config.yaml the
+// moment it is made, except a profile's colours: those move a draft until
+// [S] Save.
 type AppModel struct {
 	cfg     config.Config
 	problem string // Load's note: told once, as a toast
-	// drafts holds a saver's colours as its sliders have them, by name,
+	// drafts holds a profile's colours as its sliders have them, by name,
 	// while they differ from the file's (user, 2026-09-24: a slider that
 	// wrote at once could not be put back). [S] Save writes one, [R]
 	// Reset drops it, and a rename carries it along.
@@ -43,7 +44,7 @@ type AppModel struct {
 	pendingG bool // the first half of gg
 
 	// what an open box is about
-	editRef    int     // the saver a name box edits
+	editRef    int     // the profile a name box edits, or the saver a new one is of
 	editKind   rowKind // the setting a number or path box edits
 	optionsFor row     // the row an options list is for
 	pinNew     string  // the new PIN, awaiting its confirmation
@@ -56,13 +57,15 @@ const (
 	panelDetail panel = 2
 )
 
-// NewApp is the settings screen over cfg. problem is Load's note.
+// NewApp is the settings screen over cfg, its cursor on the active
+// profile — what one most often came to change. problem is Load's note.
 func NewApp(cfg config.Config, problem string) AppModel {
 	return AppModel{
 		cfg:     cfg,
 		problem: problem,
 		drafts:  map[string]config.Style{},
 		focus:   panelSide,
+		cur1:    profileItem(max(0, cfg.Index(cfg.Profile))),
 		menu:    newSpaceMenu(),
 		options: newOptionsMenu(),
 		help:    newHelpPopup(),
@@ -206,7 +209,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	case "q":
 		if m.anyDirty() {
 			return m, m.confirm.ask(confirmPopup{title: "Unsaved colours", accept: "quit anyway",
-				lines:  []string{"Quit without saving the colours?", "S on the saver saves them, R drops them"},
+				lines:  []string{"Quit without saving the colours?", "S on the profile saves them, R drops them"},
 				action: confirmQuit}, m.layer())
 		}
 		return m, tea.Quit
@@ -294,8 +297,8 @@ func (m *AppModel) openMenu() tea.Cmd {
 }
 
 // startPreview: the whole screen becomes the lock on cfg — the file's
-// config with every colour draft in place, and, from [p] on a saver, that
-// saver active — and comes back when it opens (ui.md §2.1).
+// config with every colour draft in place, and, from [p] on a profile,
+// that profile active — and comes back when it opens (ui.md §2.1).
 func (m *AppModel) startPreview(cfg config.Config) tea.Cmd {
 	lk := newLock(cfg, "", true)
 	lk, cmd := lk.step(tea.WindowSizeMsg{Width: m.width, Height: m.height})

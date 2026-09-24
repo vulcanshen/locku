@@ -14,7 +14,8 @@ type inputAction int
 
 const (
 	inputNone       inputAction = iota
-	inputRename                 // a saver's new name
+	inputNew                    // a new profile's name, of the saver at editRef
+	inputRename                 // a profile's new name
 	inputDuplicate              // a copy's name
 	inputNumber                 // prompt_timeout / lockout_after / lockout_seconds
 	inputPath                   // tmux_conf / screen_conf, on an offer

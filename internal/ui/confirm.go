@@ -9,9 +9,9 @@ import (
 type confirmAction int
 
 const (
-	confirmNone        confirmAction = iota
-	confirmDeleteSaver               // remove the saver at ref
-	confirmQuit                      // leave with the colour draft unsaved
+	confirmNone          confirmAction = iota
+	confirmDeleteProfile               // remove the profile at ref
+	confirmQuit                        // leave with the colour draft unsaved
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes
@@ -23,7 +23,7 @@ type confirmPopup struct {
 	lines   []string
 	accept  string // what Enter does, shown in the hint
 	action  confirmAction
-	ref     int // the saver the action is about
+	ref     int // the profile the action is about
 	layer   int
 	screenW int
 	screenH int
