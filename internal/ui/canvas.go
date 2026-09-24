@@ -267,19 +267,22 @@ func stampLine(b *board, f face, line string, k, x, y int) {
 }
 
 // A game scene needs room to be played: the runner, a jump over the
-// tallest cactus, the ground, and a runway — in its own pixels.
+// tallest cactus, the ground, and a runway — in its own pixels. A game
+// has no size setting (user, 2026-09-24): it is drawn at the largest
+// scale, up to sceneMaxScale, that leaves the scene its room.
 const (
-	sceneMinW = 40
-	sceneMinH = 25
+	sceneMinW     = 40
+	sceneMinH     = 25
+	sceneMaxScale = 3
 )
 
-// fitScene picks a game's scale on a cols × rows canvas: the size the
-// saver asks for, stepped down until a scene has its room — or 1, and
-// the game clips what it must. The scene is the whole board, which is
-// why the ground runs edge to edge.
-func fitScene(size, cols, rows int) (k, w, h int) {
+// fitScene picks a game's scale on a cols × rows canvas: from most,
+// stepped down until a scene has its room — or 1, and the game clips
+// what it must. The scene is the whole board, which is why the ground
+// runs edge to edge.
+func fitScene(most, cols, rows int) (k, w, h int) {
 	cells := cols / 2
-	for k = max(1, size); k > 1; k-- {
+	for k = max(1, most); k > 1; k-- {
 		if cells/k >= sceneMinW && rows/k >= sceneMinH {
 			break
 		}

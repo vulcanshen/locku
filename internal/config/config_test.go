@@ -101,6 +101,11 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "trex" || cfg.Profiles[1].Saver != "clock" {
 		t.Errorf("%+v", cfg)
 	}
+	// Each saver's keys are its own: a dino has no size or shapes, a
+	// clock no runner.
+	if d, c := cfg.Profiles[0], cfg.Profiles[1]; d.Size != "" || d.Layout != "" || c.Runner != "" || c.Size != "medium" {
+		t.Errorf("dino %+v clock %+v", d, c)
+	}
 	if err := SaveFile(p, cfg); err != nil {
 		t.Fatal(err)
 	}

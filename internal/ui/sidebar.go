@@ -9,19 +9,20 @@ import (
 )
 
 // Panel [1] (ui.md §1.1): three groups, their titles in blue, one under
-// the other with no gap. Savers are the kinds there are — the clock, the
-// dino: the classes, which have no name but their own and are not made
-// or deleted. Profiles are the ones the user has set up — named,
-// configured savers: the objects (user, 2026-09-24, who drew the line).
-// The active profile — the one preference › profile names — carries a
-// green dot, and the dot is all it is: it shows, it does not set.
-// Settings is one row, preference. The group titles are not stops.
+// the other with no gap. Profiles first: the ones the user has set up —
+// named, configured savers: the objects. Then Savers, the kinds there
+// are — the clock, the dino: the classes, which have no name but their
+// own and are not made or deleted (user, 2026-09-24, who drew the line
+// and put the profiles on top). The active profile — the one preference
+// › profile names — carries a green dot, and the dot is all it is: it
+// shows, it does not set. Settings is one row, preference. The group
+// titles are not stops.
 
 type sideKind int
 
 const (
-	sideSaver      sideKind = iota // a kind of saver, by its index in saver.Kinds
-	sideProfile                    // a profile, by its index in cfg.Profiles
+	sideProfile    sideKind = iota // a profile, by its index in cfg.Profiles
+	sideSaver                      // a kind of saver, by its index in saver.Kinds
 	sidePreference                 // the one settings row
 )
 
@@ -31,20 +32,20 @@ type sideItem struct {
 	ref  int
 }
 
-// sideItems is the stops in order: the savers, the profiles, preference.
+// sideItems is the stops in order: the profiles, the savers, preference.
 func (m AppModel) sideItems() []sideItem {
-	items := make([]sideItem, 0, len(saver.Kinds)+len(m.cfg.Profiles)+1)
-	for i := range saver.Kinds {
-		items = append(items, sideItem{kind: sideSaver, ref: i})
-	}
+	items := make([]sideItem, 0, len(m.cfg.Profiles)+len(saver.Kinds)+1)
 	for i := range m.cfg.Profiles {
 		items = append(items, sideItem{kind: sideProfile, ref: i})
+	}
+	for i := range saver.Kinds {
+		items = append(items, sideItem{kind: sideSaver, ref: i})
 	}
 	return append(items, sideItem{kind: sidePreference})
 }
 
 // profileItem is the cursor index of the profile at i.
-func profileItem(i int) int { return len(saver.Kinds) + i }
+func profileItem(i int) int { return i }
 
 // sideAt is the item under the cursor.
 func (m AppModel) sideAt() sideItem {
@@ -60,10 +61,6 @@ type sideLine struct {
 
 func (m AppModel) sideLines() []sideLine {
 	var out []sideLine
-	out = append(out, sideLine{text: "Savers", item: -1})
-	for i, k := range saver.Kinds {
-		out = append(out, sideLine{text: "  " + k, item: i})
-	}
 	out = append(out, sideLine{text: "Profiles", item: -1})
 	for i, p := range m.cfg.Profiles {
 		mark := "  "
@@ -72,8 +69,13 @@ func (m AppModel) sideLines() []sideLine {
 		}
 		out = append(out, sideLine{text: mark + p.Name, item: profileItem(i)})
 	}
+	n := len(m.cfg.Profiles)
+	out = append(out, sideLine{text: "Savers", item: -1})
+	for i, k := range saver.Kinds {
+		out = append(out, sideLine{text: "  " + k, item: n + i})
+	}
 	out = append(out, sideLine{text: "Settings", item: -1})
-	out = append(out, sideLine{text: "  preference", item: profileItem(len(m.cfg.Profiles))})
+	out = append(out, sideLine{text: "  preference", item: n + len(saver.Kinds)})
 	return out
 }
 

@@ -19,12 +19,12 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
-║ Savers                 ║│ name              clock                          │
-║   clock                ║│ saver             clock                          │
-║   dino                 ║│ layout            row                            │
-║ Profiles               ║│ size              medium                         │
-║ ● clock                ║│ font              3x7                            │
-║   clock2               ║│ time              HH MM                          │
+║ Profiles               ║│ name              clock                          │
+║ ● clock                ║│ saver             clock                          │
+║   clock2               ║│ layout            row                            │
+║   dino                 ║│ size              medium                         │
+║ Savers                 ║│ font              3x7                            │
+║   clock                ║│ time              HH MM                          │
 ║   dino                 ║│ date              off                            │
 ║ Settings               ║│ bg                ■ #313244  →  ■ #ff3244        │
 ║   preference           ║│   R               ───────────● 255               │
@@ -38,9 +38,10 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
-左 `[1]` 側欄三個區塊（2026-09-24 定案，使用者以 OOP 分：saver 是 class、profile 是 object）：**Savers** 列出
-有哪幾種 saver（clock、dino），它們沒有名字、名字就是自己，不能新增刪除；**Profiles** 列出使用者設定好的、有名字的
-saver 實例，新增（從 Savers 的一種按 `n`）、複製、改名、刪除都在這裡；**Settings** 一項：`preference`。區塊標題 Blue、是
+左 `[1]` 側欄三個區塊，順序 Profiles → Savers → Settings（2026-09-24 定案，使用者以 OOP 分：saver 是 class、profile 是
+object，常用的 profile 在上）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
+複製、改名、刪除都在這裡；**Savers** 列出有哪幾種 saver（clock、dino），它們沒有名字、名字就是自己，不能新增刪除；
+**Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
 是側欄唯一的綠色；它只顯示，設為啟用在 `preference › profile`。
 
@@ -64,7 +65,7 @@ saver 實例，新增（從 Savers 的一種按 `n`）、複製、改名、刪�
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
 | saver | `clock` / `dino` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
-| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值 |
+| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；dino 沒有 size，畫布自己取最大） |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
 | time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |

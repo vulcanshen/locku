@@ -149,7 +149,7 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 | type | 參數 | 內容 | tick |
 |---|---|---|---|
 | clock | `layout` row / column；`size` small / medium / large；`font` 3x7 / 3x5；`time` `HH MM` / `HH MM SS`；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`，日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
-| dino（2026-09-24） | `size` small / medium / large；`runner` 跑者，目前只有 `trex`（暴龍）；`scene` 場景，目前只有 `grassland`（草原）；`bg` / `fg` 兩個顏色 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機（草原：仙人掌 1 / 2 / 3 株、高仙人掌），間距隨機 44 到 100 px；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，前面沒東西時偶爾也無故跳一下；雲以三分之一速度飄。不記分、不畫時間，畫面上只有場景（使用者 2026-09-24：dino 上面不需要計算時間和分數）。場景像素：跑者 12 × 14、跳躍弧 16 幀最高 8 px、每幀走 2 px，最小場景 40 × 25 | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
+| dino（2026-09-24） | `runner` 跑者，目前只有 `trex`（暴龍）；`scene` 場景，目前只有 `grassland`（草原）；`bg` / `fg` 兩個顏色。沒有 size（使用者：dino 也沒有 size 的選項），畫布自己取塞得下的最大倍率 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機（草原：仙人掌 1 / 2 / 3 株、高仙人掌），間距隨機 44 到 100 px；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，前面沒東西時偶爾也無故跳一下；雲以三分之一速度飄。不記分、不畫時間，畫面上只有場景（使用者 2026-09-24：dino 上面不需要計算時間和分數）。場景像素：跑者 12 × 14、跳躍弧 16 幀最高 8 px、每幀走 2 px，最小場景 40 × 25 | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
 
 修訂（2026-09-24，第四輪）：`font` 新增，3x7 之外多一套 3x5（同樣直角、同樣 3 格寬，只有 5 列高），使用者要試；原本「第二套 3 × 5 字型」是在 5 × 7 時代否決的，那時它會是第二種畫法，現在字形已經是七段式，5 列只是把直線縮短，兩套並列讓使用者比，決定後留一套或都留。
 
@@ -207,7 +207,7 @@ Nerd Font 必裝，與家族相同。字型在使用者本機的終端機模擬�
 
 resize 重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後內容變更（clock tick）只對有變的像素做 splash 式 shuffle 揭露，沒變的不動，一次變更 ≤ 400 ms。CPU 預算不變：閒置 < 1%。
 
-dino 的畫法（2026-09-24）：場景是整塊板，k 由 size 決定、場景塞不下（40 × 25 px）就降一級到 1；場景 w × h = 板的格數 ÷ k，地面因此貼滿整寬，右邊 / 下面除不盡的格留暗。每幀整張換掉、不做 reveal——世界在移動，不是內容在變。14 fps 不是閒置，CPU 會比時鐘高，這是遊戲 saver 的代價。
+dino 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一個讓場景（40 × 25 px）塞得下的，都塞不下就 1；沒有 size 設定；場景 w × h = 板的格數 ÷ k，地面因此貼滿整寬，右邊 / 下面除不盡的格留暗。每幀整張換掉、不做 reveal——世界在移動，不是內容在變。14 fps 不是閒置，CPU 會比時鐘高，這是遊戲 saver 的代價。
 
 ### 5.4 狀態列
 
@@ -281,8 +281,7 @@ profiles:
     bg: "#313244"          # 這個 profile 的點陣板暗格，預設 surface0
     fg: "#f2b753"          # 亮格，預設 splash gold
   - name: dino
-    saver: dino
-    size: medium
+    saver: dino           # dino 沒有 layout / size / font / time / date：畫布自己取最大倍率
     runner: trex          # dino 才有：跑者，目前只有 trex
     scene: grassland      # dino 才有：場景，目前只有 grassland
     bg: "#313244"
@@ -366,8 +365,8 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver 與 profile；設為啟用在 preference › profile，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 profile 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 profile）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu；saver 的是 `[Enter] Edit`（看說明）、`[n] New`。
 24. （2026-09-24 修訂）`[2]` 在 profile 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 profile，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 profile 的 `[2]` 上就是這個 profile，其他地方是啟用中的。
-26. （2026-09-24）第二種 saver `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死；參數 size、`runner`（先只有 trex）、`scene`（先只有 grassland）、bg / fg。每 70 ms 一幀整張換，不做 reveal。
-27. （2026-09-24，使用者定案）側欄分三個區塊：**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是唯讀說明，唯一動作 `[n] New`；**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Settings › preference**。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
+26. （2026-09-24）第二種 saver `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死、不記分；參數 `runner`（先只有 trex）、`scene`（先只有 grassland）、bg / fg，沒有 size（畫布取塞得下的最大倍率）。每 70 ms 一幀整張換，不做 reveal。
+27. （2026-09-24，使用者定案）側欄分三個區塊，順序 Profiles → Savers → Settings：**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是唯讀說明，唯一動作 `[n] New`；**Settings › preference**。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
 25. （2026-09-24）preference 多兩列 `tmux_conf` / `screen_conf`，是 locku 唯二的自由輸入，用 webu 的 input 作法：提議（目前值，沒有就是慣例路徑）dim 顯示，Tab 接手、Backspace 拒絕、Enter 照打的存、沒碰提議不改；只收絕對路徑或 `~/` 開頭。
 
 ## 11. 待決清單

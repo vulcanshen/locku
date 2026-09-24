@@ -282,7 +282,8 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 func (m *LockModel) refit() board {
 	rows := m.height - 1
 	if m.game != nil {
-		k, w, h := fitScene(m.scale, m.width, rows)
+		// The run has no size of its own: as large as the terminal allows.
+		k, w, h := fitScene(sceneMaxScale, m.width, rows)
 		return paintScene(m.game.Draw(w, h), k, m.width, rows)
 	}
 	m.layout, m.plain = fit(m.face, m.clock, m.now(), m.width, rows, m.scale)

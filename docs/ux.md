@@ -54,7 +54,7 @@ profile 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定
 | saver 的說明（沒有停靠點） | `[n] New` | 無 |
 | name | `[Enter] Rename` | `[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
-| layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列是 size / runner / scene） | 同上 |
+| layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列只有 runner / scene） | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |

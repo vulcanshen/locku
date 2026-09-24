@@ -48,12 +48,12 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
-║ Savers                 ║│ name              clock                          │
-║   clock                ║│ saver             clock                          │
-║   dino                 ║│ layout            row                            │
-║ Profiles               ║│ size              medium                         │
-║ ● clock                ║│ time              HH MM                          │
-║   clock2               ║│ date              off                            │
+║ Profiles               ║│ name              clock                          │
+║ ● clock                ║│ saver             clock                          │
+║   clock2               ║│ layout            row                            │
+║   dino                 ║│ size              medium                         │
+║ Savers                 ║│ time              HH MM                          │
+║   clock                ║│ date              off                            │
 ║   dino                 ║│ bg                ■ #313244  →  ■ #ff3244        │
 ║ Settings               ║│   R               ───────────● 255               │
 ║   preference           ║│   G               ──●───────── 50                │
@@ -63,8 +63,8 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
-**Savers** 是種類（class）：clock、dino，沒有名字、不能增刪，`[2]` 是說明，在上面按 `n` 生一個它的 profile。
 **Profiles** 是你設定好的、有名字的 saver（object）：new / duplicate / rename / delete 都在這裡，`●` 是啟用中的那個。
+**Savers** 是種類（class）：clock、dino，沒有名字、不能增刪，`[2]` 是說明，在上面按 `n` 生一個它的 profile。
 
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`n` new profile；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile 上：`P` 預覽這個 profile、`S` 存顏色草稿、`R` 丟掉；
@@ -87,7 +87,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是 class、profile 是 object（2026-09-24 定案）。** 兩種 saver：clock 與 dino；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數 size、runner（先只有 trex）、scene（先只有 grassland）、bg / fg，每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是 class、profile 是 object（2026-09-24 定案）。** 兩種 saver：clock 與 dino；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（先只有 trex）、scene（先只有 grassland）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 
   各 size 需要的終端機（欄 × 列，3x7 / 3x5）：
