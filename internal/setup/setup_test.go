@@ -93,14 +93,16 @@ func TestEveryLineIsMarked(t *testing.T) {
 	if !strings.HasPrefix(tmuxSet(300)[0][3], "/") || !strings.HasSuffix(tmuxSet(300)[0][3], " lock -S '#{socket_path}'") {
 		t.Errorf("live lock command: %q", tmuxSet(300)[0][3])
 	}
-	if strings.Contains(joined, "bind ") || !strings.Contains(joined, `command-alias[90]" "locku=lock-session"`) ||
+	// The lock is the server's: lock-server, not lock-session.
+	if strings.Contains(joined, "bind ") || !strings.Contains(joined, `command-alias[90]" "locku=lock-server"`) ||
 		!strings.Contains(joined, `client-attached[90]`) || !strings.Contains(joined, `client-session-changed[90]`) ||
-		!strings.Contains(joined, `#{@locked}`) {
+		!strings.Contains(joined, `#{@locked}`) || strings.Contains(joined, "lock-session") {
 		t.Errorf("tmux block:\n%s", joined)
 	}
-	// What is set on a live server is what is unset, one for one.
-	if len(tmuxSet(300)) != len(tmuxUnset) {
-		t.Errorf("%d set, %d unset", len(tmuxSet(300)), len(tmuxUnset))
+	// What is set on a live server is what is unset, one for one — and
+	// then the mark a lock may have left.
+	if len(tmuxUnset) != len(tmuxSet(300))+1 || tmuxUnset[len(tmuxUnset)-1][2] != "@locked" {
+		t.Errorf("%d set, %d unset: %v", len(tmuxSet(300)), len(tmuxUnset), tmuxUnset)
 	}
 	for i := range tmuxSet(300) {
 		if tmuxSet(300)[i][2] != tmuxUnset[i][2] {

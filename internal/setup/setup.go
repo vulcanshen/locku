@@ -133,14 +133,18 @@ func report(w io.Writer, path string, changed bool, verb string) {
 	}
 }
 
-// The tmux side (function.md §6.2). No key is bound: a user with a
-// tmux.conf has keys of their own, so the lock is a command — `prefix :`
-// then `locku` — through a command alias (user, 2026-09-24). The hooks
-// lock a client that attaches to, or switches into, a session locku has
-// marked @locked (tmux package): tmux's own lock-session locks only the
-// clients attached at that moment. The alias and the hooks sit at a
-// high index in their arrays, so the user's own entries — at 0 — are
-// untouched, and -d can take exactly these out again.
+// The tmux side (function.md §6.2). The lock is the whole server's, as
+// a screensaver is the whole machine's (user, 2026-09-24): `locku` locks
+// every client on the server, and while locku has the server marked
+// @locked — a global option every session sees — the hooks lock a
+// client that attaches to, or switches into, any session, since tmux's
+// own lock-server locks only the clients attached at that moment. The
+// idle lock stays tmux's per-session one: the screen that idles is the
+// screen that locks. No key is bound: a user with a tmux.conf has keys
+// of their own, so the lock is a command — `prefix :` then `locku` —
+// through a command alias. The alias and the hooks sit at a high index
+// in their arrays, so the user's own entries — at 0 — are untouched, and
+// -d can take exactly these out again.
 const (
 	tmuxIndex = "90"
 	hookCmd   = `if -F "#{@locked}" lock-client`
@@ -160,9 +164,9 @@ func tmuxLines(idle int) []string {
 	return []string{
 		`set -gF lock-command "` + lockCmd() + `"  # locku`,
 		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: idle_lock; 0 never`,
-		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-session"                             # locku: prefix : locku`,
-		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client`,
-		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching into one`,
+		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-server"                              # locku: prefix : locku locks every client`,
+		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client`,
+		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions`,
 	}
 }
 
@@ -172,18 +176,21 @@ func tmuxSet(idle int) [][]string {
 	return [][]string{
 		{"set", "-gF", "lock-command", lockCmd()},
 		{"set", "-g", "lock-after-time", itoa(idle)},
-		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-session"},
+		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-server"},
 		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
 		{"set-hook", "-g", "client-session-changed[" + tmuxIndex + "]", hookCmd},
 	}
 }
 
+// tmuxUnset undoes tmuxSet one for one, and then drops the mark a lock
+// may have left.
 var tmuxUnset = [][]string{
 	{"set", "-gu", "lock-command"},
 	{"set", "-gu", "lock-after-time"},
 	{"set", "-su", "command-alias[" + tmuxIndex + "]"},
 	{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
 	{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
+	{"set", "-gu", "@locked"},
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -213,7 +220,7 @@ func Tmux(w io.Writer, path string, idle int) error {
 	if !tmuxLive(w, tmuxSet(idle)) {
 		return nil
 	}
-	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku locks, %s, attaching to a locked session locks\n", idleSays(idle))
+	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku locks every client, %s, attaching while locked locks\n", idleSays(idle))
 	return nil
 }
 
