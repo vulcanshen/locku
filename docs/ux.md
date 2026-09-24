@@ -16,7 +16,7 @@
 | **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help 內 |
 
 **規則：一個操作沒進 Space menu 或 help 就等於不存在。** core key 沒有字母可以括，鍵寫進 label：
-`[Enter] Set active`、`[Enter] Edit`。
+`[Enter] Edit`、`[Enter] Choose`。
 
 **鎖定畫布不在這張表裡。** 它只有一個動作「開 PIN prompt」，而且任何鍵都是它，沒有第二個動作可揭露，
 所以畫布上沒有 Space menu、沒有 `?`、沒有 footer。VTP 只作用在 PIN prompt 這個 popup。
@@ -26,7 +26,7 @@
 | Core-key | 設定畫面 | 鎖定畫布 |
 |---|---|---|
 | `Tab` | `[1]` ↔ `[2]`；`1` / `2` 直達 | 任何鍵 = 開 PIN prompt |
-| `Enter` | `[1]` saver：設為啟用；`[1]` config / style：焦點送到 `[2]`；`[2]` 欄位：開該欄的 popup 或原地翻轉（§2） | saver 上：開 prompt；prompt 內：送出 |
+| `Enter` | `[1]` 任何列：焦點送到 `[2]`（修訂 2026-09-24，saver 也一樣，設為啟用改在 preference）；`[2]` 欄位：開該欄的 popup 或原地翻轉（§2） | saver 上：開 prompt；prompt 內：送出 |
 | `Esc` | 關最上層浮層；沒浮層時 no-op，不離開 app | prompt 內：回 saver；saver 上：跟任何鍵一樣開 prompt |
 | `Space` | **滑鼠右鍵 context menu**；再按關閉；在 menu / viewport / message 浮層上 = 關掉它；input 打字中是空白字元 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
 | `?` | help；再按關閉；可疊在任何浮層上 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
@@ -36,30 +36,31 @@
 ### §A.1 Contextual track — Space menu
 
 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；menu 本身 `j`/`k` 走（環繞）、
-`u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。locku 兩個面板都沒有 panel
-operation：Preview 是全域（§A.2），面板層沒有別的動作；整合設定是 CLI `locku setup`。
+`u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。唯一有 panel operation 的是 `[2]` 在
+saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定是 CLI `locku setup`。
 
 **`[1]` 側欄**
 
 | cursor 在 | item operation |
 |---|---|
-| saver | `[Enter] Set active`（已啟用的 disabled）、`[c] Duplicate`（name popup，提議原名加 `2`）、`[r] Rename`（name popup）、`[x] Delete`（confirm；啟用中或最後一個 disabled 並說明） |
-| config / style | `[Enter] Edit`（焦點送到 `[2]`） |
+| saver | `[Enter] Edit`（焦點送到 `[2]`）、`[p] Preview`（鎖定畫布顯示這個 saver，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled 並說明） |
+| preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
-**`[2]` 明細**（menu-only 以外沒有字母，除了 PIN 列的 `x`）
+**`[2]` 明細**
 
-| cursor 在 | item operation |
-|---|---|
-| name | `[Enter] Rename` |
-| type | 唯讀，不可停 |
-| time / date | `[Enter] Choose` |
-| PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`、`[x] Clear PIN`（current PIN → confirm） |
-| show_status | `[Enter] Toggle` |
-| prompt_timeout / lockout_after / lockout_seconds | `[Enter] Edit` |
-| bg / fg 色票列 | 唯讀，不可停 |
-| R / G / B | `[Enter] Pick` |
+| cursor 在 | item operation | panel operation |
+|---|---|---|
+| name | `[Enter] Rename` | `[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
+| type | 唯讀，不可停 | 同上 |
+| layout / time / date | `[Enter] Choose` | 同上 |
+| bg / fg 色票列 | 唯讀，不可停 | 同上 |
+| R / G / B | `[Enter] Pick`（進草稿） | 同上 |
+| PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`、`[x] Clear PIN`（current PIN → confirm） | 無 |
+| saver | `[Enter] Choose`（列出所有 saver） | 無 |
+| show_status | `[Enter] Toggle` | 無 |
+| prompt_timeout / lockout_after / lockout_seconds | `[Enter] Edit` | 無 |
 
-delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
+修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
 **popup 內**：options / confirm / viewport / toast 沒有自己的 Space menu，Space 就是關掉。
 
@@ -67,9 +68,9 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 
 | 全域動作 | 鍵 |
 |---|---|
-| Preview（整個畫面被鎖定畫布取代，解鎖後回來） | `P` |
+| Preview（整個畫面被鎖定畫布取代，顯示啟用中的 saver、帶著顏色草稿，解鎖後回來） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
-| 離開 | `q`（浮層內不作用）、`Ctrl+C` 硬退 |
+| 離開 | `q`（浮層內不作用；有未存的顏色草稿時先 confirm）、`Ctrl+C` 硬退 |
 | splash 彩蛋 | `V`（不揭露） |
 
 全域字母在浮層開著、打字中兩種狀態下不作用。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
@@ -81,14 +82,15 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 
 | 元素 | 唯一語意 |
 |---|---|
-| 邊框 Blue / 雙線 | focus |
-| `[1]` Green `●` | 啟用中的 saver |
+| 邊框 Blue / 雙線 | focus；側欄的區塊標題也是 Blue（2026-09-24） |
+| `[1]` Green `●` | 啟用中的 saver（只顯示，不設） |
 | 值 Green | 使用者設了：PIN `set`、`on` |
 | 值 Yellow | 還沒設：`not set`；畫布 `no PIN` |
 | Red | 錯：PIN wrong、lockout、`· invalid`、`· taken`、`config error` |
 | 值 Mauve | 可以改的值 |
-| dim | 唯讀（type、色票）、menu 裡 disabled 的列、區塊標題 |
-| popup 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態（invalid / taken / wrong / try again in N s） |
+| dim | 唯讀（type、色票）、menu 裡 disabled 的列、menu 的 region header |
+| 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態（invalid / taken / wrong / try again in N s；`[2]` 的 ` · unsaved`） |
+| 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
 
 ---
 
@@ -98,7 +100,7 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、`config`、`style`；區塊標題跳過 | 可改的欄位；type 與色票列跳過 |
+| 停靠點 | saver 列、`preference`；區塊標題跳過 | 可改的欄位；type 與色票列跳過 |
 | `j` / `k` | 上下一列、不繞 | 同 |
 | `u` / `d` | 半頁 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |
@@ -115,10 +117,10 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 | 欄位 | 行為 |
 |---|---|
 | name（rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
-| time / date | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
-| R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去並寫檔；色票列即時變（webu slider 作法，不打字） |
+| R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號、`q` 是 q。Backspace 刪一字；沒有游標移動。
@@ -167,17 +169,20 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 
 ## §4 Hotkey 分層與全表
 
-規則：**小寫 = item operation 或移動**、**大寫 = 全域**；bracket 印的就是要按的鍵。
+規則：**小寫 = item operation 或移動**、**大寫 = panel operation 或全域**，例外是 `[1]` 的 `D` / `X`：紀錄類的
+duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的就是要按的鍵。
 
 | 層 | 鍵 |
 |---|---|
 | 全域 | `P`、`q`、`?`、`V`（彩蛋）、`Tab`、`1` / `2` |
-| `[1]` item | `c` `r` `x` |
+| `[1]` item | `p` `D` `r` `X` |
 | `[2]` item | `x`（只在 PIN 列） |
+| `[2]` panel（saver 上） | `S` `R` |
 | 導覽 | `j` `k` `u` `d` `gg` `G` |
 
-撞字檢查（2026-09-24）：`c` / `r` / `x` 只在 `[1]`，`x` 在 `[2]` 只有 PIN 列一處，語意都是「刪 / 清」；`P`
-與任何小寫無關；`V` 與 `v` 不衝突（沒有 `v`）；`d` 是半頁不是 delete，同 webu。
+撞字檢查（2026-09-24 修訂）：`p` 只在 `[1]`、`P` 全域，同 webu 的 `n` / `N`；`D` / `X` 只在 `[1]`，`x` 在 `[2]`
+只有 PIN 列一處，語意都是「刪 / 清」；`r` 只在 `[1]`、`R` 只在 `[2]` saver 上；`S` 沒有小寫對手；`V` 與 `v`
+不衝突（沒有 `v`）；`d` 是半頁不是 delete，同 webu。
 
 ---
 
@@ -186,10 +191,10 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
-**先 confirm 的動作**：Delete saver、Clear PIN。Preview 不 confirm：解鎖就回來，沒有代價。
+**先 confirm 的動作**：Delete saver、Clear PIN、有未存顏色草稿時的 Quit。Preview 不 confirm：解鎖就回來，沒有代價。
 
 **toast**：`PIN set`、`PIN mismatch`、`cannot delete: active` / `cannot delete: last one`、
-`write failed: <reason>`（值退回）。
+`nothing to save` / `nothing changed`、`write failed: <reason>`（值退回）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格降到 Surface2（`ui.md` §2.3）；`q` 在畫布與 prompt
 裡都只是字元。
@@ -203,10 +208,10 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 | 情境 | 行為 |
 |---|---|
 | 啟動 | 讀 config；不存在或損毀 → 記憶體內用預設值，**不寫檔**，第一次改動才寫 |
-| 每次改動 | 立即原子寫檔；失敗 toast、值退回 |
+| 每次改動 | 立即原子寫檔；失敗 toast、值退回。例外：顏色進草稿，`S` 才寫 |
 | 外部同時改 config | 不監看；最後寫的贏 |
-| Preview | 畫面被畫布取代（同進程，用記憶體內的 config）；解鎖或無 PIN 任意鍵 → 回設定畫面，焦點與兩個游標不變 |
-| 離開 | `q` 直接離開，沒有未存的東西 |
+| Preview | 畫面被畫布取代（同進程，用記憶體內的 config 加顏色草稿；`P` 是啟用中的 saver、`p` 是游標那個）；解鎖或無 PIN 任意鍵 → 回設定畫面，焦點與兩個游標不變 |
+| 離開 | `q` 直接離開；有未存的顏色草稿時先 confirm，Enter 丟掉草稿離開、Esc 留下 |
 
 ### 鎖定畫布
 
@@ -225,16 +230,16 @@ delete 用 `x` 不用 `d`：`d` 是半頁。duplicate 用 `c`：copy。
 ## 附錄 — hotkey 全表
 
 ### Core key
-`Tab` 切面板 · `Enter` 設為啟用 / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu · `?` help
+`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu · `?` help
 
 ### 全域
 `P` preview · `q` quit · `1` / `2` 直達面板
 
 ### `[1]` 側欄
-`Enter` set active · `c` duplicate · `r` rename · `x` delete
+`Enter` edit · `p` preview this saver · `D` duplicate · `r` rename · `X` delete
 
 ### `[2]` 明細
-`Enter` edit / choose / toggle / pick / set PIN / change PIN · `x` clear PIN
+`Enter` rename / choose / toggle / pick / set PIN / change PIN · `x` clear PIN · saver 上 `S` save colours · `R` reset colours
 
 ### 鎖定畫布
 任何鍵 開 prompt · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 刪一字

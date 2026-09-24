@@ -11,12 +11,17 @@ import (
 )
 
 // AppModel is the settings screen, the bare `locku` (ui.md §1.1): panel
-// [1], the savers and the two settings groups; panel [2], the detail of
-// whatever [1]'s cursor is on. Every change is written to config.yaml the
-// moment it is made — there is no Save and nothing is ever dirty.
+// [1], the savers and preference; panel [2], the detail of whatever [1]'s
+// cursor is on. Every change is written to config.yaml the moment it is
+// made, except a saver's colours: those move a draft until [S] Save.
 type AppModel struct {
 	cfg     config.Config
 	problem string // Load's note: told once, as a toast
+	// drafts holds a saver's colours as its sliders have them, by name,
+	// while they differ from the file's (user, 2026-09-24: a slider that
+	// wrote at once could not be put back). [S] Save writes one, [R]
+	// Reset drops it, and a rename carries it along.
+	drafts map[string]config.Style
 
 	width, height int
 	focus         panel
@@ -65,6 +70,7 @@ func NewApp(cfg config.Config, problem string) AppModel {
 	return AppModel{
 		cfg:     cfg,
 		problem: problem,
+		drafts:  map[string]config.Style{},
 		focus:   panelSide,
 		menu:    newSpaceMenu(),
 		options: newOptionsMenu(),
@@ -207,11 +213,16 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	// No float: the globals (ux.md §A.2).
 	switch k {
 	case "q":
+		if m.anyDirty() {
+			return m, m.confirm.ask(confirmPopup{title: "Unsaved colours", accept: "quit anyway",
+				lines:  []string{"Quit without saving the colours?", "S on the saver saves them, R drops them"},
+				action: confirmQuit}, m.layer())
+		}
 		return m, tea.Quit
 	case " ":
 		return m, m.openMenu()
 	case "P":
-		return m, m.startPreview()
+		return m, m.startPreview(m.previewCfg())
 	case "V":
 		return m, m.splash.show()
 	case "tab":
@@ -260,12 +271,28 @@ func (m AppModel) move(k string) AppModel {
 	return m
 }
 
-// openMenu is Space: the actions for the cursor, as rows (ux.md §A.1).
+// openMenu is Space: the actions for the cursor, as rows, in two regions
+// when the panel has actions of its own — item operation first, then
+// panel operation — and flat when it has one kind (VTP §A.1.1).
 func (m *AppModel) openMenu() tea.Cmd {
-	acts := m.actions()
-	items := make([]menuItem, len(acts))
-	for i, a := range acts {
-		items[i] = menuItem{label: a.label, key: a.key, hint: a.hint, disabled: a.disabled}
+	var item, panel []menuItem
+	for _, a := range m.actions() {
+		mi := menuItem{label: a.label, key: a.key, hint: a.hint, disabled: a.disabled}
+		if a.panelOp {
+			panel = append(panel, mi)
+		} else {
+			item = append(item, mi)
+		}
+	}
+	var items []menuItem
+	switch {
+	case len(item) > 0 && len(panel) > 0:
+		items = append(items, menuItem{label: "item operation", header: true})
+		items = append(items, item...)
+		items = append(items, menuItem{label: "panel operation", header: true})
+		items = append(items, panel...)
+	default:
+		items = append(item, panel...)
 	}
 	title := "[1] locku"
 	if m.focus == panelDetail {
@@ -275,10 +302,11 @@ func (m *AppModel) openMenu() tea.Cmd {
 	return m.menu.open()
 }
 
-// startPreview is P: the whole screen becomes the lock, on the config as
-// it is now, and comes back when it opens (ui.md §2.1).
-func (m *AppModel) startPreview() tea.Cmd {
-	lk := newLock(m.cfg, "", true)
+// startPreview: the whole screen becomes the lock on cfg — the file's
+// config with every colour draft in place, and, from [p] on a saver, that
+// saver active — and comes back when it opens (ui.md §2.1).
+func (m *AppModel) startPreview(cfg config.Config) tea.Cmd {
+	lk := newLock(cfg, "", true)
 	lk, cmd := lk.step(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 	m.preview = &lk
 	return cmd

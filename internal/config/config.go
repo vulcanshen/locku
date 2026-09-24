@@ -34,20 +34,30 @@ const (
 	bcryptCost = 10
 )
 
-// Saver is one named instance (function.md §5.2). Type is kept for the day
-// a second one exists; v1 draws every instance as a clock.
+// Saver is one named instance (function.md §5.2): what it shows, how it
+// is laid out, and the two colours its board is drawn in — the colours
+// are the saver's own, not a global setting (user, 2026-09-24). Type is
+// kept for the day a second one exists; v1 draws every instance as a
+// clock.
 type Saver struct {
-	Name string `yaml:"name"`
-	Type string `yaml:"type"`
-	Time string `yaml:"time"`
-	Date string `yaml:"date"`
+	Name   string `yaml:"name"`
+	Type   string `yaml:"type"`
+	Layout string `yaml:"layout"`
+	Time   string `yaml:"time"`
+	Date   string `yaml:"date"`
+	BG     string `yaml:"bg"`
+	FG     string `yaml:"fg"`
 }
 
-// Style is the two colours the board is drawn in, as "#rrggbb".
+// Style is a pair of board colours as "#rrggbb": a saver's, or a draft of
+// them on the settings screen.
 type Style struct {
-	BG string `yaml:"bg"`
-	FG string `yaml:"fg"`
+	BG string
+	FG string
 }
+
+// Colours is the saver's pair.
+func (s Saver) Colours() Style { return Style{BG: s.BG, FG: s.FG} }
 
 // Config is config.yaml, one field per key.
 type Config struct {
@@ -59,13 +69,12 @@ type Config struct {
 	PromptTimeout  int     `yaml:"prompt_timeout"`
 	LockoutAfter   int     `yaml:"lockout_after"`
 	LockoutSeconds int     `yaml:"lockout_seconds"`
-	Style          Style   `yaml:"style"`
 }
 
 // DefaultSaver is the instance a fresh install has, and the one drawn when
 // the file names none that exists.
 func DefaultSaver() Saver {
-	return Saver{Name: "clock", Type: "clock", Time: "HH:MM", Date: "off"}
+	return Saver{Name: "clock", Type: "clock", Layout: "row", Time: "HH:MM", Date: "off", BG: DefaultBG, FG: DefaultFG}
 }
 
 // Default is the file as it would be with every key left out.
@@ -78,7 +87,6 @@ func Default() Config {
 		PromptTimeout:  30,
 		LockoutAfter:   0,
 		LockoutSeconds: 30,
-		Style:          Style{BG: DefaultBG, FG: DefaultFG},
 	}
 }
 
@@ -152,12 +160,23 @@ func (cfg Config) sanitized() (Config, string) {
 		if s.Type == "" {
 			s.Type = "clock"
 		}
+		if s.Layout == "" {
+			s.Layout = DefaultSaver().Layout
+		}
 		if s.Time == "" {
 			s.Time = DefaultSaver().Time
 		}
 		if s.Date == "" {
 			s.Date = DefaultSaver().Date
 		}
+		// A colour that is not "#rrggbb" is quietly its default (ui.md §1.1).
+		if !ValidHex(s.BG) {
+			s.BG = DefaultBG
+		}
+		if !ValidHex(s.FG) {
+			s.FG = DefaultFG
+		}
+		s.BG, s.FG = strings.ToLower(s.BG), strings.ToLower(s.FG)
 		savers = append(savers, s)
 	}
 	cfg.Savers = savers
@@ -178,14 +197,6 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.LockoutSeconds <= 0 {
 		cfg.LockoutSeconds = Default().LockoutSeconds
 	}
-	if !ValidHex(cfg.Style.BG) {
-		cfg.Style.BG = DefaultBG
-	}
-	if !ValidHex(cfg.Style.FG) {
-		cfg.Style.FG = DefaultFG
-	}
-	cfg.Style.BG = strings.ToLower(cfg.Style.BG)
-	cfg.Style.FG = strings.ToLower(cfg.Style.FG)
 	return cfg, note
 }
 

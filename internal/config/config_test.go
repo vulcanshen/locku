@@ -29,15 +29,20 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 }
 
 func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
-	cfg, note := LoadFile(write(t, "prompt_timeout: 5\nstyle:\n  bg: \"#000000\"\n"))
+	cfg, note := LoadFile(write(t, "prompt_timeout: 5\nsavers:\n  - name: clock\n    bg: \"#000000\"\n"))
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if cfg.PromptTimeout != 5 || !cfg.ShowStatus || cfg.Style.BG != "#000000" || cfg.Style.FG != DefaultFG {
+	if cfg.PromptTimeout != 5 || !cfg.ShowStatus {
 		t.Errorf("%+v", cfg)
 	}
-	if s, ok := cfg.Active(); !ok || s.Name != "clock" {
+	s, ok := cfg.Active()
+	if !ok || s.Name != "clock" {
 		t.Errorf("active %+v %v", s, ok)
+	}
+	// A saver's absent keys are the defaults too.
+	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Time != "HH:MM" || s.Date != "off" {
+		t.Errorf("saver %+v", s)
 	}
 }
 
@@ -85,9 +90,9 @@ func TestEmptySaversAreTheDefault(t *testing.T) {
 }
 
 func TestBadValuesAreDefaults(t *testing.T) {
-	cfg, _ := LoadFile(write(t, "style:\n  bg: red\n  fg: \"#ABCDEF\"\nprompt_timeout: -1\nlockout_seconds: 0\n"))
-	if cfg.Style.BG != DefaultBG || cfg.Style.FG != "#abcdef" {
-		t.Errorf("style %+v", cfg.Style)
+	cfg, _ := LoadFile(write(t, "savers:\n  - name: clock\n    bg: red\n    fg: \"#ABCDEF\"\nprompt_timeout: -1\nlockout_seconds: 0\n"))
+	if s := cfg.Savers[0]; s.BG != DefaultBG || s.FG != "#abcdef" {
+		t.Errorf("colours %+v", s.Colours())
 	}
 	if cfg.PromptTimeout != 30 || cfg.LockoutSeconds != 30 {
 		t.Errorf("%+v", cfg)
