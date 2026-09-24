@@ -89,10 +89,11 @@ func saved(t *testing.T) config.Config {
 	return cfg
 }
 
-// The saver detail's stops: name, layout, time, date, then bg R G B and
-// fg R G B — ten rows.
+// A clock's stops in [2]: name, type, layout, size, font, time, date,
+// then bg R G B and fg R G B — thirteen rows.
 const (
 	stopName = iota
+	stopType
 	stopLayout
 	stopSize
 	stopFont
@@ -238,7 +239,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 }
 
 func TestDetailChoosesAndToggles(t *testing.T) {
-	m := newTestApp(t).press("2", "j", "j", "j", "j") // [2] on time (name, [type], layout, size, font, time)
+	m := newTestApp(t).press("2", "j", "j", "j", "j", "j") // [2] on time (name, type, layout, size, font, time)
 	if m.rowAt().kind != rowTime {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
@@ -369,6 +370,39 @@ func TestConfPathsAreTypedOnAnOffer(t *testing.T) {
 	m = m.press("tab", "enter")
 	if m.cfg.ScreenConf != "~/.screenrc" || saved(t).ScreenConf != "~/.screenrc" {
 		t.Errorf("screen_conf %q", m.cfg.ScreenConf)
+	}
+}
+
+// The type is chosen like any field; a dino has its own rows — size,
+// runner, scene — in place of the clock's shapes, and previews as the
+// run (user, 2026-09-24).
+func TestDinoTypeHasItsOwnRows(t *testing.T) {
+	m := newTestApp(t).press("j", "2", "j", "enter") // clock2 › type
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "clock" {
+		t.Fatalf("type options: %+v", m.options.items)
+	}
+	m = m.press("j", "enter")
+	s := m.cfg.Savers[1]
+	if s.Type != "dino" || s.Runner != "trex" || s.Scene != "grassland" || saved(t).Savers[1].Type != "dino" {
+		t.Fatalf("saver %+v", s)
+	}
+	v := m.View()
+	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "grassland") {
+		t.Errorf("a dino's rows:\n%s", v)
+	}
+	if got := len(m.stops()); got != 11 { // name, type, size, runner, scene, six channels
+		t.Errorf("%d stops", got)
+	}
+	m = m.press("P")
+	if m.preview == nil || m.preview.game == nil {
+		t.Fatal("the preview must run the dino")
+	}
+	m = m.press("x") // no PIN: any key hands back
+	// And back to a clock, from the type row the cursor is still on: its
+	// rows again.
+	m = m.press("enter", "k", "enter")
+	if m.cfg.Savers[1].Type != "clock" || !strings.Contains(m.View(), "layout") {
+		t.Errorf("back to a clock: %+v", m.cfg.Savers[1])
 	}
 }
 

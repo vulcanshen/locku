@@ -51,8 +51,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | cursor 在 | item operation | panel operation |
 |---|---|---|
 | name | `[Enter] Rename` | `[P] Preview`（這個 saver，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
-| type | 唯讀，不可停 | 同上 |
-| layout / size / time / date | `[Enter] Choose` | 同上 |
+| type / layout / size / font / time / date / runner / scene | `[Enter] Choose`（type 2026-09-24 起可改，dino 的列是 size / runner / scene） | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
@@ -102,7 +101,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、`preference`；區塊標題跳過 | 可改的欄位；type 與色票列跳過 |
+| 停靠點 | saver 列、`preference`；區塊標題跳過 | 可改的欄位；色票列跳過 |
 | `j` / `k` | 上下一列、不繞 | 同 |
 | `u` / `d` | 半頁 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |
@@ -119,7 +118,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | 欄位 | 行為 |
 |---|---|
 | name（rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
-| layout / size / font / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| type / layout / size / font / time / date / runner / scene / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | tmux_conf / screen_conf | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，`locku setup` 會說未設定）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear` |

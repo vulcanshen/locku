@@ -242,6 +242,53 @@ func TestPaintCentresTheBlocks(t *testing.T) {
 	}
 }
 
+// A game scene is the whole board at the largest scale that leaves it
+// room to be played, and its score sits top right.
+func TestSceneFitsAndPaints(t *testing.T) {
+	for _, c := range []struct{ size, cols, rows, k, w, h int }{
+		{3, 152, 31, 1, 76, 31}, // the user's terminal: 31 rows hold one scale
+		{2, 200, 59, 2, 50, 29},
+		{3, 200, 59, 2, 50, 29}, // 59/3 = 19 rows is too few
+		{3, 300, 90, 3, 50, 30},
+		{1, 300, 90, 1, 150, 90},
+		{2, 40, 12, 1, 20, 12}, // too small at any scale: 1, and the game clips
+	} {
+		if k, w, h := fitScene(c.size, c.cols, c.rows); k != c.k || w != c.w || h != c.h {
+			t.Errorf("size %d on %dx%d: k %d scene %dx%d, want k %d %dx%d", c.size, c.cols, c.rows, k, w, h, c.k, c.w, c.h)
+		}
+	}
+	d := saver.NewDino(3, saver.RunnerTRex, saver.SceneGrass)
+	sc := d.Draw(50, 29)
+	b := paintScene(sc, 2, 200, 59)
+	if b.w != 100 || b.h != 59 {
+		t.Fatalf("board %dx%d", b.w, b.h)
+	}
+	// Every scene pixel is 2 × 2 cells: the ground line, at scene row 27,
+	// is board rows 54 and 55 across the scene's 100 cells.
+	oy := (59 - 58) / 2
+	for x := 0; x < 100; x++ {
+		if !b.at(x, oy+54) || !b.at(x, oy+55) {
+			t.Fatalf("ground missing at %d", x)
+		}
+	}
+	// The score is lettered top right: something lit in the top-right
+	// corner, nothing in the top-left.
+	tl, tr := 0, 0
+	for y := 0; y < 12; y++ {
+		for x := 0; x < 40; x++ {
+			if b.at(x, y) {
+				tl++
+			}
+			if b.at(b.w-1-x, y) {
+				tr++
+			}
+		}
+	}
+	if tr == 0 || tl != 0 {
+		t.Errorf("score: %d lit top right, %d top left", tr, tl)
+	}
+}
+
 func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 	bg, fg := lipgloss.Color("#313244"), lipgloss.Color("#f2b753")
 	for _, cols := range []int{80, 81, 40, 7} {

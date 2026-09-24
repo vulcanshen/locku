@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // TestDump prints the screens at a few sizes, for eyes rather than
@@ -54,6 +55,16 @@ func TestDump(t *testing.T) {
 	}
 	show("board 120x40 k=2 21:05 as text", ascii(paint(faceTall, one([]string{"21 05"}, 2), 120, 39)))
 	show("board 200x60 k=1 the whole font", ascii(paint(faceTall, one([]string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1), 200, 59)))
+	d := saver.NewDino(5, saver.RunnerTRex, saver.SceneGrass)
+	d.Draw(76, 31)
+	for i := 0; i < 60; i++ {
+		d.Step()
+	}
+	show("dino 152x32 k=1 after 60 frames", ascii(paintScene(d.Draw(76, 31), 1, 152, 31)))
+	for i := 0; i < 8; i++ {
+		d.Step()
+	}
+	show("dino 152x32 k=1 after 68 frames", ascii(paintScene(d.Draw(76, 31), 1, 152, 31)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }

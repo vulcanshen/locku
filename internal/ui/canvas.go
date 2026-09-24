@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -229,30 +230,11 @@ func paint(f face, l layout, cols, rows int) board {
 		if l.beside {
 			ox, oy = x0, (b.h-bh)/2
 		}
-		g := gap(p.k)
 		for i, line := range p.lines {
 			if line == "" {
 				continue
 			}
-			x := ox + (bw-lineW(f, line, p.k))/2
-			ly := oy + i*(f.h*p.k+g)
-			for _, r := range line {
-				if gl, ok := f.g[r]; ok && r != ' ' {
-					for fy := 0; fy < f.h; fy++ {
-						for fx := 0; fx < len(gl[fy]); fx++ {
-							if gl[fy][fx] != '#' {
-								continue
-							}
-							for dy := 0; dy < p.k; dy++ {
-								for dx := 0; dx < p.k; dx++ {
-									b.set(x+fx*p.k+dx, ly+fy*p.k+dy)
-								}
-							}
-						}
-					}
-				}
-				x += glyphCells(f, r, p.k) + g
-			}
+			stampLine(&b, f, line, p.k, ox+(bw-lineW(f, line, p.k))/2, oy+i*(f.h*p.k+gap(p.k)))
 		}
 		if l.beside {
 			x0 += bw + l.blockGap()
@@ -260,6 +242,72 @@ func paint(f face, l layout, cols, rows int) board {
 			y0 += bh + l.blockGap()
 		}
 	}
+	return b
+}
+
+// stampLine lights line on b at scale k, its top-left cell at x, y.
+func stampLine(b *board, f face, line string, k, x, y int) {
+	g := gap(k)
+	for _, r := range line {
+		if gl, ok := f.g[r]; ok && r != ' ' {
+			for fy := 0; fy < f.h; fy++ {
+				for fx := 0; fx < len(gl[fy]); fx++ {
+					if gl[fy][fx] != '#' {
+						continue
+					}
+					for dy := 0; dy < k; dy++ {
+						for dx := 0; dx < k; dx++ {
+							b.set(x+fx*k+dx, y+fy*k+dy)
+						}
+					}
+				}
+			}
+		}
+		x += glyphCells(f, r, k) + g
+	}
+}
+
+// A game scene needs room to be played: the runner, a jump over the
+// tallest cactus, the ground, and a runway — in its own pixels.
+const (
+	sceneMinW = 40
+	sceneMinH = 25
+)
+
+// fitScene picks a game's scale on a cols × rows canvas: the size the
+// saver asks for, stepped down until a scene has its room — or 1, and
+// the game clips what it must. The scene is the whole board, which is
+// why the ground runs edge to edge.
+func fitScene(size, cols, rows int) (k, w, h int) {
+	cells := cols / 2
+	for k = max(1, size); k > 1; k-- {
+		if cells/k >= sceneMinW && rows/k >= sceneMinH {
+			break
+		}
+	}
+	return k, cells / k, rows / k
+}
+
+// paintScene lights a game's frame at scale k — every scene pixel k × k
+// cells, the odd cells left over at the edges dark — and letters its
+// score top right in the short face, as the game does.
+func paintScene(sc saver.Scene, k, cols, rows int) board {
+	b := newBoard(cols/2, rows)
+	ox, oy := (b.w-sc.W*k)/2, (b.h-sc.H*k)/2
+	for y := 0; y < sc.H; y++ {
+		for x := 0; x < sc.W; x++ {
+			if !sc.Pix[y*sc.W+x] {
+				continue
+			}
+			for dy := 0; dy < k; dy++ {
+				for dx := 0; dx < k; dx++ {
+					b.set(ox+x*k+dx, oy+y*k+dy)
+				}
+			}
+		}
+	}
+	score := fmt.Sprintf("%05d", sc.Score%100000)
+	stampLine(&b, faceShort, score, k, ox+sc.W*k-lineW(faceShort, score, k)-2*k, oy+k)
 	return b
 }
 

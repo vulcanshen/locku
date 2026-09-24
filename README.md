@@ -83,7 +83,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是具名實例，兩個 type：clock 與 dino。** dino 是 Chrome 離線小恐龍遊戲當螢幕保護（2026-09-24）：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，右上角記分；參數 size、runner（先只有 trex）、scene（先只有 grassland）、bg / fg，每 70 ms 一幀。type 在 `[2]` 直接選。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 
   各 size 需要的終端機（欄 × 列，3x7 / 3x5）：
@@ -112,7 +112,7 @@ locku/
 ├── cmd/locku/          進入點：lock / setup / version / 設定 TUI；argv[0] SCREEN-LOCK
 ├── internal/
 │   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN
-│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick、退階梯
+│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；dino 的跑者、場景、障礙與自動跳躍
 │   ├── setup/          受管區塊寫入：tmux.conf、screenrc、shell rc
 │   └── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
 └── docs/               function.md、ui.md、ux.md

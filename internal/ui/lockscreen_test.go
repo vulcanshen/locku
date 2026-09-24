@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // A lock at a fixed moment, sized 80×24, with pin set (or none when "").
@@ -187,6 +188,38 @@ func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 	}
 	if !m.prompt.anim.owns() || !strings.Contains(m.View(), "PIN") {
 		t.Error("the prompt went down with the tick")
+	}
+}
+
+// A dino saver is the run: a frame every DinoFrame, the board replaced
+// whole with no reveal, the world moved on.
+func TestDinoLockRunsFrameByFrame(t *testing.T) {
+	m := testLock(t, "", func(c *config.Config) { c.Savers[0].Type = saver.TypeDino })
+	if m.game == nil {
+		t.Fatal("a dino saver must run the game")
+	}
+	m.game = saver.NewDino(7, saver.RunnerTRex, saver.SceneGrass)
+	m, _ = m.step(tea.WindowSizeMsg{Width: 152, Height: 32})
+	if m.shown.w != 76 || m.shown.h != 31 || m.shown.count() == 0 {
+		t.Fatalf("board %dx%d, %d lit", m.shown.w, m.shown.h, m.shown.count())
+	}
+	before := m.shown.clone()
+	m, cmd := m.step(clockTickMsg{gen: m.tickGen})
+	if cmd == nil || m.rev != nil {
+		t.Fatal("a frame must schedule the next and never reveal")
+	}
+	moved := false
+	for i := range before.lit {
+		if before.lit[i] != m.shown.lit[i] {
+			moved = true
+			break
+		}
+	}
+	if !moved {
+		t.Error("the frame did not move the world")
+	}
+	if len(strings.Split(m.View(), "\n")) != 32 {
+		t.Error("the view is not the terminal")
 	}
 }
 

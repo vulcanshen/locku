@@ -6,6 +6,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // Panel [2] (ui.md §1.1): the detail of whatever [1]'s cursor is on, shown
@@ -39,6 +40,8 @@ const (
 	rowLockoutSeconds
 	rowTmuxConf
 	rowScreenConf
+	rowRunner
+	rowScene
 )
 
 // row is one line of panel [2].
@@ -90,14 +93,25 @@ func (m AppModel) rows() []row {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver:
 		s := m.cfg.Savers[it.saver]
+		// The type is a choice like any other (2026-09-24: there is a
+		// second one), and the rows under it are the type's own: the
+		// clock's shapes, or the run's runner and scene.
 		out := []row{
 			{kind: rowName, label: "name", value: s.Name, color: value, stop: true},
-			{kind: rowType, label: "type", value: s.Type, color: dimColor},
-			{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
-			{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
-			{kind: rowFont, label: "font", value: s.Font, color: value, stop: true},
-			{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
-			{kind: rowDate, label: "date", value: s.Date, color: value, stop: true},
+			{kind: rowType, label: "type", value: s.Type, color: value, stop: true},
+		}
+		if s.Type == saver.TypeDino {
+			out = append(out,
+				row{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
+				row{kind: rowRunner, label: "runner", value: s.Runner, color: value, stop: true},
+				row{kind: rowScene, label: "scene", value: s.Scene, color: value, stop: true})
+		} else {
+			out = append(out,
+				row{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
+				row{kind: rowSize, label: "size", value: s.Size, color: value, stop: true},
+				row{kind: rowFont, label: "font", value: s.Font, color: value, stop: true},
+				row{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
+				row{kind: rowDate, label: "date", value: s.Date, color: value, stop: true})
 		}
 		saved, draft := s.Colours(), m.draftOf(s)
 		for which, c := range []struct {

@@ -24,6 +24,7 @@ type LockModel struct {
 	cfg     config.Config
 	problem string
 	clock   saver.Clock
+	game    *saver.Dino  // the dino run, when that is the saver's type; the clock is idle then
 	style   config.Style // the active saver's colours
 	noPIN   bool
 
@@ -87,6 +88,9 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		preview: preview,
 		now:     time.Now,
 	}
+	if s.Type == saver.TypeDino {
+		m.game = saver.NewDino(uint64(time.Now().UnixNano()), s.Runner, s.Scene)
+	}
 	m.lockedAt = m.now()
 	m.user, m.host = whoami()
 	return m
@@ -129,6 +133,13 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 	case clockTickMsg:
 		if msg.gen != m.tickGen {
 			return m, nil
+		}
+		if m.game != nil {
+			// A frame of the run: the board is replaced whole, no reveal —
+			// the world moves, it does not change.
+			m.game.Step()
+			m.shown, m.rev = m.refit(), nil
+			return m, m.clockTick()
 		}
 		return m, tea.Batch(m.redraw(), m.clockTick())
 	case revealTickMsg:
@@ -270,6 +281,10 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 // board it makes, setting lines and k on the way.
 func (m *LockModel) refit() board {
 	rows := m.height - 1
+	if m.game != nil {
+		k, w, h := fitScene(m.scale, m.width, rows)
+		return paintScene(m.game.Draw(w, h), k, m.width, rows)
+	}
 	m.layout, m.plain = fit(m.face, m.clock, m.now(), m.width, rows, m.scale)
 	return paint(m.face, m.layout, m.width, rows)
 }
@@ -290,11 +305,16 @@ func (m *LockModel) redraw() tea.Cmd {
 	return nil
 }
 
+// clockTick is the next change of content: the clock's next minute or
+// second, or the run's next frame.
 func (m LockModel) clockTick() tea.Cmd {
 	gen := m.tickGen
 	now := m.now()
-	d := m.clock.Next(now).Sub(now)
-	return tea.Tick(d, func(time.Time) tea.Msg { return clockTickMsg{gen} })
+	next := m.clock.Next(now)
+	if m.game != nil {
+		next = m.game.Next(now)
+	}
+	return tea.Tick(next.Sub(now), func(time.Time) tea.Msg { return clockTickMsg{gen} })
 }
 
 func (m LockModel) revealTick() tea.Cmd {
@@ -327,7 +347,7 @@ func (m LockModel) View() string {
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
-		if len(m.layout.blocks) > 0 {
+		if len(m.layout.blocks) > 0 || m.game != nil {
 			out = boardRows(m.shown, bg, fg, m.width, dimmed)
 		} else {
 			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)

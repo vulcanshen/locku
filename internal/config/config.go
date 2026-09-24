@@ -15,6 +15,8 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
+
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 const (
@@ -49,6 +51,10 @@ type Saver struct {
 	Date   string `yaml:"date"`
 	BG     string `yaml:"bg"`
 	FG     string `yaml:"fg"`
+	// The dino run's own (2026-09-24): who runs, and where. A clock
+	// leaves them out of the file.
+	Runner string `yaml:"runner,omitempty"`
+	Scene  string `yaml:"scene,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a saver's, or a draft of
@@ -165,7 +171,15 @@ func (cfg Config) sanitized() (Config, string) {
 		}
 		seen[s.Name] = true
 		if s.Type == "" {
-			s.Type = "clock"
+			s.Type = saver.TypeClock
+		}
+		if s.Type == saver.TypeDino {
+			if s.Runner == "" {
+				s.Runner = saver.Runners[0]
+			}
+			if s.Scene == "" {
+				s.Scene = saver.Scenes[0]
+			}
 		}
 		if s.Layout == "" {
 			s.Layout = DefaultSaver().Layout
