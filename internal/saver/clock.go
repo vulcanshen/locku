@@ -8,14 +8,18 @@ import (
 	"time"
 )
 
-// The four time shapes and the five date shapes (function.md §5.2). They
+// The two time shapes and the five date shapes (function.md §5.2). They
 // are the whole vocabulary: there is no free-form format, so every line a
-// saver produces is made of the 39 characters the pixel font has.
+// saver produces is made of the characters the pixel font has.
+//
+// The time has no colon: its groups are parted by a space, which on the
+// board is a wider gap than the one between two digits, and that is
+// grouping enough (user, 2026-09-24). The twelve-hour shapes went the
+// same day: with the letters drawn as a seven-segment display draws them,
+// AM and PM were not worth their pixels.
 const (
-	TimeHM    = "HH:MM"
-	TimeHM12  = "HH:MM AM/PM"
-	TimeHMS   = "HH:MM:SS"
-	TimeHMS12 = "HH:MM:SS AM/PM"
+	TimeHM  = "HH MM"
+	TimeHMS = "HH MM SS"
 
 	DateOff   = "off"
 	DateYMD   = "YYYY-MM-DD"
@@ -42,11 +46,32 @@ const (
 // TimeFormats, DateFormats, Layouts and Sizes are the options in the
 // order the settings screen lists them.
 var (
-	TimeFormats = []string{TimeHM, TimeHM12, TimeHMS, TimeHMS12}
+	TimeFormats = []string{TimeHM, TimeHMS}
 	DateFormats = []string{DateOff, DateYMD, DateYMonD, DateMD, DateMonD}
 	Layouts     = []string{LayoutRow, LayoutColumn}
 	Sizes       = []string{SizeSmall, SizeMedium, SizeLarge}
 )
+
+var timeLayout = map[string]string{
+	TimeHM:  "15 04",
+	TimeHMS: "15 04 05",
+}
+
+// oldTime maps the shapes a file may still say — with colons, or in
+// twelve hours — onto the two there are.
+var oldTime = map[string]string{
+	"HH:MM":          TimeHM,
+	"HH:MM:SS":       TimeHMS,
+	"HH:MM AM/PM":    TimeHM,
+	"HH:MM:SS AM/PM": TimeHMS,
+}
+
+var dateLayout = map[string]string{
+	DateYMD:   "2006-01-02",
+	DateYMonD: "2006-Jan-02",
+	DateMD:    "01-02",
+	DateMonD:  "Jan-02",
+}
 
 // Scale is the whole factor a size names; anything else is medium.
 func Scale(size string) int {
@@ -57,23 +82,6 @@ func Scale(size string) int {
 		return 3
 	}
 	return 2
-}
-
-// ValidSize says whether s is one of the sizes.
-func ValidSize(s string) bool { return s == SizeSmall || s == SizeMedium || s == SizeLarge }
-
-var timeLayout = map[string]string{
-	TimeHM:    "15:04",
-	TimeHM12:  "03:04 PM",
-	TimeHMS:   "15:04:05",
-	TimeHMS12: "03:04:05 PM",
-}
-
-var dateLayout = map[string]string{
-	DateYMD:   "2006-01-02",
-	DateYMonD: "2006-Jan-02",
-	DateMD:    "01-02",
-	DateMonD:  "Jan-02",
 }
 
 // Saver is what the canvas asks of any saver type.
@@ -90,25 +98,37 @@ type Saver interface {
 	Degrade() (Saver, bool)
 }
 
-// Clock is the one saver type: a time in one of four shapes, a date in
-// one of four or none, laid out in a row or a column.
+// Clock is the one saver type: a time with or without seconds, a date in
+// one of four shapes or none, laid out in a row or a column.
 type Clock struct {
 	Time   string
 	Date   string
 	Layout string
 }
 
-// ValidTime, ValidDate and ValidLayout say whether s is one of the shapes.
+// ValidTime, ValidDate, ValidLayout and ValidSize say whether s is one of
+// the shapes.
 func ValidTime(s string) bool   { _, ok := timeLayout[s]; return ok }
 func ValidDate(s string) bool   { return s == DateOff || dateLayout[s] != "" }
 func ValidLayout(s string) bool { return s == LayoutRow || s == LayoutColumn }
+func ValidSize(s string) bool   { return s == SizeSmall || s == SizeMedium || s == SizeLarge }
+
+// NormalTime is the time shape a file's value means: itself, an old
+// spelling's new one, or the default.
+func NormalTime(s string) string {
+	if ValidTime(s) {
+		return s
+	}
+	if t, ok := oldTime[s]; ok {
+		return t
+	}
+	return TimeHM
+}
 
 // Normalized is c with anything that is not a shape replaced by the
 // default: a hand-edited file is not a reason to draw nothing.
 func (c Clock) Normalized() Clock {
-	if !ValidTime(c.Time) {
-		c.Time = TimeHM
-	}
+	c.Time = NormalTime(c.Time)
 	if !ValidDate(c.Date) {
 		c.Date = DateOff
 	}
@@ -138,19 +158,19 @@ func (c Clock) Lines(now time.Time) []string {
 	return lines
 }
 
-// parts breaks "21:05:09", "09:05 PM" or "2026-SEP-24" at its separators.
+// parts breaks "21 05 09" or "2026-SEP-24" at its separators.
 func parts(s string) []string {
 	return strings.FieldsFunc(s, func(r rune) bool { return r == ':' || r == ' ' || r == '-' })
 }
 
 // Seconds reports whether the time shape shows seconds.
-func (c Clock) Seconds() bool { return c.Time == TimeHMS || c.Time == TimeHMS12 }
+func (c Clock) Seconds() bool { return NormalTime(c.Time) == TimeHMS }
 
 // Next is the next second boundary with seconds on the clock, the next
 // minute boundary without. A date changes at midnight, which is also a
 // minute boundary.
 func (c Clock) Next(now time.Time) time.Time {
-	if c.Normalized().Seconds() {
+	if c.Seconds() {
 		return now.Truncate(time.Second).Add(time.Second)
 	}
 	return now.Truncate(time.Minute).Add(time.Minute)
@@ -168,8 +188,6 @@ func (c Clock) Degrade() (Saver, bool) {
 		c.Date = DateMonD
 	case c.Time == TimeHMS:
 		c.Time = TimeHM
-	case c.Time == TimeHMS12:
-		c.Time = TimeHM12
 	case c.Date != DateOff:
 		c.Date = DateOff
 	default:

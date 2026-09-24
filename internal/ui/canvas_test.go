@@ -28,24 +28,26 @@ func TestFitPicksTheScale(t *testing.T) {
 		k          int
 		lines      []string
 	}{
-		{"80x24 HH:MM large steps down to 1", hm, 80, 23, 3, 1, []string{"21:05"}},
-		{"120x40 HH:MM large steps down to 2", hm, 120, 39, 3, 2, []string{"21:05"}},
-		{"200x60 HH:MM large", hm, 200, 59, 3, 3, []string{"21:05"}},
-		{"200x60 HH:MM medium stays 2", hm, 200, 59, 2, 2, []string{"21:05"}},
-		{"200x60 HH:MM small stays 1", hm, 200, 59, 1, 1, []string{"21:05"}},
-		{"80x24 HH:MM:SS + YYYY-MM-DD small degrades to HH:MM + MM-DD", full, 80, 23, 1, 1, []string{"21:05", "09-24"}},
-		// At medium the content gives way before the size: 80 columns hold
-		// 38 pixels, HH:MM at 2 is 58, so it steps to small — and at small
-		// the full content is back on the ladder from the top.
-		{"80x24 full clock medium: small, HH:MM + MM-DD", full, 80, 23, 2, 1, []string{"21:05", "09-24"}},
-		// 200 columns hold 98 pixels: the full clock at 2 is 118, without
-		// the year 94 — the year goes and the seconds stay.
-		{"200x60 full clock medium: the year goes first", full, 200, 59, 2, 2, []string{"21:05:09", "09-24"}},
-		{"40x12 HH:MM is plain text", hm, 40, 11, 2, 0, []string{"21:05"}},
-		{"40x12 full clock degrades all the way to plain HH:MM", full, 40, 11, 3, 0, []string{"21:05"}},
-		// A column is two characters wide: 11 px; three lines are 25 px tall.
-		{"120x40 column HH:MM:SS medium: 39 rows hold 16 px at 2, not 25", col, 120, 39, 2, 2, []string{"21", "05"}},
-		{"120x80 column HH:MM:SS large", col, 120, 79, 3, 3, []string{"21", "05", "09"}},
+		// HH MM is 18 px: 80 columns hold 38, so large (54) steps down to 2 (36).
+		{"80x24 HH MM large steps down to 2", hm, 80, 23, 3, 2, []string{"21 05"}},
+		{"120x40 HH MM large", hm, 120, 39, 3, 3, []string{"21 05"}},
+		{"200x60 HH MM large", hm, 200, 59, 3, 3, []string{"21 05"}},
+		{"200x60 HH MM medium stays 2", hm, 200, 59, 2, 2, []string{"21 05"}},
+		{"200x60 HH MM small stays 1", hm, 200, 59, 1, 1, []string{"21 05"}},
+		// The full clock is 39 px wide (the date); without the year 29.
+		{"80x24 full clock small: the year goes", full, 80, 23, 1, 1, []string{"21 05 09", "09-24"}},
+		// At medium on 80 columns: the year (58) and the seconds (38 — but
+		// 15 rows at 2 is 30, over 21) go, then the date; HH MM at 2 fits.
+		{"80x24 full clock medium: HH MM alone, at 2", full, 80, 23, 2, 2, []string{"21 05"}},
+		{"200x60 full clock medium: all of it", full, 200, 59, 2, 2, []string{"21 05 09", "2026-09-24"}},
+		// 40 columns hold 18 px: exactly HH MM at 1.
+		{"40x12 HH MM is 1", hm, 40, 11, 2, 1, []string{"21 05"}},
+		{"40x12 full clock degrades to HH MM at 1", full, 40, 11, 3, 1, []string{"21 05"}},
+		{"30x8 HH MM is plain text", hm, 30, 7, 2, 0, []string{"21 05"}},
+		{"30x8 full clock degrades all the way to plain HH MM", full, 30, 7, 3, 0, []string{"21 05"}},
+		// A column is two digits wide: 7 px; three lines are 23 px tall.
+		{"120x40 column HH MM SS medium: 39 rows hold 16 px at 2, not 23", col, 120, 39, 2, 2, []string{"21", "05"}},
+		{"120x80 column HH MM SS large", col, 120, 79, 3, 3, []string{"21", "05", "09"}},
 	}
 	for _, c := range cases {
 		lines, k := fit(c.s, at, c.cols, c.rows, c.size)
@@ -55,30 +57,30 @@ func TestFitPicksTheScale(t *testing.T) {
 	}
 }
 
-// The widths the sizes are reasoned from (function.md §5.3): digits five,
-// the colon one, the space two, the hyphen three, a gap of one between.
+// The widths the sizes are reasoned from (function.md §5.3): digits and
+// most letters three, M and W five, the space two, the hyphen three, a gap
+// of one between.
 func TestLineWidths(t *testing.T) {
 	for line, want := range map[string]int{
-		"21:05":       25, // 5+1+5 +1+1+1+ 5+1+5
-		"21:05:09":    39,
-		"09:05 PM":    40,
-		"09:05:09 PM": 54,
-		"2026-09-24":  55, // 8 digits, 2 hyphens, 9 gaps
-		"09-24":       27,
-		"SEP-24":      33,
-		"21":          11,
-		"PM":          11,
+		"21 05":      18, // 3+1+3 +1+2+1+ 3+1+3
+		"21 05 09":   29,
+		"2026-09-24": 39, // 8 digits, 2 hyphens, 9 gaps
+		"09-24":      19,
+		"SEP-24":     23,
+		"MAR-24":     25,
+		"21":         7,
+		"2026":       15,
 	} {
 		if got := lineW(line); got != want {
 			t.Errorf("%q: %d px, want %d", line, got, want)
 		}
 	}
-	// What the large size needs, in columns: HH:MM 150, the seconds 234.
-	if w, _ := pixelSize([]string{"21:05"}); w*3*2 != 150 {
-		t.Errorf("HH:MM at 3 is %d columns", w*3*2)
+	// What the large size needs, in columns: HH MM 108, the seconds 174.
+	if w, _ := pixelSize([]string{"21 05"}); w*3*2 != 108 {
+		t.Errorf("HH MM at 3 is %d columns", w*3*2)
 	}
-	if w, _ := pixelSize([]string{"21:05:09"}); w*3*2 != 234 {
-		t.Errorf("HH:MM:SS at 3 is %d columns", w*3*2)
+	if w, _ := pixelSize([]string{"21 05 09"}); w*3*2 != 174 {
+		t.Errorf("HH MM SS at 3 is %d columns", w*3*2)
 	}
 	// A column of HH / MM at 3 is 45 rows; with SS 69.
 	if _, h := pixelSize([]string{"21", "05"}); h*3 != 45 {
@@ -90,8 +92,8 @@ func TestLineWidths(t *testing.T) {
 }
 
 func TestPaintCentresTheBlock(t *testing.T) {
-	// 120×40 at 2: "21:05" is 25 × 7 font pixels → 50 × 14 on a 60 × 39 board.
-	b := paint([]string{"21:05"}, 2, 120, 39)
+	// 120×40 at 2: "21 05" is 18 × 7 font pixels → 36 × 14 on a 60 × 39 board.
+	b := paint([]string{"21 05"}, 2, 120, 39)
 	if b.w != 60 || b.h != 39 {
 		t.Fatalf("board %d×%d", b.w, b.h)
 	}
@@ -104,11 +106,11 @@ func TestPaintCentresTheBlock(t *testing.T) {
 			}
 		}
 	}
-	if minX != 5 || maxX != 54 || minY != 12 || maxY != 25 {
-		t.Errorf("lit box x %d..%d y %d..%d; want 5..54, 12..25", minX, maxX, minY, maxY)
+	if minX != 12 || maxX != 47 || minY != 12 || maxY != 25 {
+		t.Errorf("lit box x %d..%d y %d..%d; want 12..47, 12..25", minX, maxX, minY, maxY)
 	}
 	// Scaling multiplies the lit count by k².
-	if one := paint([]string{"21:05"}, 1, 120, 39).count(); b.count() != one*4 {
+	if one := paint([]string{"21 05"}, 1, 120, 39).count(); b.count() != one*4 {
 		t.Errorf("k=2 lights %d, k=1 lights %d", b.count(), one)
 	}
 }
@@ -139,9 +141,9 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 }
 
 func TestPlainTextCarriesTheLines(t *testing.T) {
-	out := plainRows([]string{"21:05", "09-24"}, lipgloss.Color("#000000"), lipgloss.Color("#ffffff"), 40, 11, false)
+	out := plainRows([]string{"21 05", "09-24"}, lipgloss.Color("#000000"), lipgloss.Color("#ffffff"), 40, 11, false)
 	joined := strings.Join(out, "\n")
-	if !strings.Contains(joined, "21:05") || !strings.Contains(joined, "09-24") {
+	if !strings.Contains(joined, "21 05") || !strings.Contains(joined, "09-24") {
 		t.Errorf("text missing:\n%s", joined)
 	}
 }

@@ -22,7 +22,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ║ Savers                 ║│ name              clock                          │
 ║ ● clock                ║│ type              clock                          │
 ║   clock2               ║│ layout            row                            │
-║ Settings               ║│ time              HH:MM                          │
+║ Settings               ║│ time              HH MM                          │
 ║   preference           ║│ date              off                            │
 ║                        ║│ bg                ■ #313244  →  ■ #ff3244        │
 ║                        ║│   R               ───────────● 255               │
@@ -52,7 +52,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 | type | `clock` | 唯讀，dim；v1 只有這一個 type |
 | layout | `row` / `column` | options popup，cursor 在目前值 |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值 |
-| time | `HH:MM` / `HH:MM AM/PM` / `HH:MM:SS` / `HH:MM:SS AM/PM` | options popup，cursor 在目前值 |
+| time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列 |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值 | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
