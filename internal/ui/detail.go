@@ -43,9 +43,10 @@ const (
 	rowPIN
 	rowProfile // preference's active profile
 	rowShowStatus
-	rowPromptTimeout
-	rowLockoutAfter
-	rowLockoutSeconds
+	rowPINPromptTimeout
+	rowWrongPINAttempts
+	rowWrongPINCooldown
+	rowIdleLock
 	rowTmuxConf
 	rowScreenConf
 )
@@ -65,8 +66,9 @@ type row struct {
 }
 
 // labelW is the label column; sliders and values start after it. The
-// widest label, lockout_seconds, is fifteen, and a value wants air.
-const labelW = 18
+// widest label, wrong_pin_attempt_cooldown, is twenty-six, and a value
+// wants air.
+const labelW = 28
 
 // about is what [2] says of a saver.
 var about = map[string]string{
@@ -222,9 +224,13 @@ func (m AppModel) rows() []row {
 		if m.cfg.ShowStatus {
 			status.value, status.color = "on", liveColor
 		}
-		after := itoa(m.cfg.LockoutAfter)
-		if m.cfg.LockoutAfter == 0 {
+		after := itoa(m.cfg.WrongPINAttempts)
+		if m.cfg.WrongPINAttempts == 0 {
 			after = "0 (off)"
+		}
+		idle := itoa(m.cfg.IdleLock)
+		if m.cfg.IdleLock == 0 {
+			idle = "0 (off)"
 		}
 		// The files `locku setup` writes: unset is said, in yellow, since
 		// setup refuses without them (user, 2026-09-24).
@@ -239,9 +245,10 @@ func (m AppModel) rows() []row {
 			pin,
 			active,
 			status,
-			{kind: rowPromptTimeout, label: "prompt_timeout", value: itoa(m.cfg.PromptTimeout), color: value, stop: true},
-			{kind: rowLockoutAfter, label: "lockout_after", value: after, color: value, stop: true},
-			{kind: rowLockoutSeconds, label: "lockout_seconds", value: itoa(m.cfg.LockoutSeconds), color: value, stop: true},
+			{kind: rowPINPromptTimeout, label: "pin_prompt_timeout", value: itoa(m.cfg.PINPromptTimeout), color: value, stop: true},
+			{kind: rowWrongPINAttempts, label: "wrong_pin_attempts", value: after, color: value, stop: true},
+			{kind: rowWrongPINCooldown, label: "wrong_pin_attempt_cooldown", value: itoa(m.cfg.WrongPINCooldown), color: value, stop: true},
+			{kind: rowIdleLock, label: "idle_lock", value: idle, color: value, stop: true},
 			pathRow(rowTmuxConf, "tmux_conf", m.cfg.TmuxConf),
 			pathRow(rowScreenConf, "screen_conf", m.cfg.ScreenConf),
 		}
@@ -316,8 +323,10 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 
 	// The label column gives way only when the panel is too narrow to hold
 	// it and a value; a third of the panel was too little on an ordinary
-	// terminal (user, 2026-09-24: lockout_seconds touched its value).
-	lw := min(labelW, max(4, innerW-12))
+	// terminal (user, 2026-09-24: the widest label touched its value).
+	// A slider row needs the track, a space and three digits after the
+	// label, so that is the least the label column leaves.
+	lw := min(labelW, max(4, innerW-sliderW-5))
 	out := make([]string, 0, len(rows))
 	for i, r := range rows {
 		label := padRight(" "+r.label, lw)

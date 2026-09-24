@@ -100,7 +100,7 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 - saver：畫保護內容，吞掉所有按鍵。第一個按鍵只負責切到 prompt，不當作密碼輸入。
 - prompt：密碼輸入 popup，輸入不回顯。
 - 錯誤處理：每次錯誤固定 1 秒 debounce，連續錯誤鎖定可設定，見 4.4。
-- 閒置回 saver：prompt 內連續 `prompt_timeout` 秒沒有任何按鍵就收起回 saver，每次按鍵重算，所以輸入到一半不會消失。收起時清空已輸入內容。預設 30，0 表示永不收起。
+- 閒置回 saver：prompt 內連續 `pin_prompt_timeout` 秒沒有任何按鍵就收起回 saver，每次按鍵重算，所以輸入到一半不會消失。收起時清空已輸入內容。預設 30，0 表示永不收起。（2026-09-24 改名，原 `prompt_timeout`；同日改名的還有 `lockout_after` → `wrong_pin_attempts`、`lockout_seconds` → `wrong_pin_attempt_cooldown`，三個都帶 lock 字看不出誰是誰；舊 key 讀進來自動轉。）
 
 ## 4. 驗證
 
@@ -134,7 +134,7 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 已決（2026-09-24）：兩層。
 
 - debounce，固定不可設定：每次錯誤後 1 秒內顯示錯誤訊息並吞掉所有輸入，之後清空輸入回到可輸入。目的是明確的「錯了」回饋，且不能用連打 Enter 閃過訊息。
-- 連續錯誤鎖定，config 設定，預設關閉：連續錯 `lockout_after` 次後進入冷卻 `lockout_seconds` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`lockout_after: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。
+- 連續錯誤冷卻，config 設定，預設關閉：連續錯 `wrong_pin_attempts` 次後進入冷卻 `wrong_pin_attempt_cooldown` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`wrong_pin_attempts: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。
 
 ## 5. 螢幕保護內容
 
@@ -245,7 +245,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`。原因：screen 的 LOCKPRG �
 - 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24，原本是另一個 `x` 熱鍵加 confirm）。
 - saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
 - profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：layout、time、date……，以及 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（修訂 2026-09-24：使用者調歪過一次調不回來）。
-- preference：啟用中的 profile（`profile`）、show_status、prompt_timeout、lockout 兩個值、`tmux_conf` / `screen_conf`（`locku setup` 要寫的檔案，2026-09-24）。設為啟用在這裡，側欄的 `●` 只顯示。兩個路徑是 locku 唯二的自由輸入，用 webu 的 input 作法：框裡先 dim 顯示一個**提議**——目前值，沒有就是慣例的 `~/.tmux.conf` / `~/.screenrc`——Tab 接手編輯、Backspace 拒絕、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改。
+- preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`、`idle_lock`（閒置幾秒自動鎖，給 tmux 的 lock-after-time 與 screen 的 idle 用，任何拿 locku 當螢幕保護的工具都用這一個值；預設 300，0 關閉，改了要再跑一次 `locku setup`；2026-09-24）、`tmux_conf` / `screen_conf`（`locku setup` 要寫的檔案，2026-09-24）。設為啟用在這裡，側欄的 `●` 只顯示。兩個路徑是 locku 唯二的自由輸入，用 webu 的 input 作法：框裡先 dim 顯示一個**提議**——目前值，沒有就是慣例的 `~/.tmux.conf` / `~/.screenrc`——Tab 接手編輯、Backspace 拒絕、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改。
 - 試鎖：從 TUI 直接進入 `locku lock` 的流程，解鎖後回到 TUI；全域 `P` 看啟用中的 saver，側欄 saver 上的 `p` 看那一個，兩者都帶著顏色草稿。
 - 寫出 `~/.config/locku/config.yaml`，權限 600。
 
@@ -321,9 +321,10 @@ savers:                # 每種 saver 的預設值：之後新增的 profile 長
     bg: "#313244"
     fg: "#f2b753"
 show_status: true      # 狀態列 user@hostname · 鎖定於 HH:MM，見 5.4
-prompt_timeout: 30     # prompt 連續幾秒無按鍵就收起，每次按鍵重算，0 = 永不收起
-lockout_after: 0       # 連續錯幾次進冷卻，0 = 關閉，見 4.4
-lockout_seconds: 30    # 冷卻秒數
+pin_prompt_timeout: 30          # PIN 框連續幾秒無按鍵就收起，每次按鍵重算，0 = 永不收起
+wrong_pin_attempts: 0           # 連續輸錯幾次進冷卻，0 = 關閉，見 4.4
+wrong_pin_attempt_cooldown: 30  # 冷卻秒數
+idle_lock: 300                  # 閒置幾秒自動鎖：setup 填給 tmux 的 lock-after-time 與 screen 的 idle；0 = 不自動鎖（2026-09-24）
 tmux_conf: "~/.tmux.conf"   # locku setup tmux 寫的檔；空 = 未設定，setup 報錯（2026-09-24）
 screen_conf: "~/.screenrc"  # locku setup screen 寫的檔，同上；shell rc 另由 $SHELL 決定
 ```
@@ -334,7 +335,7 @@ screen_conf: "~/.screenrc"  # locku setup screen 寫的檔，同上；shell rc �
 - config 是 profile 的唯一來源，命令列不提供覆蓋。
 - `profile` 指向不存在的 name、或 `profiles` 為空：用內建預設 clock，狀態列顯示 config error，不算損毀。
 - 讀取失敗的處理見 4.3。
-- 閒置多久自動鎖是 tmux 的 lock-after-time、screen 的 idle，不是 locku 的設定。
+- 閒置多久自動鎖由 `idle_lock` 決定，`locku setup` 把它填給 tmux 的 lock-after-time 與 screen 的 idle；locku 自己不計時（2026-09-24 修訂：原本寫死 300 在區塊裡）。
 
 ## 8. 安裝與整合（README 要交付的內容）
 
@@ -347,7 +348,7 @@ tmux，寫進 preference 的 `tmux_conf`（慣例 `~/.tmux.conf`）：
 ```
 # >>> locku >>>
 set -gF lock-command "locku lock -S '#{socket_path}'"                       # locku
-set -g lock-after-time 300                                                  # locku: seconds idle before the lock; 0 never
+set -g lock-after-time 300                                                  # locku: idle_lock; 0 never
 set -s "command-alias[90]" "locku=lock-session"                             # locku: prefix : locku
 set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client
 set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching into one
@@ -391,10 +392,10 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 8. 裸指令 `locku` 開設定 TUI，`locku lock` 才鎖定，與 kbu / filu / sshu 裸指令即 TUI 的慣例一致。screen 經 argv[0] SCREEN-LOCK 辨識。
 9. 驗證 v1 只做自家 PIN，PAM 留 `auth: pam` 擴充位，shadow 不做。
 10. 未設定 PIN 或 config 缺失、損毀時進入無 PIN 模式：照常顯示 saver，任何按鍵解鎖，畫面標明未設定 PIN。fail open。
-11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤鎖定由 config 的 lockout_after / lockout_seconds 控制，預設 0 關閉。
+11. 錯誤 PIN 節流兩層：固定 1 秒 debounce；連續錯誤冷卻由 config 的 `wrong_pin_attempts` / `wrong_pin_attempt_cooldown` 控制（2026-09-24 改名，原 lockout_after / lockout_seconds），預設 0 關閉。
 12. saver 是 class（clock、dino），profile 是有名字的 object（2026-09-24 定案，見 27）：clock 的參數 layout row / column、size small / medium / large、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，2026-09-24 拿掉 AM/PM）、date off 或四選一、bg / fg 兩色，沒有自由輸入；預設 profile clock；可 new / duplicate / rename / delete，啟用中與最後一個不可刪；profile 的 saver 建立後不改。
 13. 狀態列 user@hostname 與鎖定時間預設顯示，show_status 可關；未設定 PIN 提示不可關。
-14. prompt_timeout 預設 30 秒，以最後一次按鍵起算，0 為永不收起。
+14. `pin_prompt_timeout`（原 prompt_timeout）預設 30 秒，以最後一次按鍵起算，0 為永不收起。
 15. 畫布只有一種樣式：整面 LED 點陣板，暗格 saver 的 bg、亮格它的 fg，點陣字依 saver 的 size 放大 1 / 2 / 3 倍；間隔是獨立的單元（size 1、2 是 1 格，3 是 2 格），隨顯示單元變大但不等比放大（2026-09-24 修訂，原本間隔跟著字型像素放大，large 大半是間隔）；退階見 20，1 倍也塞不下退化為一般文字疊在板上。saver 決定內容、大小與顏色。
 16. 內容全由固定選項產生；字元集 39 個（數字、冒號、減號、空白、大寫字母）。字形一律直角、沒有斜線，像七段顯示器：0 沒有中間斜線、7 沒有勾、S / O / I 與 5 / 0 / 1 同形；也因此數字壓成 3 格寬，字母也是（M、W 5 格），高 7 列或 5 列兩套字型（`font`），標點比例寬（減號 3、冒號 1，空白是 1 個間隔單元，時間不再用冒號）；沒有直角寫法的字母取方塊字型的畫法（N 是 Π、V 是底部收尖的 U；3x5 的 B 與 8 同形）。2026-09-24 修訂。
 17. Nerd Font 必裝，與家族相同；字型在使用者本機終端機，SSH 不影響。
@@ -402,6 +403,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 19. 顏色是每個 saver 自己的 bg / fg（修訂 2026-09-24，原為全域 Settings › style），bg 預設 surface0、fg 預設 gold；以 RGB slider 設定、config 存 hex；滑桿改草稿，`S` 存、`R` 丟，`q` 遇到未存草稿先問。
 20. 時間與日期是兩個獨立區塊，各自排版、各自退階：時間先拿整個畫布，日期拿剩下的（row 在下、column 在左）；每個區塊先降 size 再去單位（時間去秒、日期去年）；日期塞不下就不畫，時間塞不下才一般文字；config 不改。（2026-09-24 修訂三次，最後由使用者定案。）
 21. 整合設定是 CLI：`locku setup [tmux|screen]` 直接寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用；不做 TUI popup。（2026-09-24 修訂）要寫的檔案由使用者在 preference 的 `tmux_conf` / `screen_conf` 輸入，沒設就報錯，不猜路徑。`locku setup -d` 拿掉，每一行尾巴 `# locku` 註解，手動也好移。
+30. （2026-09-24，使用者定案）設定改名，三個都帶 lock 字看不出誰是誰：`prompt_timeout` → `pin_prompt_timeout`、`lockout_after` → `wrong_pin_attempts`、`lockout_seconds` → `wrong_pin_attempt_cooldown`；新增 `idle_lock`（閒置幾秒自動鎖，預設 300，0 關閉），一個值給所有拿 locku 當螢幕保護的工具：tmux 的 lock-after-time、screen 的 idle，setup 寫進去。舊 key 讀進來自動轉。
 29. （2026-09-24，使用者定案）tmux 不綁熱鍵，改 command alias `locku`（`prefix :` 打 `locku` = `lock-session`），不跟使用者既有的 bind 撞。「鎖著的 session 誰進來都被鎖」用 session option `@locked` 加 `client-attached` / `client-session-changed` hook 做到：`locku lock` 啟動時設、正常解鎖時清、tty 消失不清；lock-command 以 `set -gF` 帶 `#{socket_path}` 給 `locku lock -S`，locku 用自己的 tty 反查 session id。以 pty 端到端測試（`make e2e`）驗收。
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver 與 profile；設為啟用在 preference › profile，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 profile 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 profile）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu；saver 的是 `[Enter] Edit`（看說明）、`[n] New`。
@@ -420,7 +422,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 - tmux 內 `lock-session` 後：prefix+d、prefix+&、prefix+c、prefix+x 皆無反應。
 - Ctrl+C、Ctrl+Z、Ctrl+\ 無反應。
 - 錯誤 PIN 留在 prompt；正確 PIN 後 tmux 畫面完整恢復，pane 內程式狀態未變。
-- 錯誤 PIN 後 1 秒內的輸入被吞掉。lockout_after 設 3 時，第 3 次錯誤後顯示倒數，倒數期間輸入無效，結束後可再試。
+- 錯誤 PIN 後 1 秒內的輸入被吞掉。wrong_pin_attempts 設 3 時，第 3 次錯誤後顯示倒數，倒數期間輸入無效，結束後可再試。
 - 鎖定中 resize 視窗，畫面重繪不破。
 - screen 內 `lockscreen` 同上。
 - 裸 ssh 內執行同上。

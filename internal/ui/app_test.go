@@ -284,7 +284,7 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	if m.cfg.ShowStatus || saved(t).ShowStatus {
 		t.Error("show_status did not toggle off")
 	}
-	// prompt_timeout: a box, refusing nonsense, empty for the default.
+	// pin_prompt_timeout: a box, refusing nonsense, empty for the default.
 	m = m.press("j", "enter")
 	if m.input.title != "number" || m.input.value != "30" {
 		t.Fatalf("box %+v", m.input)
@@ -294,12 +294,12 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatalf("suffix %q", m.input.suffix)
 	}
 	m = m.press("ctrl+u").typed("12").press("enter")
-	if m.cfg.PromptTimeout != 12 || saved(t).PromptTimeout != 12 {
-		t.Errorf("prompt_timeout %d", m.cfg.PromptTimeout)
+	if m.cfg.PINPromptTimeout != 12 || saved(t).PINPromptTimeout != 12 {
+		t.Errorf("pin_prompt_timeout %d", m.cfg.PINPromptTimeout)
 	}
 	m = m.press("enter", "ctrl+u", "enter")
-	if m.cfg.PromptTimeout != 30 {
-		t.Errorf("empty must mean the default, got %d", m.cfg.PromptTimeout)
+	if m.cfg.PINPromptTimeout != 30 {
+		t.Errorf("empty must mean the default, got %d", m.cfg.PINPromptTimeout)
 	}
 }
 

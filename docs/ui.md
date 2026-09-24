@@ -81,7 +81,7 @@ object，常用的 profile 在上）：**Profiles** 列出使用者設定好的�
 panel operation `[P] Preview` 預覽這個 saver、`[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走
 （rename 帶走、delete 一起丟）。預覽都帶著草稿。其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
 label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修訂 2026-09-24：原本上限是面板寬的三分之一，
-一般寬度的終端機就把 `lockout_seconds` 壓到貼著值）。
+一般寬度的終端機就把最長的 label 壓到貼著值；2026-09-24 改名後最長的是 `wrong_pin_attempt_cooldown`，26 字，label 欄放寬到 28）。
 
 `[2]` 在 `preference` 上：
 
@@ -90,9 +90,10 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：current PIN 之後選 `New PIN` / `Remove PIN`（2026-09-24，取消併進同一條流程） |
 | profile | 啟用中的 profile 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 profile、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
 | show_status | `on` / `off` | 原地翻轉，不開 popup |
-| prompt_timeout | 數字 | input popup，型別 `number` |
-| lockout_after | 數字，0 顯示 `0 (off)` | 同上 |
-| lockout_seconds | 數字 | 同上 |
+| pin_prompt_timeout | 數字 | input popup，型別 `number` |
+| wrong_pin_attempts | 數字，0 顯示 `0 (off)` | 同上 |
+| wrong_pin_attempt_cooldown | 數字 | 同上 |
+| idle_lock | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，setup 填給 tmux / screen（2026-09-24） | 同上 |
 | tmux_conf | 路徑照存的樣子；未設 `not set`（Yellow），`locku setup tmux` 會報錯 | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1）（2026-09-24） |
 | screen_conf | 同上 | 同上 |
 
@@ -213,7 +214,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 │                               │
 ╰───────────────────────────────╯
 
-╭ PIN · closing ────────────────╮     prompt_timeout 到：正常關閉動畫回 saver
+╭ PIN · closing ────────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver
 ```
 
 錯誤與 lockout 的 Red 是 override 色（VTP §2.4），不參與層級。

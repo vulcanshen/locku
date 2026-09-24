@@ -13,7 +13,7 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、prompt_timeout、lockout、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
+| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown、idle_lock、`tmux_conf` / `screen_conf`。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku setup [-d] [tmux\|screen]` | 把整合設定寫進 preference 填的 `tmux_conf`（有 server 在跑就即時套用）與 `screen_conf` 加 shell rc；路徑沒填就報錯、不猜；不帶名字兩個都做；`-d` 拿掉。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，每行尾巴 `# locku`，冪等 |
 | `locku version` | 版本 |
@@ -36,8 +36,8 @@ brew formula 與 install.sh 在 v0.1.0 發版後可用。**Nerd Font 必裝**：
 ## 鎖定畫面
 
 任何鍵開 PIN prompt，那個鍵不算輸入；`Enter` 送出、`Esc` 回 saver、`Backspace` 刪一字。
-錯誤 PIN 邊框變紅 1 秒並吞掉所有輸入；連錯 `lockout_after` 次進入 `lockout_seconds` 秒倒數；
-`prompt_timeout` 秒沒按鍵 prompt 自動收起。狀態列 `user@host · locked since HH:MM`，沒設 PIN 時標明 `no PIN · any key unlocks`。
+錯誤 PIN 邊框變紅 1 秒並吞掉所有輸入；連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數；
+`pin_prompt_timeout` 秒沒按鍵 prompt 自動收起。閒置 `idle_lock` 秒自動鎖（setup 填給 tmux / screen，預設 300，0 關）。狀態列 `user@host · locked since HH:MM`，沒設 PIN 時標明 `no PIN · any key unlocks`。
 
 Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。
 進程只在三種情況結束：PIN 正確、無 PIN 模式任意鍵、tty 消失。
