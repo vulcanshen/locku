@@ -68,37 +68,37 @@ func (b board) count() int {
 
 // lineW is a line's width in font pixels: its glyphs and a gap between
 // each two.
-func lineW(line string) int {
+func lineW(f face, line string) int {
 	w := 0
 	for i, r := range line {
 		if i > 0 {
 			w += gapX
 		}
-		w += glyphW(r)
+		w += f.glyphW(r)
 	}
 	return w
 }
 
 // pixelSize is the block lines need in font pixels, before scaling: the
-// widest line, and m lines at 7 rows each with a gap between (function.md
-// §5.3).
-func pixelSize(lines []string) (w, h int) {
+// widest line, and m lines at the face's height each with a gap between
+// (function.md §5.3).
+func pixelSize(f face, lines []string) (w, h int) {
 	m := len(lines)
 	for _, l := range lines {
-		w = max(w, lineW(l))
+		w = max(w, lineW(f, l))
 	}
 	if w == 0 || m == 0 {
 		return 0, 0
 	}
-	return w, m*fontH + (m-1)*gapY
+	return w, m*f.h + (m-1)*gapY
 }
 
 // fitsAt reports whether lines fit a canvas of cols × rows at scale k,
 // inside the margins. A pixel is two columns by one row, near enough
 // square, so k × k draws the font as designed. rows is the canvas: the
 // terminal's height less the status row.
-func fitsAt(lines []string, k, cols, rows int) bool {
-	pw, ph := pixelSize(lines)
+func fitsAt(f face, lines []string, k, cols, rows int) bool {
+	pw, ph := pixelSize(f, lines)
 	if pw == 0 || k < 1 {
 		return false
 	}
@@ -116,12 +116,12 @@ func fitsAt(lines []string, k, cols, rows int) bool {
 // nothing fits at 1 do the least lines come back with k == 0, to be drawn
 // as plain text over the board (user, 2026-09-24: the size is a choice,
 // not a computation).
-func fit(s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k int) {
+func fit(f face, s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k int) {
 	steps := s.Steps()
 	for k = max(1, size); k >= 1; k-- {
 		for _, sv := range steps {
 			lines = sv.Lines(now)
-			if fitsAt(lines, k, cols, rows) {
+			if fitsAt(f, lines, k, cols, rows) {
 				return lines, k
 			}
 		}
@@ -132,29 +132,29 @@ func fit(s saver.Saver, now time.Time, cols, rows, size int) (lines []string, k 
 // paint lights lines at scale k on a fresh board for a cols × rows canvas,
 // the block centred, each line centred within the block in whole font
 // pixels. k < 1 gives an empty board.
-func paint(lines []string, k, cols, rows int) board {
+func paint(f face, lines []string, k, cols, rows int) board {
 	b := newBoard(cols/2, rows)
 	if k < 1 {
 		return b
 	}
-	pw, ph := pixelSize(lines)
+	pw, ph := pixelSize(f, lines)
 	ox := (b.w - pw*k) / 2
 	oy := (b.h - ph*k) / 2
 	for i, line := range lines {
 		if line == "" {
 			continue
 		}
-		lx := ox + (pw-lineW(line))/2*k
-		ly := oy + i*(fontH+gapY)*k
+		lx := ox + (pw-lineW(f, line))/2*k
+		ly := oy + i*(f.h+gapY)*k
 		x := 0 // in font pixels along the line
 		for _, r := range line {
-			g, ok := font[r]
+			g, ok := f.g[r]
 			if !ok {
 				x += fontW + gapX
 				continue
 			}
 			gx := lx + x*k
-			for fy := 0; fy < fontH; fy++ {
+			for fy := 0; fy < f.h; fy++ {
 				for fx := 0; fx < len(g[fy]); fx++ {
 					if g[fy][fx] != '#' {
 						continue
@@ -166,7 +166,7 @@ func paint(lines []string, k, cols, rows int) board {
 					}
 				}
 			}
-			x += glyphW(r) + gapX
+			x += f.glyphW(r) + gapX
 		}
 	}
 	return b

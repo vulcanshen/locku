@@ -82,25 +82,25 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；塞不下依偏好取第一個塞得下的內容（去年 → 去秒、日期留著 → 去日期、秒回來 → 去秒），還不行才降一級 size，最後才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 
-  各 size 需要的終端機（欄 × 列）：
+  各 size 需要的終端機（欄 × 列，3x7 / 3x5）：
 
   | 內容 | small | medium | large |
   |---|---|---|---|
-  | `HH MM` 一行 | 40 × 10 | 76 × 17 | 112 × 24 |
-  | `HH MM SS` 一行 | 62 × 10 | 120 × 17 | 178 × 24 |
-  | `HH` / `MM` 直排 | 18 × 18 | 32 × 33 | 46 × 48 |
-  | `HH` / `MM` / `SS` 直排 | 18 × 26 | 32 × 49 | 46 × 72 |
-- **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿改草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。
+  | `HH MM` 一行 | 40 × 10 / 8 | 76 × 17 / 13 | 112 × 24 / 18 |
+  | `HH MM SS` 一行 | 62 × 10 / 8 | 120 × 17 / 13 | 178 × 24 / 18 |
+  | `HH` / `MM` 直排 | 18 × 18 / 14 | 32 × 33 / 25 | 46 × 48 / 36 |
+  | `HH` / `MM` / `SS` 直排 | 18 × 26 / 20 | 32 × 49 / 37 | 46 × 72 / 54 |
+- **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿用該通道自己的顏色畫（R 列 `#RR0000`），改的是草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。
 - **screen 的 LOCKPRG 只能走 shell 環境**（2026-09-24 實測）：`.screenrc` 的 `setenv` 對 lock 無效，因為 lock 是 attacher 呼叫 `getenv`，`.screenrc` 只有後端讀。`locku setup screen` 因此寫 `~/.zshrc` / `~/.bashrc` / fish 的受管區塊，新開 shell 生效；已在跑的 session detach 後從新 shell `screen -r` 即可。
 - **Enter = 進 `[2]` / 編輯 / 送出，Esc 只做取消，`X` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。
 
 ## 已否決，不要重提
 
 pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死、PAM / shadow 進 v1、自由文字 saver、strftime 自由格式、
-第二套 3 × 5 字型、跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
+跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
 `locku init`、只印不寫的 setup、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
 側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形。
 

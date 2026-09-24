@@ -258,7 +258,7 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 	if m.rev != nil {
 		t.Fatal("reveal never finished")
 	}
-	want := paint([]string{"21 06"}, 2, 120, 39)
+	want := paint(faceTall, []string{"21 06"}, 2, 120, 39)
 	for i := range want.lit {
 		if want.lit[i] != m.shown.lit[i] {
 			t.Fatal("the board does not show 21:06")

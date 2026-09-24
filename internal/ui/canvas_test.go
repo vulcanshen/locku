@@ -58,7 +58,7 @@ func TestFitPicksTheScale(t *testing.T) {
 		{"120x80 column HH MM SS large", col, 120, 79, 3, 3, []string{"21", "05", "09"}},
 	}
 	for _, c := range cases {
-		lines, k := fit(c.s, at, c.cols, c.rows, c.size)
+		lines, k := fit(faceTall, c.s, at, c.cols, c.rows, c.size)
 		if k != c.k || !reflect.DeepEqual(lines, c.lines) {
 			t.Errorf("%s: got k=%d %q, want k=%d %q", c.name, k, lines, c.k, c.lines)
 		}
@@ -79,29 +79,50 @@ func TestLineWidths(t *testing.T) {
 		"21":         7,
 		"2026":       15,
 	} {
-		if got := lineW(line); got != want {
+		if got := lineW(faceTall, line); got != want {
 			t.Errorf("%q: %d px, want %d", line, got, want)
 		}
 	}
 	// What the large size needs, in columns: HH MM 108, the seconds 174.
-	if w, _ := pixelSize([]string{"21 05"}); w*3*2 != 108 {
+	if w, _ := pixelSize(faceTall, []string{"21 05"}); w*3*2 != 108 {
 		t.Errorf("HH MM at 3 is %d columns", w*3*2)
 	}
-	if w, _ := pixelSize([]string{"21 05 09"}); w*3*2 != 174 {
+	if w, _ := pixelSize(faceTall, []string{"21 05 09"}); w*3*2 != 174 {
 		t.Errorf("HH MM SS at 3 is %d columns", w*3*2)
 	}
 	// A column of HH / MM at 3 is 45 rows; with SS 69.
-	if _, h := pixelSize([]string{"21", "05"}); h*3 != 45 {
+	if _, h := pixelSize(faceTall, []string{"21", "05"}); h*3 != 45 {
 		t.Errorf("HH/MM at 3 is %d rows", h*3)
 	}
-	if _, h := pixelSize([]string{"21", "05", "09"}); h*3 != 69 {
+	if _, h := pixelSize(faceTall, []string{"21", "05", "09"}); h*3 != 69 {
 		t.Errorf("HH/MM/SS at 3 is %d rows", h*3)
+	}
+	// The short face: the same widths, five rows a line — a column of
+	// HH / MM / SS at 3 is 51 rows.
+	if w, h := pixelSize(faceShort, []string{"21 05 09"}); w != 29 || h != 5 {
+		t.Errorf("short HH MM SS is %d×%d", w, h)
+	}
+	if _, h := pixelSize(faceShort, []string{"21", "05", "09"}); h*3 != 51 {
+		t.Errorf("short HH/MM/SS at 3 is %d rows", h*3)
+	}
+	// A column of HH / MM / SS at large needs 54 rows in the short face
+	// and 72 in the tall one; 43 rows hold HH / MM at large in the short
+	// face and only at medium in the tall.
+	col := saver.Clock{Time: saver.TimeHMS, Layout: saver.LayoutColumn}
+	if lines, k := fit(faceShort, col, at, 160, 53, 3); k != 3 || len(lines) != 3 {
+		t.Errorf("short column at 160x54: k=%d %q", k, lines)
+	}
+	if lines, k := fit(faceShort, col, at, 160, 42, 3); k != 3 || len(lines) != 2 {
+		t.Errorf("short column at 160x43: k=%d %q", k, lines)
+	}
+	if lines, k := fit(faceTall, col, at, 160, 42, 3); k != 2 || len(lines) != 2 {
+		t.Errorf("tall column at 160x43: k=%d %q", k, lines)
 	}
 }
 
 func TestPaintCentresTheBlock(t *testing.T) {
 	// 120×40 at 2: "21 05" is 18 × 7 font pixels → 36 × 14 on a 60 × 39 board.
-	b := paint([]string{"21 05"}, 2, 120, 39)
+	b := paint(faceTall, []string{"21 05"}, 2, 120, 39)
 	if b.w != 60 || b.h != 39 {
 		t.Fatalf("board %d×%d", b.w, b.h)
 	}
@@ -118,7 +139,7 @@ func TestPaintCentresTheBlock(t *testing.T) {
 		t.Errorf("lit box x %d..%d y %d..%d; want 12..47, 12..25", minX, maxX, minY, maxY)
 	}
 	// Scaling multiplies the lit count by k².
-	if one := paint([]string{"21 05"}, 1, 120, 39).count(); b.count() != one*4 {
+	if one := paint(faceTall, []string{"21 05"}, 1, 120, 39).count(); b.count() != one*4 {
 		t.Errorf("k=2 lights %d, k=1 lights %d", b.count(), one)
 	}
 }
@@ -127,10 +148,10 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 	bg, fg := lipgloss.Color("#313244"), lipgloss.Color("#f2b753")
 	for _, cols := range []int{80, 81, 40, 7} {
 		rows := 23
-		lines, k := fit(saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
+		lines, k := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
 		var out []string
 		if k >= 1 {
-			out = boardRows(paint(lines, k, cols, rows), bg, fg, cols, false)
+			out = boardRows(paint(faceTall, lines, k, cols, rows), bg, fg, cols, false)
 		} else {
 			out = plainRows(lines, bg, fg, cols, rows, true)
 		}

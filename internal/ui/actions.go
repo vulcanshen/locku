@@ -61,6 +61,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "a row, or a column of parts", run: (*AppModel).chooseLayout})
 	case rowSize:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "small, medium or large digits", run: (*AppModel).chooseSize})
+	case rowFont:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "3x7, or the shorter 3x5", run: (*AppModel).chooseFont})
 	case rowTime:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one of four shapes", run: (*AppModel).chooseTime})
 	case rowDate:
@@ -196,6 +198,11 @@ func (m *AppModel) chooseSize() tea.Cmd {
 	return m.openOptions("size", saver.Sizes, s.Size, 0)
 }
 
+func (m *AppModel) chooseFont() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("font", saver.Fonts, s.Font, 0)
+}
+
 func (m *AppModel) chooseTime() tea.Cmd {
 	s := m.cfg.Savers[m.sideAt().saver]
 	return m.openOptions("time", saver.TimeFormats, s.Time, 0)
@@ -253,6 +260,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.cfg.Savers[m.sideAt().saver].Layout = v
 	case rowSize:
 		m.cfg.Savers[m.sideAt().saver].Size = v
+	case rowFont:
+		m.cfg.Savers[m.sideAt().saver].Font = v
 	case rowTime:
 		m.cfg.Savers[m.sideAt().saver].Time = v
 	case rowDate:

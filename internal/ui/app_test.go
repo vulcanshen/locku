@@ -95,6 +95,7 @@ const (
 	stopName = iota
 	stopLayout
 	stopSize
+	stopFont
 	stopTime
 	stopDate
 	stopBgR
@@ -237,7 +238,7 @@ func TestSidebarPreviewsThatSaver(t *testing.T) {
 }
 
 func TestDetailChoosesAndToggles(t *testing.T) {
-	m := newTestApp(t).press("2", "j", "j", "j") // [2] on time (name, [type], layout, size, time)
+	m := newTestApp(t).press("2", "j", "j", "j", "j") // [2] on time (name, [type], layout, size, font, time)
 	if m.rowAt().kind != rowTime {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
@@ -248,6 +249,15 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	m = m.press("j", "enter")
 	if m.cfg.Savers[0].Time != "HH MM SS" || saved(t).Savers[0].Time != "HH MM SS" {
 		t.Errorf("time %q", m.cfg.Savers[0].Time)
+	}
+	// font: the short one.
+	m = m.press("k", "enter")
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "3x7" {
+		t.Fatal("font options must open on 3x7")
+	}
+	m = m.press("j", "enter")
+	if m.cfg.Savers[0].Font != "3x5" || saved(t).Savers[0].Font != "3x5" {
+		t.Errorf("font %q", m.cfg.Savers[0].Font)
 	}
 	// size: large.
 	m = m.press("k", "enter")

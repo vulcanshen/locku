@@ -41,7 +41,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("active %+v %v", s, ok)
 	}
 	// A saver's absent keys are the defaults too.
-	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Time != "HH MM" || s.Date != "off" {
+	if s.BG != "#000000" || s.FG != DefaultFG || s.Layout != "row" || s.Size != "medium" || s.Font != "3x7" || s.Time != "HH MM" || s.Date != "off" {
 		t.Errorf("saver %+v", s)
 	}
 }

@@ -91,6 +91,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | dim | 唯讀（type、色票）、menu 裡 disabled 的列、menu 的 region header |
 | 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態（invalid / taken / wrong / try again in N s；`[2]` 的 ` · unsaved`） |
 | 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
+| R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`） |
 
 ---
 
@@ -117,7 +118,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | 欄位 | 行為 |
 |---|---|
 | name（rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
-| layout / size / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / size / font / time / date / saver | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | prompt_timeout / lockout_after / lockout_seconds | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
