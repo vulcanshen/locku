@@ -7,9 +7,8 @@ import (
 
 // hit reports whether any runner's box is in an obstacle this frame.
 func hit(d *Dino) (obstacle, bool) {
-	dw := d.runner.air.w()
 	for i := range d.air {
-		dx := d.runnerX(i)
+		dx, dw := d.runnerX(i), d.runnerW(i)
 		for _, o := range d.obs {
 			s := d.scene.obstacles[o.kind]
 			if o.x < dx+dw && o.x+s.w() > dx && d.lift(i) < s.h() {
@@ -55,7 +54,7 @@ func TestDinoNeverHitsAnything(t *testing.T) {
 						t.Fatalf("%s in %s at %dx%d, frame %d: ran into obstacle %d at %d", runner, scene, sz[0], sz[1], i, o.kind, o.x)
 					}
 				}
-				if jumps < 20*d.runner.count || seen == 0 {
+				if jumps < 20*d.runner.count() || seen == 0 {
 					t.Errorf("%s in %s at %dx%d: %d jumps, %d obstacles at most", runner, scene, sz[0], sz[1], jumps, seen)
 				}
 				sc := d.Draw(sz[0], sz[1])
@@ -70,7 +69,7 @@ func TestDinoNeverHitsAnything(t *testing.T) {
 					}
 				}
 				for i := range d.air {
-					if n := litIn(sc, d.runnerX(i), 0, d.runnerX(i)+d.runner.air.w(), sz[1]-groundH); n < 40 {
+					if n := litIn(sc, d.runnerX(i), 0, d.runnerX(i)+d.runnerW(i), sz[1]-groundH); n < 30 {
 						t.Errorf("%s at %dx%d: runner %d is %d pixels", runner, sz[0], sz[1], i, n)
 					}
 				}
@@ -79,13 +78,14 @@ func TestDinoNeverHitsAnything(t *testing.T) {
 	}
 }
 
-// Two runners stand one behind the other and jump on their own: over a
-// long run they are in the air at different times.
+// Two runners stand one behind the other — the big one behind, the small
+// one in front — and jump on their own: over a long run they are in the
+// air at different times.
 func TestTwoRunnersJumpOnTheirOwn(t *testing.T) {
 	d := NewDino(9, RunnerTwoTRex, SceneDesert)
 	d.Draw(76, 31)
-	if len(d.air) != 2 || d.runnerX(1) != d.runnerX(0)+d.runner.air.w()+runnerGap {
-		t.Fatalf("runners at %d and %d", d.runnerX(0), d.runnerX(1))
+	if len(d.air) != 2 || d.runnerX(1) != d.runnerX(0)+d.runnerW(0)+runnerGap || d.runnerW(0) <= d.runnerW(1) {
+		t.Fatalf("runners at %d (%d wide) and %d (%d wide)", d.runnerX(0), d.runnerW(0), d.runnerX(1), d.runnerW(1))
 	}
 	apart, together := 0, 0
 	for i := 0; i < 6000; i++ {
@@ -138,7 +138,7 @@ func TestDinoIsItsSeed(t *testing.T) {
 // The art the names pick, and the shapes: an unknown name is the first
 // choice; the pyramids are stepped, widest at the ground.
 func TestArtByName(t *testing.T) {
-	if runnerOf("nonsense").count != 1 || runnerOf(RunnerTwoTRex).count != 2 {
+	if runnerOf("nonsense").count() != 1 || runnerOf(RunnerTwoTRex).count() != 2 {
 		t.Error("runnerOf")
 	}
 	if sceneOf("nonsense").tuftEvery != grassland.tuftEvery || sceneOf(SceneDesert).obstacles[2].h() != 5 {
