@@ -1,0 +1,55 @@
+version: 2
+
+project_name: locku
+
+builds:
+  - main: ./cmd/locku
+    binary: locku
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/vulcanshen/locku/internal/version.Version={{.Version}}
+    goos:
+      # unix-first, like the rest of the u-family — no windows target: the
+      # lock owns a Unix tty in raw mode, and tmux / screen are Unix.
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  disable: true
+
+# A formula, not a cask, like kbu / filu / sshu / webu: a formula binary is
+# never stamped com.apple.quarantine, so an unsigned binary runs clean.
+#
+# No dependencies: a single static binary. It drives whatever tty it is
+# given; tmux and screen are what call it, not what it needs.
+brews:
+  - repository:
+      owner: vulcanshen
+      name: homebrew-tap
+      token: "{{ .Env.ACTION_TOKEN }}"
+    homepage: "https://github.com/vulcanshen/locku"
+    description: "screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty: an LED-board clock, any key asks for the PIN"
+    caveats: |
+      `locku setup` writes the lock into ~/.tmux.conf (lock-command,
+      lock-after-time, prefix L) and ~/.screenrc plus your shell rc
+      (LOCKPRG). `locku` sets the PIN and the savers; without a PIN the
+      lock is a screensaver that any key ends.
+
+      A Nerd Font terminal profile is required: the board's pixels are
+      Nerd Font glyphs.
+    test: |
+      system "#{bin}/locku", "version"
