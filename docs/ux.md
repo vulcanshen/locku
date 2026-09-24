@@ -63,10 +63,9 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）；以�
 | profile | `[Enter] Choose`（列出所有 profile） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown | `[Enter] Edit` | 無 |
-| tool（tmux / screen 的 `[2]`） | 唯讀，不可停 | `[S] Setup`、`[X] Remove`（同 `[1]` 上的，conf 沒填時 disabled） |
-| conf | `[Enter] Edit` | 同上 |
+| conf（tmux / screen 的 `[2]`） | `[Enter] Edit` | `[S] Setup`、`[X] Remove`（同 `[1]` 上的，conf 沒填時 disabled） |
 | idle_lock | `[Enter] Edit` | 同上 |
-| block | 唯讀，不可停：區塊在不在檔案裡 | 同上 |
+| status | 唯讀，不可停：`installed` / `not installed`，區塊在不在檔案裡 | 同上 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
@@ -83,6 +82,10 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）；以�
 
 全域字母在浮層開著、打字中兩種狀態下不作用。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
 按鍵（ISIG 已關，`function.md` §2.1）。
+
+help 的內容：鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、navigate）到哪裡都一樣；最後一段是**說明**——
+每個設定是什麼——只在 cursor 在有說明的項目上才出現：preference 上是 PIN 到 wrong_pin_attempt_cooldown 六列，tmux / screen 上是
+conf、idle_lock、status，profile / saver 上沒有（2026-09-25，使用者：focus 在 preference 只要 preference 的說明）。
 
 ---
 

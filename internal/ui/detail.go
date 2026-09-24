@@ -17,11 +17,12 @@ import (
 // fields and colours a profile has, which a profile made of it from now
 // on starts as, and which [p] previews; changing them changes no profile
 // already made (user, 2026-09-24). A tool — tmux, screen — is its file
-// and its idle time, and whether locku's block is in the file; [S] Setup
-// and [X] Remove are its panel operations (user, 2026-09-25). Preference
-// is the PIN, the active profile and the lock's settings; what each one
-// means is in the ? help. Every key config.yaml has is a row here,
-// except `profiles` and `savers`, which ARE panel [1].
+// and its idle time, then a status: whether locku's block is in the
+// file; [S] Setup and [X] Remove are its panel operations (user,
+// 2026-09-25). Preference is the PIN, the active profile and the lock's
+// settings. What each setting means is in the ? help, on that panel.
+// Every key config.yaml has is a row here, except `profiles` and
+// `savers`, which ARE panel [1].
 //
 // Colours edit a DRAFT (user, 2026-09-24): the sliders move a copy, the
 // swatch row shows the saved colour and, when it differs, the draft
@@ -50,10 +51,9 @@ const (
 	rowPINPromptTimeout
 	rowWrongPINAttempts
 	rowWrongPINCooldown
-	rowTool     // a tool's name, read-only
 	rowConf     // a tool's file
 	rowIdleLock // a tool's idle time
-	rowBlock    // whether locku's block is in the tool's file, read-only
+	rowStatus   // whether locku's block is in the tool's file, read-only
 )
 
 // row is one line of panel [2].
@@ -237,26 +237,23 @@ func (m AppModel) rows() []row {
 		out = append(out, fieldRows(p)...)
 		return append(out, m.colourRows(key, p)...)
 	case sideTool:
-		name, t := m.tool()
+		_, t := m.tool()
 		conf := row{kind: rowConf, label: "conf", value: t.Conf, color: value, stop: true}
 		if t.Conf == "" {
 			conf.value, conf.color = "not set", yellowColor
 		}
-		// Whether the block is there: what [S] Setup and [X] Remove are
-		// about, read off the file each time.
-		block := row{kind: rowBlock, label: "block", value: "no file set", color: dimColor}
-		switch {
-		case t.Conf == "":
-		case setup.Installed(t.Conf):
-			block.value, block.color = "in the file", liveColor
-		default:
-			block.value, block.color = "not in the file: S sets it up", yellowColor
+		// Whether the block is in the file — what [S] Setup and [X] Remove
+		// are about — read off the file each time. Two words, like the
+		// PIN's set / not set: the user found "tool tmux" and "block in
+		// the file" opaque (2026-09-25).
+		status := row{kind: rowStatus, label: "status", value: "not installed", color: yellowColor}
+		if setup.Installed(t.Conf) {
+			status.value, status.color = "installed", liveColor
 		}
 		return []row{
-			{kind: rowTool, label: "tool", value: name, color: dimColor},
 			conf,
 			{kind: rowIdleLock, label: "idle_lock", value: offOr(t.IdleLock), color: value, stop: true},
-			block,
+			status,
 		}
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
