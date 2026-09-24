@@ -73,9 +73,7 @@ func (m AppModel) actions() []action {
 		if !m.cfg.HasPIN() {
 			out = append(out, action{key: "enter", label: "[Enter] Set PIN", hint: "the lock will ask for it", run: (*AppModel).setPIN})
 		} else {
-			out = append(out,
-				action{key: "enter", label: "[Enter] Change PIN", hint: "after the current one", run: (*AppModel).changePIN},
-				action{key: "x", label: "Clear PIN", hint: "back to: any key unlocks", run: (*AppModel).clearPIN})
+			out = append(out, action{key: "enter", label: "[Enter] Change PIN", hint: "after the current one: a new one, or none", run: (*AppModel).changePIN})
 		}
 	case rowSaver:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the saver the lock shows", run: (*AppModel).chooseSaver})
@@ -272,6 +270,14 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.cfg.Savers[m.sideAt().saver].Date = v
 	case rowSaver:
 		m.cfg.Saver = v
+	case rowPIN:
+		// After the current PIN (ux.md §2.2): Remove is done on Enter, no
+		// confirm; New goes on to the new PIN and its confirmation.
+		if v == pinRemove {
+			m.cfg.ClearPIN()
+			return tea.Batch(m.options.close(), m.save(before), m.toast.show("PIN removed", toastInfo))
+		}
+		return tea.Batch(m.options.close(), m.askPIN("new PIN", inputPINNew))
 	case rowChannel:
 		n, err := strconv.Atoi(v)
 		if err != nil {
@@ -358,23 +364,35 @@ func (m *AppModel) editPath() tea.Cmd {
 
 // ---- the PIN (ux.md §2.2): one box at a time, one question each.
 
-func (m *AppModel) setPIN() tea.Cmd {
-	m.pinAfter = pinSet
-	return m.askPIN("new PIN", inputPINNew)
-}
+func (m *AppModel) setPIN() tea.Cmd { return m.askPIN("new PIN", inputPINNew) }
 
-func (m *AppModel) changePIN() tea.Cmd {
-	m.pinAfter = pinChange
-	return m.askPIN("current PIN", inputPINCurrent)
-}
-
-func (m *AppModel) clearPIN() tea.Cmd {
-	m.pinAfter = pinClear
-	return m.askPIN("current PIN", inputPINCurrent)
-}
+// changePIN is Enter on a PIN that is set: the current one first, then
+// the choice — a new PIN, or none (user, 2026-09-24: a PIN must be
+// removable, and Remove takes effect on Enter, with no confirm).
+func (m *AppModel) changePIN() tea.Cmd { return m.askPIN("current PIN", inputPINCurrent) }
 
 func (m *AppModel) askPIN(title string, action inputAction) tea.Cmd {
 	return m.input.ask(inputPopup{title: title, prompt: "PIN", masked: true, accept: "next", action: action}, m.layer())
+}
+
+// The two things to do once the current PIN is given.
+const (
+	pinNew    = "New PIN"
+	pinRemove = "Remove PIN"
+)
+
+// askPINAction is the choice after the current PIN: the options list,
+// on the PIN row, so commitOptions knows whose answer it is.
+func (m *AppModel) askPINAction() tea.Cmd {
+	m.optionsFor = m.rowAt()
+	m.options.setItems([]menuItem{
+		{label: pinNew, key: "v:" + pinNew, hint: "then confirm it"},
+		{label: pinRemove, key: "v:" + pinRemove, hint: "any key unlocks, from now"},
+	}, "PIN", m.layer())
+	m.options.rows = 0
+	m.options.cursor = 0
+	m.options.center()
+	return m.options.open()
 }
 
 // ---- the input box's answer
@@ -465,12 +483,7 @@ func (m *AppModel) commitInput() tea.Cmd {
 		if !m.cfg.CheckPIN(v) {
 			return m.input.freeze(" · wrong")
 		}
-		if m.pinAfter == pinClear {
-			return tea.Batch(m.input.close(), m.confirm.ask(confirmPopup{title: "Clear PIN", accept: "clear",
-				lines:  []string{"Clear the PIN?", "the lock will open on any key"},
-				action: confirmClearPIN}, m.layer()))
-		}
-		return m.askPIN("new PIN", inputPINNew)
+		return tea.Batch(m.input.close(), m.askPINAction())
 
 	case inputPINNew:
 		if err := config.CheckPINLength(v); err != nil {
@@ -510,8 +523,6 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 		// The cursor stays among the savers: the next one, or the new last.
 		m.cur1 = min(c.ref, len(m.cfg.Savers)-1)
 		m.cur2 = 0
-	case confirmClearPIN:
-		m.cfg.ClearPIN()
 	case confirmQuit:
 		return tea.Quit
 	}

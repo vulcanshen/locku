@@ -98,7 +98,7 @@ func TestWrongThenRight(t *testing.T) {
 	}
 }
 
-func TestEscBackToSaverKeepsTheBoardMoving(t *testing.T) {
+func TestEscBackToSaverLeavesTheBoardTicking(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
 	gen := m.tickGen
 	m, _ = m.step(keyRunes("12"))
@@ -106,8 +106,8 @@ func TestEscBackToSaverKeepsTheBoardMoving(t *testing.T) {
 	if m.prompt.anim.phase != animClosing || cmd == nil {
 		t.Fatal("Esc did not close the prompt")
 	}
-	if m.tickGen == gen {
-		t.Error("the board's ticks were not restarted on close")
+	if m.tickGen != gen {
+		t.Error("the board's ticks were restarted on close: they never stopped")
 	}
 	if len(m.prompt.value) != 0 {
 		t.Error("input survived Esc")
@@ -170,19 +170,23 @@ func TestPromptTimeoutClosesAndKeysRearmIt(t *testing.T) {
 	}
 }
 
-func TestBoardHoldsStillUnderThePrompt(t *testing.T) {
+// The board goes on under the prompt, dimmed: a tick moves it and the
+// prompt stays up (user, 2026-09-24: the colour changes, the clock does
+// not stop).
+func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 	m := testLock(t, "1234", nil)
 	gen := m.tickGen
 	m = openPrompt(t, m)
-	before := m.shown.clone()
-	m, cmd := m.step(clockTickMsg{gen: gen})
-	if cmd != nil {
-		t.Error("a stale clock tick rescheduled itself")
+	if m.tickGen != gen {
+		t.Fatal("opening the prompt stopped the board")
 	}
-	for i := range before.lit {
-		if before.lit[i] != m.shown.lit[i] {
-			t.Fatal("the board changed under the prompt")
-		}
+	m.now = func() time.Time { return at.Add(time.Minute) }
+	m, cmd := m.step(clockTickMsg{gen: gen})
+	if cmd == nil || m.rev == nil {
+		t.Fatal("the tick under the prompt did not move the board")
+	}
+	if !m.prompt.anim.owns() || !strings.Contains(m.View(), "PIN") {
+		t.Error("the prompt went down with the tick")
 	}
 }
 

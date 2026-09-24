@@ -412,18 +412,19 @@ func TestPINSetChangeClear(t *testing.T) {
 	}
 	mm, _ := m.Update(inputThawMsg{gen: m.input.frozenGen})
 	m = mm.(AppModel)
-	m = m.typed("1234").press("enter").typed("5678").press("enter").typed("5678").press("enter")
+	// The right current PIN opens the choice: a new PIN, or none.
+	m = m.typed("1234").press("enter")
+	if !m.options.isInteractive() || len(m.options.items) != 2 || m.options.items[0].label != "New PIN" || m.options.items[1].label != "Remove PIN" {
+		t.Fatalf("after the current PIN: %+v", m.options.items)
+	}
+	m = m.press("enter").typed("5678").press("enter").typed("5678").press("enter")
 	if !m.cfg.CheckPIN("5678") {
 		t.Fatal("PIN not changed")
 	}
-	// Clear: current PIN, then a confirm.
-	m = m.press("x").typed("5678").press("enter")
-	if !m.confirm.isInteractive() || m.confirm.action != confirmClearPIN {
-		t.Fatal("clear must confirm")
-	}
-	m = m.press("enter")
-	if m.cfg.HasPIN() || saved(t).HasPIN() {
-		t.Error("PIN not cleared")
+	// Remove: current PIN, the choice, Enter — done, no confirm.
+	m = m.expireToast().press("enter").typed("5678").press("enter", "j", "enter")
+	if m.confirm.isActive() || m.cfg.HasPIN() || saved(t).HasPIN() || m.toast.msg != "PIN removed" {
+		t.Errorf("PIN not removed: hasPIN=%v toast=%q", m.cfg.HasPIN(), m.toast.msg)
 	}
 	// Esc anywhere in a chain cancels all of it. (The toast goes first —
 	// Esc takes the topmost thing down, and a toast is a thing — so it is

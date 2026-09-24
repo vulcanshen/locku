@@ -55,7 +55,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | layout / size / time / date | `[Enter] Choose` | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
-| PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`、`[x] Clear PIN`（current PIN → confirm） | 無 |
+| PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
 | saver | `[Enter] Choose`（列出所有 saver） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
 | prompt_timeout / lockout_after / lockout_seconds | `[Enter] Edit` | 無 |
@@ -133,8 +133,7 @@ saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。整合設定�
 | 動作 | 順序 | 失敗 |
 |---|---|---|
 | Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：toast `PIN mismatch`，回到空的 `new PIN`；長度不在 4 到 64：邊框 ` · 4-64 chars` 框留著 |
-| Change PIN（已設） | `current PIN` → `new PIN` → `confirm PIN` → 寫檔 | current 錯：邊框 ` · wrong` 1 秒、清空、留在 current PIN |
-| Clear PIN | `current PIN` → confirm `Clear PIN?` → 寫檔（pin_hash 清空） | 同上 |
+| Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：邊框 ` · wrong` 1 秒、清空、留在 current PIN |
 
 每一步一個 popup、一次只問一件事；任一步 Esc 取消整串、什麼都不寫。遮罩顯示 `●`，不顯示長度以外的資訊。
 
@@ -194,7 +193,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
-**先 confirm 的動作**：Delete saver、Clear PIN、有未存顏色草稿時的 Quit。Preview 不 confirm：解鎖就回來，沒有代價。
+**先 confirm 的動作**：Delete saver、有未存顏色草稿時的 Quit。Preview 不 confirm：解鎖就回來，沒有代價。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
 **toast**：`PIN set`、`PIN mismatch`、`cannot delete: active` / `cannot delete: last one`、
 `nothing to save` / `nothing changed`、`write failed: <reason>`（值退回）。
@@ -221,7 +220,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 | 情境 | 行為 |
 |---|---|
 | 啟動 | 讀 config → 第一幀直接出現（不動畫）→ 依 saver 的 tick 排程 |
-| tick | 只對有變的像素做 shuffle 揭露，≤ 400 ms；prompt 開著時停 tick，關掉後補畫到當下時間 |
+| tick | 只對有變的像素做 shuffle 揭露，≤ 400 ms；prompt 開著時照常 tick、照常揭露，只是亮格退成 backdrop 色（修訂 2026-09-24：原本停 tick、關掉後補畫） |
 | 任何鍵 | 開 prompt（§2.3） |
 | 解鎖 | Enter 比對成功 → exit 0，tmux / screen 自己重繪 |
 | tty 消失 | read 得到 EOF / EIO → exit 0；SIGHUP 本身忽略 |
@@ -242,7 +241,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 `Enter` edit · `p` preview this saver · `D` duplicate · `r` rename · `X` delete
 
 ### `[2]` 明細
-`Enter` rename / choose / toggle / pick / set PIN / change PIN · `x` clear PIN · saver 上 `P` preview this saver · `S` save colours · `R` reset colours
+`Enter` rename / choose / toggle / pick / set PIN / change PIN（含 remove） · saver 上 `P` preview this saver · `S` save colours · `R` reset colours
 
 ### 鎖定畫布
 任何鍵 開 prompt · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 刪一字

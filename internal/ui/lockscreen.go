@@ -214,13 +214,10 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 	return m, m.armTimeout()
 }
 
-// openPrompt puts the prompt up. The board holds still underneath it: its
-// ticks stop, and a reveal in flight is completed on the spot.
+// openPrompt puts the prompt up. The board goes on underneath it — ticking,
+// revealing — dimmed to a backdrop (user, 2026-09-24: the colour changes,
+// the clock does not stop; until then the ticks stopped under the prompt).
 func (m *LockModel) openPrompt() tea.Cmd {
-	m.tickGen++
-	if m.rev != nil {
-		m.shown, m.rev = m.rev.to, nil
-	}
 	m.promptGen++
 	cmd := m.prompt.open()
 	if m.now().Before(m.lockoutUntil) {
@@ -230,13 +227,10 @@ func (m *LockModel) openPrompt() tea.Cmd {
 	return tea.Batch(cmd, m.armTimeout())
 }
 
-// closePrompt takes it down and brings the board up to date: it was not
-// ticking while the prompt was up (ux.md §6).
+// closePrompt takes it down; the board never stopped.
 func (m *LockModel) closePrompt(timedOut bool) tea.Cmd {
 	m.promptGen++
-	cmd := m.prompt.close(timedOut)
-	m.tickGen++
-	return tea.Batch(cmd, m.redraw(), m.clockTick())
+	return m.prompt.close(timedOut)
 }
 
 // check is Enter in the prompt: the right PIN ends the lock at once — no
