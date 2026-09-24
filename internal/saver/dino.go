@@ -110,13 +110,28 @@ func beside(gap int, parts ...sprite) sprite {
 	return out
 }
 
-// runnerArt is a runner: two running poses and the one in the air, and
-// how many of them run — one behind the other, each jumping on its own
-// (user, 2026-09-24).
+// runnerArt is a runner: the figures that run, back to front, each
+// jumping on its own (user, 2026-09-24: two of them, the small one in
+// front and the big one behind).
 type runnerArt struct {
-	run   [2]sprite
-	air   sprite
-	count int
+	figures []figure
+}
+
+// figure is one runner's art: two running poses and the one in the air.
+type figure struct {
+	run [2]sprite
+	air sprite
+}
+
+func (a runnerArt) count() int { return len(a.figures) }
+
+// tallest is the tallest figure's height: the sky starts above it.
+func (a runnerArt) tallest() int {
+	h := 0
+	for _, f := range a.figures {
+		h = max(h, f.air.h())
+	}
+	return h
 }
 
 // sceneArt is a scene: what stands in the way, what drifts by, and how
@@ -143,16 +158,38 @@ var trexBody = sprite{
 	"....#####...",
 }
 
-var trexArt = runnerArt{
+var trex = figure{
 	run: [2]sprite{
 		append(append(sprite{}, trexBody...), "....##.#....", "....#..##..."),
 		append(append(sprite{}, trexBody...), "....#.##....", "....##..#..."),
 	},
-	air:   append(append(sprite{}, trexBody...), "....##.##...", "....#...#..."),
-	count: 1,
+	air: append(append(sprite{}, trexBody...), "....##.##...", "....#...#..."),
 }
 
-var twoTRexArt = runnerArt{run: trexArt.run, air: trexArt.air, count: 2}
+// A small T-Rex, eight wide and ten tall, to run in front of the big one.
+var smallTRexBody = sprite{
+	"....####",
+	"....#.##",
+	"....####",
+	"....###.",
+	"#..#####",
+	"##.####.",
+	".######.",
+	"..#####.",
+}
+
+var smallTRex = figure{
+	run: [2]sprite{
+		append(append(sprite{}, smallTRexBody...), "...#.#..", "...#..#."),
+		append(append(sprite{}, smallTRexBody...), "...#.#..", "..#..#.."),
+	},
+	air: append(append(sprite{}, smallTRexBody...), "...#.#..", "...#.#.."),
+}
+
+var (
+	trexArt    = runnerArt{figures: []figure{trex}}
+	twoTRexArt = runnerArt{figures: []figure{trex, smallTRex}} // the big one behind, the small one in front
+)
 
 var (
 	cactus = sprite{
@@ -259,7 +296,7 @@ func NewDino(seed uint64, runner, scene string) *Dino {
 		scene:  sceneOf(scene),
 		gap:    firstGap,
 	}
-	d.air = make([]int, d.runner.count)
+	d.air = make([]int, d.runner.count())
 	for i := range d.air {
 		d.air[i] = -1
 	}
@@ -272,8 +309,17 @@ func (d *Dino) Next(now time.Time) time.Time { return now.Add(DinoFrame) }
 func (d *Dino) groundY() int { return d.h - groundH }
 
 // runnerX is where runner i stands: the first a sixth of the way in,
-// each next one a runner's width and a gap ahead of it.
-func (d *Dino) runnerX(i int) int { return d.w/6 + i*(d.runner.air.w()+runnerGap) }
+// each next one a gap ahead of the one behind it.
+func (d *Dino) runnerX(i int) int {
+	x := d.w / 6
+	for j := 0; j < i; j++ {
+		x += d.runner.figures[j].air.w() + runnerGap
+	}
+	return x
+}
+
+// runnerW is runner i's width.
+func (d *Dino) runnerW(i int) int { return d.runner.figures[i].air.w() }
 
 // lift is how far above the ground runner i is this frame.
 func (d *Dino) lift(i int) int {
@@ -356,7 +402,7 @@ func (d *Dino) ahead(i int) (obstacle, bool) {
 // is more careful than its shape.
 func (d *Dino) clears(i int, o obstacle, delay int) bool {
 	s := d.scene.obstacles[o.kind]
-	dx, dw := d.runnerX(i), d.runner.air.w()
+	dx, dw := d.runnerX(i), d.runnerW(i)
 	for t := 0; ; t++ {
 		ox := o.x - speed*t
 		if ox+s.w() <= dx {
@@ -373,7 +419,7 @@ func (d *Dino) clears(i int, o obstacle, delay int) bool {
 }
 
 func (d *Dino) newCloud(x int) cloud {
-	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.air.h()-arc[6]-d.scene.cloud.h()))}
+	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.tallest()-arc[6]-d.scene.cloud.h()))}
 }
 
 // resize is a new scene size: the clouds find their sky again; the
@@ -420,10 +466,10 @@ func (d *Dino) Draw(w, h int) Scene {
 		s := d.scene.obstacles[o.kind]
 		sc.blit(s, o.x, gy-s.h())
 	}
-	for i := range d.air {
-		pose := d.runner.air
+	for i, f := range d.runner.figures {
+		pose := f.air
 		if d.air[i] < 0 {
-			pose = d.runner.run[(d.t/3+i)%2]
+			pose = f.run[(d.t/3+i)%2]
 		}
 		sc.blit(pose, d.runnerX(i), gy-pose.h()-d.lift(i))
 	}
