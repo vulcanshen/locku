@@ -55,8 +55,42 @@ func TestFitPicksTheScale(t *testing.T) {
 	}
 }
 
+// The widths the sizes are reasoned from (function.md §5.3): digits five,
+// the colon one, the space two, the hyphen three, a gap of one between.
+func TestLineWidths(t *testing.T) {
+	for line, want := range map[string]int{
+		"21:05":       25, // 5+1+5 +1+1+1+ 5+1+5
+		"21:05:09":    39,
+		"09:05 PM":    40,
+		"09:05:09 PM": 54,
+		"2026-09-24":  55, // 8 digits, 2 hyphens, 9 gaps
+		"09-24":       27,
+		"SEP-24":      33,
+		"21":          11,
+		"PM":          11,
+	} {
+		if got := lineW(line); got != want {
+			t.Errorf("%q: %d px, want %d", line, got, want)
+		}
+	}
+	// What the large size needs, in columns: HH:MM 150, the seconds 234.
+	if w, _ := pixelSize([]string{"21:05"}); w*3*2 != 150 {
+		t.Errorf("HH:MM at 3 is %d columns", w*3*2)
+	}
+	if w, _ := pixelSize([]string{"21:05:09"}); w*3*2 != 234 {
+		t.Errorf("HH:MM:SS at 3 is %d columns", w*3*2)
+	}
+	// A column of HH / MM at 3 is 45 rows; with SS 69.
+	if _, h := pixelSize([]string{"21", "05"}); h*3 != 45 {
+		t.Errorf("HH/MM at 3 is %d rows", h*3)
+	}
+	if _, h := pixelSize([]string{"21", "05", "09"}); h*3 != 69 {
+		t.Errorf("HH/MM/SS at 3 is %d rows", h*3)
+	}
+}
+
 func TestPaintCentresTheBlock(t *testing.T) {
-	// 120×40 at 2: "21:05" is 29 × 7 font pixels → 58 × 14 on a 60 × 39 board.
+	// 120×40 at 2: "21:05" is 25 × 7 font pixels → 50 × 14 on a 60 × 39 board.
 	b := paint([]string{"21:05"}, 2, 120, 39)
 	if b.w != 60 || b.h != 39 {
 		t.Fatalf("board %d×%d", b.w, b.h)
@@ -70,8 +104,8 @@ func TestPaintCentresTheBlock(t *testing.T) {
 			}
 		}
 	}
-	if minX != 1 || maxX != 58 || minY != 12 || maxY != 25 {
-		t.Errorf("lit box x %d..%d y %d..%d; want 1..58, 12..25", minX, maxX, minY, maxY)
+	if minX != 5 || maxX != 54 || minY != 12 || maxY != 25 {
+		t.Errorf("lit box x %d..%d y %d..%d; want 5..54, 12..25", minX, maxX, minY, maxY)
 	}
 	// Scaling multiplies the lit count by k².
 	if one := paint([]string{"21:05"}, 1, 120, 39).count(); b.count() != one*4 {
