@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -119,16 +118,29 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 }
 
 func (m inputPopup) view() string {
+	bc := popupLayerColor(m.layer)
+	if m.suffix != "" {
+		bc = warnColor
+	}
+	if m.masked {
+		// A PIN box IS the lock's PIN prompt (pinprompt.go): the same
+		// width, the same air, the same spaced dots from the middle — one
+		// look for a PIN wherever it is typed (user, 2026-09-24).
+		innerW := popupInnerW(m.screenW, pinPromptW-2)
+		hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
+		if m.frozen {
+			hint = ""
+		}
+		return drawPopupBox(bc, " "+glyphLock+" "+m.title+m.suffix+" ", hint,
+			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW)}), innerW)
+	}
+
 	innerW := popupInnerW(m.screenW, max(40, dispW(m.value)+8, dispW(m.placeholder)+8, dispW(m.prompt)+3))
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
 
-	shown := m.value
-	if m.masked {
-		shown = strings.Repeat("●", len([]rune(m.value)))
-	}
-	value := truncateHead(shown, innerW-3)
+	value := truncateHead(m.value, innerW-3)
 	line := " " + edit.Render(value) + cur.Render(" ") + spaces(max(0, innerW-2-dispW(value)))
 	offered := m.value == "" && m.placeholder != ""
 	if offered {
@@ -140,10 +152,6 @@ func (m inputPopup) view() string {
 		dim.Render(padRight(" "+m.prompt, innerW)),
 		spaces(innerW),
 		line,
-	}
-	bc := popupLayerColor(m.layer)
-	if m.suffix != "" {
-		bc = warnColor
 	}
 	pairs := [][2]string{{"Enter", m.accept}}
 	if offered {
