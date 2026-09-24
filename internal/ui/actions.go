@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"slices"
 	"strconv"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/saver"
+	"github.com/vulcanshen/locku/internal/setup"
 )
 
 // action is one thing the user can do to what the cursor is on, or to the
@@ -41,6 +43,9 @@ func (m AppModel) actions() []action {
 			return []action{edit,
 				{key: "p", label: "Preview", hint: "the lock, showing this saver with its defaults", run: (*AppModel).previewThis},
 				m.newProfileAction()}
+		case sideTool:
+			edit.hint = "its file and idle time, in [2]"
+			return append([]action{edit}, m.toolActions(false)...)
 		case sidePreference:
 			return []action{edit}
 		}
@@ -90,17 +95,18 @@ func (m AppModel) actions() []action {
 	case rowShowStatus:
 		out = append(out, action{key: "enter", label: "[Enter] Toggle", hint: "user@host and the time, on the lock", run: (*AppModel).toggleStatus})
 	case rowPINPromptTimeout:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds until the prompt closes; 0 never", run: (*AppModel).editNumber})
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds until the PIN box closes; 0 never", run: (*AppModel).editNumber})
 	case rowWrongPINAttempts:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "wrong PINs before a cooldown; 0 off", run: (*AppModel).editNumber})
 	case rowWrongPINCooldown:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
+	case rowConf:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
 	case rowIdleLock:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds idle before tmux or screen locks; 0 never — then run locku setup", run: (*AppModel).editNumber})
-	case rowTmuxConf:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup tmux writes", run: (*AppModel).editPath})
-	case rowScreenConf:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file locku setup screen writes", run: (*AppModel).editPath})
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "idle seconds before it locks; 0 never; setup again after", run: (*AppModel).editNumber})
+	}
+	if it.kind == sideTool {
+		return append(out, m.toolActions(true)...)
 	}
 	if p, key, ok := m.subject(); ok {
 		what := "this profile"
@@ -119,6 +125,28 @@ func (m AppModel) actions() []action {
 			save, reset)
 	}
 	return out
+}
+
+// toolActions is Setup and Remove for the tool under the cursor (user,
+// 2026-09-25: buttons, in place of the `locku setup` command): the block
+// into the file — and onto a running tmux server — and out again. Each
+// says why it cannot when the file is not set.
+func (m AppModel) toolActions(panelOp bool) []action {
+	name, t := m.tool()
+	set := action{key: "S", label: "Setup", hint: "write locku's block into the file", panelOp: panelOp, run: (*AppModel).setupTool}
+	rm := action{key: "X", label: "Remove", hint: "take locku's block out of the file", panelOp: panelOp, run: (*AppModel).removeTool}
+	if name == tools[toolTmux] {
+		set.hint += ", and onto a running server"
+		rm.hint += ", and off a running server"
+	} else {
+		set.hint += ", and LOCKPRG into the shell rc"
+		rm.hint += ", and out of the shell rc"
+	}
+	if t.Conf == "" {
+		set.disabled, set.hint = true, "set conf first: the file to write"
+		rm.disabled, rm.hint = true, "set conf first: the file to clean"
+	}
+	return []action{set, rm}
 }
 
 // newProfileAction is [n] on a saver: a profile of it (user, 2026-09-24:
@@ -190,6 +218,15 @@ func (m *AppModel) edit(f func(*config.Profile)) {
 	}
 }
 
+// editTool changes the tool under the cursor through f.
+func (m *AppModel) editTool(f func(*config.Tool)) {
+	if m.sideAt().ref == toolScreen {
+		f(&m.cfg.Screen)
+	} else {
+		f(&m.cfg.Tmux)
+	}
+}
+
 // previewCfg is the config a preview runs on: the file's, with every
 // colour draft in place of the saved colours — a draft is what a preview
 // is for.
@@ -253,6 +290,37 @@ func (m *AppModel) deleteProfile() tea.Cmd {
 	return m.confirm.ask(confirmPopup{title: "Delete profile", accept: "delete",
 		lines:  []string{"Delete " + m.cfg.Profiles[ref].Name + "?", "the config is written at once"},
 		action: confirmDeleteProfile, ref: ref}, m.layer())
+}
+
+// ---- the tools (ux.md §A.1): the block written, or taken out.
+
+// setupTool is [S] on a tool: locku's block into its file, and for tmux
+// onto a running server. What setup would have printed is the toast.
+func (m *AppModel) setupTool() tea.Cmd {
+	var out bytes.Buffer
+	var err error
+	if name, t := m.tool(); name == tools[toolTmux] {
+		err = setup.Tmux(&out, t.Conf, t.IdleLock)
+	} else {
+		err = setup.Screen(&out, t.Conf, t.IdleLock)
+	}
+	if err != nil {
+		return m.toast.show(err.Error(), toastError)
+	}
+	return m.toast.show(said(out), toastInfo)
+}
+
+// removeTool is [X] on a tool: a confirm, then the block out again.
+func (m *AppModel) removeTool() tea.Cmd {
+	name, t := m.tool()
+	return m.confirm.ask(confirmPopup{title: "Remove " + name + " integration", accept: "remove",
+		lines:  []string{"Take locku's block out of " + t.Conf + "?", "the file is rewritten at once"},
+		action: confirmRemoveTool, ref: m.sideAt().ref}, m.layer())
+}
+
+// said is setup's report as one toast line: its lines, parted by dots.
+func said(out bytes.Buffer) string {
+	return strings.Join(strings.Split(strings.TrimSpace(out.String()), "\n"), " · ")
 }
 
 // ---- panel [2]
@@ -424,29 +492,26 @@ func (m *AppModel) editNumber() tea.Cmd {
 	case rowWrongPINCooldown:
 		cur = itoa(m.cfg.WrongPINCooldown)
 	case rowIdleLock:
-		cur = itoa(m.cfg.IdleLock)
+		_, t := m.tool()
+		cur = itoa(t.IdleLock)
 	}
 	return m.input.ask(inputPopup{title: "number", prompt: r.label + " — empty for the default",
 		value: cur, accept: "save", action: inputNumber}, m.layer())
 }
 
-// editPath is Enter on tmux_conf or screen_conf: webu's settings box.
-// The current value — or the usual file when there is none — is an
-// OFFER, shown dim: Tab takes it into the line to edit, Backspace
-// declines it, typing starts fresh over it; Enter commits the line as
-// typed, and an offer nobody took changes nothing (user, 2026-09-24:
-// webu's way of taking a value).
+// editPath is Enter on a tool's conf: webu's settings box. The current
+// value — or the usual file when there is none — is an OFFER, shown dim:
+// Tab takes it into the line to edit, Backspace declines it, typing
+// starts fresh over it; Enter commits the line as typed, and an offer
+// nobody took changes nothing (user, 2026-09-24: webu's way of taking a
+// value).
 func (m *AppModel) editPath() tea.Cmd {
-	r := m.rowAt()
-	m.editKind = r.kind
-	offer, usual := m.cfg.TmuxConf, "~/.tmux.conf"
-	if r.kind == rowScreenConf {
-		offer, usual = m.cfg.ScreenConf, "~/.screenrc"
-	}
+	name, t := m.tool()
+	offer := t.Conf
 	if offer == "" {
-		offer = usual
+		offer = usualConf[name]
 	}
-	return m.input.ask(inputPopup{title: "path", prompt: r.label + " — the file locku setup writes; Backspace then Enter to unset",
+	return m.input.ask(inputPopup{title: "path", prompt: "conf — the file " + name + "'s block goes into; Backspace then Enter to unset",
 		placeholder: offer, accept: "save", action: inputPath}, m.layer())
 }
 
@@ -576,9 +641,9 @@ func (m *AppModel) commitInput() tea.Cmd {
 			m.cfg.WrongPINCooldown = n
 		case rowIdleLock:
 			if v == "" {
-				n = def.IdleLock
+				n = config.DefaultIdleLock
 			}
-			m.cfg.IdleLock = n
+			m.editTool(func(t *config.Tool) { t.IdleLock = n })
 		}
 		return tea.Batch(m.input.close(), m.save(before))
 
@@ -592,11 +657,7 @@ func (m *AppModel) commitInput() tea.Cmd {
 			return nil
 		}
 		before := m.snapshot()
-		if m.editKind == rowScreenConf {
-			m.cfg.ScreenConf = v
-		} else {
-			m.cfg.TmuxConf = v
-		}
+		m.editTool(func(t *config.Tool) { t.Conf = v })
 		return tea.Batch(m.input.close(), m.save(before))
 
 	case inputPINCurrent:
@@ -643,6 +704,19 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 		// The cursor stays among the profiles: the next one, or the new last.
 		m.cur1 = profileItem(min(c.ref, len(m.cfg.Profiles)-1))
 		m.cur2 = 0
+	case confirmRemoveTool:
+		// The block out of the tool's file: nothing of config.yaml changes.
+		var out bytes.Buffer
+		var err error
+		if c.ref == toolTmux {
+			err = setup.TmuxUndo(&out, m.cfg.Tmux.Conf)
+		} else {
+			err = setup.ScreenUndo(&out, m.cfg.Screen.Conf)
+		}
+		if err != nil {
+			return tea.Batch(m.confirm.close(), m.menu.close(), m.toast.show(err.Error(), toastError))
+		}
+		return tea.Batch(m.confirm.close(), m.menu.close(), m.toast.show(said(out), toastInfo))
 	case confirmQuit:
 		return tea.Quit
 	}

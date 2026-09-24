@@ -23,7 +23,7 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q for a missing file", note)
 	}
-	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.IdleLock != 300 {
+	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.Tmux.IdleLock != 300 || cfg.Screen.IdleLock != 300 {
 		t.Errorf("not the defaults: %+v", cfg)
 	}
 }
@@ -129,7 +129,7 @@ func TestEmptyProfilesAreTheDefault(t *testing.T) {
 // prompt and lockout settings — are read as the new names, and the next
 // save writes only those.
 func TestOldKeysAreCarriedOver(t *testing.T) {
-	p := write(t, "saver: run\nsavers:\n  - name: run\n    type: dino\n  - name: clock\nprompt_timeout: 5\nlockout_after: 3\nlockout_seconds: 9\n")
+	p := write(t, "saver: run\nsavers:\n  - name: run\n    type: dino\n  - name: clock\nprompt_timeout: 5\nlockout_after: 3\nlockout_seconds: 9\ntmux_conf: ~/.tmux.conf\nidle_lock: 45\n")
 	cfg, note := LoadFile(p)
 	if note != "" {
 		t.Errorf("note %q", note)
@@ -139,6 +139,11 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	if cfg.PINPromptTimeout != 5 || cfg.WrongPINAttempts != 3 || cfg.WrongPINCooldown != 9 {
 		t.Errorf("the settings under their old names: %+v", cfg)
+	}
+	// The tools' keys moved under each tool; the one idle time became
+	// both tools' own (2026-09-25).
+	if cfg.Tmux.Conf != "~/.tmux.conf" || cfg.Tmux.IdleLock != 45 || cfg.Screen.Conf != "" || cfg.Screen.IdleLock != 45 {
+		t.Errorf("the tools under their old keys: tmux %+v screen %+v", cfg.Tmux, cfg.Screen)
 	}
 	// Each saver's keys are its own: a dino has no size or shapes, a
 	// clock no runner.
@@ -151,7 +156,9 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
 		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
-		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") {
+		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") ||
+		!strings.Contains(s, "tmux:\n    conf: ~/.tmux.conf\n    idle_lock: 45") || !strings.Contains(s, "screen:\n    conf: \"\"\n    idle_lock: 45") ||
+		strings.Contains(s, "tmux_conf") || strings.Contains(s, "\nidle_lock") {
 		t.Errorf("saved with the old keys:\n%s", s)
 	}
 }

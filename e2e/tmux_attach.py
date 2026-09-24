@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """End to end, on a real tmux with the real binary (function.md §12):
-`locku setup tmux` writes the block; on a server started on it, `locku`
-locks every client and marks the server; a client attaching to ANY
-session meanwhile is locked by the hook; unlocking clears the mark, and
-a client attaching then is not locked; a terminal that dies under the
-lock leaves the mark, and the next client in meets the lock; `setup -d`
-takes it all out. No PIN is set, so any key unlocks — the PIN itself is
-the unit tests' business.
+the settings screen's Integration › tmux › [S] Setup writes the block;
+on a server started on it, `locku` locks every client and marks the
+server; a client attaching to ANY session meanwhile is locked by the
+hook; unlocking clears the mark, and a client attaching then is not
+locked; a terminal that dies under the lock leaves the mark, and the
+next client in meets the lock; [X] Remove takes it all out. No PIN is
+set, so any key unlocks — the PIN itself is the unit tests' business.
 
     make e2e            # builds the binary and runs this
     e2e/tmux_attach.py ./locku
@@ -25,7 +25,7 @@ cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 conf = os.path.join(work, "tmux.conf")
 with open(os.path.join(cfgDir, "config.yaml"), "w") as f:
-    f.write('tmux_conf: "' + conf + '"\n')
+    f.write('tmux:\n  conf: "' + conf + '"\n')
 # TMUX_TMPDIR keeps every tmux here away from the user's own server.
 env = {"HOME": work, "PATH": binDir + ":" + os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
        "LOCKU_CONFIG": cfgDir, "TMUX_TMPDIR": work, "USER": os.environ.get("USER", "u")}
@@ -101,16 +101,28 @@ def check(label, cond):
     print(("ok   " if cond else "FAIL ") + label)
 
 
-def setup(*a):
-    return subprocess.run([LOCKU, "setup"] + list(a), env=env, capture_output=True, text=True).stdout.strip()
+def settings(*keys):
+    """The settings screen on a pty, the keys pressed one by one, then q.
+    Integration › tmux is two rows above preference: G, k, k."""
+    pid, fd, out = spawn([LOCKU])
+    time.sleep(1.2)
+    for k in keys:
+        os.write(fd, k)
+        time.sleep(0.5)
+    os.write(fd, b"q")
+    time.sleep(0.8)
+    kill(pid)
+    return b"".join(out)
 
 
-print(setup("tmux"))
-text = open(conf).read()
-check("the block is in the file, every line marked, the lock command absolute", "# >>> locku >>>" in text
-      and "client-attached[90]" in text and 'lock-command "/' in text and "socket_path" in text
-      and "locku=lock-server" in text
+# 0. Setup from the screen: G to preference, k k up to tmux, S.
+screen = settings(b"G", b"k", b"k", b"S")
+text = open(conf).read() if os.path.exists(conf) else ""
+check("Setup from the settings screen wrote the block, every line marked, the lock command absolute",
+      "# >>> locku >>>" in text and "client-attached[90]" in text and 'lock-command "/' in text
+      and "socket_path" in text and "locku=lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
+check("the screen said so", b"wrote" in screen)
 
 subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.DEVNULL)
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
@@ -160,12 +172,13 @@ time.sleep(2.0)
 check("D, attaching after that, shows the board", board(od))
 unlock(fd_)
 check("D's unlock clears the mark", not marked())
-
-# 6. setup -d takes it all out of the file.
-print(setup("-d", "tmux"))
-check("the block is gone from the file", "locku" not in open(conf).read())
-
 tmux("kill-server")
 kill(pd)
+
+# 6. Remove from the screen: X, then Enter on the confirm.
+screen = settings(b"G", b"k", b"k", b"X", b"\r")
+check("Remove from the settings screen took the block out", "locku" not in open(conf).read())
+check("the screen said so", b"removed" in screen)
+
 print("ALL OK" if ok else "SOMETHING FAILED")
 sys.exit(0 if ok else 1)

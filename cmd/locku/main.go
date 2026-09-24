@@ -14,7 +14,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vulcanshen/locku/internal/config"
-	"github.com/vulcanshen/locku/internal/setup"
 	"github.com/vulcanshen/locku/internal/tmux"
 	"github.com/vulcanshen/locku/internal/ui"
 	"github.com/vulcanshen/locku/internal/version"
@@ -26,10 +25,6 @@ const usage = `locku — a screensaver with a PIN, for the terminal
   locku lock [-S socket]     lock this terminal — what tmux and screen run;
                              -S is the tmux server's socket, which setup's
                              lock-command passes
-  locku setup [tmux|screen]  write the lock into the files preference names as
-                             tmux_conf and screen_conf, and the shell rc; both
-                             without a name. -d takes it out again
-  locku setup -d [tmux|screen]
   locku version              the version
   locku help                 this
 `
@@ -46,8 +41,6 @@ func main() {
 		os.Exit(runSettings())
 	case args[0] == "lock":
 		os.Exit(runLock(socketArg(args[1:])))
-	case args[0] == "setup":
-		os.Exit(runSetup(args[1:]))
 	case args[0] == "version":
 		fmt.Println("locku " + version.Display())
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
@@ -113,47 +106,9 @@ func runLock(socket string) int {
 	}
 }
 
-// runSetup is `locku setup [-d] [tmux|screen]`: both without a name; -d
-// takes locku out again (user, 2026-09-24). The files are the ones
-// preference names; setup with one unset says so and writes nothing.
-func runSetup(args []string) int {
-	cfg, problem := config.Load()
-	if problem != "" {
-		fmt.Fprintf(os.Stderr, "locku: %s\n", problem)
-	}
-	undo := false
-	if len(args) > 0 && args[0] == "-d" {
-		undo, args = true, args[1:]
-	}
-	targets := args
-	if len(targets) == 0 {
-		targets = []string{"tmux", "screen"}
-	}
-	code := 0
-	for _, t := range targets {
-		var err error
-		switch {
-		case t == "tmux" && undo:
-			err = setup.TmuxUndo(os.Stdout, cfg.TmuxConf)
-		case t == "tmux":
-			err = setup.Tmux(os.Stdout, cfg.TmuxConf, cfg.IdleLock)
-		case t == "screen" && undo:
-			err = setup.ScreenUndo(os.Stdout, cfg.ScreenConf)
-		case t == "screen":
-			err = setup.Screen(os.Stdout, cfg.ScreenConf, cfg.IdleLock)
-		default:
-			fmt.Fprintf(os.Stderr, "locku: setup takes tmux or screen, not %q\n", t)
-			return 2
-		}
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "locku: setup %s: %v\n", t, err)
-			code = 1
-		}
-	}
-	return code
-}
-
-// runSettings is the bare `locku`: the settings screen.
+// runSettings is the bare `locku`: the settings screen, where the tmux
+// and screen integration is set up and removed too (user, 2026-09-25:
+// buttons, in place of a `locku setup` command).
 func runSettings() int {
 	cfg, problem := config.Load()
 	p := tea.NewProgram(ui.NewApp(cfg, problem), tea.WithAltScreen())

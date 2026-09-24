@@ -135,37 +135,3 @@ func itoa(n int) string {
 	}
 	return string(b)
 }
-
-// wrap breaks s into lines no wider than w, at spaces; a word wider than
-// w is cut. Nothing comes back for an empty s or a w under one.
-func wrap(s string, w int) []string {
-	if w < 1 {
-		return nil
-	}
-	var out []string
-	line := ""
-	for _, word := range strings.Fields(s) {
-		for dispW(word) > w {
-			if line != "" {
-				out = append(out, line)
-				line = ""
-			}
-			r := []rune(word)
-			out = append(out, string(r[:w]))
-			word = string(r[w:])
-		}
-		switch {
-		case line == "":
-			line = word
-		case dispW(line)+1+dispW(word) <= w:
-			line += " " + word
-		default:
-			out = append(out, line)
-			line = word
-		}
-	}
-	if line != "" {
-		out = append(out, line)
-	}
-	return out
-}

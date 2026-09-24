@@ -26,11 +26,11 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ║ Savers                 ║│ font              3x7                            │
 ║   clock                ║│ time              HH MM                          │
 ║   dino                 ║│ date              off                            │
-║ Settings               ║│ bg                ■ #313244  →  ■ #ff3244        │
-║   preference           ║│   R               ───────────● 255               │
-║                        ║│   G               ──●───────── 50                │
-║                        ║│   B               ───●──────── 68                │
-║                        ║│ fg                ■ #f2b753                      │
+║ Integration            ║│ bg                ■ #313244  →  ■ #ff3244        │
+║   tmux                 ║│   R               ───────────● 255               │
+║   screen               ║│   G               ──●───────── 50                │
+║ Settings               ║│   B               ───●──────── 68                │
+║   preference           ║│ fg                ■ #f2b753                      │
 ║                        ║│   R               ──────────●─ 242               │
 ║                        ║│   G               ────────●─── 183               │
 ║                        ║│   B               ────●─────── 83                │
@@ -38,9 +38,10 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
-左 `[1]` 側欄三個區塊，順序 Profiles → Savers → Settings（2026-09-24 定案，使用者以 OOP 分：saver 是 class、profile 是
-object，常用的 profile 在上）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
+左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
+object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
 複製、改名、刪除都在這裡；**Savers** 列出有哪幾種 saver（clock、dino），它們沒有名字、名字就是自己，不能新增刪除；
+**Integration** 兩項：`tmux`、`screen`，各自的設定檔與閒置鎖，`[S] Setup` / `[X] Remove` 在這裡（取代 `locku setup` 指令）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
 是側欄唯一的綠色；它只顯示，設為啟用在 `preference › profile`。
@@ -93,16 +94,24 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | pin_prompt_timeout | 數字 | input popup，型別 `number` |
 | wrong_pin_attempts | 數字，0 顯示 `0 (off)` | 同上 |
 | wrong_pin_attempt_cooldown | 數字 | 同上 |
-| idle_lock | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，setup 填給 tmux / screen（2026-09-24） | 同上 |
-| tmux_conf | 路徑照存的樣子；未設 `not set`（Yellow），`locku setup tmux` 會報錯 | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1）（2026-09-24） |
-| screen_conf | 同上 | 同上 |
 
-每一列下面接一列 dim 的一句話說明（2026-09-24，使用者要求）：PIN `what the lock asks for; with none, any key unlocks`、profile
-`the profile the lock shows`、show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a
-key before the PIN box closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、
-wrong_pin_attempt_cooldown `seconds the cooldown lasts`、idle_lock `idle seconds until tmux or screen lock; 0 never; setup
-again after`、tmux_conf / screen_conf `the file locku setup … writes its block into`。說明**只佔 label 欄的寬**，從內縮 2 格起
-在欄內自動換行（使用者 2026-09-24：不准伸到值那一欄），不可停；列數超過面板時跟著 cursor 捲，游標那列的說明一起留在畫面上。
+每一列是什麼，在 `?` help 的 preference 段說（2026-09-25：原本每列下面接一列 dim 說明，2026-09-24 加的，使用者要搬到 help；
+`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
+show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a key before the PIN box
+closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
+cooldown lasts`。列數超過面板時跟著 cursor 捲。
+
+`[2]` 在 Integration 的 tmux / screen 上（2026-09-25），標題 `[2] tmux · integration`：
+
+| 列 | 呈現 | 編輯 |
+|---|---|---|
+| tool | dim 的工具名，唯讀，不可停 | 無 |
+| conf | 路徑照存的樣子；未設 `not set`（Yellow），Setup / Remove 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc` |
+| idle_lock | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，Setup 填給 tmux 的 lock-after-time / screen 的 idle，各工具一份 | input popup，型別 `number`，清空 = 300 |
+| block | 唯讀，不可停：`in the file` / `not in the file: S sets it up`（Yellow）/ `no file set`（Yellow），每次畫都讀一次 conf | 無 |
+
+`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；`?` help 的
+Integration 段說 S 與 X 各做什麼、tmux / screen 段說 conf 與 idle_lock。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
@@ -161,7 +170,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
   設為啟用改在 `preference › profile`，`●` 純顯示；saver 上的新增是 `n`，不佔用 Enter）。preview / duplicate / rename / delete 在 Space menu 的
   item region。
 - **Preview** 有兩個入口：全域 `P` 看啟用中的 saver（`?` 揭露）；側欄 saver 上的 `[p] Preview` 看游標那一個，
-  不改啟用（修訂 2026-09-24）。整合設定不在 TUI 裡，是 `locku setup`。
+  不改啟用（修訂 2026-09-24）。整合設定在側欄 Integration 的 tmux / screen 上：`S` 寫、`X` 拿掉（2026-09-25，原為 `locku setup` 指令）。
 
 **Preview**：一個動作，整個 TUI 被鎖定畫布取代，就像桌面螢幕保護程式的預覽。同一個進程、用記憶體內的 config
 加上顏色草稿，解鎖後回到設定畫面、焦點與 cursor 不變。無 PIN 時任意鍵就回來。

@@ -109,18 +109,30 @@ func home() string {
 	return h
 }
 
-// confPath is a preference's path as a file to write: expanded, and
-// refused when it is not set or not absolute (user, 2026-09-24: setup
-// writes where the user said, and says so when they have not said).
-func confPath(p, key string) (string, error) {
+// confPath is a tool's conf as a file to write: expanded, and refused
+// when it is not set or not absolute (user, 2026-09-24: setup writes
+// where the user said, and says so when they have not said).
+func confPath(p, tool string) (string, error) {
 	if p == "" {
-		return "", fmt.Errorf("%s is not set: run locku, preference › %s", key, key)
+		return "", fmt.Errorf("%s: no file set — Integration › %s › conf", tool, tool)
 	}
 	abs, ok := config.AbsPath(p)
 	if !ok {
-		return "", fmt.Errorf("%s is %q, not an absolute path", key, p)
+		return "", fmt.Errorf("%s: %q is not an absolute path", tool, p)
 	}
 	return abs, nil
+}
+
+// Installed reports whether locku's block is in the file at p — "~/…"
+// allowed; a file that is not there, or a path that is no path, has it
+// not.
+func Installed(p string) bool {
+	abs, ok := config.AbsPath(p)
+	if !ok {
+		return false
+	}
+	b, err := os.ReadFile(abs)
+	return err == nil && strings.Contains(string(b), blockBegin)
 }
 
 func report(w io.Writer, path string, changed bool, verb string) {
@@ -208,7 +220,7 @@ func pad(s string, w int) string {
 // itself (0: never), and, when a server is running, sets the same
 // things on it now.
 func Tmux(w io.Writer, path string, idle int) error {
-	path, err := confPath(path, "tmux_conf")
+	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
@@ -235,7 +247,7 @@ func idleSays(idle int) string {
 // TmuxUndo takes the block out of the file at path and, when a server is
 // running, the same things off it.
 func TmuxUndo(w io.Writer, path string) error {
-	path, err := confPath(path, "tmux_conf")
+	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
@@ -283,7 +295,7 @@ func screenLines(idle int) []string {
 // end reads it, and .screenrc's own `setenv` never reaches that process
 // (function.md §6.2, measured 2026-09-24) — so the rc file it is.
 func Screen(w io.Writer, rc string, idle int) error {
-	rc, err := confPath(rc, "screen_conf")
+	rc, err := confPath(rc, "screen")
 	if err != nil {
 		return err
 	}
@@ -306,7 +318,7 @@ func Screen(w io.Writer, rc string, idle int) error {
 
 // ScreenUndo takes the blocks out of the file at rc and the shell's rc.
 func ScreenUndo(w io.Writer, rc string) error {
-	rc, err := confPath(rc, "screen_conf")
+	rc, err := confPath(rc, "screen")
 	if err != nil {
 		return err
 	}
