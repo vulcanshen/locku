@@ -234,9 +234,12 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			tint := lipgloss.NewStyle().
 				Foreground(lipgloss.Color(config.Hex(ch[0], ch[1], ch[2]))).
 				Background(lipgloss.Color(config.Hex(255-r.num, 255-r.num, 255-r.num)))
+			// The ground is the track's alone; the number reads as a value
+			// like every other row's, in the value colour, on nothing.
 			plain = padRight(label+bar+" "+r.value, innerW)
 			styled = txt.Render(label) + tint.Render(bar) + " " +
-				tint.Render(padRight(r.value, innerW-lw-sliderW-1))
+				lipgloss.NewStyle().Foreground(r.color).Render(r.value) +
+				spaces(innerW-lw-sliderW-1-dispW(r.value))
 		default:
 			plain = padRight(label+r.value, innerW)
 			ls := txt
