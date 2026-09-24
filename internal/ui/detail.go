@@ -342,7 +342,21 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	// label, so that is the least the label column leaves.
 	lw := min(labelW, max(4, innerW-sliderW-5))
 	out := make([]string, 0, len(rows))
+	// keep is the last output line that must stay on screen: the cursor's
+	// row, and the note under it when there is one.
+	keep := 0
 	for i, r := range rows {
+		if r.kind == rowNote {
+			// Wrapped inside the label column, a little in from its edge
+			// (user, 2026-09-24): the note belongs to the key over it.
+			for _, l := range wrap(r.value, lw-3) {
+				out = append(out, "  "+dim.Render(padRight(l, innerW-2)))
+			}
+			if i == curRow+1 {
+				keep = len(out) - 1
+			}
+			continue
+		}
 		label := padRight(" "+r.label, lw)
 		var plain, styled string
 		switch r.kind {
@@ -375,12 +389,6 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			styled = txt.Render(label) + tint.Render(bar) + " " +
 				lipgloss.NewStyle().Foreground(r.color).Render(r.value) +
 				spaces(innerW-lw-sliderW-1-dispW(r.value))
-		case rowNote:
-			// Under the row it explains, a little in from the label: the
-			// value column would leave it too little room.
-			note := truncate(r.value, innerW-3)
-			plain = padRight("   "+note, innerW)
-			styled = "   " + dim.Render(padRight(note, innerW-3))
 		default:
 			plain = padRight(label+r.value, innerW)
 			ls := txt
@@ -397,9 +405,11 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 		default:
 			out = append(out, styled)
 		}
+		if i == curRow {
+			keep = len(out) - 1
+		}
 	}
-	// The rows follow the cursor when they outgrow the panel — with the
-	// row under it, which on preference is its note.
-	top := scrollTo(0, min(len(out)-1, max(0, curRow)+1), innerH)
+	// The lines follow the cursor when they outgrow the panel.
+	top := scrollTo(0, min(len(out)-1, keep), innerH)
 	return fitLines(out[min(top, len(out)):], innerW, innerH)
 }

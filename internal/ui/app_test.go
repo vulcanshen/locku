@@ -525,17 +525,44 @@ func TestPreferenceExplainsItself(t *testing.T) {
 			t.Errorf("rows %d, %d: %+v %+v", i, i+1, rows[i], rows[i+1])
 		}
 	}
+	// The notes are wrapped inside the label column: no line of the
+	// panel's body reaches the value column with note text, and every
+	// word is there.
 	v := m.View()
-	for _, want := range []string{"any key unlocks", "0 never", "setup again after", "writes its block into"} {
+	for _, want := range []string{"unlocks", "never", "cooldown", "setup"} {
 		if !strings.Contains(v, want) {
-			t.Errorf("note %q missing:\n%s", want, v)
+			t.Errorf("note word %q missing:\n%s", want, v)
+		}
+	}
+	for _, l := range strings.Split(v, "\n") {
+		if i := strings.Index(l, "what the lock"); i >= 0 && strings.Contains(l, "any key unlocks") {
+			t.Errorf("a note ran past the label column:\n%s", l)
 		}
 	}
 	// On a short terminal the last rows are off the panel until the
 	// cursor gets there, and its note comes along.
 	m = m.size(60, 12).press("G")
-	if v := m.View(); !strings.Contains(v, "screen_conf") || !strings.Contains(v, "the file locku setup screen") || strings.Contains(v, "PIN  ") {
-		t.Errorf("the last row and its note must be on screen, the first rows off it:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "screen_conf") || strings.Contains(v, "PIN  ") {
+		t.Errorf("the last row must be on screen, the first rows off it:\n%s", v)
+	}
+}
+
+// wrap breaks at spaces, never past w, and cuts a word longer than w.
+func TestWrap(t *testing.T) {
+	got := wrap("what the lock asks for; with none, any key unlocks", 26)
+	if len(got) != 2 || got[0] != "what the lock asks for;" || got[1] != "with none, any key unlocks" {
+		t.Errorf("%q", got)
+	}
+	for _, l := range wrap("seconds without a key before the PIN box closes; 0 never", 10) {
+		if dispW(l) > 10 {
+			t.Errorf("%q is wider than 10", l)
+		}
+	}
+	if got := wrap("abcdefghij", 4); len(got) != 3 || got[0] != "abcd" || got[2] != "ij" {
+		t.Errorf("a long word: %q", got)
+	}
+	if wrap("", 10) != nil || wrap("x", 0) != nil {
+		t.Error("nothing to wrap")
 	}
 }
 

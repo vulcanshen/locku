@@ -101,8 +101,8 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 `the profile the lock shows`、show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a
 key before the PIN box closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、
 wrong_pin_attempt_cooldown `seconds the cooldown lasts`、idle_lock `idle seconds until tmux or screen lock; 0 never; setup
-again after`、tmux_conf / screen_conf `the file locku setup … writes its block into`。說明列從 label 欄內縮 3 格起、不可停；
-列數超過面板時跟著 cursor 捲，游標那列的說明一起留在畫面上。
+again after`、tmux_conf / screen_conf `the file locku setup … writes its block into`。說明**只佔 label 欄的寬**，從內縮 2 格起
+在欄內自動換行（使用者 2026-09-24：不准伸到值那一欄），不可停；列數超過面板時跟著 cursor 捲，游標那列的說明一起留在畫面上。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
