@@ -17,10 +17,10 @@ var navKeys = map[string]bool{
 //
 // page is how many rows are on screen; `u`/`d` move by HALF of it.
 //
-// j and k WRAP when wrap is set — a menu is a ring — and stop at the ends
-// when it is not: a panel's list stops (ux.md §1, §3). u, d, gg and G never
-// wrap: a half-page that silently teleports to the other end is worse than
-// one that stops.
+// j and k WRAP when wrap is set — a menu is a ring, and so is a panel's
+// list (user, 2026-09-24) — and stop at the ends when it is not (ux.md
+// §1, §3). u, d, gg and G never wrap: a half-page that silently
+// teleports to the other end is worse than one that stops.
 func moveCursor(cur, n int, k string, page int, wrap bool) int {
 	if n == 0 {
 		return 0

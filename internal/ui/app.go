@@ -249,19 +249,21 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	return m.dispatch(k)
 }
 
-// move walks the focused panel's cursor. Moving [1] resets [2] to its
-// first row: the detail has changed under it.
+// move walks the focused panel's cursor: j and k round the ends (user,
+// 2026-09-24: a panel loops like a menu does), u and d by half a page,
+// gg and G to the ends. Moving [1] resets [2] to its first row: the
+// detail has changed under it.
 func (m AppModel) move(k string) AppModel {
 	page := max(1, m.height-3)
 	if m.focus == panelSide {
 		was := m.cur1
-		m.cur1 = moveCursor(m.cur1, len(m.sideItems()), k, page, false)
+		m.cur1 = moveCursor(m.cur1, len(m.sideItems()), k, page, true)
 		if m.cur1 != was {
 			m.cur2 = 0
 		}
 		return m
 	}
-	m.cur2 = moveCursor(m.cur2, len(m.stops()), k, page, false)
+	m.cur2 = moveCursor(m.cur2, len(m.stops()), k, page, true)
 	return m
 }
 

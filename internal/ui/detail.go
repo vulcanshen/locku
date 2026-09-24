@@ -40,6 +40,7 @@ const (
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
+	rowNote  // a preference row's one-line explanation, dim, under it
 	rowPIN
 	rowProfile // preference's active profile
 	rowShowStatus
@@ -241,17 +242,30 @@ func (m AppModel) rows() []row {
 			}
 			return r
 		}
-		return []row{
-			pin,
-			active,
-			status,
-			{kind: rowPINPromptTimeout, label: "pin_prompt_timeout", value: itoa(m.cfg.PINPromptTimeout), color: value, stop: true},
-			{kind: rowWrongPINAttempts, label: "wrong_pin_attempts", value: after, color: value, stop: true},
-			{kind: rowWrongPINCooldown, label: "wrong_pin_attempt_cooldown", value: itoa(m.cfg.WrongPINCooldown), color: value, stop: true},
-			{kind: rowIdleLock, label: "idle_lock", value: idle, color: value, stop: true},
-			pathRow(rowTmuxConf, "tmux_conf", m.cfg.TmuxConf),
-			pathRow(rowScreenConf, "screen_conf", m.cfg.ScreenConf),
+		// Every setting has a dim line under it saying what it is (user,
+		// 2026-09-24), so the screen explains itself without the menu.
+		var out []row
+		for _, r := range []struct {
+			row  row
+			note string
+		}{
+			{pin, "what the lock asks for; with none, any key unlocks"},
+			{active, "the profile the lock shows"},
+			{status, "user@host and the time, on the lock's last row"},
+			{row{kind: rowPINPromptTimeout, label: "pin_prompt_timeout", value: itoa(m.cfg.PINPromptTimeout), color: value, stop: true},
+				"seconds without a key before the PIN box closes; 0 never"},
+			{row{kind: rowWrongPINAttempts, label: "wrong_pin_attempts", value: after, color: value, stop: true},
+				"wrong PINs in a row before a cooldown; 0 off"},
+			{row{kind: rowWrongPINCooldown, label: "wrong_pin_attempt_cooldown", value: itoa(m.cfg.WrongPINCooldown), color: value, stop: true},
+				"seconds the cooldown lasts"},
+			{row{kind: rowIdleLock, label: "idle_lock", value: idle, color: value, stop: true},
+				"idle seconds until tmux or screen lock; 0 never; setup again after"},
+			{pathRow(rowTmuxConf, "tmux_conf", m.cfg.TmuxConf), "the file locku setup tmux writes its block into"},
+			{pathRow(rowScreenConf, "screen_conf", m.cfg.ScreenConf), "the file locku setup screen writes its block into"},
+		} {
+			out = append(out, r.row, row{kind: rowNote, value: r.note, color: dimColor})
 		}
+		return out
 	}
 }
 
@@ -361,6 +375,12 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			styled = txt.Render(label) + tint.Render(bar) + " " +
 				lipgloss.NewStyle().Foreground(r.color).Render(r.value) +
 				spaces(innerW-lw-sliderW-1-dispW(r.value))
+		case rowNote:
+			// Under the row it explains, a little in from the label: the
+			// value column would leave it too little room.
+			note := truncate(r.value, innerW-3)
+			plain = padRight("   "+note, innerW)
+			styled = "   " + dim.Render(padRight(note, innerW-3))
 		default:
 			plain = padRight(label+r.value, innerW)
 			ls := txt
@@ -378,5 +398,8 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			out = append(out, styled)
 		}
 	}
-	return fitLines(out, innerW, innerH)
+	// The rows follow the cursor when they outgrow the panel — with the
+	// row under it, which on preference is its note.
+	top := scrollTo(0, min(len(out)-1, max(0, curRow)+1), innerH)
+	return fitLines(out[min(top, len(out)):], innerW, innerH)
 }

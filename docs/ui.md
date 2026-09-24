@@ -97,7 +97,14 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | tmux_conf | 路徑照存的樣子；未設 `not set`（Yellow），`locku setup tmux` 會報錯 | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1）（2026-09-24） |
 | screen_conf | 同上 | 同上 |
 
-`savers` 這個 key 不成列：它就是 `[1]` 本身。其餘每個 config key 一定有一列。
+每一列下面接一列 dim 的一句話說明（2026-09-24，使用者要求）：PIN `what the lock asks for; with none, any key unlocks`、profile
+`the profile the lock shows`、show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a
+key before the PIN box closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、
+wrong_pin_attempt_cooldown `seconds the cooldown lasts`、idle_lock `idle seconds until tmux or screen lock; 0 never; setup
+again after`、tmux_conf / screen_conf `the file locku setup … writes its block into`。說明列從 label 欄內縮 3 格起、不可停；
+列數超過面板時跟著 cursor 捲，游標那列的說明一起留在畫面上。
+
+`profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
 
 ### 1.2 鎖定畫布 grid
