@@ -40,6 +40,14 @@ func TestFitPicksTheScale(t *testing.T) {
 		// 15 rows at 2 is 30, over 21) go, then the date; HH MM at 2 fits.
 		{"80x24 full clock medium: HH MM alone, at 2", full, 80, 23, 2, 2, []string{"21 05"}},
 		{"200x60 full clock medium: all of it", full, 200, 59, 2, 2, []string{"21 05 09", "2026-09-24"}},
+		// Too short for two lines, wide enough for the seconds: the date
+		// goes and the seconds stay (user, 2026-09-24 — a chain that
+		// dropped the seconds on the way to the date showed HH MM here).
+		{"130x24 full clock medium: the date goes, not the seconds", full, 130, 23, 2, 2, []string{"21 05 09"}},
+		{"130x24 HH MM SS + MM-DD medium: the same", saver.Clock{Time: saver.TimeHMS, Date: saver.DateMD}, 130, 23, 2, 2, []string{"21 05 09"}},
+		// And where both fit, the date is worth more than the seconds.
+		{"130x40 HH MM SS + MM-DD medium: both", saver.Clock{Time: saver.TimeHMS, Date: saver.DateMD}, 130, 39, 2, 2, []string{"21 05 09", "09-24"}},
+		{"84x40 HH MM SS + MM-DD medium: the seconds go, the date stays", saver.Clock{Time: saver.TimeHMS, Date: saver.DateMD}, 84, 39, 2, 2, []string{"21 05", "09-24"}},
 		// 40 columns hold 18 px: exactly HH MM at 1.
 		{"40x12 HH MM is 1", hm, 40, 11, 2, 1, []string{"21 05"}},
 		{"40x12 full clock degrades to HH MM at 1", full, 40, 11, 3, 1, []string{"21 05"}},
