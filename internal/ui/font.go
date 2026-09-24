@@ -20,9 +20,10 @@ import "github.com/vulcanshen/locku/internal/saver"
 // a letter on the board.
 //
 // The punctuation is as wide as it needs to be — the colon one cell, the
-// space two, the hyphen three. A row is '#' lit and '.' dark, top to
-// bottom; every row of a glyph is the same width, every glyph of a face
-// the same height.
+// hyphen three. The space is one cell here and, on the board, one gap
+// unit: it is dark, so it is a gap, not a glyph (canvas.go). A row is
+// '#' lit and '.' dark, top to bottom; every row of a glyph is the same
+// width, every glyph of a face the same height.
 
 // fontW is a digit's width, and most letters'.
 const fontW = 3
@@ -67,7 +68,7 @@ var faceTall = face{name: saver.FontTall, h: 7, g: map[rune][]string{
 	'9': {"###", "#.#", "#.#", "###", "..#", "..#", "###"},
 	':': {".", "#", "#", ".", "#", "#", "."},
 	'-': {"...", "...", "...", "###", "...", "...", "..."},
-	' ': {"..", "..", "..", "..", "..", "..", ".."},
+	' ': {".", ".", ".", ".", ".", ".", "."},
 	'A': {"###", "#.#", "#.#", "###", "#.#", "#.#", "#.#"},
 	'B': {"##.", "#.#", "#.#", "##.", "#.#", "#.#", "##."},
 	'C': {"###", "#..", "#..", "#..", "#..", "#..", "###"},
@@ -114,7 +115,7 @@ var faceShort = face{name: saver.FontShort, h: 5, g: map[rune][]string{
 	'9': {"###", "#.#", "###", "..#", "###"},
 	':': {".", "#", ".", "#", "."},
 	'-': {"...", "...", "###", "...", "..."},
-	' ': {"..", "..", "..", "..", ".."},
+	' ': {".", ".", ".", ".", "."},
 	'A': {"###", "#.#", "###", "#.#", "#.#"},
 	'B': {"###", "#.#", "###", "#.#", "###"}, // as 8, the way a seven-segment display shows it
 	'C': {"###", "#..", "#..", "#..", "###"},

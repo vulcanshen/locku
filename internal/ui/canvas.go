@@ -12,18 +12,31 @@ import (
 // The canvas is one LED board (function.md §5.3, ui.md §1.2): every cell of
 // the terminal but the status row is one pixel — the square glyph and a
 // space, two columns wide, so a pixel is close to square. Dark pixels wear
-// the board's bg colour, lit pixels its fg. The saver's lines are set in the
-// 5 × 7 font, scaled by the largest whole k that fits, and centred.
+// the board's bg colour, lit pixels its fg. The saver's lines are set in
+// the pixel font at the saver's size, and centred.
 //
 // It is the only way anything is drawn. A saver never sees a colour, a
 // glyph or a position.
+//
+// Two units (user, 2026-09-24): the DISPLAY unit is one font pixel, k × k
+// cells at size k; the GAP unit is the dark between things — two glyphs,
+// two lines, and the space that parts two groups is one of them — and it
+// grows with the display unit but not as fast, or a large clock is mostly
+// gap. Everything below is measured in cells.
 
 const (
-	gapX       = 1 // pixels between two glyphs
-	gapY       = 1 // pixels between two lines (2 until 2026-09-24: a column's lines are rows the large size cannot spare)
 	marginCols = 4 // two columns of margin either side
 	marginRows = 2 // one row above and below
+	// The room between two blocks, in gap units: under each other, two;
+	// beside each other, six — two columns need a gutter wider than the
+	// space between two groups, or the date reads as part of the time.
+	underGap  = 2
+	besideGap = 6
 )
+
+// gap is the gap unit at scale k, in cells: one at small and medium, two
+// at large.
+func gap(k int) int { return (k + 1) / 2 }
 
 // pixelCell is one pixel on the terminal: the glyph and its space.
 var pixelCell = pixelGlyph + " "
@@ -66,42 +79,51 @@ func (b board) count() int {
 	return n
 }
 
-// lineW is a line's width in font pixels: its glyphs and a gap between
-// each two.
-func lineW(f face, line string) int {
+// glyphCells is a glyph's width in cells at scale k: its pixels at k —
+// but the space, which is one gap unit, so that with the gap either side
+// of it a space parts two groups by three gap units.
+func glyphCells(f face, r rune, k int) int {
+	if r == ' ' {
+		return gap(k)
+	}
+	return f.glyphW(r) * k
+}
+
+// lineW is a line's width in cells at scale k: its glyphs and a gap
+// between each two.
+func lineW(f face, line string, k int) int {
 	w := 0
 	for i, r := range line {
 		if i > 0 {
-			w += gapX
+			w += gap(k)
 		}
-		w += f.glyphW(r)
+		w += glyphCells(f, r, k)
 	}
 	return w
 }
 
-// pixelSize is the block lines need in font pixels, before scaling: the
-// widest line, and m lines at the face's height each with a gap between
-// (function.md §5.3).
-func pixelSize(f face, lines []string) (w, h int) {
+// blockSize is the cells lines take at scale k: the widest line, and m
+// lines at the face's height each with a gap between (function.md §5.3).
+func blockSize(f face, lines []string, k int) (w, h int) {
 	m := len(lines)
 	for _, l := range lines {
-		w = max(w, lineW(f, l))
+		w = max(w, lineW(f, l, k))
 	}
 	if w == 0 || m == 0 {
 		return 0, 0
 	}
-	return w, m*f.h + (m-1)*gapY
+	return w, m*f.h*k + (m-1)*gap(k)
 }
 
-// fitsIn reports whether lines at scale k fit availPx pixels across and
-// availRows down. A pixel is two columns by one row, near enough square,
+// fitsIn reports whether lines at scale k fit availW cells across and
+// availRows down. A cell is two columns by one row, near enough square,
 // so k × k draws the font as designed.
-func fitsIn(f face, lines []string, k, availPx, availRows int) bool {
-	pw, ph := pixelSize(f, lines)
-	if pw == 0 || k < 1 {
+func fitsIn(f face, lines []string, k, availW, availRows int) bool {
+	w, h := blockSize(f, lines, k)
+	if w == 0 || k < 1 {
 		return false
 	}
-	return pw*k <= availPx && ph*k <= availRows
+	return w <= availW && h <= availRows
 }
 
 // placed is one block as it will be drawn: its lines, at its scale.
@@ -117,9 +139,18 @@ type layout struct {
 	beside bool
 }
 
-// gapBeside is the room between two blocks sitting side by side, in font
-// pixels of the block on the left: about a hyphen's width.
-const gapBeside = 3
+// blockGap is the room between two blocks, in cells along the axis they
+// follow: gap units of the time's size — the block fitted first, which is
+// the first drawn under each other and the last drawn beside.
+func (l layout) blockGap() int {
+	if len(l.blocks) == 0 {
+		return 0
+	}
+	if l.beside {
+		return besideGap * gap(l.blocks[len(l.blocks)-1].k)
+	}
+	return underGap * gap(l.blocks[0].k)
+}
 
 // fit lays the saver's blocks out, each on its own (function.md §5.3):
 // the time first, in the whole canvas; the date in what is left — under
@@ -135,13 +166,13 @@ const gapBeside = 3
 // less the status row.
 func fit(f face, s saver.Saver, now time.Time, cols, rows, size int) (layout, []string) {
 	l := layout{beside: s.Beside()}
-	pxLeft := (cols - marginCols) / 2
+	wLeft := (cols - marginCols) / 2
 	rowsLeft := rows - marginRows
 	for i, b := range s.Blocks(now) {
 		var got *placed
 		for _, v := range b.Variants {
 			for k := max(1, size); k >= 1 && got == nil; k-- {
-				if fitsIn(f, v, k, pxLeft, rowsLeft) {
+				if fitsIn(f, v, k, wLeft, rowsLeft) {
 					got = &placed{lines: v, k: k}
 				}
 			}
@@ -155,43 +186,37 @@ func fit(f face, s saver.Saver, now time.Time, cols, rows, size int) (layout, []
 			}
 			break
 		}
-		pw, ph := pixelSize(f, got.lines)
+		bw, bh := blockSize(f, got.lines, got.k)
 		if l.beside {
 			// The time is fitted first and drawn last: the date goes to
 			// its left.
 			l.blocks = append([]placed{*got}, l.blocks...)
-			pxLeft -= (pw + gapBeside) * got.k
+			wLeft -= bw + l.blockGap()
 		} else {
 			l.blocks = append(l.blocks, *got)
-			rowsLeft -= (ph + gapY) * got.k
+			rowsLeft -= bh + l.blockGap()
 		}
 	}
 	return l, nil
 }
 
 // paint lights a layout on a fresh board for a cols × rows canvas. Blocks
-// under each other: the stack centred, each block centred across, a gap
-// of one of the upper block's pixels between two. Blocks beside each
-// other: the row centred, each block centred up and down on its own, a
-// gap of gapBeside of the left block's pixels between two. Within a
-// block each line is centred in whole font pixels.
+// under each other: the stack centred, each block centred across. Blocks
+// beside each other: the row centred, each block centred up and down on
+// its own. blockGap between two. Within a block each line is centred.
 func paint(f face, l layout, cols, rows int) board {
 	b := newBoard(cols/2, rows)
 	// The stack's extent along the axis the blocks follow.
 	total := 0
 	for i, p := range l.blocks {
-		pw, ph := pixelSize(f, p.lines)
+		bw, bh := blockSize(f, p.lines, p.k)
 		if l.beside {
-			total += pw * p.k
+			total += bw
 		} else {
-			total += ph * p.k
+			total += bh
 		}
 		if i < len(l.blocks)-1 {
-			if l.beside {
-				total += gapBeside * p.k
-			} else {
-				total += gapY * p.k
-			}
+			total += l.blockGap()
 		}
 	}
 	x0, y0 := 0, (b.h-total)/2
@@ -199,44 +224,40 @@ func paint(f face, l layout, cols, rows int) board {
 		x0, y0 = (b.w-total)/2, 0
 	}
 	for _, p := range l.blocks {
-		pw, ph := pixelSize(f, p.lines)
-		ox, oy := (b.w-pw*p.k)/2, y0
+		bw, bh := blockSize(f, p.lines, p.k)
+		ox, oy := (b.w-bw)/2, y0
 		if l.beside {
-			ox, oy = x0, (b.h-ph*p.k)/2
+			ox, oy = x0, (b.h-bh)/2
 		}
+		g := gap(p.k)
 		for i, line := range p.lines {
 			if line == "" {
 				continue
 			}
-			lx := ox + (pw-lineW(f, line))/2*p.k
-			ly := oy + i*(f.h+gapY)*p.k
-			x := 0 // in font pixels along the line
+			x := ox + (bw-lineW(f, line, p.k))/2
+			ly := oy + i*(f.h*p.k+g)
 			for _, r := range line {
-				g, ok := f.g[r]
-				if !ok {
-					x += fontW + gapX
-					continue
-				}
-				gx := lx + x*p.k
-				for fy := 0; fy < f.h; fy++ {
-					for fx := 0; fx < len(g[fy]); fx++ {
-						if g[fy][fx] != '#' {
-							continue
-						}
-						for dy := 0; dy < p.k; dy++ {
-							for dx := 0; dx < p.k; dx++ {
-								b.set(gx+fx*p.k+dx, ly+fy*p.k+dy)
+				if gl, ok := f.g[r]; ok && r != ' ' {
+					for fy := 0; fy < f.h; fy++ {
+						for fx := 0; fx < len(gl[fy]); fx++ {
+							if gl[fy][fx] != '#' {
+								continue
+							}
+							for dy := 0; dy < p.k; dy++ {
+								for dx := 0; dx < p.k; dx++ {
+									b.set(x+fx*p.k+dx, ly+fy*p.k+dy)
+								}
 							}
 						}
 					}
 				}
-				x += f.glyphW(r) + gapX
+				x += glyphCells(f, r, p.k) + g
 			}
 		}
 		if l.beside {
-			x0 += (pw + gapBeside) * p.k
+			x0 += bw + l.blockGap()
 		} else {
-			y0 += (ph + gapY) * p.k
+			y0 += bh + l.blockGap()
 		}
 	}
 	return b
