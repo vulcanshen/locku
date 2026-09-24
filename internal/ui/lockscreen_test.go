@@ -13,10 +13,13 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// A lock at a fixed moment, sized 80×24, with pin set (or none when "").
+// A lock at a fixed moment, sized 80×24, with pin set (or none when ""),
+// showing a plain medium clock — HH MM in the tall face, no date —
+// whatever the saver's defaults are today.
 func testLock(t *testing.T, pin string, tweak func(*config.Config)) LockModel {
 	t.Helper()
 	cfg := config.Default()
+	cfg.Profiles[0].Size, cfg.Profiles[0].Font, cfg.Profiles[0].Time, cfg.Profiles[0].Date = "medium", "3x7", "HH MM", "off"
 	if pin != "" {
 		h, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.MinCost)
 		if err != nil {

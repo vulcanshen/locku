@@ -49,14 +49,17 @@ object，常用的 profile 在上）：**Profiles** 列出使用者設定好的�
 （唯讀）；在 profile 上就是那個 profile 的欄位與顏色；在 `preference` 上是一般設定的列。title chip 跟著換成
 `[2] clock · saver`、`[2] clock`、`[2] preference`；profile 的顏色草稿未存時尾綴 ` · unsaved`。
 
-`[2]` 在 saver 上（全部唯讀、沒有停靠點，唯一的動作是 `[n] New`）：
+`[2]` 在 saver 上：先三列唯讀說明，再一列 dim 的 `defaults` 標題，然後是**這種 saver 的預設值**——跟 profile 一模一樣的欄位列與
+色票 / slider 列（沒有 name），同樣的 options popup、顏色草稿、`S` / `R`、` · unsaved`（2026-09-24 定案）。改預設值只影響之後
+用這種 saver 新增的 profile，不動既有的；`[p]` / `[P]` 用預設值跑一個臨時 profile 預覽；`[n] New` 生 profile。
 
 | 列 | 值 |
 |---|---|
 | saver | `clock` / `dino` |
 | what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever |
-| settings | 這種 saver 的 profile 能設什麼 |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
+| defaults | dim 標題：`for profiles made of it from now on` |
+| （預設值） | clock：layout / size / font / time / date；dino：runner / scene；再 bg / fg 各一色票列加 R G B |
 
 `[2]` 在 profile 上：
 
@@ -176,7 +179,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 上另有 panel region（Preview / Save / Reset）— 兩個 region 各有 header，只有一個就扁平；saver 的 `[2]` 只有 `[n] New` |
+| Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— 兩個 region 各有 header，只有一個就扁平 |
 | `?` help | viewport | 全域動作表 |
 | input | input | **邊框寫型別**（`name`、`number`、`path`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
@@ -243,7 +246,7 @@ Blue 不出現在那裡。
 
 | 件 | 設定畫面 | 鎖定畫布 |
 |---|---|---|
-| Border title chip | `[1] locku`、`[2] <saver> · saver`、`[2] <profile name>`（顏色草稿未存時 ` · unsaved`）/ `[2] preference` | 無 |
+| Border title chip | `[1] locku`、`[2] <saver> · saver`、`[2] <profile name>`（兩者顏色草稿未存時 ` · unsaved`）/ `[2] preference` | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | `[2]` 下框右側：config 路徑 | 無 |
 | footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |

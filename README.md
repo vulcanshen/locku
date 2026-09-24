@@ -64,10 +64,11 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ```
 
 **Profiles** 是你設定好的、有名字的 saver（object）：new / duplicate / rename / delete 都在這裡，`●` 是啟用中的那個。
-**Savers** 是種類（class）：clock、dino，沒有名字、不能增刪，`[2]` 是說明，在上面按 `n` 生一個它的 profile。
+**Savers** 是種類（class）：clock、dino，沒有名字、不能增刪，`[2]` 是說明加**預設值**——之後用這種 saver 新增的 profile 就長這樣，
+改它不動既有的 profile；在上面按 `n` 生一個它的 profile、`p` 用預設值預覽。內建預設：clock 是 row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`，dino 是 trex / grassland。
 
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
-`[1]` 的 saver：`n` new profile；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile 上：`P` 預覽這個 profile、`S` 存顏色草稿、`R` 丟掉；
+`[1]` 的 saver：`n` new profile、`p` 預覽預設值；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile / saver 上：`P` 預覽、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
 `tmux_conf` / `screen_conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。
 
