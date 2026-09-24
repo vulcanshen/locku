@@ -165,7 +165,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		return m, nil
 	}
 	if k == "?" {
-		return m, m.help.open(m.layer(), m.sideAt().kind)
+		return m, m.help.open(m.layer(), m.helpEntries())
 	}
 	if m.confirm.anim.owns() {
 		switch k {
@@ -396,4 +396,16 @@ func foldHome(p string) string {
 		return "~" + p[len(home):]
 	}
 	return p
+}
+
+// helpEntries is what ? shows here: on [2] of a panel with a glossary —
+// preference, a tool — that glossary alone, what each row means; anywhere
+// else the keys (user, 2026-09-25: "only the preference items").
+func (m AppModel) helpEntries() []helpEntry {
+	if m.focus == panelDetail {
+		if g := helpGlossary[m.sideAt().kind]; g != nil {
+			return g
+		}
+	}
+	return helpKeys
 }

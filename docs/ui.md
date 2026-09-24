@@ -95,8 +95,8 @@ label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修
 | wrong_pin_attempts | 數字，0 顯示 `0 (off)` | 同上 |
 | wrong_pin_attempt_cooldown | 數字 | 同上 |
 
-每一列是什麼，在 `?` help 最後的 preference 段說，那一段只在 cursor 在 preference 時出現（2026-09-25：原本每列下面接一列 dim 說明，
-2026-09-24 加的，使用者要搬到 help，而且 preference 上只要 preference 的；`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
+每一列是什麼，focus 在這個 `[2]` 時按 `?`：help 裡**只有**這幾列的說明，一列一項、太長就在說明欄內自動換行，沒有鍵的清單
+（2026-09-25：原本每列下面接一列 dim 說明，2026-09-24 加的，使用者要搬到 help，而且 `[2]` 上只要這些；`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
 show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a key before the PIN box
 closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
 cooldown lasts`。列數超過面板時跟著 cursor 捲。
@@ -111,7 +111,7 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
 就是 property / value 兩欄，跟 profile 一樣（2026-09-25 修訂：原本第一列是 dim 的 `tool tmux`、最後一列叫 `block`、值是 `in the
 file`，使用者看不懂）。`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；
-`?` help 的 Integration 段說 S 與 X 各做什麼，tmux / screen 段說 conf、idle_lock、status，後者只在 cursor 在 tmux / screen 時出現。
+`?` help 的 Integration 段說 S 與 X 各做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、idle_lock、status 三列的說明。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。

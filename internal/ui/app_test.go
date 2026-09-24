@@ -430,10 +430,11 @@ func TestSetupAndRemoveFromTheScreen(t *testing.T) {
 
 // What each preference setting means is in the help, not on the panel
 // (user, 2026-09-25).
-// The help's glossary is the panel's own: on preference the preference
-// settings, on a tool its conf and idle_lock, on a profile none — and
-// the keys, Integration's included, everywhere (user, 2026-09-25).
-func TestHelpExplainsThePanelsSettings(t *testing.T) {
+// ? on [2] of preference is the preference glossary and nothing else —
+// what each row means, in place of the note that sat under each row —
+// on [2] of a tool that tool's; on [1], and on a profile's [2], the keys
+// (user, 2026-09-25). A description longer than its column wraps.
+func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	has := func(v string, want ...string) []string {
 		var missing []string
 		for _, w := range want {
@@ -444,18 +445,50 @@ func TestHelpExplainsThePanelsSettings(t *testing.T) {
 		return missing
 	}
 	m := newTestApp(t)
-	if v := m.press("?", "G").View(); len(has(v, "Integration", "duplicate")) != 0 || strings.Contains(v, "what each is") {
-		t.Errorf("on a profile: the keys, no glossary:\n%s", v)
+	if v := m.press("?").View() + m.press("?", "G").View(); len(has(v, "Core keys", "Integration", "duplicate")) != 0 || strings.Contains(v, "what each row is") {
+		t.Errorf("on a profile: the keys, top and bottom:\n%s", v)
 	}
-	// The last sidebar row is preference; G in the help scrolls to its end.
-	if v := m.press("G", "?", "G").View(); len(has(v, "[2] preference", "wrong_pin_attempt_cooldown", "pin_prompt_timeout", "any key unlocks")) != 0 || strings.Contains(v, "idle_lock") {
-		t.Errorf("on preference: its glossary and no other:\n%s", v)
+	if v := m.press("G", "?").View(); !strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") { // [1] on preference
+		t.Errorf("on [1], preference: still the keys:\n%s", v)
+	}
+	if v := m.press("G", "2", "?").View(); len(has(v, "[2] preference", "any key unlocks", "wrong_pin_attempt_cooldown")) != 0 || strings.Contains(v, "Core keys") || strings.Contains(v, "idle_lock") {
+		t.Errorf("on [2], preference: its glossary only:\n%s", v)
 	}
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "?", "G").View(); len(has(v, "[2] tmux / screen", "conf", "idle_lock", "status")) != 0 || strings.Contains(v, "any key unlocks") {
-		t.Errorf("on tmux: its glossary and no other:\n%s", v)
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux / screen", "conf", "idle_lock", "status")) != 0 || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
+	}
+	// Narrow: the PIN's line does not fit beside a 26-column key and is
+	// not cut — its end goes on under itself.
+	v := m.size(60, 30).press("G", "2", "?").View()
+	if !strings.Contains(v, "what the lock asks for") || !strings.Contains(v, "unlocks") {
+		t.Fatalf("the description is cut:\n%s", v)
+	}
+	for _, l := range strings.Split(v, "\n") {
+		if strings.Contains(l, "what the lock asks for") && strings.Contains(l, "unlocks") {
+			t.Errorf("the description did not wrap:\n%s", v)
+		}
+	}
+}
+
+// wrap breaks at spaces, never past w, and cuts a word longer than w.
+func TestWrap(t *testing.T) {
+	got := wrap("what the lock asks for; with none, any key unlocks", 26)
+	if len(got) != 2 || got[0] != "what the lock asks for;" || got[1] != "with none, any key unlocks" {
+		t.Errorf("%q", got)
+	}
+	for _, l := range wrap("seconds without a key before the PIN box closes; 0 never", 10) {
+		if dispW(l) > 10 {
+			t.Errorf("%q is wider than 10", l)
+		}
+	}
+	if got := wrap("abcdefghij", 4); len(got) != 3 || got[0] != "abcd" || got[2] != "ij" {
+		t.Errorf("a long word: %q", got)
+	}
+	if wrap("", 10) != nil || wrap("x", 0) != nil {
+		t.Error("nothing to wrap")
 	}
 }
 
