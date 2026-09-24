@@ -102,7 +102,7 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	case rowConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
-	case rowIdleLock:
+	case rowIdle:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "idle seconds before it locks; 0 never; setup again after", run: (*AppModel).editNumber})
 	}
 	if it.kind == sideTool {
@@ -220,11 +220,9 @@ func (m *AppModel) edit(f func(*config.Profile)) {
 
 // editTool changes the tool under the cursor through f.
 func (m *AppModel) editTool(f func(*config.Tool)) {
-	if m.sideAt().ref == toolScreen {
-		f(&m.cfg.Screen)
-	} else {
-		f(&m.cfg.Tmux)
-	}
+	name, t := m.tool()
+	f(&t)
+	m.cfg.SetTool(name, t)
 }
 
 // previewCfg is the config a preview runs on: the file's, with every
@@ -300,9 +298,9 @@ func (m *AppModel) setupTool() tea.Cmd {
 	var out bytes.Buffer
 	var err error
 	if name, t := m.tool(); name == tools[toolTmux] {
-		err = setup.Tmux(&out, t.Conf, t.IdleLock)
+		err = setup.Tmux(&out, t.Conf, t.Idle)
 	} else {
-		err = setup.Screen(&out, t.Conf, t.IdleLock)
+		err = setup.Screen(&out, t.Conf, t.Idle)
 	}
 	if err != nil {
 		return m.toast.show(err.Error(), toastError)
@@ -491,9 +489,9 @@ func (m *AppModel) editNumber() tea.Cmd {
 		cur = itoa(m.cfg.WrongPINAttempts)
 	case rowWrongPINCooldown:
 		cur = itoa(m.cfg.WrongPINCooldown)
-	case rowIdleLock:
+	case rowIdle:
 		_, t := m.tool()
-		cur = itoa(t.IdleLock)
+		cur = itoa(t.Idle)
 	}
 	return m.input.ask(inputPopup{title: "number", prompt: r.label + " — empty for the default",
 		value: cur, accept: "save", action: inputNumber}, m.layer())
@@ -639,11 +637,11 @@ func (m *AppModel) commitInput() tea.Cmd {
 				n = def.WrongPINCooldown
 			}
 			m.cfg.WrongPINCooldown = n
-		case rowIdleLock:
+		case rowIdle:
 			if v == "" {
-				n = config.DefaultIdleLock
+				n = config.DefaultIdle
 			}
-			m.editTool(func(t *config.Tool) { t.IdleLock = n })
+			m.editTool(func(t *config.Tool) { t.Idle = n })
 		}
 		return tea.Batch(m.input.close(), m.save(before))
 

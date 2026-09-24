@@ -64,7 +64,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）；以�
 | show_status | `[Enter] Toggle` | 無 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown | `[Enter] Edit` | 無 |
 | conf（tmux / screen 的 `[2]`） | `[Enter] Edit` | `[S] Setup`、`[X] Remove`（同 `[1]` 上的，conf 沒填時 disabled） |
-| idle_lock | `[Enter] Edit` | 同上 |
+| lock-after-time（screen：idle） | `[Enter] Edit` | 同上 |
 | status | 唯讀，不可停：`installed` / `not installed`，區塊在不在檔案裡 | 同上 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
@@ -85,7 +85,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）；以�
 
 help 的內容看 focus 在哪：`[1]`，以及 profile / saver 的 `[2]`，是鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、
 navigate）；preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
-conf、idle_lock、status 的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
+conf、lock-after-time / idle、status 的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
 preference 時只要 preference 的說明，只要）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
@@ -113,7 +113,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；saver 列與色票列跳過；saver 的說明沒有停靠點 |
+| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Properties / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點 |
 | `j` / `k` | 上下一列、頭尾相接（2026-09-24 修訂：原本不繞，使用者要面板跟 menu 一樣 loop） | 同 |
 | `u` / `d` | 半頁，到頭就停不繞；清單比半頁短時等於跳到頭 / 尾 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |
@@ -132,7 +132,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 | name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
 | layout / size / font / time / date / runner / scene / profile | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
-| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / idle_lock（tmux、screen 各一個） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | conf（tmux、screen 各一個；2026-09-25 前是 preference 的 tmux_conf / screen_conf） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，Setup / Remove 就 disabled）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear` |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |

@@ -319,8 +319,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowConf {
 		t.Fatalf("tmux, conf row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "not installed") || strings.Contains(v, "tool ") {
-		t.Errorf("tmux's rows are conf, idle_lock, status:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "not installed") || strings.Contains(v, "tool ") || strings.Contains(v, "idle_lock") {
+		t.Errorf("tmux's rows are conf, lock-after-time, status:\n%s", v)
 	}
 	m = m.press("enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
@@ -366,14 +366,15 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if m.cfg.Tmux.Conf != "" || saved(t).Tmux.Conf != "" {
 		t.Errorf("unset: %q", m.cfg.Tmux.Conf)
 	}
-	// idle_lock is the tool's own: tmux's changes, screen's does not.
+	// The idle time is the tool's own, under its own name: tmux's
+	// lock-after-time changes, screen's idle does not.
 	m = m.press("j", "enter")
 	if m.input.title != "number" || m.input.value != "300" {
 		t.Fatalf("idle box %+v", m.input)
 	}
 	m = m.press("ctrl+u").typed("45").press("enter")
-	if m.cfg.Tmux.IdleLock != 45 || saved(t).Tmux.IdleLock != 45 || m.cfg.Screen.IdleLock != 300 {
-		t.Errorf("tmux idle %d, screen idle %d", m.cfg.Tmux.IdleLock, m.cfg.Screen.IdleLock)
+	if m.cfg.Tmux.LockAfterTime != 45 || saved(t).Tmux.LockAfterTime != 45 || m.cfg.Screen.Idle != 300 {
+		t.Errorf("tmux idle %d, screen idle %d", m.cfg.Tmux.LockAfterTime, m.cfg.Screen.Idle)
 	}
 	// screen, with its own usual file.
 	m = m.press("1", "j", "2", "enter")
@@ -457,7 +458,7 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux / screen", "conf", "idle_lock", "status")) != 0 || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "conf", "lock-after-time", "status")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
 	// Narrow: the PIN's line does not fit beside a 26-column key and is
@@ -469,6 +470,22 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	for _, l := range strings.Split(v, "\n") {
 		if strings.Contains(l, "what the lock asks for") && strings.Contains(l, "unlocks") {
 			t.Errorf("the description did not wrap:\n%s", v)
+		}
+	}
+}
+
+// Every [2] is a table under a header row, Properties and Value, which
+// the cursor skips (user, 2026-09-25).
+func TestEveryDetailHasAHeader(t *testing.T) {
+	m := newTestApp(t)
+	for _, keys := range [][]string{{}, {"G", "k", "k", "k", "k"}, {"G", "k", "k"}, {"G"}} { // a profile, a saver, tmux, preference
+		mm := m.press(keys...)
+		if r := mm.rows(); r[0].kind != rowHead || r[0].label != "Properties" || r[0].value != "Value" || r[0].stop {
+			t.Errorf("%v: first row %+v", keys, r[0])
+		}
+		mm = mm.press("2")
+		if v := mm.View(); !strings.Contains(v, "Properties") || !strings.Contains(v, "Value") || mm.rowAt().kind == rowHead {
+			t.Errorf("%v: the header, and the cursor not on it:\n%s", keys, v)
 		}
 	}
 }
@@ -603,8 +620,8 @@ func TestNewProfileOfASaver(t *testing.T) {
 		t.Errorf("offer %q", m.input.value)
 	}
 	m = m.press("esc")
-	if rows := m.rows(); rows[2].label != "profiles" || rows[2].value != "dino" {
-		t.Errorf("the saver's profiles row: %+v", rows[2])
+	if rows := m.rows(); rows[3].label != "profiles" || rows[3].value != "dino" {
+		t.Errorf("the saver's profiles row: %+v", rows[3])
 	}
 }
 

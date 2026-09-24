@@ -23,7 +23,7 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q for a missing file", note)
 	}
-	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.Tmux.IdleLock != 300 || cfg.Screen.IdleLock != 300 {
+	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.Tmux.LockAfterTime != 300 || cfg.Screen.Idle != 300 {
 		t.Errorf("not the defaults: %+v", cfg)
 	}
 }
@@ -142,7 +142,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	// The tools' keys moved under each tool; the one idle time became
 	// both tools' own (2026-09-25).
-	if cfg.Tmux.Conf != "~/.tmux.conf" || cfg.Tmux.IdleLock != 45 || cfg.Screen.Conf != "" || cfg.Screen.IdleLock != 45 {
+	if cfg.Tmux.Conf != "~/.tmux.conf" || cfg.Tmux.LockAfterTime != 45 || cfg.Screen.Conf != "" || cfg.Screen.Idle != 45 {
 		t.Errorf("the tools under their old keys: tmux %+v screen %+v", cfg.Tmux, cfg.Screen)
 	}
 	// Each saver's keys are its own: a dino has no size or shapes, a
@@ -157,9 +157,18 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
 		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
 		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") ||
-		!strings.Contains(s, "tmux:\n    conf: ~/.tmux.conf\n    idle_lock: 45") || !strings.Contains(s, "screen:\n    conf: \"\"\n    idle_lock: 45") ||
+		!strings.Contains(s, "tmux:\n    conf: ~/.tmux.conf\n    lock-after-time: 45") || !strings.Contains(s, "screen:\n    conf: \"\"\n    idle: 45") ||
 		strings.Contains(s, "tmux_conf") || strings.Contains(s, "\nidle_lock") {
 		t.Errorf("saved with the old keys:\n%s", s)
+	}
+}
+
+// A tool's idle time written as idle_lock — the shape of 2026-09-25's
+// morning — is read under the tool's own name for it.
+func TestAToolsIdleLockIsCarriedOver(t *testing.T) {
+	cfg, note := LoadFile(write(t, "tmux:\n  conf: ~/.tmux.conf\n  idle_lock: 45\nscreen:\n  idle_lock: 0\n"))
+	if note != "" || cfg.Tmux.Conf != "~/.tmux.conf" || cfg.Tmux.LockAfterTime != 45 || cfg.Screen.Idle != 0 {
+		t.Errorf("note %q, tmux %+v, screen %+v", note, cfg.Tmux, cfg.Screen)
 	}
 }
 

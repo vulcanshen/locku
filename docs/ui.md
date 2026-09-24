@@ -19,24 +19,27 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
-║ Profiles               ║│ name              clock                          │
-║ ● clock                ║│ saver             clock                          │
-║   clock2               ║│ layout            row                            │
-║   dino                 ║│ size              medium                         │
-║ Savers                 ║│ font              3x7                            │
-║   clock                ║│ time              HH MM                          │
-║   dino                 ║│ date              off                            │
-║ Integration            ║│ bg                ■ #313244  →  ■ #ff3244        │
-║   tmux                 ║│   R               ───────────● 255               │
-║   screen               ║│   G               ──●───────── 50                │
-║ Settings               ║│   B               ───●──────── 68                │
-║   preference           ║│ fg                ■ #f2b753                      │
+║ Profiles               ║│ Properties        Value                          │
+║ ● clock                ║│ name              clock                          │
+║   clock2               ║│ saver             clock                          │
+║   dino                 ║│ layout            row                            │
+║ Savers                 ║│ size              medium                         │
+║   clock                ║│ font              3x7                            │
+║   dino                 ║│ time              HH MM                          │
+║ Integration            ║│ date              off                            │
+║   tmux                 ║│ bg                ■ #313244  →  ■ #ff3244        │
+║   screen               ║│   R               ───────────● 255               │
+║ Settings               ║│   G               ──●───────── 50                │
+║   preference           ║│   B               ───●──────── 68                │
+║                        ║│ fg                ■ #f2b753                      │
 ║                        ║│   R               ──────────●─ 242               │
 ║                        ║│   G               ────────●─── 183               │
-║                        ║│   B               ────●─────── 83                │
 ╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
+
+每個 `[2]` 第一列是表頭：`Properties` 與 `Value`，用側欄區塊標題的 Blue，不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
+都給標題列）。
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
@@ -106,12 +109,12 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 | 列 | 呈現 | 編輯 |
 |---|---|---|
 | conf | 路徑照存的樣子；未設 `not set`（Yellow），Setup / Remove 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc` |
-| idle_lock | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，Setup 填給 tmux 的 lock-after-time / screen 的 idle，各工具一份 | input popup，型別 `number`，清空 = 300 |
+| lock-after-time（screen 上是 idle） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱（2026-09-25，使用者），Setup 原樣填進去，各工具一份 | input popup，型別 `number`，清空 = 300 |
 | status | 唯讀，不可停：`installed`（Green）/ `not installed`（Yellow），區塊在不在 conf 裡，每次畫都讀一次 | 無 |
 
 就是 property / value 兩欄，跟 profile 一樣（2026-09-25 修訂：原本第一列是 dim 的 `tool tmux`、最後一列叫 `block`、值是 `in the
 file`，使用者看不懂）。`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；
-`?` help 的 Integration 段說 S 與 X 各做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、idle_lock、status 三列的說明。
+`?` help 的 Integration 段說 S 與 X 各做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、lock-after-time / idle、status 三列的說明。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
