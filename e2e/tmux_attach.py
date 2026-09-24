@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """End to end, on a real tmux with the real binary (function.md §12):
-`locku setup tmux` writes the block; a server started on it locks its
-client with lock-session and marks the session; a client attaching
-meanwhile is locked by the hook; unlocking clears the mark, and a client
-attaching then is not locked; a terminal that dies under the lock leaves
-the mark, and the next client in meets the lock; `setup -d` takes it all
-out. No PIN is set, so any key unlocks — the PIN itself is the unit
-tests' business.
+`locku setup tmux` writes the block; on a server started on it, `locku`
+locks every client and marks the server; a client attaching to ANY
+session meanwhile is locked by the hook; unlocking clears the mark, and
+a client attaching then is not locked; a terminal that dies under the
+lock leaves the mark, and the next client in meets the lock; `setup -d`
+takes it all out. No PIN is set, so any key unlocks — the PIN itself is
+the unit tests' business.
 
     make e2e            # builds the binary and runs this
     e2e/tmux_attach.py ./locku
@@ -20,7 +20,7 @@ LOCKU = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else "./locku")
 work = tempfile.mkdtemp(prefix="locku-e2e-")
 binDir = os.path.join(work, "bin")
 os.makedirs(binDir)
-os.symlink(LOCKU, os.path.join(binDir, "locku"))  # the block says `locku lock`
+os.symlink(LOCKU, os.path.join(binDir, "locku"))
 cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 conf = os.path.join(work, "tmux.conf")
@@ -72,7 +72,7 @@ def board(out):
 
 
 def marked():
-    return "@locked 1" in tmux("show", "-t", "t", "@locked")
+    return tmux("show", "-gv", "@locked") == "1"
 
 
 def locks_running():
@@ -109,43 +109,48 @@ print(setup("tmux"))
 text = open(conf).read()
 check("the block is in the file, every line marked, the lock command absolute", "# >>> locku >>>" in text
       and "client-attached[90]" in text and 'lock-command "/' in text and "socket_path" in text
+      and "locku=lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
 
 subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.DEVNULL)
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
 time.sleep(1.5)
+tmux("new-session", "-d", "-s", "u")  # a second session, nobody on it
 check("the server took the block: alias and hooks",
-      "locku=lock-session" in tmux("show", "-s", "command-alias") and "client-attached[90]" in tmux("show-hooks", "-g"))
+      "locku=lock-server" in tmux("show", "-s", "command-alias") and "client-attached[90]" in tmux("show-hooks", "-g"))
 
-# 1. lock-session locks A and marks the session.
-tmux("lock-session", "-t", "t")
+# 1. `locku` locks A and marks the server.
+tmux("locku")
 time.sleep(1.8)
-check("A shows the board after lock-session", board(oa))
-check("the session is marked @locked", marked())
+check("A shows the board after locku", board(oa))
+check("the server is marked @locked", marked())
 
-# 2. B attaches meanwhile and is locked by the hook.
+# 2. B attaches to the same session meanwhile, E to the other: both locked.
 pb, fb, ob = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
+pe, fe, oe = spawn(["tmux", "-L", SOCK, "attach", "-t", "u"])
 time.sleep(2.0)
 check("B, attaching to the locked session, shows the board", board(ob))
+check("E, attaching to the OTHER session, shows the board too", board(oe))
 
-# 3. A unlocks: the mark goes; B is on its own lock until its own key.
+# 3. A unlocks: the mark goes; B and E stay on their own locks until their own key.
 unlock(fa)
 check("A's unlock clears the mark", not marked())
-check("B still shows the board until its own key", locks_running())
+check("B and E still show the board until their own key", locks_running())
 unlock(fb)
+unlock(fe)
 time.sleep(0.5)
-check("B is back too", not locks_running())
+check("B and E are back too", not locks_running())
 
-# 4. C attaches to the unlocked session: no lock.
-pc, fc, oc = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
+# 4. C attaches to the unlocked server: no lock.
+pc, fc, oc = spawn(["tmux", "-L", SOCK, "attach", "-t", "u"])
 time.sleep(1.5)
-check("C, attaching to the unlocked session, sees no board", not board(oc))
-kill(pc)
-kill(pb)
+check("C, attaching once unlocked, sees no board", not board(oc))
+for p in (pc, pb, pe):
+    kill(p)
 time.sleep(0.5)
 
 # 5. A's terminal dies under the lock: the mark stays, the next client is locked.
-tmux("lock-session", "-t", "t")
+tmux("locku")
 time.sleep(1.5)
 kill(pa)
 time.sleep(1.5)

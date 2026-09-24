@@ -85,7 +85,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ## 決定摘要
 
 - **鎖在 tmux / screen 之外，不在 pane 內。** pane 內的程式永遠看不到 prefix；tmux 的 lock-command 由 client 進程以 `system()` 同步執行、期間不讀任何鍵，screen 的 LOCKPRG 同理。這是唯一正確的 hook。
-- **tmux：不綁熱鍵，鎖著的 session 誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-session`（command alias，不跟你的 bind 撞）；tmux 本身沒有「session 鎖著」的狀態，locku 在 `locku lock` 啟動時把 session 的 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`，PIN 對了才清掉，tty 消失不清。lock-command 由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。
+- **tmux：整台 server 一起鎖，不綁熱鍵，鎖著的時候誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-server`（command alias，不跟你的 bind 撞），所有 session 的所有 client 一起變保護程式；tmux 本身沒有「鎖著」的狀態，locku 在 `locku lock` 啟動時把全域 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`——attach 哪個 session 都一樣，PIN 對了才清掉，tty 消失不清。閒置鎖是 tmux 每個 session 各自計時，哪個畫面閒置就鎖哪個畫面。lock-command 是 locku 的絕對路徑，由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
@@ -110,7 +110,8 @@ pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死�
 跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
 `locku init`、只印不寫的 setup、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
 側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形、
-tmux 的 `bind L`（跟使用者既有熱鍵撞，改 command alias）。
+tmux 的 `bind L`（跟使用者既有熱鍵撞，改 command alias）、session 等級的 tmux 鎖（換個 session 就繞過，改整台）、
+閒置鎖升級成整台（雙螢幕會被另一邊鎖到）、一個 PIN 解全部 client（要輪詢，維持各自輸）。
 
 ## 目錄
 

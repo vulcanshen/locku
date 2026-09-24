@@ -55,7 +55,9 @@ tmux 的細節：server 呼叫前已自行切到 alternate screen 並清屏，cl
 
 tmux `lock-session` 對每個 attach 中的 client 各跑一份 locku，彼此獨立，A 解鎖不影響 B。這是 tmux 的行為，locku 不需要知道其他實例存在。
 
-但 tmux 沒有「session 鎖著」這個狀態：`lock-session` 只對那一刻 attach 著的 client 送 MSG_LOCK，之後 attach 進來的 client 什麼都不會發生（實測 2026-09-24，tmux 3.7c）。使用者要的是「只要進入這個 session、而它是鎖著的，就得看到保護程式」，所以 locku 補一個狀態：`locku lock` 啟動時把 session 的 user option `@locked` 設成 1，`locku setup tmux` 寫的 `client-attached` / `client-session-changed` hook 看到 `@locked` 就對那個 client `lock-client`；PIN 對了（或無 PIN 模式任意鍵）結束前把 `@locked` 拿掉；tty 消失或被砍死不拿掉，下一個進來的人還是被鎖，直到有人輸入 PIN。第一個輸入正確 PIN 的 client 把 session 解鎖，其他還開著 locku 的 client 各自輸 PIN 才回來。細節見 6.2。
+但 tmux 沒有「鎖著」這個狀態：`lock-server` / `lock-session` 只對那一刻 attach 著的 client 送 MSG_LOCK，之後 attach 進來的 client 什麼都不會發生（實測 2026-09-24，tmux 3.7c）。使用者要的是「只要進來、而它是鎖著的，就得看到保護程式」，所以 locku 補一個狀態：`locku lock` 啟動時把**全域** user option `@locked` 設成 1（每個 session 都看得到），`locku setup tmux` 寫的 `client-attached` / `client-session-changed` hook 看到 `@locked` 就對那個 client `lock-client`；PIN 對了（或無 PIN 模式任意鍵）結束前把 `@locked` 拿掉；tty 消失或被砍死不拿掉，下一個進來的人還是被鎖，直到有人輸入 PIN。第一個輸入正確 PIN 的 client 把標記清掉，其他還開著 locku 的 client 各自輸 PIN 才回來（使用者 2026-09-24：維持各自輸，不做輪詢）。
+
+鎖的範圍是**整台 server**，不是 session（使用者 2026-09-24 定案）：螢幕保護程式保護的是「坐在這台終端機前的人看得到什麼」，鎖住一個 session 的話 `tmux attach -t 另一個` 就繞過去了，等於沒鎖；一份 config、一個受管區塊、一個 profile 對整台，也不用替每個 session 各配一套。所以 `locku` 這個 alias 是 `lock-server`。閒置鎖是 tmux 的極限——`lock-after-time` 是每個 session 各自計時——維持「哪個畫面閒置就鎖哪個畫面」，不升級成整台（雙螢幕各 attach 一個 session 時，正在打字的那邊不該被另一邊的閒置鎖到）。細節見 6.2。
 
 ## 2. 輸入與訊號
 
@@ -271,11 +273,11 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 - 路徑由使用者在 preference 輸入（2026-09-24）：`tmux_conf` / `screen_conf` 沒設時 `locku setup tmux` / `screen` 印 `tmux_conf is not set: run locku, preference › tmux_conf` 並以 1 結束，什麼都不寫（screen 連 shell rc 也不寫）；原本「`~/.tmux.conf` 不在就找 `~/.config/tmux/tmux.conf`」的猜法拿掉。相對路徑拒收，它會落在 setup 剛好執行的目錄。
 - tmux 有 server 在跑時同時即時套用同樣五條（`tmux set -gF lock-command …` 等）；`-d` 時反向 `set -gu` / `set -su` / `set-hook -gu` 一條對一條拿掉。沒有 tmux 或沒有 server 就跳過並說明。
 - tmux 那五行的道理（2026-09-24，使用者定案，全部以 pty 實測 tmux 3.7c）：
-  - **不綁熱鍵**。用戶既然在用 tmux 就有自己一套 bind，`bind L` 會撞。改用 command alias：`prefix :` 然後打 `locku`，就是 `lock-session`；shell 裡 `tmux lock-session` 也一樣。
+  - **不綁熱鍵**。用戶既然在用 tmux 就有自己一套 bind，`bind L` 會撞。改用 command alias：`prefix :` 然後打 `locku`，就是 `lock-server`（整台的 client 全鎖）；shell 裡 `tmux locku` 也一樣。
   - **每行尾巴 `# locku`**，加上受管區塊的頭尾標記，手動要移也認得出來；alias 與 hook 放在陣列的 90 號，不碰使用者自己的 0 號。
   - **lock-command 寫絕對路徑**：tmux client 是用它自己的 shell 環境跑 `sh -c`，`locku` 不一定在那個 PATH 上——找不到就是「畫面閃一下」（使用者 2026-09-24 實際踩到）。setup 寫的是 `Binary()`：PATH 上的 locku（brew 的 symlink）優先，否則就是執行 setup 的這個檔，跟 screen 的 LOCKPRG 同一套。所以從 repo 跑 `./locku setup tmux` 寫的就是 repo 那個 binary。
-  - **lock-command 帶 socket**：lock-command 在 client 進程裡以 `system()` 跑，環境裡沒有 `TMUX`，被鎖的 client 也不在 `list-clients` 裡；`set -gF` 在讀檔時把 `#{socket_path}` 展開進去，`locku lock -S <socket>` 才知道要跟哪個 server 講話（`-L` 開的 server 也對）。locku 用 `tty` 拿自己的 tty，`tmux -S <socket> display -p -t <tty> '#{session_id}'` 反查 session；用 id 不用名字，名字有冒號會被當 window。
-  - **`@locked` 由 locku 設與清**：解鎖沒有 hook（3.7c 的 MSG_UNLOCK 只清 flag），所以 `locku lock` 啟動時 `set -t <id> @locked 1`、正常解鎖結束前 `set -t <id> -u @locked`，tty 消失不清。兩個 hook 看到 `@locked` 就 `lock-client`（attach 與 switch-client 都驗過會觸發）。
+  - **lock-command 帶 socket**：lock-command 在 client 進程裡以 `system()` 跑，環境裡沒有 `TMUX`，被鎖的 client 也不在 `list-clients` 裡；`set -gF` 在讀檔時把 `#{socket_path}` 展開進去，`locku lock -S <socket>` 才知道要跟哪個 server 講話（`-L` 開的 server 也對）。標記是全域的，locku 不必反查自己在哪個 session（改成 server 等級前曾用 `tty` 反查，已不需要）。
+  - **`@locked` 由 locku 設與清，全域**：解鎖沒有 hook（3.7c 的 MSG_UNLOCK 只清 flag），所以 `locku lock` 啟動時 `set -g @locked 1`、正常解鎖結束前 `set -gu @locked`，tty 消失不清；沒帶 `-S` 就什麼都不做。兩個 hook 看到 `@locked` 就 `lock-client`（attach 任何 session 與 switch-client 都驗過會觸發）。`setup -d` 順手 `set -gu @locked`。
   - 這些 tmux 呼叫都有 2 秒 timeout、失敗一律靜默：不可能讓鎖起不來或掉下來。裸 tty、screen、沒有 tmux 時 `Session()` 回空字串，什麼都不做。
 - screen 的 LOCKPRG 只能走 shell 環境（實測 2026-09-24，macOS screen 4.00.03，以探針程式經 pty 驗證）。原本想走 `.screenrc` 的 `setenv LOCKPRG` 一個檔搞定，實測不通：按 `C-a x` 出現的是 screen 內建的 `Key:` 鎖，探針沒被呼叫。原因是 `lockscreen` 由 attacher（接著終端機的前端進程）呼叫 `getenv`，而 `.screenrc` 只有後端讀、`setenv` 改的是後端與視窗內 shell 的環境；attacher 的環境在 `screen` 或 `screen -r` 執行那一刻就固定了。環境變數路線則完全符合設計：LOCKPRG 被 execl、`argv[0]` 是 `SCREEN-LOCK`、stdin 是 tty。所以 setup 寫 shell rc 的受管區塊，並提示：新開 shell 才有這個變數；已在跑的 session 不必重啟，detach 後從新 shell `screen -r` 即可，因為 attacher 是新進程。
 - 絕對路徑偏好 PATH 上找到的那個（通常是 brew 的 symlink），不用解析 symlink 後的 Cellar 路徑，升級版本後才不會失效。
@@ -350,13 +352,13 @@ tmux，寫進 preference 的 `tmux_conf`（慣例 `~/.tmux.conf`）：
 # >>> locku >>>
 set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: idle_lock; 0 never
-set -s "command-alias[90]" "locku=lock-session"                             # locku: prefix : locku
-set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching to a locked session locks the client
-set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching into one
+set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
+set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client
+set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions
 # <<< locku <<<
 ```
 
-鎖：`prefix :` 打 `locku`（或 shell 的 `tmux lock-session`），閒置 300 秒也鎖；鎖著的時候誰 attach 進來都會看到保護程式。移除：`locku setup -d tmux`。
+鎖：`prefix :` 打 `locku`（或 shell 的 `tmux locku`）整台的 client 全鎖，閒置 300 秒的畫面也鎖；鎖著的時候誰 attach 哪個 session 都會看到保護程式。移除：`locku setup -d tmux`。
 
 screen，preference 的 `screen_conf`（慣例 `~/.screenrc`）：
 
@@ -405,7 +407,8 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 20. 時間與日期是兩個獨立區塊，各自排版、各自退階：時間先拿整個畫布，日期拿剩下的（row 在下、column 在左）；每個區塊先降 size 再去單位（時間去秒、日期去年）；日期塞不下就不畫，時間塞不下才一般文字；config 不改。（2026-09-24 修訂三次，最後由使用者定案。）
 21. 整合設定是 CLI：`locku setup [tmux|screen]` 直接寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用；不做 TUI popup。（2026-09-24 修訂）要寫的檔案由使用者在 preference 的 `tmux_conf` / `screen_conf` 輸入，沒設就報錯，不猜路徑。`locku setup -d` 拿掉，每一行尾巴 `# locku` 註解，手動也好移。
 30. （2026-09-24，使用者定案）設定改名，三個都帶 lock 字看不出誰是誰：`prompt_timeout` → `pin_prompt_timeout`、`lockout_after` → `wrong_pin_attempts`、`lockout_seconds` → `wrong_pin_attempt_cooldown`；新增 `idle_lock`（閒置幾秒自動鎖，預設 300，0 關閉），一個值給所有拿 locku 當螢幕保護的工具：tmux 的 lock-after-time、screen 的 idle，setup 寫進去。舊 key 讀進來自動轉。
-29. （2026-09-24，使用者定案）tmux 不綁熱鍵，改 command alias `locku`（`prefix :` 打 `locku` = `lock-session`），不跟使用者既有的 bind 撞。「鎖著的 session 誰進來都被鎖」用 session option `@locked` 加 `client-attached` / `client-session-changed` hook 做到：`locku lock` 啟動時設、正常解鎖時清、tty 消失不清；lock-command 以 `set -gF` 帶 `#{socket_path}` 給 `locku lock -S`，locku 用自己的 tty 反查 session id。以 pty 端到端測試（`make e2e`）驗收。
+29. （2026-09-24，使用者定案）tmux 不綁熱鍵，改 command alias `locku`（`prefix :` 打 `locku`），不跟使用者既有的 bind 撞。「鎖著的時候誰進來都被鎖」用全域 user option `@locked` 加 `client-attached` / `client-session-changed` hook 做到：`locku lock` 啟動時設、正常解鎖時清、tty 消失不清；lock-command 是 locku 的絕對路徑並以 `set -gF` 帶 `#{socket_path}` 給 `locku lock -S`。以 pty 端到端測試（`make e2e`）驗收。
+31. （2026-09-24，使用者定案）鎖的範圍是**整台 tmux server**，不是 session：`locku` = `lock-server`，標記全域，attach 任何 session 都被鎖；螢幕保護程式保護的是整台，session 等級的鎖換個 session 就繞過。閒置鎖維持 tmux 的每 session 計時、不升級成整台；解鎖維持每個 client 各自輸 PIN、不輪詢。一份 config、一個區塊、一個 profile 對整台。
 22. （2026-09-24 修訂）側欄 Enter 一律把焦點送到 `[2]`，包括 saver 與 profile；設為啟用在 preference › profile，側欄的 `●` 只顯示。Settings 只有 preference 一項，原 config 改名 preference、style 取消。
 23. （2026-09-24 修訂）側欄 profile 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 profile）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu；saver 的是 `[Enter] Edit`（看說明）、`[n] New`。
 24. （2026-09-24 修訂）`[2]` 在 profile 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 profile，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 profile 的 `[2]` 上就是這個 profile，其他地方是啟用中的。
@@ -436,6 +439,6 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 - 設定 TUI 寫出的 config 能被 `locku lock` 讀取。
 - LOCKPRG 指向 locku 本體時，screen `lockscreen` 進入鎖定而不是設定 TUI。
 - `locku setup tmux` 跑兩次，設定檔內容相同；有 server 時 `tmux show -g lock-command` 立即是 `locku lock -S '<socket>'`；`locku setup -d tmux` 後區塊消失、server 上五條都拿掉（setup 套件測試）。
-- 鎖著的 session 誰進來都被鎖（2026-09-24，`make e2e` 在真的 tmux 3.7c 上跑，13 項全過）：`lock-session` 後 client A 看到點陣板、session 標 `@locked`；B 此時 attach 進來也看到點陣板；A 解鎖後 `@locked` 消失、B 仍鎖著直到自己解鎖；之後 attach 的 C 不被鎖；鎖定中 A 的終端機死掉，`@locked` 留著，接著 attach 的 D 被鎖、D 解鎖才清掉。
+- 鎖著的時候誰進來都被鎖（2026-09-24，`make e2e` 在真的 tmux 3.7c 上跑）：`locku` 後 client A 看到點陣板、全域標 `@locked`；B 此時 attach 同一個 session、E attach 另一個 session，都看到點陣板；A 解鎖後 `@locked` 消失、B 與 E 仍鎖著直到各自解鎖；之後 attach 的 C 不被鎖；鎖定中 A 的終端機死掉，`@locked` 留著，接著 attach 的 D 被鎖、D 解鎖才清掉；`setup -d` 後區塊消失。
 - shell 環境有 LOCKPRG 時 `C-a x` 進的是 locku（2026-09-24 以探針實測通過；`.screenrc` 的 `setenv` 路線實測不通，6.2 已改為 shell rc）。
 - tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix+d、prefix+c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix+d 才 detach）。

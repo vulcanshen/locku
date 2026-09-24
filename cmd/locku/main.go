@@ -77,12 +77,11 @@ func runLock(socket string) int {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
 		syscall.SIGTSTP, syscall.SIGTTIN, syscall.SIGTTOU)
 	cfg, problem := config.Load()
-	// Under tmux the session is marked locked for as long as this runs,
-	// so a client attaching meanwhile is locked too (function.md §6.2);
-	// a terminal that goes away leaves the mark, and the next client in
-	// meets the lock.
-	session := tmux.Session(socket)
-	tmux.SetLocked(socket, session, true)
+	// Under tmux the server is marked locked for as long as this runs,
+	// so a client attaching to any session meanwhile is locked too
+	// (function.md §6.2); a terminal that goes away leaves the mark, and
+	// the next client in meets the lock.
+	tmux.SetLocked(socket, true)
 	quick := 0
 	for {
 		started := time.Now()
@@ -95,7 +94,7 @@ func runLock(socket string) int {
 		)
 		if m, err := p.Run(); err == nil {
 			if lm, ok := m.(ui.LockModel); !ok || !lm.TTYGone() {
-				tmux.SetLocked(socket, session, false)
+				tmux.SetLocked(socket, false)
 			}
 			return 0
 		}
