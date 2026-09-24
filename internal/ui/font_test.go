@@ -55,6 +55,29 @@ func TestFontIsWellFormed(t *testing.T) {
 	}
 }
 
+// Every stroke is horizontal or vertical: a lit pixel always has a lit
+// neighbour straight above, below, left or right, so no glyph is drawn
+// with a stair of single pixels — which is what a diagonal is on a grid
+// (user, 2026-09-24).
+func TestNoDiagonals(t *testing.T) {
+	for r, g := range font {
+		w := len(g[0])
+		lit := func(x, y int) bool {
+			return x >= 0 && x < w && y >= 0 && y < fontH && g[y][x] == '#'
+		}
+		for y := 0; y < fontH; y++ {
+			for x := 0; x < w; x++ {
+				if !lit(x, y) {
+					continue
+				}
+				if !lit(x-1, y) && !lit(x+1, y) && !lit(x, y-1) && !lit(x, y+1) {
+					t.Errorf("%q: the pixel at %d,%d stands alone — a diagonal, or a stray", r, x, y)
+				}
+			}
+		}
+	}
+}
+
 // Every line a saver can produce, in every shape, across a year, is drawn
 // from the charset — the promise of function.md §5.2 that the content is
 // made of fixed choices.
