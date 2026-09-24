@@ -226,10 +226,14 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			// its value — the R slider is #RR0000, the G one #00GG00, the
 			// B one #0000BB — so the slider shows what it is setting
 			// (user, 2026-09-24).
+			// On a ground that runs the other way — white at 0, black at 255
+			// — so a dark value is still a visible bar (user, 2026-09-24).
 			bar := sliderBar(r.num)
 			ch := [3]int{}
 			ch[r.ch] = r.num
-			tint := lipgloss.NewStyle().Foreground(lipgloss.Color(config.Hex(ch[0], ch[1], ch[2])))
+			tint := lipgloss.NewStyle().
+				Foreground(lipgloss.Color(config.Hex(ch[0], ch[1], ch[2]))).
+				Background(lipgloss.Color(config.Hex(255-r.num, 255-r.num, 255-r.num)))
 			plain = padRight(label+bar+" "+r.value, innerW)
 			styled = txt.Render(label) + tint.Render(bar) + " " +
 				tint.Render(padRight(r.value, innerW-lw-sliderW-1))

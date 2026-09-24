@@ -93,22 +93,33 @@ func Scale(size string) int {
 	return 2
 }
 
+// Block is one group of lines the canvas lays out on its own — the time,
+// or the date — with its content in order of preference. The canvas
+// takes the first variant that fits at the largest size it can, every
+// size tried before the next variant (user, 2026-09-24: the size goes
+// before the units, and the date is the date's business, the time the
+// time's — so a date that is too wide shrinks while the time keeps its
+// size).
+type Block struct {
+	Variants [][]string
+}
+
 // Saver is what the canvas asks of any saver type.
 type Saver interface {
-	// Lines is the content at now: the time, then the date when one is
-	// shown, on one line each or broken into their parts.
+	// Blocks is the content at now: the time first, then the date when
+	// one is shown. The first block is never dropped; a later one is,
+	// when nothing of it fits in what the ones before leave.
+	Blocks(now time.Time) []Block
+	// Beside says how the blocks sit: one under the other, the time above
+	// (false), or side by side, the time on the right and the date on the
+	// left (true) — the column layout (user, 2026-09-24).
+	Beside() bool
+	// Lines is the whole content at now, one line each or broken into
+	// parts: what the fonts have to be able to draw.
 	Lines(now time.Time) []string
 	// Next is when the lines will next change, so the lock can sleep until
 	// then rather than poll (function.md §5.2 "tick").
 	Next(now time.Time) time.Time
-	// Steps is the content in order of preference, the whole of it first,
-	// then with less and less on it (function.md §5.3): the canvas draws
-	// the first step that fits. It is a list and not a chain, because
-	// what does not fit may be the height as well as the width, and a
-	// chain that drops the seconds on its way to dropping the date would
-	// lose them even when the date alone was the problem (user,
-	// 2026-09-24).
-	Steps() []Saver
 }
 
 // Clock is the one saver type: a time with or without seconds, a date in
@@ -151,24 +162,57 @@ func (c Clock) Normalized() Clock {
 	return c
 }
 
-// Lines is the time, then the date when one is shown. Month names are
-// upper case (JAN..DEC): the font has no lower case. In a column the
-// separators go and each part is a line of its own.
-func (c Clock) Lines(now time.Time) []string {
+// lines is one string as the layout shows it: on one line, or in a column
+// with the separators gone and each part a line of its own.
+func (c Clock) lines(s string) []string {
+	if c.Layout == LayoutColumn {
+		return parts(s)
+	}
+	return []string{s}
+}
+
+// shortDate is the date shape without its year, or the shape itself.
+func shortDate(d string) string {
+	switch d {
+	case DateYMD:
+		return DateMD
+	case DateYMonD:
+		return DateMonD
+	}
+	return d
+}
+
+// Blocks is the time — with its seconds, then without — and, when one is
+// shown, the date — with its year, then without. Month names are upper
+// case (JAN..DEC): the font has no lower case.
+func (c Clock) Blocks(now time.Time) []Block {
 	c = c.Normalized()
-	var lines []string
-	add := func(s string) {
-		if c.Layout == LayoutColumn {
-			lines = append(lines, parts(s)...)
-			return
-		}
-		lines = append(lines, s)
+	t := Block{Variants: [][]string{c.lines(now.Format(timeLayout[c.Time]))}}
+	if c.Seconds() {
+		t.Variants = append(t.Variants, c.lines(now.Format(timeLayout[TimeHM])))
 	}
-	add(now.Format(timeLayout[c.Time]))
+	out := []Block{t}
 	if c.Date != DateOff {
-		add(strings.ToUpper(now.Format(dateLayout[c.Date])))
+		d := Block{Variants: [][]string{c.lines(strings.ToUpper(now.Format(dateLayout[c.Date])))}}
+		if short := shortDate(c.Date); short != c.Date {
+			d.Variants = append(d.Variants, c.lines(strings.ToUpper(now.Format(dateLayout[short]))))
+		}
+		out = append(out, d)
 	}
-	return lines
+	return out
+}
+
+// Beside is true in the column layout: the time's parts stacked in one
+// column on the right, the date's in another on the left.
+func (c Clock) Beside() bool { return c.Normalized().Layout == LayoutColumn }
+
+// Lines is the whole content: every block's first variant.
+func (c Clock) Lines(now time.Time) []string {
+	var out []string
+	for _, b := range c.Blocks(now) {
+		out = append(out, b.Variants[0]...)
+	}
+	return out
 }
 
 // parts breaks "21 05 09" or "2026-SEP-24" at its separators.
@@ -187,36 +231,4 @@ func (c Clock) Next(now time.Time) time.Time {
 		return now.Truncate(time.Second).Add(time.Second)
 	}
 	return now.Truncate(time.Minute).Add(time.Minute)
-}
-
-// Steps is the clock with less and less on it (function.md §5.3): the
-// year goes first, then the seconds — the date is worth more than they
-// are — then the date, at which point the seconds come back, and last
-// the seconds alone. The time is the last thing to go, and it never goes
-// here: after these the canvas falls back to plain text.
-func (c Clock) Steps() []Saver {
-	c = c.Normalized()
-	short := c.Date
-	switch c.Date {
-	case DateYMD:
-		short = DateMD
-	case DateYMonD:
-		short = DateMonD
-	}
-	var out []Saver
-	add := func(t, d string) { out = append(out, Clock{Time: t, Date: d, Layout: c.Layout}) }
-	add(c.Time, c.Date) // everything
-	if short != c.Date {
-		add(c.Time, short) // the year goes
-	}
-	if c.Seconds() && c.Date != DateOff {
-		add(TimeHM, short) // the seconds go, the date stays
-	}
-	if c.Date != DateOff {
-		add(c.Time, DateOff) // the date goes, the seconds are back
-	}
-	if c.Seconds() {
-		add(TimeHM, DateOff) // the seconds go too
-	}
-	return out
 }

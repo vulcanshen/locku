@@ -28,8 +28,8 @@ type LockModel struct {
 	noPIN   bool
 
 	width, height int
-	lines         []string // what the board spells now
-	k             int      // its scale; 0 draws the lines as text
+	layout        layout   // what the board spells now, block by block
+	plain         []string // when nothing fits: the lines drawn as text
 	scale         int      // the scale the saver asks for: 1, 2 or 3
 	face          face     // the font the saver asks for
 	shown         board    // the board on screen
@@ -276,8 +276,8 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 // board it makes, setting lines and k on the way.
 func (m *LockModel) refit() board {
 	rows := m.height - 1
-	m.lines, m.k = fit(m.face, m.clock, m.now(), m.width, rows, m.scale)
-	return paint(m.face, m.lines, m.k, m.width, rows)
+	m.layout, m.plain = fit(m.face, m.clock, m.now(), m.width, rows, m.scale)
+	return paint(m.face, m.layout, m.width, rows)
 }
 
 // redraw moves the board to now: by a reveal when only some pixels change,
@@ -333,10 +333,10 @@ func (m LockModel) View() string {
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
-		if m.k >= 1 {
+		if len(m.layout.blocks) > 0 {
 			out = boardRows(m.shown, bg, fg, m.width, dimmed)
 		} else {
-			out = plainRows(m.lines, bg, fg, m.width, rows, dimmed)
+			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)
 		}
 	}
 	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem))
