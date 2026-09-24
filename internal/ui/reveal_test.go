@@ -3,8 +3,8 @@ package ui
 import "testing"
 
 func TestRevealTouchesOnlyWhatChanged(t *testing.T) {
-	from := paint([]string{"21:05"}, 2, 120, 39)
-	to := paint([]string{"21:06"}, 2, 120, 39)
+	from := paint([]string{"21:05"}, 2, 2, 120, 39)
+	to := paint([]string{"21:06"}, 2, 2, 120, 39)
 	r := newReveal(from, to)
 	if r == nil {
 		t.Fatal("no reveal for a changed board")
@@ -36,11 +36,11 @@ func TestRevealTouchesOnlyWhatChanged(t *testing.T) {
 }
 
 func TestRevealIsNilWhenNothingToDo(t *testing.T) {
-	a := paint([]string{"21:05"}, 2, 120, 39)
+	a := paint([]string{"21:05"}, 2, 2, 120, 39)
 	if newReveal(a, a.clone()) != nil {
 		t.Error("same board")
 	}
-	if newReveal(a, paint([]string{"21:05"}, 1, 80, 23)) != nil {
+	if newReveal(a, paint([]string{"21:05"}, 1, 1, 80, 23)) != nil {
 		t.Error("different size")
 	}
 }

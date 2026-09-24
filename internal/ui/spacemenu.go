@@ -14,6 +14,9 @@ type menuItem struct {
 	label string
 	key   string // dispatched on commit; "enter" for the core-key action
 	hint  string
+	// header is a region's label — "item operation", "panel operation" —
+	// dim and not a stop (VTP §A.1.1).
+	header bool
 	// disabled: the action belongs here but cannot run right now. A row
 	// that vanishes teaches that the action does not exist on this panel;
 	// a dimmed row keeps the map honest and still answers when pressed.
@@ -52,7 +55,8 @@ func newOptionsMenu() spaceMenu {
 
 func (m *spaceMenu) setItems(items []menuItem, title string, layer int) {
 	m.items, m.title, m.layer = items, title, layer
-	m.cursor, m.top, m.rows, m.pendingG = 0, 0, 0, false
+	m.top, m.rows, m.pendingG = 0, 0, false
+	m.cursor = m.firstStop()
 }
 
 func (m spaceMenu) isActive() bool      { return m.anim.isActive() }
@@ -61,6 +65,24 @@ func (m *spaceMenu) open() tea.Cmd      { return m.anim.open() }
 func (m *spaceMenu) close() tea.Cmd     { return m.anim.close() }
 func (m *spaceMenu) setSize(w, h int)   { m.screenW, m.screenH = w, h }
 
+func (m spaceMenu) firstStop() int {
+	for i, it := range m.items {
+		if !it.header {
+			return i
+		}
+	}
+	return 0
+}
+
+func (m spaceMenu) lastStop() int {
+	for i := len(m.items) - 1; i >= 0; i-- {
+		if !m.items[i].header {
+			return i
+		}
+	}
+	return 0
+}
+
 // center puts the cursor in the middle of the window: an options list
 // opens on the current value with room either side (ux.md §2.1).
 func (m *spaceMenu) center() {
@@ -68,21 +90,45 @@ func (m *spaceMenu) center() {
 	m.top = clamp(m.cursor-vis/2, 0, max(0, len(m.items)-vis))
 }
 
-// step moves d rows and WRAPS at the ends — off the bottom is the top. A
-// list is a ring, and the last item is one keystroke from the first.
+// step moves one row in direction d, over the headers, and WRAPS at the
+// ends — off the bottom is the top. A list is a ring, and the last item is
+// one keystroke from the first.
 func (m *spaceMenu) step(d int) {
 	n := len(m.items)
 	if n == 0 {
 		return
 	}
-	m.cursor = (m.cursor + d%n + n) % n
-	m.scroll()
+	at := m.cursor
+	for i := 0; i < n; i++ {
+		at = (at + d + n) % n
+		if !m.items[at].header {
+			m.cursor = at
+			m.scroll()
+			return
+		}
+	}
 }
 
-// jump moves d rows and STOPS at the ends: a half-page is a movement you
-// aim, and one that teleports to the other end is worse than one that stops.
+// jump moves up to |d| rows in direction d and STOPS at the ends: a
+// half-page is a movement you aim, and one that teleports to the other
+// end is worse than one that stops.
 func (m *spaceMenu) jump(d int) {
-	m.cursor = clamp(m.cursor+d, 0, max(0, len(m.items)-1))
+	dir, n := 1, d
+	if d < 0 {
+		dir, n = -1, -d
+	}
+	at := m.cursor
+	for i := 0; i < n; i++ {
+		next := at + dir
+		for next >= 0 && next < len(m.items) && m.items[next].header {
+			next += dir
+		}
+		if next < 0 || next >= len(m.items) {
+			break
+		}
+		at = next
+	}
+	m.cursor = at
 	m.scroll()
 }
 
@@ -118,7 +164,7 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string) {
 	if m.pendingG {
 		m.pendingG = false
 		if k == "g" {
-			m.cursor = 0
+			m.cursor = m.firstStop()
 			m.scroll()
 			return m, ""
 		}
@@ -132,23 +178,20 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string) {
 	case "k", "up":
 		m.step(-1)
 	case "G":
-		m.cursor = max(0, len(m.items)-1)
+		m.cursor = m.lastStop()
 		m.scroll()
 	case "d", "ctrl+d":
 		m.jump(max(1, m.visible()/2))
 	case "u", "ctrl+u":
 		m.jump(-max(1, m.visible()/2))
 	case "enter":
-		if m.cursor < len(m.items) {
+		if m.cursor < len(m.items) && !m.items[m.cursor].header {
 			return m, m.items[m.cursor].key
 		}
 	default:
 		// Letter hotkeys work from inside the menu too: the menu is the
 		// slow path and the letter is the fast one, and they must agree.
-		keys := make([]string, len(m.items))
-		for i, it := range m.items {
-			keys[i] = it.key
-		}
+		keys := m.menuKeys()
 		if i := hotkeyIndex(keys, k); i >= 0 {
 			return m, keys[i]
 		}
@@ -157,8 +200,12 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string) {
 }
 
 func (m spaceMenu) view() string {
-	labelW, hintW := 0, 0
+	labelW, hintW, headW := 0, 0, 0
 	for _, it := range m.items {
+		if it.header {
+			headW = max(headW, dispW(it.label)+2)
+			continue
+		}
 		labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
 		hintW = max(hintW, dispW(it.hint))
 	}
@@ -166,7 +213,7 @@ func (m spaceMenu) view() string {
 	if len(m.items) == 0 {
 		legend = hintLegend([][2]string{{"Esc", "close"}})
 	}
-	innerW := popupInnerW(m.screenW, max(dispW(m.title)+6, labelW+hintW+4, dispW(legend)+1))
+	innerW := popupInnerW(m.screenW, max(dispW(m.title)+6, labelW+hintW+4, headW, dispW(legend)+1))
 	hintW = max(0, min(hintW, innerW-labelW-3))
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
@@ -176,6 +223,10 @@ func (m spaceMenu) view() string {
 
 	rows := make([]string, 0, len(m.items))
 	for i, it := range m.items {
+		if it.header {
+			rows = append(rows, dim.Render(padRight(" "+it.label, innerW)))
+			continue
+		}
 		label := padRight(" "+bracketHotkey(it.label, it.key), innerW-hintW-1)
 		hint := padLeft(it.hint, hintW) + " "
 		switch {
@@ -202,11 +253,13 @@ func (m spaceMenu) view() string {
 		legend, animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }
 
-// menuKeys is every key the menu would fire, for the completeness tests.
+// menuKeys is every key the menu would fire, one per row, headers as "".
 func (m spaceMenu) menuKeys() []string {
-	var keys []string
-	for _, it := range m.items {
-		keys = append(keys, it.key)
+	keys := make([]string, len(m.items))
+	for i, it := range m.items {
+		if !it.header {
+			keys[i] = it.key
+		}
 	}
 	return keys
 }

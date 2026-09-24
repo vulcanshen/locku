@@ -9,25 +9,32 @@ import (
 )
 
 // Panel [2] (ui.md §1.1): the detail of whatever [1]'s cursor is on, shown
-// at once — there is no Enter to open it. A saver is its four fields;
-// config is the PIN and the four settings; style is the two colours, each
-// a swatch and three channel sliders. Every key config.yaml has is a row
-// here, except `saver` and `savers`, which ARE panel [1].
+// at once — there is no Enter to open it. A saver is its fields and its
+// two colours, each a swatch and three channel sliders; preference is the
+// PIN, the active saver and the four settings. Every key config.yaml has
+// is a row here, except `savers`, which IS panel [1].
+//
+// A saver's colours edit a DRAFT (user, 2026-09-24): the sliders move a
+// copy, the swatch row shows the saved colour and, when it differs, the
+// draft beside it, and nothing reaches the file until [S] Save; [R] Reset
+// drops the draft. Every other row writes at once.
 
 type rowKind int
 
 const (
 	rowName rowKind = iota
 	rowType
+	rowLayout
 	rowTime
 	rowDate
+	rowSwatch
+	rowChannel
 	rowPIN
+	rowSaver
 	rowShowStatus
 	rowPromptTimeout
 	rowLockoutAfter
 	rowLockoutSeconds
-	rowSwatch
-	rowChannel
 )
 
 // row is one line of panel [2].
@@ -40,12 +47,38 @@ type row struct {
 	// which colour (0 bg, 1 fg) and which channel (0 r, 1 g, 2 b) a
 	// swatch or channel row is about; num is the channel's value.
 	which, ch, num int
-	hex            string
+	// a swatch row: the saved colour, and the draft when it differs.
+	hex, draft string
 }
 
 // labelW is the label column; sliders and values start after it. The
-// widest label, lockout_seconds, is fifteen, and a value needs a gap.
-const labelW = 17
+// widest label, lockout_seconds, is fifteen, and a value wants air.
+const labelW = 18
+
+// draftOf is a saver's colours as the sliders have them: the draft when
+// one is up, the file's otherwise.
+func (m AppModel) draftOf(s config.Saver) config.Style {
+	if d, ok := m.drafts[s.Name]; ok {
+		return d
+	}
+	return s.Colours()
+}
+
+// dirtyOf reports whether a saver has a draft that differs from the file.
+func (m AppModel) dirtyOf(s config.Saver) bool {
+	d, ok := m.drafts[s.Name]
+	return ok && d != s.Colours()
+}
+
+// anyDirty reports whether any saver has unsaved colours.
+func (m AppModel) anyDirty() bool {
+	for _, s := range m.cfg.Savers {
+		if m.dirtyOf(s) {
+			return true
+		}
+	}
+	return false
+}
 
 // rows is panel [2] for the current selection.
 func (m AppModel) rows() []row {
@@ -53,16 +86,38 @@ func (m AppModel) rows() []row {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver:
 		s := m.cfg.Savers[it.saver]
-		return []row{
+		out := []row{
 			{kind: rowName, label: "name", value: s.Name, color: value, stop: true},
 			{kind: rowType, label: "type", value: s.Type, color: dimColor},
+			{kind: rowLayout, label: "layout", value: s.Layout, color: value, stop: true},
 			{kind: rowTime, label: "time", value: s.Time, color: value, stop: true},
 			{kind: rowDate, label: "date", value: s.Date, color: value, stop: true},
 		}
-	case sideConfig:
+		saved, draft := s.Colours(), m.draftOf(s)
+		for which, c := range []struct {
+			label, saved, draft string
+		}{{"bg", saved.BG, draft.BG}, {"fg", saved.FG, draft.FG}} {
+			sw := row{kind: rowSwatch, label: c.label, value: c.saved, color: dimColor, which: which, hex: c.saved}
+			if c.draft != c.saved {
+				sw.draft = c.draft
+				sw.value += "  →  " + c.draft
+			}
+			out = append(out, sw)
+			r, g, b := config.RGB(c.draft)
+			for ch, v := range []int{r, g, b} {
+				out = append(out, row{kind: rowChannel, label: "  " + string("RGB"[ch]), value: itoa(v),
+					color: value, stop: true, which: which, ch: ch, num: v})
+			}
+		}
+		return out
+	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
 			pin.value, pin.color = "set", liveColor
+		}
+		active := row{kind: rowSaver, label: "saver", value: m.cfg.Saver, color: value, stop: true}
+		if _, ok := m.cfg.Active(); !ok {
+			active.value, active.color = m.cfg.Saver+" (missing)", yellowColor
 		}
 		status := row{kind: rowShowStatus, label: "show_status", value: "off", color: value, stop: true}
 		if m.cfg.ShowStatus {
@@ -74,24 +129,12 @@ func (m AppModel) rows() []row {
 		}
 		return []row{
 			pin,
+			active,
 			status,
 			{kind: rowPromptTimeout, label: "prompt_timeout", value: itoa(m.cfg.PromptTimeout), color: value, stop: true},
 			{kind: rowLockoutAfter, label: "lockout_after", value: after, color: value, stop: true},
 			{kind: rowLockoutSeconds, label: "lockout_seconds", value: itoa(m.cfg.LockoutSeconds), color: value, stop: true},
 		}
-	default:
-		var out []row
-		for which, c := range []struct {
-			label, hex string
-		}{{"bg", m.cfg.Style.BG}, {"fg", m.cfg.Style.FG}} {
-			r, g, b := config.RGB(c.hex)
-			out = append(out, row{kind: rowSwatch, label: c.label, value: c.hex, color: dimColor, which: which, hex: c.hex})
-			for ch, v := range []int{r, g, b} {
-				out = append(out, row{kind: rowChannel, label: "  " + string("RGB"[ch]), value: itoa(v),
-					color: value, stop: true, which: which, ch: ch, num: v})
-			}
-		}
-		return out
 	}
 }
 
@@ -126,16 +169,18 @@ func sliderBar(v int) string {
 	return strings.Repeat("─", at) + "●" + strings.Repeat("─", sliderW-1-at)
 }
 
-// detailTitle is panel [2]'s chip: the saver's name, or config, or style.
+// detailTitle is panel [2]'s chip: the saver's name — with ` · unsaved`
+// while its colour draft differs (ui.md §B) — or preference.
 func (m AppModel) detailTitle() string {
-	switch it := m.sideAt(); it.kind {
-	case sideSaver:
-		return "[2] " + m.cfg.Savers[it.saver].Name
-	case sideConfig:
-		return "[2] config"
-	default:
-		return "[2] style"
+	it := m.sideAt()
+	if it.kind != sideSaver {
+		return "[2] preference"
 	}
+	s := m.cfg.Savers[it.saver]
+	if m.dirtyOf(s) {
+		return "[2] " + s.Name + " · unsaved"
+	}
+	return "[2] " + s.Name
 }
 
 // detailBody draws panel [2]'s rows at innerW × innerH.
@@ -149,6 +194,9 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	txt := lipgloss.NewStyle().Foreground(textColor)
+	swatch := func(hex string) string {
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(hex)).Render(pixelGlyph)
+	}
 
 	lw := min(labelW, max(4, innerW/3))
 	out := make([]string, 0, len(rows))
@@ -157,9 +205,15 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 		var plain, styled string
 		switch r.kind {
 		case rowSwatch:
-			sw := lipgloss.NewStyle().Foreground(lipgloss.Color(r.hex)).Render(pixelCell + pixelGlyph)
-			plain = padRight(label+"   "+r.hex, innerW)
-			styled = dim.Render(label) + sw + " " + dim.Render(padRight(r.hex, innerW-lw-4))
+			// The saved colour, and the draft after an arrow when it differs.
+			plain = padRight(label+"  "+r.value, innerW)
+			styled = dim.Render(label) + swatch(r.hex) + " " + dim.Render(r.hex)
+			used := lw + 2 + dispW(r.hex)
+			if r.draft != "" {
+				styled += dim.Render("  →  ") + swatch(r.draft) + " " + dim.Render(r.draft)
+				used += 5 + 2 + dispW(r.draft)
+			}
+			styled = clipANSI(styled, innerW) + spaces(innerW-min(used, innerW))
 		case rowChannel:
 			bar := sliderBar(r.num)
 			plain = padRight(label+bar+" "+r.value, innerW)

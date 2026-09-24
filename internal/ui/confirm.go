@@ -12,6 +12,7 @@ const (
 	confirmNone        confirmAction = iota
 	confirmDeleteSaver               // remove the saver at ref
 	confirmClearPIN                  // back to "any key unlocks"
+	confirmQuit                      // leave with the colour draft unsaved
 )
 
 // confirmPopup is the message class (§6.1): a short question with one yes

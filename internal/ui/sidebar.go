@@ -6,30 +6,31 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Panel [1] (ui.md §1.1): two groups. Savers lists every instance, the
-// active one with a green dot — the sidebar's only green. Settings is two
-// rows, config and style. The group labels are separators, not stops.
+// Panel [1] (ui.md §1.1): two groups, Savers and Settings, their titles in
+// blue, one under the other with no gap (user, 2026-09-24). Every saver is
+// a row; the active one — the one preference › saver names — carries a
+// green dot, and the dot is all it is: it shows, it does not set. Settings
+// is one row, preference. The group titles are not stops.
 
 type sideKind int
 
 const (
 	sideSaver sideKind = iota
-	sideConfig
-	sideStyle
+	sidePreference
 )
 
-// sideItem is one stop of the cursor: a saver (by index) or a settings row.
+// sideItem is one stop of the cursor: a saver (by index) or preference.
 type sideItem struct {
 	kind  sideKind
 	saver int
 }
 
 func (m AppModel) sideItems() []sideItem {
-	items := make([]sideItem, 0, len(m.cfg.Savers)+2)
+	items := make([]sideItem, 0, len(m.cfg.Savers)+1)
 	for i := range m.cfg.Savers {
 		items = append(items, sideItem{kind: sideSaver, saver: i})
 	}
-	return append(items, sideItem{kind: sideConfig}, sideItem{kind: sideStyle})
+	return append(items, sideItem{kind: sidePreference})
 }
 
 // sideAt is the item under the cursor.
@@ -38,8 +39,7 @@ func (m AppModel) sideAt() sideItem {
 	return items[clamp(m.cur1, 0, len(items)-1)]
 }
 
-// sideLine is one display row: an item's index, or -1 for a label or a
-// blank.
+// sideLine is one display row: an item's index, or -1 for a group title.
 type sideLine struct {
 	text string
 	item int
@@ -55,10 +55,8 @@ func (m AppModel) sideLines() []sideLine {
 		}
 		out = append(out, sideLine{text: mark + s.Name, item: i})
 	}
-	out = append(out, sideLine{item: -1})
 	out = append(out, sideLine{text: "Settings", item: -1})
-	out = append(out, sideLine{text: "  config", item: len(m.cfg.Savers)})
-	out = append(out, sideLine{text: "  style", item: len(m.cfg.Savers) + 1})
+	out = append(out, sideLine{text: "  preference", item: len(m.cfg.Savers)})
 	return out
 }
 
@@ -77,7 +75,7 @@ func (m AppModel) sidebarBody(innerW, innerH int) []string {
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(handColor)
 	curOff := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(borderDim)
 	txt := lipgloss.NewStyle().Foreground(textColor)
-	dim := lipgloss.NewStyle().Foreground(dimColor)
+	title := lipgloss.NewStyle().Foreground(focusColor)
 	live := lipgloss.NewStyle().Foreground(liveColor)
 
 	out := make([]string, 0, innerH)
@@ -85,7 +83,7 @@ func (m AppModel) sidebarBody(innerW, innerH int) []string {
 		l := lines[i]
 		switch {
 		case l.item < 0:
-			out = append(out, dim.Render(padRight(" "+l.text, innerW)))
+			out = append(out, title.Render(padRight(" "+l.text, innerW)))
 		case l.item == m.cur1 && m.focus == panelSide:
 			out = append(out, cur.Render(padRight(" "+l.text, innerW)))
 		case l.item == m.cur1:

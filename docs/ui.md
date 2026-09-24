@@ -18,24 +18,31 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ### 1.1 設定畫面 grid
 
 ```
-╔ [1] locku ═════════════╗╭ [2] style ───────────────────────────────────────╮
-║ Savers                 ║│ bg    ■■ #313244                                 │
-║ ● clock                ║│   R   ──●───────── 49                            │
-║   clock2               ║│   G   ──●───────── 50                            │
-║                        ║│   B   ───●──────── 68                            │
-║                        ║│ fg    ■■ #f2b753                                 │
-║ Settings               ║│   R   ──────────●─ 242                           │
-║   config               ║│   G   ────────●─── 183                           │
-║   style                ║│   B   ────●─────── 83                            │
+╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
+║ Savers                 ║│ name              clock                          │
+║ ● clock                ║│ type              clock                          │
+║   clock2               ║│ layout            row                            │
+║ Settings               ║│ time              HH:MM                          │
+║   preference           ║│ date              off                            │
+║                        ║│ bg                ■ #313244  →  ■ #ff3244        │
+║                        ║│   R               ───────────● 255               │
+║                        ║│   G               ──●───────── 50                │
+║                        ║│   B               ───●──────── 68                │
+║                        ║│ fg                ■ #f2b753                      │
+║                        ║│   R               ──────────●─ 242               │
+║                        ║│   G               ────────●─── 183               │
+║                        ║│   B               ────●─────── 83                │
 ╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
-左 `[1]` 側欄兩個區塊：**Savers** 列出所有 saver 實例，**Settings** 兩項：`config` 與 `style`。區塊標題是
-分隔，不可停；cursor 只在項目之間走。啟用中的 saver 前面一顆 Green `●`，是側欄唯一的綠色。
+左 `[1]` 側欄兩個區塊：**Savers** 列出所有 saver 實例，**Settings** 一項：`preference`。區塊標題 Blue、是
+分隔，不可停，區塊之間不空列（修訂 2026-09-24）；cursor 只在項目之間走。啟用中的 saver 前面一顆 Green `●`，
+是側欄唯一的綠色；它只顯示，設為啟用在 `preference › saver`。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上就是那個 saver
-的欄位；在 `config` 上是一般設定的列，在 `style` 上是兩個顏色。title chip 跟著換成 `[2] clock`、`[2] config`、`[2] style`。
+的欄位與顏色；在 `preference` 上是一般設定的列。title chip 跟著換成 `[2] clock`、`[2] preference`；saver 的顏色草稿
+未存時尾綴 ` · unsaved`。
 
 `[2]` 在 saver 上：
 
@@ -43,38 +50,37 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
 | type | `clock` | 唯讀，dim；v1 只有這一個 type |
+| layout | `row` / `column` | options popup，cursor 在目前值 |
 | time | `HH:MM` / `HH:MM AM/PM` / `HH:MM:SS` / `HH:MM:SS AM/PM` | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列 |
+| bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
+| R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值 | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 
-`[2]` 在 `config` 上：
+顏色走**草稿**（修訂 2026-09-24，使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
+panel operation `[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走（rename 帶走、delete 一起丟）。
+`P` / `p` 預覽帶著草稿。其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
+
+`[2]` 在 `preference` 上：
 
 | 列 | 值的呈現 | Enter |
 |---|---|---|
 | PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：更改流程。清除走 Space menu |
+| saver | 啟用中的 saver 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 saver、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
 | show_status | `on` / `off` | 原地翻轉，不開 popup |
 | prompt_timeout | 數字 | input popup，型別 `number` |
 | lockout_after | 數字，0 顯示 `0 (off)` | 同上 |
 | lockout_seconds | 數字 | 同上 |
 
-`[2]` 在 `style` 上，兩組各四列：
-
-| 列 | 值的呈現 | Enter |
-|---|---|---|
-| bg / fg | 兩格該色的 glyph 當色票 + hex，唯讀，隨下面三列即時變 | 不可停 |
-| R / G / B | webu 的 slider 列：12 格軌道 + 目前值 | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字） |
-
-改一個 channel 就立即寫檔，config 存 hex。手改 config 的非法 hex 視同預設。
-
-`saver` 與 `savers` 兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
-每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
+`savers` 這個 key 不成列：它就是 `[1]` 本身。其餘每個 config key 一定有一列。
+除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
 
 ### 1.2 鎖定畫布 grid
 
 ```
 □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □
 □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □ □
-□ □ □ □ □ ■ □ □ ■ ■ ■ □ □ □ □ ■ ■ ■ □ □ ■ □ ■ □ □ □ □ □ □ □ □ □   ← 亮格 style.fg，預設 gold
-□ □ □ □ ■ ■ □ □ □ □ ■ □ ■ □ □ □ □ ■ □ □ ■ □ ■ □ □ □ □ □ □ □ □ □     暗格 style.bg，預設 surface0
+□ □ □ □ □ ■ □ □ ■ ■ ■ □ □ □ □ ■ ■ ■ □ □ ■ □ ■ □ □ □ □ □ □ □ □ □   ← 亮格 saver 的 fg，預設 gold
+□ □ □ □ ■ ■ □ □ □ □ ■ □ ■ □ □ □ □ ■ □ □ ■ □ ■ □ □ □ □ □ □ □ □ □     暗格 saver 的 bg，預設 surface0
 □ □ □ □ □ ■ □ □ ■ ■ ■ □ □ □ □ ■ ■ ■ □ □ ■ ■ ■ □ □ □ □ □ □ □ □ □     每格 = nf-fa-square + 空格
 □ □ □ □ □ ■ □ □ ■ □ □ □ ■ □ □ □ □ ■ □ □ □ □ ■ □ □ □ □ □ □ □ □ □
 □ □ □ □ □ ■ □ □ ■ ■ ■ □ □ □ □ ■ ■ ■ □ □ □ □ ■ □ □ □ □ □ □ □ □ □
@@ -83,16 +89,17 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
  vulcan@prod-db-01 · locked since 13:58                           ← 狀態列，一般文字
 ```
 
-整個終端機是一塊 LED 點陣板：狀態列以外的每一格都是 nf-fa-square 加空格，沒亮的用 style.bg，亮的用
-style.fg，字由亮格組出來。沒有邊框、沒有 title chip、沒有 footer。footer 在這裡沒有意義：唯一的動作是
-「按任何鍵」，不需要揭露。**只有一種畫法**：saver 給幾行 ASCII，渲染器（`function.md` §5.3）選最大
-的整數倍 k 讓它塞進格數，置中。splash 底下的名字、版本、開發者都不出現，只取它的 glyph 畫法。
+整個終端機是一塊 LED 點陣板：狀態列以外的每一格都是 nf-fa-square 加空格，沒亮的用 saver 的 bg，亮的用
+它的 fg，字由亮格組出來。沒有邊框、沒有 title chip、沒有 footer。footer 在這裡沒有意義：唯一的動作是
+「按任何鍵」，不需要揭露。**只有一種畫法**：saver 給幾行 ASCII（row 一到兩行，column 依分隔符拆行），渲染器
+（`function.md` §5.3）選最大的整數倍 kx 讓它塞進格數、列數允許時把像素拉高到 ky ≤ 1.5 kx，置中。
+splash 底下的名字、版本、開發者都不出現，只取它的 glyph 畫法。
 
 | 元素 | 位置 | 規則 |
 |---|---|---|
 | 點陣板 | 狀態列以外全部 | 每格一個 glyph 加空格；終端機寬為奇數時最右一欄留白 |
-| 暗格 | 沒亮的格 | style.bg，預設 surface0 |
-| 內容 | 點陣板置中 | 亮格 style.fg，預設 gold；k < 1 時點陣板照鋪，內容改用一般文字以 fg 色置中疊在板上 |
+| 暗格 | 沒亮的格 | saver 的 bg，預設 surface0 |
+| 內容 | 點陣板置中 | 亮格 saver 的 fg，預設 gold；kx < 1 時點陣板照鋪，內容改用一般文字以 fg 色置中疊在板上 |
 | 狀態列 | 最後一列，左起 1 欄 | `user@host · locked since HH:MM`；`show_status: false` 時整列空白 |
 | 無 PIN 提示 | 狀態列右側接續 | `· no PIN · any key unlocks`，Yellow，不受 show_status 影響 |
 | config 錯誤 | 同上 | `· config error: <reason>`，Red，取代無 PIN 提示 |
@@ -117,14 +124,14 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 ### 2.1 `[1]` 側欄
 
-- Savers：Enter = 設為啟用（`●` 移過去、config `saver` 立即寫檔），與 webu `[1]` Tabs 的 Enter
-  切換同一個語意。duplicate / rename / delete 在 Space menu 的 item region。
-- Settings › config：Enter 只是把焦點送到 `[2]`。
-- **Preview**（全螢幕試鎖）是全域動作，走 `?` 與大寫鍵 `P`，不佔列。理由：它作用於整個 app 而非 `[1]` 的
-  某一項，VTP 把這類動作放 non-contextual track（2026-09-24）。整合設定不在 TUI 裡，是 `locku setup`。
+- 每一列的 Enter 都只是把焦點送到 `[2]`，saver 也一樣（修訂 2026-09-24，原為 saver 上 Enter = 設為啟用；
+  設為啟用改在 `preference › saver`，`●` 純顯示）。preview / duplicate / rename / delete 在 Space menu 的
+  item region。
+- **Preview** 有兩個入口：全域 `P` 看啟用中的 saver（`?` 揭露）；側欄 saver 上的 `[p] Preview` 看游標那一個，
+  不改啟用（修訂 2026-09-24）。整合設定不在 TUI 裡，是 `locku setup`。
 
-**Preview**：一個動作，整個 TUI 被鎖定畫布取代，就像桌面螢幕保護程式的預覽。同一個進程、用目前 config
-（全部已落盤），解鎖後回到設定畫面、焦點與 cursor 不變。無 PIN 時任意鍵就回來。
+**Preview**：一個動作，整個 TUI 被鎖定畫布取代，就像桌面螢幕保護程式的預覽。同一個進程、用記憶體內的 config
+加上顏色草稿，解鎖後回到設定畫面、焦點與 cursor 不變。無 PIN 時任意鍵就回來。
 
 
 ### 2.2 `[2]` 明細
@@ -147,12 +154,13 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| Space menu | menu | `[1]` saver 的 item region；`[2]` 欄位的 item region；只有一個 region 就扁平 |
+| Space menu | menu | `[1]` saver 的 item region；`[2]` 欄位的 item region；`[2]` 在 saver 上另有 panel region（Save / Reset）— 兩個 region 各有 header，只有一個就扁平 |
 | `?` help | viewport | 全域動作表 |
 | input | input | **邊框寫型別**（`name`、`number`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；輸入顯示 `●` |
-| confirm | message | Delete saver、Clear PIN |
-| toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個） |
+| options | menu | layout / time / date / saver 的清單；R G B 的 0–255 清單 10 列一窗 |
+| confirm | message | Delete saver、Clear PIN、Quit（有未存的顏色草稿時） |
+| toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
 
 duplicate 是 `name` input popup：提議值是原名加 `2`，確認後複製參數並把 cursor 移到新實例。
 PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → `new PIN` → `confirm PIN`），一次只問一件事，
@@ -188,17 +196,17 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → `new PIN
 
 ## §4 色帶
 
-錨點 catppuccin-mocha，與家族相同。點陣板的兩色是**使用者資料**（Settings › style），不屬於 app 色帶，預設值取 splash。
+錨點 catppuccin-mocha，與家族相同。點陣板的兩色是**使用者資料**（每個 saver 的 bg / fg），不屬於 app 色帶，預設值取 splash。
 
 | 色帶 | 意思 | 值 |
 |---|---|---|
-| Blue | focus：焦點面板邊框 | `#89b4fa` |
+| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24） | `#89b4fa` |
 | Surface2 | unfocused 面板邊框；PIN prompt 開啟時亮格的 backdrop 色 | `#585b70` |
 | Green | 使用者足跡：啟用中的 saver `●`、PIN `set`、toggle `on` | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
-| style.fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
-| style.bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
-| Overlay0 | 狀態列、hint、唯讀的 type 列、區塊標題 | `#6c7086` |
+| saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
+| saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
+| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列 | `#6c7086` |
 | Yellow（warn） | `not set`、`no PIN · any key unlocks` | override |
 | Red（error） | PIN wrong、lockout、`· invalid`、`· taken`、`config error` | override |
 | popup layer scale | 浮層邊框，最多兩層 | VTP §2.5 |
@@ -212,7 +220,7 @@ Blue 不出現在那裡。
 
 | 件 | 設定畫面 | 鎖定畫布 |
 |---|---|---|
-| Border title chip | `[1] locku`、`[2] <saver name>` / `[2] config` / `[2] style` | 無 |
+| Border title chip | `[1] locku`、`[2] <saver name>`（顏色草稿未存時 ` · unsaved`）/ `[2] preference` | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | `[2]` 下框右側：config 路徑 | 無 |
 | footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |

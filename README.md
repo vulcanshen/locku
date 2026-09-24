@@ -13,7 +13,7 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：PIN、saver、show_status、prompt_timeout、lockout、點陣板顏色。每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
+| `locku` | 設定 TUI：每個 saver 的 layout / time / date 與 bg / fg 顏色，preference 的 PIN、啟用中的 saver、show_status、prompt_timeout、lockout。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku setup [tmux\|screen]` | 把整合設定寫進 `~/.tmux.conf`（有 server 在跑就即時套用）與 `~/.screenrc` 加 shell rc；不帶參數兩個都做。只碰 `# >>> locku >>>` … `# <<< locku <<<` 受管區塊，冪等 |
 | `locku version` | 版本 |
@@ -47,20 +47,24 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ## 設定畫面
 
 ```
-╔ [1] locku ═════════════╗╭ [2] style ───────────────────────────────────────╮
-║ Savers                 ║│ bg    ■■ #313244                                 │
-║ ● clock                ║│   R   ──●───────── 49                            │
-║   clock2               ║│   G   ──●───────── 50                            │
-║                        ║│   B   ───●──────── 68                            │
-║ Settings               ║│ fg    ■■ #f2b753                                 │
-║   config               ║│   R   ──────────●─ 242                           │
-║   style                ║│   G   ────────●─── 183                           │
+╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
+║ Savers                 ║│ name              clock                          │
+║ ● clock                ║│ type              clock                          │
+║   clock2               ║│ layout            row                            │
+║ Settings               ║│ time              HH:MM                          │
+║   preference           ║│ date              off                            │
+║                        ║│ bg                ■ #313244  →  ■ #ff3244        │
+║                        ║│   R               ───────────● 255               │
+║                        ║│   G               ──●───────── 50                │
+║                        ║│   B               ───●──────── 68                │
+║                        ║│ fg                ■ #f2b753                      │
 ╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
-`Tab` / `1` / `2` 切面板、`Enter` 設為啟用或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
-`[1]` 的 saver：`c` duplicate、`r` rename、`x` delete；`[2]` 的 PIN 列：`x` clear。`P` 預覽、`q` 離開。
+`Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
+`[1]` 的 saver：`p` 預覽這個 saver、`D` duplicate、`r` rename、`X` delete；`[2]` saver 上：`S` 存顏色草稿、`R` 丟掉；
+`[2]` preference 的 PIN 列：`x` clear。啟用哪個 saver在 preference › saver 選，側欄的 `●` 只顯示。`P` 預覽、`q` 離開。
 
 ## 文件
 
@@ -78,9 +82,9 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是具名實例，v1 只有 clock 一個 type。** time 四選一（24 / 12 時制 × 有無秒）、date off 或四選一；沒有任何自由輸入；可 duplicate / rename / delete。
-- **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 style.bg、亮格 style.fg，5 × 7 點陣字依格數整數倍放大；塞不下依序去年 → 去秒 → 去日期 → 一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
-- **顏色在 Settings › style**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字。
+- **saver 是具名實例，v1 只有 clock 一個 type。** layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、time 四選一（24 / 12 時制 × 有無秒）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg，5 × 7 點陣字依格數整數倍放大，列數允許時縱向拉高到 1.5 倍；塞不下依序去年 → 去秒 → 去日期 → 一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
+- **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿改草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。
 - **screen 的 LOCKPRG 只能走 shell 環境**（2026-09-24 實測）：`.screenrc` 的 `setenv` 對 lock 無效，因為 lock 是 attacher 呼叫 `getenv`，`.screenrc` 只有後端讀。`locku setup screen` 因此寫 `~/.zshrc` / `~/.bashrc` / fish 的受管區塊，新開 shell 生效；已在跑的 session detach 後從新 shell `screen -r` 即可。
 - **Enter = 設為啟用 / 編輯 / 送出，Esc 只做取消，`x` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。
 
@@ -88,7 +92,8 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死、PAM / shadow 進 v1、自由文字 saver、strftime 自由格式、
 第二套 3 × 5 字型、跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
-`locku init`、只印不寫的 setup、`.screenrc setenv LOCKPRG`（實測不通）。
+`locku init`、只印不寫的 setup、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
+側欄 Enter 設為啟用（改在 preference › saver 選）。
 
 ## 目錄
 
@@ -97,7 +102,7 @@ locku/
 ├── cmd/locku/          進入點：lock / setup / version / 設定 TUI；argv[0] SCREEN-LOCK
 ├── internal/
 │   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN
-│   ├── saver/          內容：clock 的四種 time × 五種 date、tick、退階梯
+│   ├── saver/          內容：clock 的四種 time × 五種 date × row / column、tick、退階梯
 │   ├── setup/          受管區塊寫入：tmux.conf、screenrc、shell rc
 │   └── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
 └── docs/               function.md、ui.md、ux.md

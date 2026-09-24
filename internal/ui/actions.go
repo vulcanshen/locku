@@ -11,74 +11,89 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// action is one thing the user can do to what the cursor is on. The Space
-// menu lists actions and the letter hotkeys dispatch them, from ONE table,
-// so a letter hotkey that is not a menu row cannot exist (§4.2) — and a
-// row that is disabled still answers, with why.
+// action is one thing the user can do to what the cursor is on, or to the
+// panel. The Space menu lists actions and the letter hotkeys dispatch
+// them, from ONE table, so a letter hotkey that is not a menu row cannot
+// exist (§4.2) — and a row that is disabled still answers, with why.
 type action struct {
 	key      string // "enter" for the core-key action, or one letter
 	label    string
 	hint     string
 	disabled bool
-	run      func(*AppModel) tea.Cmd
+	// panelOp: the action is about the panel, not the row — the menu's
+	// second region (VTP §A.1.1).
+	panelOp bool
+	run     func(*AppModel) tea.Cmd
 }
 
 // actions is the table for the current focus and cursor (ux.md §A.1).
 func (m AppModel) actions() []action {
 	if m.focus == panelSide {
+		// Enter on any row of [1] is the same thing: over to [2], where
+		// the row's fields are (user, 2026-09-24). The active saver is set
+		// on preference › saver, not here; the dot only shows.
+		edit := action{key: "enter", label: "[Enter] Edit", hint: "its rows, in [2]",
+			run: func(a *AppModel) tea.Cmd { a.focus = panelDetail; return nil }}
 		it := m.sideAt()
 		if it.kind != sideSaver {
-			return []action{{key: "enter", label: "[Enter] Edit", hint: "its rows, in [2]",
-				run: func(a *AppModel) tea.Cmd { a.focus = panelDetail; return nil }}}
+			return []action{edit}
 		}
-		s := m.cfg.Savers[it.saver]
-		active := s.Name == m.cfg.Saver
-		del := action{key: "x", label: "Delete", hint: "this saver", run: (*AppModel).deleteSaver}
+		del := action{key: "X", label: "Delete", hint: "this saver", run: (*AppModel).deleteSaver}
 		switch {
 		case len(m.cfg.Savers) == 1:
 			del.disabled, del.hint = true, "cannot delete: last one"
-		case active:
+		case m.cfg.Savers[it.saver].Name == m.cfg.Saver:
 			del.disabled, del.hint = true, "cannot delete: active"
 		}
-		set := action{key: "enter", label: "[Enter] Set active", hint: "the lock shows this one", run: (*AppModel).setActive}
-		if active {
-			set.disabled, set.hint = true, "it is the active one"
-		}
 		return []action{
-			set,
-			{key: "c", label: "Duplicate", hint: "a copy, under a new name", run: (*AppModel).duplicateSaver},
+			edit,
+			{key: "p", label: "Preview", hint: "the lock, showing this saver", run: (*AppModel).previewSaver},
+			{key: "D", label: "Duplicate", hint: "a copy, under a new name", run: (*AppModel).duplicateSaver},
 			{key: "r", label: "Rename", hint: "this saver", run: (*AppModel).renameSaver},
 			del,
 		}
 	}
-	r := m.rowAt()
-	switch r.kind {
+	var out []action
+	switch r := m.rowAt(); r.kind {
 	case rowName:
-		return []action{{key: "enter", label: "[Enter] Rename", hint: "this saver", run: (*AppModel).renameSaver}}
+		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this saver", run: (*AppModel).renameSaver})
+	case rowLayout:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "a row, or a column of parts", run: (*AppModel).chooseLayout})
 	case rowTime:
-		return []action{{key: "enter", label: "[Enter] Choose", hint: "one of four shapes", run: (*AppModel).chooseTime}}
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one of four shapes", run: (*AppModel).chooseTime})
 	case rowDate:
-		return []action{{key: "enter", label: "[Enter] Choose", hint: "off, or one of four shapes", run: (*AppModel).chooseDate}}
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "off, or one of four shapes", run: (*AppModel).chooseDate})
+	case rowChannel:
+		out = append(out, action{key: "enter", label: "[Enter] Pick", hint: "0 to 255, into the draft", run: (*AppModel).pickChannel})
 	case rowPIN:
 		if !m.cfg.HasPIN() {
-			return []action{{key: "enter", label: "[Enter] Set PIN", hint: "the lock will ask for it", run: (*AppModel).setPIN}}
+			out = append(out, action{key: "enter", label: "[Enter] Set PIN", hint: "the lock will ask for it", run: (*AppModel).setPIN})
+		} else {
+			out = append(out,
+				action{key: "enter", label: "[Enter] Change PIN", hint: "after the current one", run: (*AppModel).changePIN},
+				action{key: "x", label: "Clear PIN", hint: "back to: any key unlocks", run: (*AppModel).clearPIN})
 		}
-		return []action{
-			{key: "enter", label: "[Enter] Change PIN", hint: "after the current one", run: (*AppModel).changePIN},
-			{key: "x", label: "Clear PIN", hint: "back to: any key unlocks", run: (*AppModel).clearPIN},
-		}
+	case rowSaver:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "the saver the lock shows", run: (*AppModel).chooseSaver})
 	case rowShowStatus:
-		return []action{{key: "enter", label: "[Enter] Toggle", hint: "user@host and the time, on the lock", run: (*AppModel).toggleStatus}}
+		out = append(out, action{key: "enter", label: "[Enter] Toggle", hint: "user@host and the time, on the lock", run: (*AppModel).toggleStatus})
 	case rowPromptTimeout:
-		return []action{{key: "enter", label: "[Enter] Edit", hint: "seconds until the prompt closes; 0 never", run: (*AppModel).editNumber}}
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "seconds until the prompt closes; 0 never", run: (*AppModel).editNumber})
 	case rowLockoutAfter:
-		return []action{{key: "enter", label: "[Enter] Edit", hint: "wrong PINs before a cooldown; 0 off", run: (*AppModel).editNumber}}
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "wrong PINs before a cooldown; 0 off", run: (*AppModel).editNumber})
 	case rowLockoutSeconds:
-		return []action{{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber}}
-	case rowChannel:
-		return []action{{key: "enter", label: "[Enter] Pick", hint: "0 to 255", run: (*AppModel).pickChannel}}
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	}
-	return nil
+	if it := m.sideAt(); it.kind == sideSaver {
+		save := action{key: "S", label: "Save", hint: "write the colour draft to config.yaml", panelOp: true, run: (*AppModel).saveColours}
+		reset := action{key: "R", label: "Reset", hint: "drop the draft: the saved colours again", panelOp: true, run: (*AppModel).resetColours}
+		if !m.dirtyOf(m.cfg.Savers[it.saver]) {
+			save.disabled, save.hint = true, "nothing to save"
+			reset.disabled, reset.hint = true, "nothing changed"
+		}
+		out = append(out, save, reset)
+	}
+	return out
 }
 
 // dispatch runs the action bound to key, or says why it cannot.
@@ -103,9 +118,9 @@ func (m AppModel) snapshot() config.Config {
 	return before
 }
 
-// save writes config.yaml now — every change is saved the moment it is
-// made (ui.md §1.1) — and, when the write fails, puts the config back as
-// it was and says so.
+// save writes config.yaml now — every change but the colours is saved the
+// moment it is made (ui.md §1.1) — and, when the write fails, puts the
+// config back as it was and says so.
 func (m *AppModel) save(before config.Config) tea.Cmd {
 	if err := config.Save(m.cfg); err != nil {
 		m.cfg = before
@@ -115,12 +130,26 @@ func (m *AppModel) save(before config.Config) tea.Cmd {
 	return nil
 }
 
+// previewCfg is the config a preview runs on: the file's, with every
+// colour draft in place of the saved colours — a draft is what a preview
+// is for.
+func (m AppModel) previewCfg() config.Config {
+	cfg := m.snapshot()
+	for i, s := range cfg.Savers {
+		d := m.draftOf(s)
+		cfg.Savers[i].BG, cfg.Savers[i].FG = d.BG, d.FG
+	}
+	return cfg
+}
+
 // ---- panel [1]
 
-func (m *AppModel) setActive() tea.Cmd {
-	before := m.snapshot()
-	m.cfg.Saver = m.cfg.Savers[m.sideAt().saver].Name
-	return m.save(before)
+// previewSaver is [p] on a saver: the lock as it would look with THIS one
+// active, whether or not it is (user, 2026-09-24).
+func (m *AppModel) previewSaver() tea.Cmd {
+	cfg := m.previewCfg()
+	cfg.Saver = m.cfg.Savers[m.sideAt().saver].Name
+	return m.startPreview(cfg)
 }
 
 func (m *AppModel) duplicateSaver() tea.Cmd {
@@ -130,11 +159,7 @@ func (m *AppModel) duplicateSaver() tea.Cmd {
 }
 
 func (m *AppModel) renameSaver() tea.Cmd {
-	if m.focus == panelSide {
-		m.editRef = m.sideAt().saver
-	} else {
-		m.editRef = m.sideAt().saver
-	}
+	m.editRef = m.sideAt().saver
 	return m.input.ask(inputPopup{title: "name", prompt: "name",
 		value: m.cfg.Savers[m.editRef].Name, accept: "rename", action: inputRename}, m.layer())
 }
@@ -148,6 +173,11 @@ func (m *AppModel) deleteSaver() tea.Cmd {
 
 // ---- panel [2]
 
+func (m *AppModel) chooseLayout() tea.Cmd {
+	s := m.cfg.Savers[m.sideAt().saver]
+	return m.openOptions("layout", saver.Layouts, s.Layout, 0)
+}
+
 func (m *AppModel) chooseTime() tea.Cmd {
 	s := m.cfg.Savers[m.sideAt().saver]
 	return m.openOptions("time", saver.TimeFormats, s.Time, 0)
@@ -156,6 +186,14 @@ func (m *AppModel) chooseTime() tea.Cmd {
 func (m *AppModel) chooseDate() tea.Cmd {
 	s := m.cfg.Savers[m.sideAt().saver]
 	return m.openOptions("date", saver.DateFormats, s.Date, 0)
+}
+
+func (m *AppModel) chooseSaver() tea.Cmd {
+	names := make([]string, len(m.cfg.Savers))
+	for i, s := range m.cfg.Savers {
+		names[i] = s.Name
+	}
+	return m.openOptions("saver", names, m.cfg.Saver, 0)
 }
 
 func (m *AppModel) pickChannel() tea.Cmd {
@@ -187,30 +225,60 @@ func (m *AppModel) openOptions(title string, values []string, current string, ro
 	return m.options.open()
 }
 
-// commitOptions is a value chosen from the options list.
+// commitOptions is a value chosen from the options list. A colour channel
+// goes into the saver's draft; everything else goes into the file at once.
 func (m *AppModel) commitOptions(key string) tea.Cmd {
 	v := strings.TrimPrefix(key, "v:")
 	before := m.snapshot()
 	switch r := m.optionsFor; r.kind {
+	case rowLayout:
+		m.cfg.Savers[m.sideAt().saver].Layout = v
 	case rowTime:
 		m.cfg.Savers[m.sideAt().saver].Time = v
 	case rowDate:
 		m.cfg.Savers[m.sideAt().saver].Date = v
+	case rowSaver:
+		m.cfg.Saver = v
 	case rowChannel:
 		n, err := strconv.Atoi(v)
 		if err != nil {
 			return m.options.close()
 		}
-		hex := &m.cfg.Style.BG
+		s := m.cfg.Savers[m.sideAt().saver]
+		d := m.draftOf(s)
+		hex := &d.BG
 		if r.which == 1 {
-			hex = &m.cfg.Style.FG
+			hex = &d.FG
 		}
 		c := [3]int{}
 		c[0], c[1], c[2] = config.RGB(*hex)
 		c[r.ch] = n
 		*hex = config.Hex(c[0], c[1], c[2])
+		m.drafts[s.Name] = d
+		return m.options.close()
+	default:
+		return m.options.close()
 	}
 	return tea.Batch(m.options.close(), m.save(before))
+}
+
+// saveColours is [S] on a saver: its draft becomes the file's.
+func (m *AppModel) saveColours() tea.Cmd {
+	before := m.snapshot()
+	i := m.sideAt().saver
+	d := m.draftOf(m.cfg.Savers[i])
+	m.cfg.Savers[i].BG, m.cfg.Savers[i].FG = d.BG, d.FG
+	cmd := m.save(before)
+	if m.cfg.Savers[i].Colours() == d {
+		delete(m.drafts, m.cfg.Savers[i].Name)
+	}
+	return cmd
+}
+
+// resetColours is [R]: the draft goes, and the file's colours show again.
+func (m *AppModel) resetColours() tea.Cmd {
+	delete(m.drafts, m.cfg.Savers[m.sideAt().saver].Name)
+	return nil
 }
 
 func (m *AppModel) toggleStatus() tea.Cmd {
@@ -277,6 +345,11 @@ func (m *AppModel) commitInput() tea.Cmd {
 			m.cfg.Savers[m.editRef].Name = name
 			if m.cfg.Saver == old {
 				m.cfg.Saver = name
+			}
+			// The draft follows the name.
+			if d, ok := m.drafts[old]; ok {
+				delete(m.drafts, old)
+				m.drafts[name] = d
 			}
 		} else {
 			s := m.cfg.Savers[m.editRef]
@@ -362,12 +435,15 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 		if c.ref < 0 || c.ref >= len(m.cfg.Savers) {
 			break
 		}
+		delete(m.drafts, m.cfg.Savers[c.ref].Name)
 		m.cfg.Savers = slices.Delete(m.cfg.Savers, c.ref, c.ref+1)
 		// The cursor stays among the savers: the next one, or the new last.
 		m.cur1 = min(c.ref, len(m.cfg.Savers)-1)
 		m.cur2 = 0
 	case confirmClearPIN:
 		m.cfg.ClearPIN()
+	case confirmQuit:
+		return tea.Quit
 	}
 	return tea.Batch(m.confirm.close(), m.menu.close(), m.save(before))
 }

@@ -22,13 +22,21 @@ const (
 	DateYMonD = "YYYY-MMM-DD"
 	DateMD    = "MM-DD"
 	DateMonD  = "MMM-DD"
+
+	// LayoutRow is the time on one line and the date on the next;
+	// LayoutColumn breaks each at its separators — HH over MM over SS,
+	// then the date's parts — so the lines are two or four characters and
+	// the digits come out several times bigger (user, 2026-09-24).
+	LayoutRow    = "row"
+	LayoutColumn = "column"
 )
 
-// TimeFormats and DateFormats are the options in the order the settings
-// screen lists them.
+// TimeFormats, DateFormats and Layouts are the options in the order the
+// settings screen lists them.
 var (
 	TimeFormats = []string{TimeHM, TimeHM12, TimeHMS, TimeHMS12}
 	DateFormats = []string{DateOff, DateYMD, DateYMonD, DateMD, DateMonD}
+	Layouts     = []string{LayoutRow, LayoutColumn}
 )
 
 var timeLayout = map[string]string{
@@ -47,7 +55,8 @@ var dateLayout = map[string]string{
 
 // Saver is what the canvas asks of any saver type.
 type Saver interface {
-	// Lines is the content at now: one line, or two when a date is shown.
+	// Lines is the content at now: the time, then the date when one is
+	// shown, on one line each or broken into their parts.
 	Lines(now time.Time) []string
 	// Next is when the lines will next change, so the lock can sleep until
 	// then rather than poll (function.md §5.2 "tick").
@@ -58,16 +67,18 @@ type Saver interface {
 	Degrade() (Saver, bool)
 }
 
-// Clock is the one saver type: a time in one of four shapes, and a date
-// in one of four or none.
+// Clock is the one saver type: a time in one of four shapes, a date in
+// one of four or none, laid out in a row or a column.
 type Clock struct {
-	Time string
-	Date string
+	Time   string
+	Date   string
+	Layout string
 }
 
-// ValidTime and ValidDate say whether s is one of the shapes.
-func ValidTime(s string) bool { _, ok := timeLayout[s]; return ok }
-func ValidDate(s string) bool { return s == DateOff || dateLayout[s] != "" }
+// ValidTime, ValidDate and ValidLayout say whether s is one of the shapes.
+func ValidTime(s string) bool   { _, ok := timeLayout[s]; return ok }
+func ValidDate(s string) bool   { return s == DateOff || dateLayout[s] != "" }
+func ValidLayout(s string) bool { return s == LayoutRow || s == LayoutColumn }
 
 // Normalized is c with anything that is not a shape replaced by the
 // default: a hand-edited file is not a reason to draw nothing.
@@ -78,18 +89,35 @@ func (c Clock) Normalized() Clock {
 	if !ValidDate(c.Date) {
 		c.Date = DateOff
 	}
+	if !ValidLayout(c.Layout) {
+		c.Layout = LayoutRow
+	}
 	return c
 }
 
 // Lines is the time, then the date when one is shown. Month names are
-// upper case (JAN..DEC): the font has no lower case.
+// upper case (JAN..DEC): the font has no lower case. In a column the
+// separators go and each part is a line of its own.
 func (c Clock) Lines(now time.Time) []string {
 	c = c.Normalized()
-	lines := []string{now.Format(timeLayout[c.Time])}
+	var lines []string
+	add := func(s string) {
+		if c.Layout == LayoutColumn {
+			lines = append(lines, parts(s)...)
+			return
+		}
+		lines = append(lines, s)
+	}
+	add(now.Format(timeLayout[c.Time]))
 	if c.Date != DateOff {
-		lines = append(lines, strings.ToUpper(now.Format(dateLayout[c.Date])))
+		add(strings.ToUpper(now.Format(dateLayout[c.Date])))
 	}
 	return lines
+}
+
+// parts breaks "21:05:09", "09:05 PM" or "2026-SEP-24" at its separators.
+func parts(s string) []string {
+	return strings.FieldsFunc(s, func(r rune) bool { return r == ':' || r == ' ' || r == '-' })
 }
 
 // Seconds reports whether the time shape shows seconds.

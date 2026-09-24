@@ -24,11 +24,12 @@ type LockModel struct {
 	cfg     config.Config
 	problem string
 	clock   saver.Clock
+	style   config.Style // the active saver's colours
 	noPIN   bool
 
 	width, height int
 	lines         []string // what the board spells now
-	k             int      // its scale; 0 draws the lines as text
+	kx, ky        int      // its scale; kx 0 draws the lines as text
 	shown         board    // the board on screen
 	rev           *reveal  // the change in progress, if one is
 	tickGen       int      // a clock or reveal tick from before a change carries an older gen
@@ -75,7 +76,8 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	m := LockModel{
 		cfg:     cfg,
 		problem: problem,
-		clock:   saver.Clock{Time: s.Time, Date: s.Date}.Normalized(),
+		clock:   saver.Clock{Time: s.Time, Date: s.Date, Layout: s.Layout}.Normalized(),
+		style:   s.Colours(),
 		noPIN:   !cfg.HasPIN(),
 		prompt:  newPinPrompt(),
 		preview: preview,
@@ -270,8 +272,8 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 // board it makes, setting lines and k on the way.
 func (m *LockModel) refit() board {
 	rows := m.height - 1
-	m.lines, m.k = fit(m.clock, m.now(), m.width, rows)
-	return paint(m.lines, m.k, m.width, rows)
+	m.lines, m.kx, m.ky = fit(m.clock, m.now(), m.width, rows)
+	return paint(m.lines, m.kx, m.ky, m.width, rows)
 }
 
 // redraw moves the board to now: by a reveal when only some pixels change,
@@ -322,12 +324,12 @@ func (m LockModel) View() string {
 	if m.width <= 0 || m.height <= 0 {
 		return ""
 	}
-	bg, fg := lipgloss.Color(m.cfg.Style.BG), lipgloss.Color(m.cfg.Style.FG)
+	bg, fg := lipgloss.Color(m.style.BG), lipgloss.Color(m.style.FG)
 	dimmed := m.prompt.anim.isActive()
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
-		if m.k >= 1 {
+		if m.kx >= 1 {
 			out = boardRows(m.shown, bg, fg, m.width, dimmed)
 		} else {
 			out = plainRows(m.lines, bg, fg, m.width, rows, dimmed)

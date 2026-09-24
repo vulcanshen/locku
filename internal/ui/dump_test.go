@@ -21,15 +21,18 @@ func TestDump(t *testing.T) {
 	}
 	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
-	cfg.Savers = append(cfg.Savers, config.Saver{Name: "clock2", Type: "clock", Time: "HH:MM:SS", Date: "YYYY-MMM-DD"})
+	second := config.DefaultSaver()
+	second.Name, second.Time, second.Date = "clock2", "HH:MM:SS", "YYYY-MMM-DD"
+	cfg.Savers = append(cfg.Savers, second)
 	show := func(label string, v string) {
 		fmt.Printf("===== %s =====\n%s\n", label, v)
 	}
 	m := NewApp(cfg, "").size(100, 30)
 	show("settings 100x30, [1] on clock", m.View())
-	show("settings, [2] config", m.press("j", "j", "2").View())
-	show("settings, [2] style", m.press("G", "2").View())
+	show("settings, [2] preference", m.press("G", "2").View())
 	show("settings, space menu on clock2", m.press("j", " ").View())
+	show("settings, [2] clock with a colour draft", m.press("2", "G", "enter", "G", "enter").View())
+	show("settings, [2] clock menu with regions", m.press("2", " ").View())
 	show("settings, options on time", m.press("2", "j", "enter").View())
 	show("settings 50x18 narrow", m.size(50, 18).View())
 
@@ -49,8 +52,8 @@ func TestDump(t *testing.T) {
 		}
 		return sb.String()
 	}
-	show("board 120x40 k=2 21:05 as text", ascii(paint([]string{"21:05"}, 2, 120, 39)))
-	show("board 200x60 k=1 the whole font", ascii(paint([]string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1, 200, 59)))
+	show("board 120x40 2x3 21:05 as text", ascii(paint([]string{"21:05"}, 2, 3, 120, 39)))
+	show("board 200x60 1x1 the whole font", ascii(paint([]string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1, 1, 200, 59)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }

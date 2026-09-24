@@ -37,19 +37,23 @@ type helpEntry struct{ key, desc string }
 var helpContent = []helpEntry{
 	{"", "Core keys"},
 	{"Tab · 1-2", "next panel / this panel"},
-	{"Enter", "[1]: set the saver active; [2]: edit, choose, toggle, pick"},
+	{"Enter", "[1]: the row's fields, in [2]; [2]: edit, choose, toggle, pick"},
 	{"Esc", "close the top float"},
-	{"Space", "what can I do here: the item under the cursor"},
+	{"Space", "what can I do here: the item, and the panel"},
 	{"?", "this help"},
 	{"", "Global"},
-	{"P", "preview: the lock, with these settings; unlock to come back"},
-	{"q", "quit — everything is already saved"},
+	{"P", "preview: the lock with the active saver, colour drafts included; unlock to come back"},
+	{"q", "quit — asks first when colours are unsaved"},
 	{"Ctrl+C", "force quit"},
 	{"", "[1] Savers"},
-	{"c", "duplicate the saver under a new name"},
+	{"p", "preview the lock showing this saver"},
+	{"D", "duplicate it under a new name"},
 	{"r", "rename it"},
-	{"x", "delete it (not the active one, not the last one)"},
-	{"", "[2] config"},
+	{"X", "delete it (not the active one, not the last one)"},
+	{"", "[2] a saver"},
+	{"S", "save its colour draft to config.yaml"},
+	{"R", "reset the draft to the saved colours"},
+	{"", "[2] preference"},
 	{"x", "on the PIN row: clear the PIN, after the current one"},
 	{"", "Navigate"},
 	{"j · k", "next / previous row"},
@@ -72,7 +76,7 @@ func (m helpPopup) view() string {
 	for _, e := range helpContent {
 		keyW = max(keyW, dispW(e.key))
 	}
-	innerW := popupInnerW(m.screenW, keyW+58)
+	innerW := popupInnerW(m.screenW, keyW+64)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(handColor)

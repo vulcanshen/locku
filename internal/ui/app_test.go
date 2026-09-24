@@ -16,7 +16,9 @@ func newTestApp(t *testing.T) AppModel {
 	t.Helper()
 	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
-	cfg.Savers = append(cfg.Savers, config.Saver{Name: "clock2", Type: "clock", Time: "HH:MM:SS", Date: "YYYY-MM-DD"})
+	second := config.DefaultSaver()
+	second.Name, second.Time, second.Date = "clock2", "HH:MM:SS", "YYYY-MM-DD"
+	cfg.Savers = append(cfg.Savers, second)
 	m := NewApp(cfg, "")
 	return m.size(100, 30)
 }
@@ -87,23 +89,54 @@ func saved(t *testing.T) config.Config {
 	return cfg
 }
 
-func TestEnterOnASaverSetsItActiveAndWrites(t *testing.T) {
+// The saver detail's stops: name, layout, time, date, then bg R G B and
+// fg R G B — ten rows.
+const (
+	stopName = iota
+	stopLayout
+	stopTime
+	stopDate
+	stopBgR
+	stopBgG
+	stopBgB
+	stopFgR
+	stopFgG
+	stopFgB
+)
+
+func TestSidebarEnterOpensTheDetail(t *testing.T) {
 	m := newTestApp(t).press("j", "enter")
-	if m.cfg.Saver != "clock2" {
-		t.Fatalf("active %q", m.cfg.Saver)
+	if m.focus != panelDetail || m.cfg.Saver != "clock" {
+		t.Errorf("Enter on a saver: focus %d, active %q", m.focus, m.cfg.Saver)
 	}
-	if saved(t).Saver != "clock2" {
-		t.Error("not written")
+	m = m.press("1", "j", "enter") // preference
+	if m.focus != panelDetail || m.sideAt().kind != sidePreference {
+		t.Error("Enter on preference must go to [2]")
 	}
-	// The active one cannot be set active again: the row is disabled and
-	// pressing it says so.
-	m = m.press("enter")
-	if !m.toast.isActive() || !strings.Contains(m.toast.msg, "active") {
-		t.Error("expected the disabled row's reason as a toast")
+	if !strings.Contains(m.View(), "[2] preference") || strings.Contains(m.View(), "style") {
+		t.Errorf("preference, not config or style:\n%s", m.View())
 	}
 }
 
-func TestRenameFollowsTheActiveName(t *testing.T) {
+func TestPreferenceChoosesTheActiveSaver(t *testing.T) {
+	m := newTestApp(t).press("G", "2", "j") // preference › saver
+	if m.rowAt().kind != rowSaver {
+		t.Fatalf("row %v", m.rowAt().kind)
+	}
+	m = m.press("enter")
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "clock" {
+		t.Fatal("the options must open on the active saver")
+	}
+	m = m.press("j", "enter")
+	if m.cfg.Saver != "clock2" || saved(t).Saver != "clock2" {
+		t.Errorf("active %q", m.cfg.Saver)
+	}
+	if !strings.Contains(m.View(), "● clock2") {
+		t.Error("the dot did not move")
+	}
+}
+
+func TestRenameFollowsTheActiveNameAndTheDraft(t *testing.T) {
 	m := newTestApp(t).press("r")
 	if !m.input.isInteractive() || m.input.value != "clock" || m.input.title != "name" {
 		t.Fatalf("rename box: %+v", m.input)
@@ -123,10 +156,19 @@ func TestRenameFollowsTheActiveName(t *testing.T) {
 	if s := saved(t); s.Saver != "main" {
 		t.Error("not written")
 	}
+	// A colour draft follows the rename.
+	m = m.press("2").typed(strings.Repeat("j", stopBgR)).press("enter", "G", "enter")
+	if !m.dirtyOf(m.cfg.Savers[0]) {
+		t.Fatal("no draft")
+	}
+	m = m.press("1", "r", "ctrl+u").typed("renamed").press("enter")
+	if !m.dirtyOf(m.cfg.Savers[0]) || m.drafts["renamed"].BG != "#ff3244" {
+		t.Errorf("the draft did not follow the name: %v", m.drafts)
+	}
 }
 
 func TestDuplicateLandsOnTheCopy(t *testing.T) {
-	m := newTestApp(t).press("c")
+	m := newTestApp(t).press("D")
 	if m.input.value != "clock2" {
 		t.Fatalf("offer %q", m.input.value)
 	}
@@ -141,11 +183,11 @@ func TestDuplicateLandsOnTheCopy(t *testing.T) {
 }
 
 func TestDeleteRules(t *testing.T) {
-	m := newTestApp(t).press("x")
+	m := newTestApp(t).press("X")
 	if m.confirm.isActive() || !strings.Contains(m.toast.msg, "active") {
 		t.Fatal("the active saver must not be deletable")
 	}
-	m = m.press("esc", "j", "x")
+	m = m.press("esc", "j", "X")
 	if !m.confirm.isInteractive() {
 		t.Fatal("no confirm for a deletable saver")
 	}
@@ -153,14 +195,31 @@ func TestDeleteRules(t *testing.T) {
 	if len(m.cfg.Savers) != 1 || len(saved(t).Savers) != 1 {
 		t.Errorf("not deleted: %+v", m.cfg.Savers)
 	}
-	m = m.press("x")
+	m = m.press("X")
 	if !strings.Contains(m.toast.msg, "last") {
 		t.Error("the last saver must not be deletable")
 	}
 }
 
+func TestSidebarPreviewsThatSaver(t *testing.T) {
+	m := newTestApp(t).press("j", "p")
+	if m.preview == nil {
+		t.Fatal("p did not start a preview")
+	}
+	if m.preview.clock.Time != "HH:MM:SS" {
+		t.Errorf("the preview shows %q, not the saver under the cursor", m.preview.clock.Time)
+	}
+	if m.cfg.Saver != "clock" {
+		t.Error("previewing must not change the active saver")
+	}
+	m = m.press("x") // no PIN: any key unlocks
+	if m.preview != nil {
+		t.Error("the preview did not hand back")
+	}
+}
+
 func TestDetailChoosesAndToggles(t *testing.T) {
-	m := newTestApp(t).press("2", "j") // [2] on time (name, [type], time)
+	m := newTestApp(t).press("2", "j", "j") // [2] on time (name, [type], layout, time)
 	if m.rowAt().kind != rowTime {
 		t.Fatalf("row %v", m.rowAt().kind)
 	}
@@ -172,8 +231,17 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 	if m.cfg.Savers[0].Time != "HH:MM:SS" || saved(t).Savers[0].Time != "HH:MM:SS" {
 		t.Errorf("time %q", m.cfg.Savers[0].Time)
 	}
-	// config › show_status flips in place.
-	m = m.press("1", "j", "j", "2", "j", "enter")
+	// layout: a column.
+	m = m.press("k", "enter")
+	if !m.options.isInteractive() || m.options.items[m.options.cursor].label != "row" {
+		t.Fatal("layout options must open on row")
+	}
+	m = m.press("j", "enter")
+	if m.cfg.Savers[0].Layout != "column" || saved(t).Savers[0].Layout != "column" {
+		t.Errorf("layout %q", m.cfg.Savers[0].Layout)
+	}
+	// preference › show_status flips in place (PIN, saver, show_status).
+	m = m.press("1", "G", "2", "j", "j", "enter")
 	if m.cfg.ShowStatus || saved(t).ShowStatus {
 		t.Error("show_status did not toggle off")
 	}
@@ -197,7 +265,7 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 }
 
 func TestPINSetChangeClear(t *testing.T) {
-	m := newTestApp(t).press("1", "j", "j", "2") // config, PIN row
+	m := newTestApp(t).press("G", "2") // preference, PIN row
 	if m.rowAt().kind != rowPIN {
 		t.Fatal("not on the PIN row")
 	}
@@ -258,8 +326,8 @@ func TestPINSetChangeClear(t *testing.T) {
 	}
 }
 
-func TestChannelPick(t *testing.T) {
-	m := newTestApp(t).press("G", "2") // style; [2] on bg › R
+func TestColourDraftSaveReset(t *testing.T) {
+	m := newTestApp(t).press("2").typed(strings.Repeat("j", stopBgR)) // clock › bg › R
 	r := m.rowAt()
 	if r.kind != rowChannel || r.which != 0 || r.ch != 0 || r.num != 0x31 {
 		t.Fatalf("row %+v", r)
@@ -272,18 +340,70 @@ func TestChannelPick(t *testing.T) {
 		t.Errorf("cursor %d not in window at %d", m.options.cursor, m.options.top)
 	}
 	m = m.press("G", "enter")
-	if m.cfg.Style.BG != "#ff3244" || saved(t).Style.BG != "#ff3244" {
-		t.Errorf("bg %q", m.cfg.Style.BG)
+	// The draft moved; the file and the config did not.
+	clock := m.cfg.Savers[0]
+	if m.draftOf(clock).BG != "#ff3244" || clock.BG != config.DefaultBG || saved(t).Savers[0].BG != config.DefaultBG {
+		t.Errorf("draft %q cfg %q", m.draftOf(clock).BG, clock.BG)
 	}
-	// fg › B: the last stop.
-	m = m.press("G", "enter", "g", "g", "enter")
-	if m.cfg.Style.FG != "#f2b700" {
-		t.Errorf("fg %q", m.cfg.Style.FG)
+	if v := m.View(); !m.dirtyOf(clock) || !strings.Contains(v, "· unsaved") ||
+		!strings.Contains(v, "#313244") || !strings.Contains(v, "→") || !strings.Contains(v, "#ff3244") {
+		t.Errorf("the draft is not shown:\n%s", v)
+	}
+	// The other saver is untouched, and its own panel says so.
+	if m.dirtyOf(m.cfg.Savers[1]) || strings.Contains(m.press("1", "j").View(), "unsaved") {
+		t.Error("the draft leaked to another saver")
+	}
+	// A preview runs on the draft.
+	m = m.press("P")
+	if m.preview == nil || m.preview.style.BG != "#ff3244" {
+		t.Error("the preview must use the draft colours")
+	}
+	m = m.press("x")
+	// Reset drops it.
+	m = m.press("1", "k", "2", "R")
+	if m.dirtyOf(m.cfg.Savers[0]) || m.draftOf(m.cfg.Savers[0]).BG != config.DefaultBG {
+		t.Errorf("reset: draft %q", m.draftOf(m.cfg.Savers[0]).BG)
+	}
+	m = m.press("R")
+	if !strings.Contains(m.toast.msg, "nothing changed") {
+		t.Error("R with nothing to reset must say so")
+	}
+	// Pick again, then Save writes it.
+	m = m.press("esc", "enter", "G", "enter", "S")
+	if m.dirtyOf(m.cfg.Savers[0]) || m.cfg.Savers[0].BG != "#ff3244" || saved(t).Savers[0].BG != "#ff3244" {
+		t.Errorf("save: dirty=%v bg %q", m.dirtyOf(m.cfg.Savers[0]), m.cfg.Savers[0].BG)
+	}
+	// fg › B is the last stop; the swatch row shows one colour when clean.
+	m = m.press("G", "enter", "g", "g", "enter", "S")
+	if m.cfg.Savers[0].FG != "#f2b700" {
+		t.Errorf("fg %q", m.cfg.Savers[0].FG)
+	}
+	if strings.Contains(m.View(), "→") || strings.Contains(m.View(), "unsaved") {
+		t.Error("a clean saver must show no arrow and no unsaved")
+	}
+}
+
+func TestQuitAsksWhenColoursUnsaved(t *testing.T) {
+	m := newTestApp(t).press("2").typed(strings.Repeat("j", stopFgB)).press("enter", "G", "enter")
+	if !m.anyDirty() {
+		t.Fatal("not dirty")
+	}
+	m = m.press("q")
+	if !m.confirm.isInteractive() || m.confirm.action != confirmQuit {
+		t.Fatal("q with a dirty draft must ask")
+	}
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter}); !quits(cmd) {
+		t.Error("Enter on the confirm must quit")
+	}
+	m = m.press("esc", "R")
+	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}); !quits(cmd) {
+		t.Error("q with a clean draft must quit at once")
 	}
 }
 
 // Every letter hotkey the panel answers is a row of the Space menu, and
-// no action claims a navigation letter (§4.2, ux.md §4).
+// no action claims a navigation letter (§4.2, ux.md §4). Where the panel
+// has actions of its own the menu has two regions.
 func TestMenuCoversEveryHotkey(t *testing.T) {
 	m := newTestApp(t)
 	positions := 0
@@ -311,12 +431,28 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 					if navKeys[a.key] {
 						t.Errorf("action %q claims the navigation key %q", a.label, a.key)
 					}
-					if !strings.Contains(strings.Join(keys, ","), a.key) {
+					if hotkeyIndex(keys, a.key) < 0 {
 						t.Errorf("action %q (%s) is not a menu row", a.label, a.key)
 					}
 					if len(a.key) == 1 && !strings.Contains(bracketHotkey(a.label, a.key), "["+a.key+"]") {
 						t.Errorf("row %q does not show its key %q", a.label, a.key)
 					}
+				}
+				hasPanel := false
+				for _, a := range acts {
+					hasPanel = hasPanel || a.panelOp
+				}
+				headers := 0
+				for _, it := range opened.menu.items {
+					if it.header {
+						headers++
+					}
+				}
+				if hasPanel && headers != 2 || !hasPanel && headers != 0 {
+					t.Errorf("focus %d cur %d/%d: %d headers with panel ops %v", focus, c1, c2, headers, hasPanel)
+				}
+				if opened.menu.items[opened.menu.cursor].header {
+					t.Errorf("focus %d cur %d/%d: the cursor opened on a header", focus, c1, c2)
 				}
 			}
 		}
@@ -347,7 +483,9 @@ func TestViewFitsTheTerminal(t *testing.T) {
 		check(t, m.press("r"), "input")
 		check(t, m.press("2", "j", "enter"), "options")
 		check(t, m.press("2"), "detail focused")
-		check(t, m.press("G", "2"), "style")
+		check(t, m.press("G", "2"), "preference")
+		check(t, m.press("2", "G", "enter", "G", "enter"), "saver with a draft")
+		check(t, m.press("2", " "), "saver menu with regions")
 	}
 }
 
@@ -366,7 +504,7 @@ func TestPreviewComesBack(t *testing.T) {
 }
 
 func TestEscClosesOnlyTheTop(t *testing.T) {
-	m := newTestApp(t).press("j", "x") // menu-less confirm via the hotkey
+	m := newTestApp(t).press("j", "X") // menu-less confirm via the hotkey
 	if !m.confirm.isInteractive() {
 		t.Fatal("no confirm")
 	}
@@ -392,9 +530,14 @@ func TestMenuRunsTheRow(t *testing.T) {
 	if !m.menu.isInteractive() {
 		t.Fatal("no menu")
 	}
-	m = m.press("enter") // [Enter] Set active is the first row
-	if m.cfg.Saver != "clock2" || m.menu.anim.owns() {
-		t.Errorf("menu commit: active %q menu up %v", m.cfg.Saver, m.menu.anim.owns())
+	m = m.press("enter") // [Enter] Edit is the first row
+	if m.focus != panelDetail || m.menu.anim.owns() {
+		t.Errorf("menu commit: focus %d menu up %v", m.focus, m.menu.anim.owns())
+	}
+	// A hotkey inside the menu runs its row too.
+	m = m.press("1", " ", "p")
+	if m.preview == nil {
+		t.Error("p inside the menu must preview")
 	}
 }
 
