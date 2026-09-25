@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.0] - 2026-09-25
 ### Added
 - `locku lock`: the terminal as one LED board — every cell a Nerd Font square, dark in the saver's `bg`, lit in its `fg` — spelling the clock in a right-angled 3 × 7 pixel font, the look of a seven-segment display (no slash in the zero, no diagonal anywhere; M and W five wide, the space two, the hyphen three), at the saver's `size` (small, medium, large: one font pixel is 1, 2 or 3 cells square); what does not fit sheds the year, the seconds, then the date before the size steps down. A change lands as a shuffled reveal of only the pixels that differ.
 - A second saver type, `dino`: the offline dinosaur game as a screensaver. The ground and the obstacles scroll by — cacti or pyramids, in three sizes, small, medium and large — and the T-Rex jumps them by itself — as high as each asks, a low jump over a small one, a middling one over a medium, the high one over a large; at a random moment inside the window that clears them, and now and then for nothing, at any of the three heights — for ever, never dying; no score, no clock. Its settings are `runner` — `big` or `small`, one T-Rex of that size, or two one behind the other: `big-big`, `small-small`, `small-big` or `big-small`, the name read left to right as they stand on the screen, each jumping on its own; a file's `trex` or `two-trex` from before is read as `big` or `big-small` and saved as that — `scene` (`grassland` with its cacti, or `desert` with pyramids) and the two colours — no size: it is drawn as large as the terminal allows; fourteen frames a second, replaced whole. Each saver's keys are its own in the file: a dino profile has no shapes, a clock profile no runner.

@@ -163,5 +163,4 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make ch
 
 1. 8 小時 CPU / 記憶體觀察（§12 最後一項）。
 2. README 英文版。
-3. brew formula（vulcanshen/homebrew-tap）。
-4. CHANGELOG 收 0.1.0、tag。
+3. brew formula（vulcanshen/homebrew-tap）：v0.1.0 的 tag push 上去後由 release workflow 推。
