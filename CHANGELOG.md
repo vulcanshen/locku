@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.1] - 2026-09-26
 ### Changed
 - The splash behind `V` is now the icon itself, cell for cell: the navy U around the gold letters of LOCK, each wrapping the next, revealed from the outside in before the U rises around them. It used to show a padlock the icon never had.
 
