@@ -183,9 +183,15 @@ func TestArtByName(t *testing.T) {
 // Each scene's obstacles come in three sizes — small, medium and large
 // (user, 2026-09-25: there had been only small and medium) — each
 // tier taller than the one under it, the large one the tallest thing
-// in the scene; the jump tops it by the pixel the arc promises, and
-// nothing is wider than the thirteen the arc is timed for.
+// in the scene, and every obstacle marked with its tier. A jump a tier
+// (user, the same day: the height had been the same over everything),
+// each higher than the one under it, each topping the tallest of its
+// tier in either scene by the one pixel the arcs promise; none longer
+// than the large tier's sixteen frames, which the least gap is timed
+// to; the sky starts over the highest; and nothing is wider than the
+// thirteen the arcs are timed for.
 func TestObstaclesComeInThreeTiers(t *testing.T) {
+	var tallest [3]int // of each tier, in either scene
 	for _, c := range []struct {
 		name    string
 		scene   sceneArt
@@ -195,24 +201,73 @@ func TestObstaclesComeInThreeTiers(t *testing.T) {
 		{SceneGrass, grassland, []sprite{cactus, tallCactus, bigCactus}, []int{5, 7, 10}},
 		{SceneDesert, desert, []sprite{pyramid, greatPyramid, hugePyramid}, []int{3, 5, 7}},
 	} {
-		for i, tier := range c.tiers {
-			if !slices.ContainsFunc(c.scene.obstacles, func(s sprite) bool { return slices.Equal(s, tier) }) {
-				t.Errorf("%s: tier %d is not among the obstacles", c.name, i)
+		for i, art := range c.tiers {
+			if !slices.ContainsFunc(c.scene.obstacles, func(o obstacleArt) bool { return slices.Equal(o.sprite, art) && o.tier == tier(i) }) {
+				t.Errorf("%s: tier %d is not among the obstacles as that tier", c.name, i)
 			}
-			if tier.h() != c.heights[i] || (i > 0 && tier.h() <= c.tiers[i-1].h()) {
-				t.Errorf("%s: tier %d is %d high, want %d and more than the one under it", c.name, i, tier.h(), c.heights[i])
+			if art.h() != c.heights[i] || (i > 0 && art.h() <= c.tiers[i-1].h()) {
+				t.Errorf("%s: tier %d is %d high, want %d and more than the one under it", c.name, i, art.h(), c.heights[i])
 			}
 		}
-		tallest, widest := 0, 0
-		for _, s := range c.scene.obstacles {
-			tallest, widest = max(tallest, s.h()), max(widest, s.w())
+		widest := 0
+		for _, o := range c.scene.obstacles {
+			if o.tier > large || o.h() > c.tiers[2].h() {
+				t.Errorf("%s: an obstacle %d high of tier %d", c.name, o.h(), o.tier)
+			}
+			tallest[o.tier] = max(tallest[o.tier], o.h())
+			widest = max(widest, o.w())
 		}
-		if tallest != c.tiers[2].h() || arcTop < tallest+1 || widest > 13 {
-			t.Errorf("%s: tallest %d, widest %d, the jump %d high", c.name, tallest, widest, arcTop)
+		if widest > 13 {
+			t.Errorf("%s: widest %d", c.name, widest)
 		}
 	}
-	if len(arc) != 16 || minGap != len(arc)*speed+trex.air.w() {
-		t.Errorf("a jump is %d frames, the least gap %d", len(arc), minGap)
+	for tr := small; tr <= large; tr++ {
+		top := slices.Max(arcs[tr])
+		if top != tallest[tr]+1 || (tr > small && top <= slices.Max(arcs[tr-1])) || len(arcs[tr]) > len(arcs[large]) {
+			t.Errorf("tier %d: tallest %d, the jump %d high, %d frames", tr, tallest[tr], top, len(arcs[tr]))
+		}
+	}
+	if len(arcs[large]) != 16 || arcTop != slices.Max(arcs[large]) || minGap != len(arcs[large])*speed+trex.air.w() {
+		t.Errorf("the large jump is %d frames and %d high, the sky from %d, the least gap %d", len(arcs[large]), slices.Max(arcs[large]), arcTop, minGap)
+	}
+}
+
+// The jump is the obstacle's size (user, 2026-09-25: the height had
+// been the same over everything): over a small one the low arc, over a
+// medium one the middling, over a large one the high — in either scene,
+// by a big T-Rex or a small one, each kind of obstacle put in its way
+// alone: the runner takes the arc of its tier, peaks at that arc's top,
+// and clears it.
+func TestJumpIsTheObstaclesSize(t *testing.T) {
+	for _, scene := range Scenes {
+		for _, runner := range []string{RunnerBig, RunnerSmall} {
+			for kind, o := range sceneOf(scene).obstacles {
+				d := NewDino(3, runner, scene)
+				d.Draw(76, 31)
+				d.gap = 1000 // nothing else is due
+				d.obs = []obstacle{{x: 60, kind: kind}}
+				peak, jumped := 0, false
+				for i := 0; !jumped || d.air[0] >= 0; i++ {
+					if i > 100 {
+						t.Fatalf("%s in %s: no jump over obstacle %d", runner, scene, kind)
+					}
+					d.Step()
+					if d.air[0] == 0 {
+						jumped = true
+						if d.jump[0] != o.tier {
+							t.Errorf("%s in %s over obstacle %d, tier %d: the tier %d jump", runner, scene, kind, o.tier, d.jump[0])
+						}
+					}
+					peak = max(peak, d.lift(0))
+					if _, ok := hit(d); ok {
+						t.Fatalf("%s in %s: ran into obstacle %d", runner, scene, kind)
+					}
+				}
+				if peak != slices.Max(arcs[o.tier]) {
+					t.Errorf("%s in %s over obstacle %d, tier %d: peaked at %d, want %d", runner, scene, kind, o.tier, peak, slices.Max(arcs[o.tier]))
+				}
+			}
+		}
 	}
 }
 
