@@ -47,8 +47,11 @@ jobs:
           version: "~> v2"
           args: release --clean --skip=validate --release-notes RELEASE_NOTES.md
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTION_TOKEN: ${{ secrets.ACTION_TOKEN }}
+          # goreleaser reads GITHUB_TOKEN for the release and for the tap
+          # (.goreleaser.yaml). The built-in token cannot write to the
+          # tap repository, so a PAT in the ACTION_TOKEN secret is used
+          # when it is set, and the built-in token otherwise.
+          GITHUB_TOKEN: ${{ secrets.ACTION_TOKEN || secrets.GITHUB_TOKEN }}
       - name: Force release body from CHANGELOG (goreleaser's --release-notes is unreliable)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
