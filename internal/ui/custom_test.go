@@ -95,6 +95,7 @@ func TestCommandIsTheCustomKindsAlone(t *testing.T) {
 // red; and the prompt-only lock, up from the first frame, ends with
 // Back when the prompt closes and without it for the PIN.
 func TestWordLockAndPromptOnly(t *testing.T) {
+	t.Setenv("LOCKU_CONFIG", t.TempDir()) // no file: the lock keeps its hash
 	cfg := config.Default()
 	lk := NewLockWord(cfg, "", saver.ExitWord(3), "custom saver: exit 3 · boom")
 	lk, _ = lk.step(tea.WindowSizeMsg{Width: 160, Height: 40})

@@ -9,12 +9,13 @@
 > 設計 2026-09-24 定案，同日實作完成第一版：渲染器、`locku lock`、設定 TUI（含 tmux / screen 的 activate 開關），
 > 單元測試與 tmux / screen 的 pty 端到端測試皆通過。尚未發版（v0.1.0 待 icon、英文 README、brew formula）。
 
-## 三個指令
+## 四個指令
 
 | 指令 | 作用 |
 |---|---|
 | `locku` | 設定 TUI：三種 saver（clock、dino、custom）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `activate`（on / off）、`config file path`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`）、tmux 的 `bind-key`、screen 的 `bind`（prefix / C-a 之後鎖的鍵，空就不綁）；`activate` 開了就把整合設定寫進去，一改就直接寫，關了拿掉。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面（任意鍵回來，不驗 PIN） |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
+| `locku pin reset` | 忘記 PIN：從你自己的任何一個 shell 跑，`[y/N]` 後要你的**登入密碼**，過了就產生一組新的八位數 PIN 顯示一次、寫進 config（不會把 PIN 清空），鎖定中的畫面下一鍵就認得新 PIN；每次 reset 記在 `~/.locku/data/pin-resets.log`（不含 PIN）。能這樣做的人本來就能殺掉鎖——locku 不是安全邊界，帳號才是 |
 | `locku version` | 版本 |
 
 argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是 execl、不能帶參數。
@@ -76,7 +77,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
-| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 35 條、MVP 驗收 | 1 |
+| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 37 條、MVP 驗收 | 1 |
 | [`docs/ui.md`](docs/ui.md) | 設定畫面兩個面板的 grid、鎖定畫布的點陣板、每個欄位怎麼呈現、popup 清單、PIN prompt 四個狀態、色帶、chrome、存檔 | 2 |
 | [`docs/ux.md`](docs/ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、畫布 prompt 事件表、hotkey 分層與撞字檢查、浮層、時間軸 | 3 |
 

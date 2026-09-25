@@ -261,6 +261,47 @@ func TestSaveRoundTrip(t *testing.T) {
 	}
 }
 
+// A PIN made for the user is eight digits, and a new one each time.
+func TestNewPINIsEightDigits(t *testing.T) {
+	a, err := NewPIN()
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := NewPIN()
+	if len(a) != 8 || strings.Trim(a, "0123456789") != "" || a == b {
+		t.Errorf("%q %q", a, b)
+	}
+	if err := CheckPINLength(a); err != nil {
+		t.Errorf("a made PIN must be a PIN: %v", err)
+	}
+}
+
+// The file's pin_hash, read on its own for a lock already up: the hash,
+// none, or not readable.
+func TestLoadPINHash(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU_CONFIG", dir)
+	if _, ok := LoadPINHash(); ok {
+		t.Error("no file must not read as anything")
+	}
+	cfg := Default()
+	cfg.SetPIN("1234")
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if h, ok := LoadPINHash(); !ok || h != cfg.PINHash {
+		t.Errorf("%q %v", h, ok)
+	}
+	os.WriteFile(Path(), []byte("pin_hash: nope\n"), 0o600)
+	if _, ok := LoadPINHash(); ok {
+		t.Error("a hash that is no hash must not read")
+	}
+	os.WriteFile(Path(), []byte("auth: pin\n"), 0o600)
+	if h, ok := LoadPINHash(); !ok || h != "" {
+		t.Errorf("no pin_hash is none: %q %v", h, ok)
+	}
+}
+
 func TestPINLength(t *testing.T) {
 	cfg := Default()
 	if err := cfg.SetPIN("123"); err == nil {

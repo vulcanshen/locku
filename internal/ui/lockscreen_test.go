@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +20,9 @@ import (
 // whatever the saver's defaults are today.
 func testLock(t *testing.T, pin string, tweak func(*config.Config)) LockModel {
 	t.Helper()
+	// No file: the lock keeps the hash it was made with (the file is
+	// read at every key, when there is one).
+	t.Setenv("LOCKU_CONFIG", t.TempDir())
 	cfg := config.Default()
 	cfg.Profiles[0].Size, cfg.Profiles[0].Font, cfg.Profiles[0].Time, cfg.Profiles[0].Date = "medium", "3x7", "HH MM", "off"
 	if pin != "" {
@@ -309,5 +314,54 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 		if want.lit[i] != m.shown.lit[i] {
 			t.Fatal("the board does not show 21:06")
 		}
+	}
+}
+
+// A PIN reset under a lock already up (user, 2026-09-25): the hash is
+// read off the file at every key, so the new PIN opens and the old one
+// no longer does; a file gone bad meanwhile changes nothing; a file
+// with no PIN opens at any key.
+func TestLockReadsTheFilesPINAtEveryKey(t *testing.T) {
+	m := testLock(t, "1234", nil)
+	path := filepath.Join(os.Getenv("LOCKU_CONFIG"), "config.yaml")
+	cfg := config.Default()
+	if err := cfg.SetPIN("9999"); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.SaveFile(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	m = openPrompt(t, m)
+	for _, r := range "1234" {
+		m, _ = m.step(keyRunes(string(r)))
+	}
+	m, cmd := m.step(tea.KeyMsg{Type: tea.KeyEnter})
+	if quits(cmd) || m.prompt.state != promptWrong {
+		t.Fatal("the old PIN must not open the lock once the file holds a new one")
+	}
+	m, _ = m.step(wrongOverMsg{gen: m.promptGen})
+	open := m // the prompt, empty, ready for a PIN
+	typed := func(m LockModel, pin string) (LockModel, tea.Cmd) {
+		for _, r := range pin {
+			m, _ = m.step(keyRunes(string(r)))
+		}
+		return m.step(tea.KeyMsg{Type: tea.KeyEnter})
+	}
+	if _, cmd := typed(open, "9999"); !quits(cmd) {
+		t.Fatal("the new PIN must open the lock")
+	}
+	// A file gone bad keeps the hash the lock has.
+	if err := os.WriteFile(path, []byte("pin_hash: [not a hash\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := typed(open, "9999"); !quits(cmd) {
+		t.Fatal("a file gone bad must change nothing")
+	}
+	// A file with no PIN: any key.
+	if err := config.SaveFile(path, config.Default()); err != nil {
+		t.Fatal(err)
+	}
+	if _, cmd := open.step(keyRunes("x")); !quits(cmd) {
+		t.Fatal("a file with no PIN opens at any key")
 	}
 }
