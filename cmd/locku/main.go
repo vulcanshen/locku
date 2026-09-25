@@ -22,9 +22,11 @@ import (
 const usage = `locku — a screensaver with a PIN, for the terminal
 
   locku                      settings: the PIN, the savers, the colours
-  locku lock [-S socket]     lock this terminal — what tmux and screen run;
-                             -S is the tmux server's socket, which setup's
-                             lock-command passes
+  locku lock [-S socket] [-t session]
+                             lock this terminal — what tmux and screen run;
+                             -S is the tmux server's socket and -t, for
+                             lock-session, the session's id, both passed by
+                             the lock-command the settings screen writes
   locku version              the version
   locku help                 this
 `
@@ -33,14 +35,14 @@ func main() {
 	// screen runs LOCKPRG by execl with argv[0] set to SCREEN-LOCK and no
 	// arguments: that name is the whole message (function.md §6).
 	if filepath.Base(os.Args[0]) == "SCREEN-LOCK" {
-		os.Exit(runLock(""))
+		os.Exit(runLock("", ""))
 	}
 	args := os.Args[1:]
 	switch {
 	case len(args) == 0:
 		os.Exit(runSettings())
 	case args[0] == "lock":
-		os.Exit(runLock(socketArg(args[1:])))
+		os.Exit(runLock(lockArgs(args[1:])))
 	case args[0] == "version":
 		fmt.Println("locku " + version.Display())
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
@@ -51,14 +53,18 @@ func main() {
 	}
 }
 
-// socketArg is the -S after `lock`: the tmux server's socket, or "".
-func socketArg(args []string) string {
+// lockArgs is what follows `lock`: -S, the tmux server's socket, and -t,
+// the session whose lock this is, either "" when not given.
+func lockArgs(args []string) (socket, session string) {
 	for i := 0; i+1 < len(args); i++ {
-		if args[i] == "-S" {
-			return args[i+1]
+		switch args[i] {
+		case "-S":
+			socket = args[i+1]
+		case "-t":
+			session = args[i+1]
 		}
 	}
-	return ""
+	return socket, session
 }
 
 // runLock is `locku lock`. The process is the lock (function.md §1.2): it
@@ -66,15 +72,15 @@ func socketArg(args []string) string {
 // terminal that has gone away — and for nothing else. Signals are ignored
 // rather than handled (§2.2), and a program that comes down for any other
 // reason, a panic included, goes straight back up.
-func runLock(socket string) int {
+func runLock(socket, session string) int {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
 		syscall.SIGTSTP, syscall.SIGTTIN, syscall.SIGTTOU)
 	cfg, problem := config.Load()
-	// Under tmux the server is marked locked for as long as this runs,
-	// so a client attaching to any session meanwhile is locked too
-	// (function.md §6.2); a terminal that goes away leaves the mark, and
-	// the next client in meets the lock.
-	tmux.SetLocked(socket, true)
+	// Under tmux the server — or, for lock-session, this session — is
+	// marked locked for as long as this runs, so a client attaching to it
+	// meanwhile is locked too (function.md §6.2); a terminal that goes
+	// away leaves the mark, and the next client in meets the lock.
+	tmux.SetLocked(socket, session, true)
 	quick := 0
 	for {
 		started := time.Now()
@@ -87,7 +93,7 @@ func runLock(socket string) int {
 		)
 		if m, err := p.Run(); err == nil {
 			if lm, ok := m.(ui.LockModel); !ok || !lm.TTYGone() {
-				tmux.SetLocked(socket, false)
+				tmux.SetLocked(socket, session, false)
 			}
 			return 0
 		}

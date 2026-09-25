@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/vulcanshen/locku/internal/config"
 )
 
 func TestApplyIsIdempotentAndKeepsTheRest(t *testing.T) {
@@ -60,13 +62,14 @@ func TestIdleTimeIsHandedOn(t *testing.T) {
 		idle         int
 		tmux, screen string
 	}{{300, "set -g lock-after-time 300 ", "idle 300 lockscreen"}, {0, "set -g lock-after-time 0 ", "idle 0 lockscreen"}, {45, "set -g lock-after-time 45 ", "idle 45 lockscreen"}} {
-		if l := strings.Join(tmuxLines(c.idle, ""), "\n"); !strings.Contains(l, c.tmux) {
+		tm := config.Tmux{LockAfterTime: c.idle, Lock: config.LockServer}
+		if l := strings.Join(tmuxLines(tm), "\n"); !strings.Contains(l, c.tmux) {
 			t.Errorf("idle %d, tmux:\n%s", c.idle, l)
 		}
 		if l := screenLines(c.idle)[0]; !strings.HasPrefix(l, c.screen) {
 			t.Errorf("idle %d, screen: %q", c.idle, l)
 		}
-		if s := tmuxSet(c.idle, "")[1]; s[2] != "lock-after-time" || s[3] != itoa(c.idle) {
+		if s := tmuxSet(tm)[1]; s[2] != "lock-after-time" || s[3] != itoa(c.idle) {
 			t.Errorf("idle %d, live: %v", c.idle, s)
 		}
 	}
@@ -75,8 +78,10 @@ func TestIdleTimeIsHandedOn(t *testing.T) {
 // Every line locku writes says so at its end, so it reads as locku's
 // when met on its own (user, 2026-09-24: it has to be easy to take out).
 func TestEveryLineIsMarked(t *testing.T) {
-	for _, l := range append(append([]string{}, tmuxLines(300, "C-l")...), screenLines(300)...) {
-		if !strings.Contains(l, "# locku") {
+	server := config.Tmux{LockAfterTime: 300, Lock: config.LockServer}
+	session := config.Tmux{LockAfterTime: 300, Lock: config.LockSession, BindKey: "C-l"}
+	for _, l := range append(append(tmuxLines(server), tmuxLines(session)...), screenLines(300)...) {
+		if !strings.Contains(l, " # locku") {
 			t.Errorf("unmarked: %q", l)
 		}
 	}
@@ -84,24 +89,35 @@ func TestEveryLineIsMarked(t *testing.T) {
 	// alias, and the hooks and the alias sit at locku's own index.
 	// The lock command is this binary by its absolute path — not "locku",
 	// which the client's shell may not find — told the socket.
-	joined := strings.Join(tmuxLines(300, ""), "\n")
+	joined := strings.Join(tmuxLines(server), "\n")
 	if !strings.Contains(joined, `set -gF lock-command "/`) || !strings.Contains(joined, ` lock -S '#{socket_path}'"`) ||
 		strings.Contains(joined, `"locku lock`) {
 		t.Errorf("the lock command must be absolute and told the socket:\n%s", joined)
 	}
-	if !strings.HasPrefix(tmuxSet(300, "")[0][3], "/") || !strings.HasSuffix(tmuxSet(300, "")[0][3], " lock -S '#{socket_path}'") {
-		t.Errorf("live lock command: %q", tmuxSet(300, "")[0][3])
+	if !strings.HasPrefix(tmuxSet(server)[0][3], "/") || !strings.HasSuffix(tmuxSet(server)[0][3], " lock -S '#{socket_path}'") {
+		t.Errorf("live lock command: %q", tmuxSet(server)[0][3])
 	}
-	// The lock is the server's: lock-server, not lock-session.
-	if strings.Contains(joined, "bind ") || !strings.Contains(joined, `command-alias[90]" "locku=lock-server"`) ||
+	// The lock is the server's by default: lock-server, and no hook that
+	// tells a session its lock.
+	if strings.Contains(joined, "bind-key") || !strings.Contains(joined, `command-alias[90]" "locku=lock-server"`) ||
 		!strings.Contains(joined, `client-attached[90]`) || !strings.Contains(joined, `client-session-changed[90]`) ||
-		!strings.Contains(joined, `#{@locked}`) || strings.Contains(joined, "lock-session") {
+		!strings.Contains(joined, `#{@locked}`) || strings.Contains(joined, "lock-session") || strings.Contains(joined, "session-created") {
 		t.Errorf("tmux block:\n%s", joined)
 	}
-	// What is set on a live server is what is unset, one for one — and
-	// then the mark a lock may have left.
-	set, unset := tmuxSet(300, ""), tmuxUnset("")
-	if len(unset) != len(set)+1 || unset[len(unset)-1][2] != "@locked" {
+	// lock-session: the alias and the key run it, and a session-created
+	// hook gives each session its own lock-command with its id in it,
+	// quoted from the shell (user, 2026-09-25; measured: a locked client
+	// cannot find its session by its tty).
+	sj := strings.Join(tmuxLines(session), "\n")
+	if !strings.Contains(sj, `"locku=lock-session"`) || !strings.Contains(sj, "bind-key C-l lock-session") ||
+		!strings.Contains(sj, `set-hook -g "session-created[90]" "set -F lock-command \"/`) || !strings.Contains(sj, `-t '#{session_id}'\""`) ||
+		strings.Contains(sj, "lock-server") {
+		t.Errorf("tmux block, lock-session:\n%s", sj)
+	}
+	// What is set on a live server is what is unset, one for one — then
+	// the session hook, and the mark a lock may have left.
+	set, unset := tmuxSet(server), tmuxUnset("")
+	if len(unset) != len(set)+2 || unset[len(unset)-2][2] != "session-created[90]" || unset[len(unset)-1][2] != "@locked" {
 		t.Errorf("%d set, %d unset: %v", len(set), len(unset), unset)
 	}
 	for i := range set {
@@ -109,24 +125,23 @@ func TestEveryLineIsMarked(t *testing.T) {
 			t.Errorf("set %v, unset %v", set[i], unset[i])
 		}
 	}
-	// A key named binds after prefix, in the file and on the server, and
-	// is unbound on the way out (user, 2026-09-25).
-	withKey := strings.Join(tmuxLines(300, "C-l"), "\n")
-	if !strings.Contains(withKey, "bind-key C-l lock-server") || !strings.Contains(withKey, "# locku: prefix C-l locks every client") {
-		t.Errorf("tmux block with a key:\n%s", withKey)
+	set, unset = tmuxSet(session), tmuxUnset("C-l")
+	if hook := set[5]; strings.Join(hook[:3], " ") != "set-hook -g session-created[90]" || !strings.HasSuffix(hook[3], `-t '#{session_id}'"`) {
+		t.Errorf("live session hook: %v", hook)
 	}
-	set, unset = tmuxSet(300, "C-l"), tmuxUnset("C-l")
-	if last := set[len(set)-1]; strings.Join(last, " ") != "bind-key C-l lock-server" {
+	if last := set[len(set)-1]; strings.Join(last, " ") != "bind-key C-l lock-session" {
 		t.Errorf("live bind: %v", last)
 	}
 	if u := unset[len(unset)-2]; strings.Join(u, " ") != "unbind-key C-l" || unset[len(unset)-1][2] != "@locked" {
 		t.Errorf("live unbind: %v", unset)
 	}
-	if k := boundKey(Apply("set -g mouse on\n", tmuxLines(300, "C-l"))); k != "C-l" {
-		t.Errorf("the bound key read off the file: %q", k)
+	// What the file binds is read back off it; a key bound outside the
+	// block is not locku's.
+	if k, l := bound(Apply("set -g mouse on\n", tmuxLines(session))); k != "C-l" || l != config.LockSession {
+		t.Errorf("read off the file: %q %q", k, l)
 	}
-	if k := boundKey(Apply("bind-key l last-window\n", tmuxLines(300, ""))); k != "" {
-		t.Errorf("a key bound outside the block is not locku's: %q", k)
+	if k, l := bound(Apply("bind-key l last-window\n", tmuxLines(server))); k != "" || l != config.LockServer {
+		t.Errorf("read off the file: %q %q", k, l)
 	}
 }
 
@@ -136,15 +151,18 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	t.Setenv("PATH", t.TempDir()) // no tmux
 	path := filepath.Join(h, ".tmux.conf")
 	os.WriteFile(path, []byte("set -g mouse on\n"), 0o644)
+	at := func(conf, lock, key string) config.Tmux {
+		return config.Tmux{Conf: conf, LockAfterTime: 300, Lock: lock, BindKey: key}
+	}
 	var out bytes.Buffer
-	if err := Tmux(&out, path, 300, ""); err != nil {
+	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
 	body, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range tmuxLines(300, "") {
+	for _, want := range tmuxLines(at(path, config.LockServer, "")) {
 		if !strings.Contains(string(body), want) {
 			t.Errorf("missing %q in\n%s", want, body)
 		}
@@ -153,26 +171,40 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 		t.Errorf("output:\n%s", out.String())
 	}
 	out.Reset()
-	if err := Tmux(&out, path, 300, ""); err != nil {
+	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "already up to date") {
 		t.Errorf("second run:\n%s", out.String())
 	}
 	// A key: one bind-key line; emptied again, the line goes.
-	if err := Tmux(&out, path, 300, "l"); err != nil {
+	if err := Tmux(&out, at(path, config.LockServer, "l")); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(path); !strings.Contains(string(b), "bind-key l lock-server") || strings.Count(string(b), "# locku") != 6 {
 		t.Errorf("with a key:\n%s", b)
 	}
-	if err := Tmux(&out, path, 300, ""); err != nil {
+	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(path); strings.Contains(string(b), "bind-key") || strings.Count(string(b), "# locku") != 5 {
 		t.Errorf("key emptied:\n%s", b)
 	}
-	// -d: the block goes, the user's line stays; again, nothing to do.
+	// lock-session: the alias, and the session hook; lock-server again,
+	// and both go.
+	if err := Tmux(&out, at(path, config.LockSession, "")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"locku=lock-session"`) || !strings.Contains(string(b), "session-created[90]") || strings.Count(string(b), "# locku") != 6 {
+		t.Errorf("lock-session:\n%s", b)
+	}
+	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(path); strings.Contains(string(b), "lock-session") || strings.Contains(string(b), "session-created") || strings.Count(string(b), "# locku") != 5 {
+		t.Errorf("lock-server again:\n%s", b)
+	}
+	// Undo: the block goes, the user's line stays; again, nothing to do.
 	out.Reset()
 	if err := TmuxUndo(&out, path); err != nil {
 		t.Fatal(err)
@@ -199,15 +231,15 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	}
 	// No path is a refusal, not a guess; a relative one too. A path
 	// under ~ is expanded, the directory made.
-	if err := Tmux(&out, "", 300, ""); err == nil || !strings.Contains(err.Error(), "tmux: no file set") {
+	if err := Tmux(&out, at("", config.LockServer, "")); err == nil || !strings.Contains(err.Error(), "tmux: no file set") {
 		t.Errorf("empty path: %v", err)
 	}
-	if err := Tmux(&out, "tmux.conf", 300, ""); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
+	if err := Tmux(&out, at("tmux.conf", config.LockServer, "")); err == nil || !strings.Contains(err.Error(), "not an absolute path") {
 		t.Errorf("relative path: %v", err)
 	}
 	h2 := t.TempDir()
 	t.Setenv("HOME", h2)
-	if err := Tmux(&out, "~/.config/tmux/tmux.conf", 300, ""); err != nil {
+	if err := Tmux(&out, at("~/.config/tmux/tmux.conf", config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
 	if b, _ := os.ReadFile(filepath.Join(h2, ".config", "tmux", "tmux.conf")); !strings.Contains(string(b), blockBegin) {

@@ -6,7 +6,9 @@ locks every client and marks the server; a client attaching to ANY
 session meanwhile is locked by the hook; unlocking clears the mark, and
 a client attaching then is not locked; a terminal that dies under the
 lock — prefix l having locked it — leaves the mark, and the next client
-in meets the lock; activate off takes it all out. No PIN is
+in meets the lock; with lock-session chosen on the screen, the mark is
+one session's and another session is left alone; activate off takes it
+all out. No PIN is
 set, so any key unlocks — the PIN itself is the unit tests' business.
 
     make e2e            # builds the binary and runs this
@@ -117,9 +119,9 @@ def settings(*keys):
 
 
 # 0. Activate from the screen: G to preference, k k up to tmux, into
-# [2], down past the path and the idle time to bind-key and l typed into
-# it, back up to activate, Enter, and Enter on the confirm.
-screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
+# [2], down past the path, the lock and the idle time to bind-key and l
+# typed into it, back up to activate, Enter, and Enter on the confirm.
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
 text = open(conf).read() if os.path.exists(conf) else ""
 check("activate from the settings screen wrote the block, every line marked, the lock command absolute, the key bound",
       "# >>> locku >>>" in text and "client-attached[90]" in text and 'lock-command "/' in text
@@ -181,7 +183,41 @@ check("D's unlock clears the mark", not marked())
 tmux("kill-server")
 kill(pd)
 
-# 6. Deactivate from the screen: activate is the first row, Enter, then
+# 6. lock-session, chosen on the screen while activate is on: the file is
+# rewritten at once — the alias, the key and a session-created hook.
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"j", b"\r")
+text = open(conf).read()
+check("lock-session chosen on the screen: the alias, the key and the session hook are in the file",
+      "locku=lock-session" in text and "bind-key l lock-session" in text and "session-created[90]" in text
+      and "-t '#{session_id}'" in text and "lock-server" not in text)
+pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
+time.sleep(1.5)
+tmux("new-session", "-d", "-s", "u")
+# A session is named with its colon: a bare name is tried as a window
+# name's prefix first, and u's window is called after its shell (measured
+# 2026-09-25: -t t found u's window "tmux").
+check("each session's lock-command carries its own id",
+      "-t '$0'" in tmux("show", "-t", "t:", "-v", "lock-command") and "-t '$1'" in tmux("show", "-t", "u:", "-v", "lock-command"))
+tmux("locku", "-t", "t")
+time.sleep(1.8)
+check("A shows the board after locku on its session", board(oa))
+check("the mark is the session's, not the server's",
+      tmux("show", "-t", "t:", "-qv", "@locked") == "1" and tmux("show", "-gqv", "@locked") == "")
+pb, fb, ob = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
+pe, fe, oe = spawn(["tmux", "-L", SOCK, "attach", "-t", "u"])
+time.sleep(2.0)
+check("B, attaching to the locked session, shows the board", board(ob))
+check("E, attaching to the OTHER session, is left alone", not board(oe))
+unlock(fa)
+check("A's unlock clears the session's mark", tmux("show", "-t", "t:", "-qv", "@locked") == "")
+unlock(fb)
+time.sleep(0.5)
+check("B is back too", not locks_running())
+tmux("kill-server")
+for p in (pa, pb, pe):
+    kill(p)
+
+# 7. Deactivate from the screen: activate is the first row, Enter, then
 # Enter on the confirm.
 screen = settings(b"G", b"k", b"k", b"2", b"\r", b"\r")
 check("deactivate from the settings screen took the block out", "locku" not in open(conf).read())

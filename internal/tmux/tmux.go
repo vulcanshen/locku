@@ -20,17 +20,26 @@ import (
 // wait is the most any one call to tmux may take.
 const wait = 2 * time.Second
 
-// SetLocked marks the server at socket locked or not: the global @locked
-// option, which every session sees and the hooks look at. Nothing
-// happens without a socket — a bare tty, screen, or a lock command from
-// before the socket was passed.
-func SetLocked(socket string, on bool) {
+// SetLocked marks the server at socket — or, given a session id, that
+// session alone — locked or not: the @locked option the hooks look at,
+// global or the session's. The hooks read a client's session before the
+// global (measured 2026-09-25), so where the mark is IS the lock's
+// scope; the session's id comes in on -t, baked into that session's own
+// lock-command by setup, since a locked client cannot look its session
+// up (setup.sessionLockCmd). Nothing happens without a socket — a bare
+// tty, screen, or a lock command from before the socket was passed.
+func SetLocked(socket, session string, on bool) {
 	if socket == "" {
 		return
 	}
-	if on {
+	switch {
+	case on && session != "":
+		run("tmux", "-S", socket, "set-option", "-t", session, "@locked", "1")
+	case on:
 		run("tmux", "-S", socket, "set-option", "-g", "@locked", "1")
-	} else {
+	case session != "":
+		run("tmux", "-S", socket, "set-option", "-u", "-t", session, "@locked")
+	default:
 		run("tmux", "-S", socket, "set-option", "-gu", "@locked")
 	}
 }
