@@ -13,12 +13,12 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `conf`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`）、tmux 的 `bind-key`（prefix 之後鎖整台的鍵，空就不綁），`[2]` 最後一列的 Install / Uninstall 按鈕把整合設定寫進去、拿掉，裝了以後一改就直接寫。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面（任意鍵回來，不驗 PIN） |
+| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `conf`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`）、tmux 的 `bind-key`（prefix 之後鎖整台的鍵，空就不綁），`[2]` 底部的 Install / Uninstall 按鈕把整合設定寫進去、拿掉，裝了以後一改就直接寫。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面（任意鍵回來，不驗 PIN） |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku version` | 版本 |
 
 argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是 execl、不能帶參數。
-整合設定不是指令（2026-09-25 拿掉 `locku setup`）：在 `locku` 側欄的 Integration › tmux / screen 的 `[2]` 最後一列按 Install（confirm 後），把受管區塊寫進你填的 `conf`（tmux 有 server 在跑就即時套用；screen 加 shell rc）；裝了以後改任何一列都直接寫進去，Uninstall 拿掉。只碰 `# >>> locku >>>` … `# <<< locku <<<` 區塊，每行尾巴 `# locku`，冪等；路徑沒填就不能按、不猜。
+整合設定不是指令（2026-09-25 拿掉 `locku setup`）：在 `locku` 側欄的 Integration › tmux / screen 的 `[2]` 底部按 Install（confirm 後），把受管區塊寫進你填的 `conf`（tmux 有 server 在跑就即時套用；screen 加 shell rc）；裝了以後改任何一列都直接寫進去，Uninstall 拿掉。只碰 `# >>> locku >>>` … `# <<< locku <<<` 區塊，每行尾巴 `# locku`，冪等；路徑沒填就不能按、不猜。
 
 ## 安裝
 
@@ -26,7 +26,7 @@ argv[0] 是 `SCREEN-LOCK` 時視同 `locku lock`，因為 screen 的 LOCKPRG 是
 git clone https://github.com/vulcanshen/locku.git
 cd locku
 make build      # → ./locku（CGO_ENABLED=0 靜態）
-./locku         # Integration › tmux / screen：填 conf，最後一列 Install 寫整合設定；設 PIN（可省略：不設就是純螢幕保護）
+./locku         # Integration › tmux / screen：填 conf，底部的 Install 寫整合設定；設 PIN（可省略：不設就是純螢幕保護）
 ./locku lock    # 現在就鎖
 ```
 
@@ -70,7 +70,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`n` new profile、`p` 預覽預設值；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile / saver 上：`P` 預覽、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽（任意鍵回來，不驗 PIN）、`q` 離開。
-**Integration** 的 tmux / screen 各有 `conf`（要寫的設定檔）與閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind——區塊在不在檔案裡寫在 `[2]` 標題的膠囊尾巴（`installed` 綠 / `uninstalled` 橘）；最後一列是 Install / Uninstall 按鈕，Enter 後 confirm 才寫；裝了以後改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊鏈：名字、種類、狀態三顆，`[1] locku` 一顆。`conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
+**Integration** 的 tmux / screen 各有 `conf`（要寫的設定檔）與閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind——區塊在不在檔案裡寫在 `[2]` 標題的膠囊尾巴（focus 時 `installed` 綠；`uninstalled`，以及沒 focus 時整條，都是灰）；底部分隔線下置中一顆 Install / Uninstall 按鈕，cursor 到才亮，Enter 後 confirm 才寫；裝了以後改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊鏈：名字、種類、狀態三顆，`[1] locku` 一顆。`conf` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
 
 ## 文件
 
@@ -108,11 +108,11 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死、PAM / shadow 進 v1、自由文字 saver、strftime 自由格式、
 跑馬燈、拿掉像素間空格、`[2]` 內的 preview 框、底板 sheet、Integration popup、`--saver` 命令列覆蓋、
-`locku init`、只印不寫的 setup、`locku setup` 指令與後來的 `S` / `X` 熱鍵（畫面上看不到；改成 `[2]` 最後一列的 Install / Uninstall 按鈕）、preference 每列下面的說明列（搬進 `?` help）、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
+`locku init`、只印不寫的 setup、`locku setup` 指令與後來的 `S` / `X` 熱鍵（畫面上看不到；改成 `[2]` 底部的 Install / Uninstall 按鈕）、preference 每列下面的說明列（搬進 `?` help）、`.screenrc setenv LOCKPRG`（實測不通）、全域的 style 設定（顏色改為每個 saver 自己的）、
 側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形、
 tmux 預設的 `bind L`（跟使用者既有熱鍵撞，改 command alias；要綁的自己填 `bind-key`）、session 等級的 tmux 鎖（換個 session 就繞過，改整台）、
 閒置鎖升級成整台（雙螢幕會被另一邊鎖到）、一個 PIN 解全部 client（要輪詢，維持各自輸）、
-純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態進標題膠囊）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN。
+純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態進標題膠囊）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN、常亮的按鈕列與橘色的 uninstalled（按鈕移到底部、cursor 到才亮；狀態只在 focus 時上色）。
 
 ## 目錄
 

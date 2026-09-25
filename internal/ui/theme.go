@@ -27,9 +27,6 @@ var (
 	// yellow is "not set yet".
 	warnColor   = lipgloss.Color("#f38ba8") // red
 	yellowColor = lipgloss.Color("#f9e2af") // yellow
-	// a tool whose block is not in its file: the title's "uninstalled"
-	// chip (user, 2026-09-25: orange against installed's green).
-	peachColor = lipgloss.Color("#fab387") // peach
 	// the lit cells while the PIN prompt is up: the board steps back to be
 	// the prompt's backdrop (ui.md §2.3).
 	backdropColor = borderDim

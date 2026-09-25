@@ -423,7 +423,26 @@ func TestInstallAndUninstallFromTheScreen(t *testing.T) {
 	}
 	m = m.press("G")
 	if m.rowAt().kind != rowInstall || m.rowAt().value != "Install" {
-		t.Fatalf("the last row is the button: %+v", m.rowAt())
+		t.Fatalf("the last stop is the button: %+v", m.rowAt())
+	}
+	// The button is not a row of the table: it sits under a rule on the
+	// last line of [2], centred, once.
+	v := m.View()
+	lines := strings.Split(v, "\n")
+	at := -1
+	for i, l := range lines {
+		if strings.Contains(l, " Install ") {
+			at = i
+		}
+	}
+	if strings.Count(v, " Install ") != 1 || at < 2 || !strings.Contains(lines[at+1], "╝") || !strings.Contains(lines[at-1], "────") {
+		t.Fatalf("the button must be the last line, under a rule:\n%s", v)
+	}
+	pre := dispW(lines[at][:strings.Index(lines[at], " Install ")]) + 1
+	left := pre - (sideW + 1)
+	right := (m.width - sideW - 2) - left - dispW("Install")
+	if left < 10 || right < 10 || max(left-right, right-left) > 4 {
+		t.Errorf("the button is not centred: %d left, %d right:\n%s", left, right, v)
 	}
 	m = m.press("enter")
 	if !strings.Contains(m.toast.msg, "set conf first") || m.confirm.isActive() {
@@ -492,6 +511,24 @@ func TestInstallAndUninstallFromTheScreen(t *testing.T) {
 	m = m.expireToast().press("k", "enter", "ctrl+u").typed("60").press("enter")
 	if b, _ := os.ReadFile(conf2); strings.Contains(string(b), "locku") {
 		t.Errorf("a change while uninstalled reached the file:\n%s", b)
+	}
+}
+
+// The title's chips: one grey strip on a panel without the keys; with
+// them the first lights in the border's colour and installed / unsaved
+// in theirs, uninstalled keeping the grey (user, 2026-09-25).
+func TestChipFill(t *testing.T) {
+	name, kind := chip{text: "[2] tmux", border: true}, chip{text: "integration"}
+	on, off := chip{text: "installed", fill: liveColor}, chip{text: "uninstalled"}
+	for _, c := range []chip{name, kind, on, off} {
+		if f := chipFill(c, borderDim, false); f != borderDim {
+			t.Errorf("unfocused, %q wears %v", c.text, f)
+		}
+	}
+	if chipFill(name, focusColor, true) != focusColor || chipFill(kind, focusColor, true) != borderDim ||
+		chipFill(on, focusColor, true) != liveColor || chipFill(off, focusColor, true) != borderDim {
+		t.Errorf("focused: name %v, kind %v, installed %v, uninstalled %v",
+			chipFill(name, focusColor, true), chipFill(kind, focusColor, true), chipFill(on, focusColor, true), chipFill(off, focusColor, true))
 	}
 }
 

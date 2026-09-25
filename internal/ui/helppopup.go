@@ -64,7 +64,7 @@ var helpKeys = []helpEntry{
 	{"P", "preview the lock showing this profile"},
 	{"S", "save its colour draft to config.yaml"},
 	{"R", "reset the draft to the saved colours"},
-	{"", "[2] tmux, screen — the last row is the button"},
+	{"", "[2] tmux, screen — the button at the foot"},
 	{"Enter", "Install: locku's block into the file (tmux: and onto a running server), after a confirm — and from then on a row changed is written at once; Uninstall: out again"},
 	{"", "Navigate"},
 	{"j · k", "next / previous row"},
@@ -95,7 +95,7 @@ func helpTool(name string) []helpEntry {
 	if name == tools[toolTmux] {
 		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none"})
 	}
-	return append(out, helpEntry{"Install", "the button: Enter writes the block into conf, after a confirm; once it is in — the title says installed — every row above is written at once when it changes, and the button is Uninstall"})
+	return append(out, helpEntry{"Install", "the button at the foot, j past the last row or G: Enter writes the block into conf, after a confirm; once it is in — the title says installed — every row above is written at once when it changes, and the button is Uninstall"})
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {
