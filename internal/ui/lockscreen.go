@@ -60,7 +60,7 @@ type LockModel struct {
 	// nothing was unlocked — a tmux session stays marked locked.
 	gone bool
 	// promptOnly: the PIN prompt alone, for the custom saver (function.md
-	// §5.6) — up from the first frame, on a screen of the profile's
+	// §5.5) — up from the first frame, on a screen of the profile's
 	// colour, and when it closes the program is put back (back), not a
 	// board.
 	promptOnly bool

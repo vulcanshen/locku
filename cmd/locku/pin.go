@@ -30,11 +30,14 @@ func pinReset(in *os.File, out io.Writer, verify func(user, password string) boo
 		return 2
 	}
 	cfg, note := config.Load()
-	if note != "" && !strings.Contains(note, "not found") {
-		// A file that could not be read would be written back as the
-		// defaults with a PIN on top: not this command's to do.
-		fmt.Fprintf(out, "locku pin reset: config.yaml: %s — fix that first\n", note)
-		return 1
+	if _, ok := config.LoadPINHash(); !ok {
+		if _, err := os.Stat(config.Path()); err == nil {
+			// A file that cannot be read — or whose pin_hash is no hash —
+			// would be written back as the defaults with a PIN on top:
+			// not this command's to do. A file that is not there is made.
+			fmt.Fprintf(out, "locku pin reset: config.yaml cannot be read (%s) — fix that first\n", note)
+			return 1
+		}
 	}
 	fmt.Fprint(out, "Reset the PIN? A new one is made and shown here once; the old one stops working at once. [y/N] ")
 	line, _ := bufio.NewReader(in).ReadString('\n')

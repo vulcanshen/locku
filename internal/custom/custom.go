@@ -1,5 +1,5 @@
 // Package custom runs the user's own program as the saver (function.md
-// §5.6; user, 2026-09-25): a command of theirs, on a pty of locku's, its
+// §5.5; user, 2026-09-25): a command of theirs, on a pty of locku's, its
 // output passed on to the terminal as it comes. The program is a process
 // of its own and nothing more: locku does not restart it, does not read
 // its screen, and when the lock ends kills it — its whole process group,
@@ -432,7 +432,7 @@ func (t *Terminal) Cancel() {
 
 // Preview runs command on the terminal until a key, or until the
 // program ends: a look at it from the settings screen (function.md
-// §5.6). It returns the outcome of a program that ended, and nil for a
+// §5.5). It returns the outcome of a program that ended, and nil for a
 // key; either way the program is killed and the terminal given back.
 func Preview(command string, tty, out *os.File) *Outcome {
 	t, err := Take(tty, out)
