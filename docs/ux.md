@@ -37,8 +37,8 @@
 
 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
-profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的 Install / Uninstall 不是 panel operation，是 `[2]` 底部分隔線下
-按鈕的 Enter（2026-09-25，取代同日早上的 `[S]` / `[X]` 熱鍵——畫面上看不到；更早是 CLI `locku setup`）。
+profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25，取代同日的底部 Install 按鈕與
+`[S]` / `[X]` 熱鍵——畫面上看不到；更早是 CLI `locku setup`）。
 
 **`[1]` 側欄**
 
@@ -46,7 +46,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 |---|---|
 | saver（class：clock、dino） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，提議 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
 | profile | `[Enter] Edit`（焦點送到 `[2]`）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled 並說明） |
-| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：conf、閒置鎖、bind-key 與底部的 Install / Uninstall 按鈕）；同日拿掉 `[S] Setup` / `[X] Remove` 熱鍵 |
+| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：activate、config file path，分隔線下工具自己的 key）；同日拿掉 `[S] Setup` / `[X] Remove` 熱鍵 |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
 **`[2]` 明細**
@@ -63,10 +63,11 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | profile | `[Enter] Choose`（列出所有 profile） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown | `[Enter] Edit` | 無 |
-| conf（tmux / screen 的 `[2]`） | `[Enter] Edit`（裝著時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
-| lock-after-time（screen：idle） | `[Enter] Edit`（裝著時直接重寫區塊、tmux 即時套用） | 無 |
+| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把區塊寫進 config file path；tmux 有 server 在跑就即時套用；screen 連 shell rc）/ `[Enter] Deactivate`（confirm 後拿掉，tmux 連 server 上的一併拿掉）；路徑沒填時 disabled 並說 `set the config file path first`（2026-09-25） | 無 |
+| config file path | `[Enter] Edit`（on 時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
+| 分隔線 | 不可停 | 無 |
+| lock-after-time（screen：idle） | `[Enter] Edit`（on 時直接重寫區塊、tmux 即時套用） | 無 |
 | bind-key（tmux） | `[Enter] Edit`（同上） | 無 |
-| Install / Uninstall（`[2]` 底部分隔線下的按鈕，置中，cursor 到才點亮） | `[Enter] Install`（confirm 後把區塊寫進 conf；tmux 有 server 在跑就即時套用；screen 連 shell rc）/ `[Enter] Uninstall`（confirm 後拿掉，tmux 連 server 上的一併拿掉）；conf 沒填時 disabled 並說 `set conf first`（2026-09-25） | 無 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
@@ -86,7 +87,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 help 的內容看 focus 在哪：`[1]`，以及 profile / saver 的 `[2]`，是鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、
 navigate）；preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
-conf、lock-after-time / idle、bind-key（tmux）、Install 的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
+activate、config file path、lock-after-time / idle、bind-key（tmux）的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
 preference 時只要 preference 的說明，只要）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
@@ -114,7 +115,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Property / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點；tmux / screen 的最後一個停靠點是底部的按鈕（2026-09-25） |
+| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Property / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點；tmux / screen 的分隔線跳過（2026-09-25） |
 | `j` / `k` | 上下一列、頭尾相接（2026-09-24 修訂：原本不繞，使用者要面板跟 menu 一樣 loop） | 同 |
 | `u` / `d` | 半頁，到頭就停不繞；清單比半頁短時等於跳到頭 / 尾 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |
@@ -134,8 +135,8 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 | layout / size / font / time / date / runner / scene / profile | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
-| bind-key（tmux；2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → ` · one key, e.g. l or C-l` 框留著、否則寫檔；裝著就直接進檔案與 server，沒裝只存 config |
-| conf（tmux、screen 各一個；2026-09-25 前是 preference 的 tmux_conf / screen_conf） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，按鈕就 disabled；裝著的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear`；裝著時改路徑，區塊搬到新檔（2026-09-25） |
+| bind-key（tmux；2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → ` · one key, e.g. l or C-l` 框留著、否則寫檔；activate on 就直接進檔案與 server，off 只存 config |
+| config file path（tmux、screen 各一個；2026-09-25 前是 preference 的 tmux_conf / screen_conf，同日中午叫 conf） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear`；on 時改路徑，區塊搬到新檔（2026-09-25） |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 
@@ -206,7 +207,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
-**先 confirm 的動作**：Delete saver、有未存顏色草稿時的 Quit、tmux / screen 的 Install 與 Uninstall（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
+**先 confirm 的動作**：Delete saver、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server；改成 property 列後仍 confirm）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
 **toast**：`PIN set`、`PIN mismatch`、`cannot delete: active` / `cannot delete: last one`、
 `nothing to save` / `nothing changed`、`write failed: <reason>`（值退回）。

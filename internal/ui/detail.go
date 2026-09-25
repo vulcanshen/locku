@@ -18,12 +18,11 @@ import (
 // on starts as, and which [p] previews; changing them changes no profile
 // already made (user, 2026-09-24). A tool — tmux, screen — is its file
 // and its idle time — tmux's the key after prefix that locks, too —
-// then, under a rule at the foot of the panel, a button: Install while
-// locku's block is not in the file, Uninstall while it is (user,
-// 2026-09-25: a button on the screen, where S and X were hotkeys nobody
-// saw — and not a row of the table: apart, at the bottom, centred, lit
-// only while the cursor is on it); whether the block is in is the
-// title's business, a chip after the panel's name. Preference is the PIN, the active profile and the lock's
+// under locku's own two rows: activate, on while locku's block is in
+// the file and off while it is not, and the file's path; a rule parts
+// the two from the tool's own keys (user, 2026-09-25: property and
+// value throughout — the button, and the S and X hotkeys before it,
+// are gone). Preference is the PIN, the active profile and the lock's
 // settings. What each setting means is in the ? help, on that panel.
 // Every key config.yaml has is a row here, except `profiles` and
 // `savers`, which ARE panel [1]; a tool's idle time under the tool's
@@ -58,10 +57,11 @@ const (
 	rowPINPromptTimeout
 	rowWrongPINAttempts
 	rowWrongPINCooldown
-	rowConf    // a tool's file
-	rowIdle    // a tool's idle time, under the tool's own name for it
-	rowBindKey // tmux's key after prefix that locks, or none
-	rowInstall // the button at the foot: Install, or Uninstall once the block is in
+	rowConf     // a tool's file
+	rowIdle     // a tool's idle time, under the tool's own name for it
+	rowBindKey  // tmux's key after prefix that locks, or none
+	rowActivate // locku's block in the tool's file: on, or off
+	rowRule     // the line between locku's rows and the tool's own
 )
 
 // row is one line of panel [2].
@@ -252,19 +252,24 @@ func (m AppModel) rows() []row {
 		return append(out, m.colourRows(key, p)...)
 	case sideTool:
 		name, t := m.tool()
-		conf := row{kind: rowConf, label: "conf", value: t.Conf, color: value, stop: true}
+		// locku's own two rows first — whether the block is in the file,
+		// read off the file each time, and the file — then a rule, then
+		// the tool's own keys under the tool's own names (user,
+		// 2026-09-25: property and value throughout, the rule parting
+		// what is locku's from what is the tool's).
+		active := row{kind: rowActivate, label: "activate", value: "off", color: value, stop: true}
+		if setup.Installed(t.Conf) {
+			active.value, active.color = "on", liveColor
+		}
+		conf := row{kind: rowConf, label: "config file path", value: t.Conf, color: value, stop: true}
 		if t.Conf == "" {
 			conf.value, conf.color = "not set", yellowColor
 		}
-		// The button, last: which of the two it is, is read off the file
-		// each time.
-		button := row{kind: rowInstall, value: "Install", stop: true}
-		if setup.Installed(t.Conf) {
-			button.value = "Uninstall"
-		}
 		out := []row{
 			head,
+			active,
 			conf,
+			{kind: rowRule},
 			{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true},
 		}
 		// tmux alone binds a key: the one after prefix that locks every
@@ -276,7 +281,7 @@ func (m AppModel) rows() []row {
 			}
 			out = append(out, bind)
 		}
-		return append(out, button)
+		return out
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
@@ -337,43 +342,54 @@ func sliderBar(v int) string {
 // sideChips is panel [1]'s title: one chip, in the border's colour.
 var sideChips = []chip{{text: "[1] locku", border: true}}
 
-// detailChips is panel [2]'s title as a chain (ui.md §B, 2026-09-25):
-// the panel and what it shows, in the border's colour; then the kind
-// it is — profile, saver, integration, settings; then, when there is
-// one, its state: a colour draft unsaved lights yellow and a tool's
-// block installed green while the panel has the keys, uninstalled
-// keeps the grey (chipFill). Read apart, the three say what, which
-// kind, and how it stands.
+// detailChips is panel [2]'s title as a chain (ui.md §5, 2026-09-25):
+// the panel and what it shows, in the border's colour, and, while a
+// colour draft differs, unsaved — lit yellow while the panel has the
+// keys (chipFill). What kind of thing it shows — profile, saver,
+// integration, settings — is not chained here: it is detailKind, a tag
+// of its own in the border's other corner (user, 2026-09-25).
 func (m AppModel) detailChips() []chip {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver, sideProfile:
 		p, key, _ := m.subject()
-		out := []chip{{text: "[2] " + p.Name, border: true}, {text: "profile"}}
+		name := p.Name
 		if it.kind == sideSaver {
-			out = []chip{{text: "[2] " + saver.Kinds[it.ref], border: true}, {text: "saver"}}
+			name = saver.Kinds[it.ref]
 		}
+		out := []chip{{text: "[2] " + name, border: true}}
 		if m.dirtyOf(key, p) {
 			out = append(out, chip{text: "unsaved", fill: yellowColor})
 		}
 		return out
 	case sideTool:
-		name, t := m.tool()
-		state := chip{text: "uninstalled"}
-		if setup.Installed(t.Conf) {
-			state = chip{text: "installed", fill: liveColor}
-		}
-		return []chip{{text: "[2] " + name, border: true}, {text: "integration"}, state}
+		name, _ := m.tool()
+		return []chip{{text: "[2] " + name, border: true}}
 	}
-	return []chip{{text: "[2] preference", border: true}, {text: "settings"}}
+	return []chip{{text: "[2] preference", border: true}}
 }
 
-// detailTitle is the same title in words, for the Space menu's own box.
-func (m AppModel) detailTitle() string {
-	var parts []string
-	for _, c := range m.detailChips() {
-		parts = append(parts, c.text)
+// detailKind is the kind of thing [2] shows: the tag in the border's
+// right corner.
+func (m AppModel) detailKind() string {
+	switch m.sideAt().kind {
+	case sideSaver:
+		return "saver"
+	case sideProfile:
+		return "profile"
+	case sideTool:
+		return "integration"
 	}
-	return strings.Join(parts, " · ")
+	return "settings"
+}
+
+// detailTitle is the same, in words, for the Space menu's own box.
+func (m AppModel) detailTitle() string {
+	chips := m.detailChips()
+	title := chips[0].text + " · " + m.detailKind()
+	for _, c := range chips[1:] {
+		title += " · " + c.text
+	}
+	return title
 }
 
 // detailBody draws panel [2]'s rows at innerW × innerH.
@@ -400,21 +416,14 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	lw := min(labelW, max(4, innerW-sliderW-5))
 	out := make([]string, 0, len(rows))
 	keep := 0
-	button, lit := "", false
 	for i, r := range rows {
-		if r.kind == rowInstall {
-			// Not a line of the table: the button sits under a rule at
-			// the foot (buttonFoot); the cursor on it keeps the last row
-			// in view.
-			button, lit = r.value, i == curRow && m.focus == panelDetail
-			if i == curRow {
-				keep = max(0, len(out)-1)
-			}
-			continue
-		}
 		label := padRight(" "+r.label, lw)
 		var plain, styled string
 		switch r.kind {
+		case rowRule:
+			// The line between locku's rows and the tool's own.
+			plain = strings.Repeat("─", innerW)
+			styled = lipgloss.NewStyle().Foreground(borderDim).Render(plain)
 		case rowHead:
 			// The table's header, in the colour of the sidebar's group
 			// titles, so both panels are read the same way.
@@ -469,35 +478,7 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			keep = len(out) - 1
 		}
 	}
-	// The lines follow the cursor when they outgrow the panel — above
-	// the foot, when the panel has one.
-	footH := 0
-	if button != "" {
-		footH = min(2, innerH)
-	}
-	top := scrollTo(0, min(len(out)-1, keep), innerH-footH)
-	body := fitLines(out[min(top, len(out)):], innerW, innerH-footH)
-	return append(body, fitLines(buttonFoot(button, lit, innerW, footH), innerW, footH)...)
-}
-
-// buttonFoot is the tool's button under a rule, the last lines of [2]
-// (user, 2026-09-25: a button is not a row of the table — it sits
-// apart, at the bottom, centred, and is not lit until the cursor is on
-// it, so the user can see the hand is there). h is the lines it may
-// take; with one, the button alone.
-func buttonFoot(text string, lit bool, innerW, h int) []string {
-	if h <= 0 {
-		return nil
-	}
-	f := borderDim
-	if lit {
-		f = handColor
-	}
-	w := chainW([]chip{{text: text}})
-	left := max(0, (innerW-w)/2)
-	line := clipANSI(spaces(left)+titleChain([]chip{{text: text, fill: f}}, f, true), innerW)
-	if h == 1 {
-		return []string{line}
-	}
-	return []string{lipgloss.NewStyle().Foreground(borderDim).Render(strings.Repeat("─", innerW)), line}
+	// The lines follow the cursor when they outgrow the panel.
+	top := scrollTo(0, min(len(out)-1, keep), innerH)
+	return fitLines(out[min(top, len(out)):], innerW, innerH)
 }

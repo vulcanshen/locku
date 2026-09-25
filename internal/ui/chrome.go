@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -49,7 +48,18 @@ func titleChain(chips []chip, bc lipgloss.Color, focused bool) string {
 			div, fg, bg := divider(chipFill(chips[i-1], bc, focused), f)
 			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
 		}
-		b.WriteString(lipgloss.NewStyle().Foreground(canvas).Background(f).Bold(f != borderDim).Render(" " + c.text + " "))
+		// Flush against the caps, as sshu's and filu's capsules are; a
+		// space either side of a seam, so no word touches the triangle
+		// (user, 2026-09-25: the space after the round cap was one too
+		// many).
+		seg := c.text
+		if i > 0 {
+			seg = " " + seg
+		}
+		if i < len(chips)-1 {
+			seg += " "
+		}
+		b.WriteString(lipgloss.NewStyle().Foreground(canvas).Background(f).Bold(f != borderDim).Render(seg))
 	}
 	b.WriteString(lipgloss.NewStyle().Foreground(chipFill(chips[len(chips)-1], bc, focused)).Render(capRight))
 	return b.String()
@@ -61,7 +71,7 @@ func titleChain(chips []chip, bc lipgloss.Color, focused bool) string {
 // panel has the keys; everything else, and everything on a panel
 // without them, the unfocused border's grey (user, 2026-09-25: the
 // chips are one grey strip until the panel is focused, and then
-// installed lights while uninstalled keeps the grey — the state that
+// unsaved lights while the rest keep the grey — the state that
 // wants noticing is the one that lights).
 func chipFill(c chip, bc lipgloss.Color, focused bool) lipgloss.Color {
 	switch {
@@ -85,24 +95,27 @@ func divider(prev, cur lipgloss.Color) (glyph string, fg, bg lipgloss.Color) {
 	return dividerHard, prev, cur
 }
 
-// chainW is the cells a chain takes: two caps, each chip's text with a
-// space either side, and a seam between neighbours.
+// chainW is the cells a chain takes: two caps, each chip's text, and
+// between neighbours a seam with a space either side.
 func chainW(chips []chip) int {
-	w := 2 + len(chips) - 1
+	w := 2 + 3*(len(chips)-1)
 	for _, c := range chips {
-		w += dispW(c.text) + 2
+		w += dispW(c.text)
 	}
 	return w
 }
 
 // panelFrame frames body — every line already innerW cells — with a title
-// chain in the top border and, for the unfocused rounded frame, a hint
-// in the bottom one. Focused frames carry no hint: the hint is the
-// config's path, a resting fact, and it lives on [2] whichever side has
-// the keys. A chain too wide for the border sheds its second chip —
-// the kind before the state, which is the part that says something —
-// until it fits, or is left out whole.
-func panelFrame(innerW int, body []string, title []chip, hint string, focused bool) string {
+// chain flush after the top border's first corner, as sshu seats its
+// capsule, a tag — what kind of thing the panel shows — flush before
+// its other corner, on its own (user, 2026-09-25: the kind is not part
+// of the title), and, for the unfocused rounded frame, a hint in the
+// bottom border. Focused frames carry no hint: the hint is the config's
+// path, a resting fact, and it lives on [2] whichever side has the
+// keys. A chain too wide for the border sheds its state chip; a tag
+// with no room beside it is left out, and so is a chain wider than the
+// border.
+func panelFrame(innerW int, body []string, title []chip, tag, hint string, focused bool) string {
 	bc := borderDim
 	tl, tr, bl, br, h, v := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -113,17 +126,20 @@ func panelFrame(innerW int, body []string, title []chip, hint string, focused bo
 	hs := lipgloss.NewStyle().Foreground(dimColor)
 
 	out := make([]string, 0, len(body)+2)
-	// " chain " inside the top border, or nothing when it cannot fit.
-	titleW := 0
-	top := ""
-	for len(title) > 1 && chainW(title)+2 > innerW {
-		title = slices.Delete(slices.Clone(title), 1, 2)
+	titleW, top := 0, ""
+	if len(title) > 1 && chainW(title) > innerW {
+		title = title[:1]
 	}
-	if len(title) > 0 && chainW(title)+2 <= innerW {
-		titleW = chainW(title) + 2
-		top = " " + titleChain(title, bc, focused) + " "
+	if len(title) > 0 && chainW(title) <= innerW {
+		titleW = chainW(title)
+		top = titleChain(title, bc, focused)
 	}
-	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW))+tr))
+	tagW, right := 0, ""
+	if tag != "" && titleW+dispW(tag)+2+1 <= innerW {
+		tagW = dispW(tag) + 2
+		right = titleChain([]chip{{text: tag, border: true}}, bc, focused)
+	}
+	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW-tagW)))+right+bs.Render(tr))
 	side := bs.Render(v)
 	for _, l := range body {
 		out = append(out, side+l+strings.Repeat(" ", max(0, innerW-dispW(l)))+side)
