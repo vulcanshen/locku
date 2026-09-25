@@ -182,7 +182,9 @@ func (m *AppModel) previewHere() tea.Cmd {
 	if _, _, ok := m.subject(); ok && m.focus == panelDetail {
 		return m.previewThis()
 	}
-	return m.startPreview(m.previewCfg())
+	cfg := m.previewCfg()
+	p, _ := cfg.Active()
+	return m.previewOf(cfg, p)
 }
 
 // dispatch runs the action bound to key, or says why it cannot.
