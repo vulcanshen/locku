@@ -32,7 +32,7 @@ with open(os.path.join(cfgDir, "config.yaml"), "w") as f:
 # TMUX_TMPDIR keeps every tmux here away from the user's own server.
 env = {"HOME": work, "PATH": binDir + ":" + os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
        "LOCKU_CONFIG": cfgDir, "TMUX_TMPDIR": work, "USER": os.environ.get("USER", "u")}
-SOCK = "locku-e2e"
+SOCK = "default"  # the server locku's settings screen applies to, under its own TMUX_TMPDIR
 
 
 def spawn(argv):
@@ -79,7 +79,7 @@ def marked():
 
 
 def locks_running():
-    return subprocess.run(["pgrep", "-f", "locku lock -S"], capture_output=True).returncode == 0
+    return subprocess.run(["pgrep", "-f", "locku lock -S " + os.path.join(os.path.realpath(work), "tmux-%d" % os.getuid(), SOCK)], capture_output=True).returncode == 0
 
 
 def unlock(fd):
@@ -183,21 +183,27 @@ check("D's unlock clears the mark", not marked())
 tmux("kill-server")
 kill(pd)
 
-# 6. lock-session, chosen on the screen while activate is on: the file is
-# rewritten at once — the alias, the key and a session-created hook.
+# 6. lock-session, chosen on the screen while activate is on AND a server
+# runs on the lock-server block: the file is rewritten at once, and the
+# running server takes the whole block — the alias, the key, the session
+# hook, each session's own lock-command — with a stale mark cleared.
+pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
+time.sleep(1.5)
+tmux("new-session", "-d", "-s", "u")
+tmux("set", "-g", "@locked", "1")  # a mark left over, which a switch must clear
 screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"j", b"\r")
 text = open(conf).read()
 check("lock-session chosen on the screen: the alias, the key and the session hook are in the file",
       "locku=lock-session" in text and "bind-key l lock-session" in text and "session-created[90]" in text
       and "-t '#{session_id}'" in text and "lock-server" not in text)
-pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
-time.sleep(1.5)
-tmux("new-session", "-d", "-s", "u")
 # A session is named with its colon: a bare name is tried as a window
 # name's prefix first, and u's window is called after its shell (measured
 # 2026-09-25: -t t found u's window "tmux").
-check("each session's lock-command carries its own id",
-      "-t '$0'" in tmux("show", "-t", "t:", "-v", "lock-command") and "-t '$1'" in tmux("show", "-t", "u:", "-v", "lock-command"))
+check("the running server took the block: alias, key, hook, and each session's own lock-command",
+      "locku=lock-session" in tmux("show", "-s", "command-alias") and "session-created[90]" in tmux("show-hooks", "-g")
+      and "lock-session" in tmux("list-keys", "-T", "prefix")
+      and "-t '$0'" in tmux("show", "-t", "t:", "-v", "lock-command") and "-t '$1'" in tmux("show", "-t", "u:", "-v", "lock-command"))
+check("the switch cleared the stale mark", tmux("show", "-gqv", "@locked") == "")
 tmux("locku", "-t", "t")
 time.sleep(1.8)
 check("A shows the board after locku on its session", board(oa))

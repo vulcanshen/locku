@@ -259,28 +259,29 @@ func boundIn(path string) (key, lock string) {
 	return bound(string(b))
 }
 
-// tmuxSet is the same on a running server; tmuxUnset its undoing, one
-// for one.
-func tmuxSet(t config.Tmux) [][]string {
-	cmds := [][]string{
-		{"set", "-gF", "lock-command", lockCmd()},
-		{"set", "-g", "lock-after-time", itoa(t.LockAfterTime)},
-		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=" + t.Lock},
-		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
-		{"set-hook", "-g", "client-session-changed[" + tmuxIndex + "]", hookCmd},
+// sourceBlock hands lines — the block, as the file got it — to the
+// running server, from a file of their own: the same text, read the
+// same way, so the server and the file cannot drift apart (user,
+// 2026-09-25: one block, written whole, not a list of commands kept in
+// step with it).
+func sourceBlock(w io.Writer, tmux string, lines []string) {
+	f, err := os.CreateTemp("", "locku-block-*.conf")
+	if err != nil {
+		fmt.Fprintln(w, "the block could not be handed to the server:", err)
+		return
 	}
-	if t.Lock == config.LockSession {
-		cmds = append(cmds, []string{"set-hook", "-g", "session-created[" + tmuxIndex + "]", sessionHook()})
+	defer os.Remove(f.Name())
+	f.WriteString(strings.Join(lines, "\n") + "\n")
+	f.Close()
+	if out, err := exec.Command(tmux, "source-file", f.Name()).CombinedOutput(); err != nil {
+		fmt.Fprintf(w, "tmux source-file: %s\n", strings.TrimSpace(string(out)))
 	}
-	if t.BindKey != "" {
-		cmds = append(cmds, []string{"bind-key", t.BindKey, t.Lock})
-	}
-	return cmds
 }
 
-// tmuxUnset undoes tmuxSet one for one — then the session hook, the
-// key that was bound, and the mark a lock may have left on the server;
-// what each session holds is eachSession's to take off.
+// tmuxUnset takes off the server everything the block sets, one for
+// one — then the session hook, the key that was bound, and the mark a
+// lock may have left on the server; what each session holds is
+// eachSession's to take off.
 func tmuxUnset(key string) [][]string {
 	cmds := [][]string{
 		{"set", "-gu", "lock-command"},
@@ -307,13 +308,14 @@ func pad(s string, w int) string {
 }
 
 // Tmux writes the block into the file at t.Conf — "~/…" allowed — and,
-// when a server is running, sets the same things on it now. A key the
-// file bound before, and this write does not, comes off the server; a
-// lock changed takes every mark off, the server's and each session's,
-// since a mark left over reads as locked under the other rule (the
-// study: a global mark after a switch to lock-session reads as every
-// session locked); and each session gets its own lock-command, or
-// loses it, as the lock says.
+// when a server is running, hands it the same block (sourceBlock). What
+// the old block did and this one does not is undone first: a key it
+// bound comes off; a lock changed takes the session hook and every mark
+// off, the server's and each session's, since a mark left over reads as
+// locked under the other rule (the study: a global mark after a switch
+// to lock-session reads as every session locked). Then each session
+// gets its own lock-command, or loses it, as the lock says — the hook
+// in the block only reaches sessions made from now on.
 func Tmux(w io.Writer, t config.Tmux) error {
 	path, err := confPath(t.Conf, "tmux")
 	if err != nil {
@@ -325,18 +327,19 @@ func Tmux(w io.Writer, t config.Tmux) error {
 		return err
 	}
 	report(w, path, changed, "wrote")
-	cmds := tmuxSet(t)
+	var undo [][]string
 	if wasKey != "" && wasKey != t.BindKey {
-		cmds = append([][]string{{"unbind-key", wasKey}}, cmds...)
+		undo = append(undo, []string{"unbind-key", wasKey})
 	}
 	switched := wasLock != "" && wasLock != t.Lock
 	if switched {
-		cmds = append([][]string{{"set", "-gu", "@locked"}, {"set-hook", "-gu", "session-created[" + tmuxIndex + "]"}}, cmds...)
+		undo = append(undo, []string{"set", "-gu", "@locked"}, []string{"set-hook", "-gu", "session-created[" + tmuxIndex + "]"})
 	}
-	tmux, ok := tmuxLive(w, cmds)
+	tmux, ok := tmuxLive(w, undo)
 	if !ok {
 		return nil
 	}
+	sourceBlock(w, tmux, tmuxLines(t))
 	eachSession(tmux, func(id string) {
 		if t.Lock == config.LockSession {
 			exec.Command(tmux, "set", "-t", id, "-F", "lock-command", sessionLockCmd()).Run()
