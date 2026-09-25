@@ -239,6 +239,10 @@ type screen struct {
 	cols, rows int
 	box        string
 	rect       struct{ top, left, w, h int }
+	// pending is the end of the program's last chunk that could not be
+	// cut from — an escape sequence or a character not yet whole —
+	// held until the next chunk completes it.
+	pending []byte
 }
 
 const (
@@ -254,9 +258,20 @@ func (s *screen) Write(p []byte) (int, error) {
 	if s.box == "" {
 		return s.out.Write(p)
 	}
+	// The box goes in only where the stream can be cut: a chunk ends
+	// wherever the pipe happened to end it, and a box put into the
+	// middle of a cursor move left its digits on the screen as text
+	// (measured 2026-09-25, cmatrix). What cannot be cut from is held
+	// for the next chunk.
+	buf := append(s.pending, p...)
+	cut := safeCut(buf)
+	s.pending = append([]byte(nil), buf[cut:]...)
+	if cut == 0 {
+		return len(p), nil
+	}
 	var b bytes.Buffer
 	b.WriteString(syncBegin)
-	b.Write(p)
+	b.Write(buf[:cut])
 	b.WriteString(saveCur)
 	s.paint(&b)
 	b.WriteString(restoreCur)
@@ -265,6 +280,67 @@ func (s *screen) Write(p []byte) (int, error) {
 		return 0, err
 	}
 	return len(p), nil
+}
+
+// safeCut is where b can be cut without breaking what the program is
+// saying: before a trailing escape sequence that is not complete, and
+// before a trailing UTF-8 character that is not whole.
+func safeCut(b []byte) int {
+	if i := bytes.LastIndexByte(b, 0x1b); i >= 0 && !complete(b[i:]) {
+		return i
+	}
+	for k := 1; k <= 3 && k <= len(b); k++ {
+		c := b[len(b)-k]
+		if c&0xC0 == 0x80 {
+			continue // a continuation byte: the lead is further back
+		}
+		if c&0x80 == 0 {
+			break // ASCII: whole
+		}
+		need := 0
+		switch {
+		case c&0xE0 == 0xC0:
+			need = 2
+		case c&0xF0 == 0xE0:
+			need = 3
+		case c&0xF8 == 0xF0:
+			need = 4
+		}
+		if need > k {
+			return len(b) - k
+		}
+		break
+	}
+	return len(b)
+}
+
+// complete reports whether the escape sequence at the start of seq has
+// its end: a CSI its final byte, an OSC / DCS / SOS / PM / APC its BEL
+// or ST, an nF sequence its final, anything else its one byte.
+func complete(seq []byte) bool {
+	if len(seq) < 2 {
+		return false
+	}
+	switch seq[1] {
+	case '[':
+		for _, c := range seq[2:] {
+			if c >= 0x40 && c <= 0x7E {
+				return true
+			}
+		}
+		return false
+	case ']', 'P', 'X', '^', '_':
+		return bytes.IndexByte(seq, 0x07) >= 0 || bytes.Contains(seq, []byte{0x1b, '\\'})
+	}
+	if seq[1] >= 0x20 && seq[1] <= 0x2F {
+		for _, c := range seq[2:] {
+			if c >= 0x30 && c <= 0x7E {
+				return true
+			}
+		}
+		return false
+	}
+	return true
 }
 
 // paint writes the box into w and widens the rectangle it has taken.
@@ -295,11 +371,16 @@ func (s *screen) Overlay(box string) {
 	s.out.Write(b.Bytes())
 }
 
-// Clear takes the box away and blanks its place, the largest it was.
+// Clear takes the box away and blanks its place, the largest it was;
+// what was held back goes out first, whole now or not.
 func (s *screen) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.box = ""
+	if len(s.pending) > 0 {
+		s.out.Write(s.pending)
+		s.pending = nil
+	}
 	if s.rect.h > 0 {
 		var b bytes.Buffer
 		b.WriteString(syncBegin + saveCur)
