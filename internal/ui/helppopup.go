@@ -57,6 +57,7 @@ var helpKeys = []helpEntry{
 	{"n", "new profile of this saver, under a name"},
 	{"", "[1] Profiles — the ones set up"},
 	{"p", "preview the lock showing this profile"},
+	{"a", "activate: the lock shows this profile from now on"},
 	{"D", "duplicate it under a new name"},
 	{"r", "rename it"},
 	{"X", "delete it (not the active one, not the last one)"},

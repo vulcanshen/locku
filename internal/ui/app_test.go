@@ -1151,3 +1151,20 @@ func TestQuitAndSpaceInsideFloats(t *testing.T) {
 		t.Error("q on the panel must quit")
 	}
 }
+
+// [a] on a profile in [1] makes it the one the lock shows, at once
+// (user, 2026-09-25): the dot moves, the file is written; on the
+// active one the key says so and changes nothing.
+func TestActivateFromTheSidebar(t *testing.T) {
+	m := newTestApp(t).press("a")
+	if m.cfg.Profile != "clock" || !strings.Contains(m.toast.msg, "already active") {
+		t.Fatalf("a on the active profile: %q, toast %q", m.cfg.Profile, m.toast.msg)
+	}
+	m = m.expireToast().press("j", "a")
+	if m.cfg.Profile != "clock2" || saved(t).Profile != "clock2" || !strings.Contains(m.View(), "● clock2") {
+		t.Errorf("a on clock2: %q, saved %q:\n%s", m.cfg.Profile, saved(t).Profile, m.View())
+	}
+	if !strings.Contains(m.press(" ").View(), "ctivate") {
+		t.Error("Activate must be a row of the profile's menu")
+	}
+}

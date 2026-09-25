@@ -277,7 +277,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`（不帶 `-S` / `-t`）。原�
 - 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24）。
 - saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
 - profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，dino 的 runner、scene，custom 的 command；clock 與 dino 再有 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。custom 沒有顏色，也就沒有草稿與 `S` / `R`。
-- preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，側欄的 `●` 只顯示。
+- preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，或側欄 profile 列按 `a`（2026-09-25，使用者：不必每次到 preference 切）。
 - Integration（2026-09-25，使用者定案）：側欄第三個區塊，`tmux` 與 `screen` 各一項，`[2]` 的列：
   - **`activate`**（`on` / `off`）：區塊在不在 `config file path` 那個檔案裡，每次畫都讀檔。Enter → confirm → 執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 進去；screen 連 shell rc 一起寫、跑著的 session 即時 `screen -X`），off 拿掉（tmux server 上的、跑著的 screen session 上的一併拿掉）；路徑沒填時 disabled 並說 `set the config file path first`。
   - **`config file path`**：要寫的檔案，`~/` 可用，提議 `~/.tmux.conf` / `~/.screenrc`（webu 的提議作法，ux.md §2.1）。
@@ -500,6 +500,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 38. （2026-09-25，使用者定案）custom saver 的 PIN 框**疊在動畫上、動畫不停**：程式的輸出照樣經 `screen` writer 直通，框開著時每段輸出後面補畫一次框（DECSC / DECRC 包住、一次 `?2026` synchronised update），沒有一幀被丟；框收起時清空它佔過的矩形，只對閒置 ≥ 500 ms 的程式送 SIGWINCH 要它重畫（cmatrix 實測：正在畫的程式被要求重畫會閃一下從頭來）。同日三版：先是「按鍵時暫停轉發、離開 alt screen、在 locku 自己的底上開框、回來送 SIGWINCH」（使用者：框下面沒有動畫）；再是「框畫在凍住的畫面上、回來時真的縮一欄再放回去逼它整頁重畫」（cmatrix 實測：只送訊號的 curses 程式只重畫它以為有變的部分，舊幀透出來）；最後是現在這版——不凍畫面就沒有補畫的問題。PIN prompt 因此是一個沒有 renderer 的 lock 程式，透過 callback 畫框。否決：內建 VT 終端機模擬器把輸出 parse 成格子再畫（多一個依賴、忠實度與效能都要驗）；重啟三次再退階（不干涉生命週期）；黑畫面加紅字（用板子）；框下面 locku 的底色；雙重 resize；對正在畫的程式送 SIGWINCH。同日：全域 `P` 在 `[1]` 上什麼都不做（`p` 預覽游標那列）；在 preference / tmux / screen 的 `[2]` 上預覽啟用中的 profile，custom 也走交出終端機那條路（原本走畫面內的鎖，custom 沒有顏色就成了一片白格）。`locku help` 說 `-S` / `-t` 是 tmux 整合傳的、使用者不用打，screen 以 SCREEN-LOCK 不帶參數呼叫。
 39. （2026-09-25，使用者定案）tmux 的即時套用改成**整個區塊 `source-file`**：跑著的 server 拿到的就是檔案拿到的那幾行（寫進暫存檔、`tmux source-file`、刪掉），不再維護一份跟區塊平行的指令清單，server 與檔案不會走散；新區塊不做而舊區塊做過的先 undo（舊的 bind-key 解綁、`lock` 換檔時清全域與每個 session 的 `@locked`、拿掉 session-created hook），再對每個既有 session 逐一設或清它自己的 lock-command（hook 只管之後建立的 session）。e2e 因此在跑著 lock-server 區塊、且留了一個 stale 全域旗的 server 上從畫面切到 lock-session，驗 server 上的 alias、鍵、hook、每個 session 的 lock-command 都換了、旗清了；e2e 的 tmux 用預設 socket 名 `default`、跑在自己的 `TMUX_TMPDIR` 下，數鎖只數自己 socket 上的（使用者自己的 server 上有鎖也不會誤判）。
 40. （2026-09-25，使用者定案）**平台：macOS / Linux（WSL 可），不支援 Windows**——鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品。`make check` = fmt-check + vet + `go test -race`：custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 三處各自有 goroutine，沒有 race detector 看不出資料競爭；多花十幾秒。
+41. （2026-09-25，使用者定案）側欄 profile 列多一個熱鍵 **`a` Activate**：鎖定畫面改用這個 profile，`●` 移過去、立刻寫檔；已啟用的 disabled。preference › profile 那列照舊，是同一個設定的另一個入口；Enter 維持進 `[2]`（9/24 否決的是用 Enter 設啟用，不是熱鍵）。用 `a`：`p` 是預覽、`D` / `r` / `X` 已用、`u` / `d` / `g` / `G` 是導覽，`a` 跟 `●` 的語意對上。
 
 ## 11. 待決清單
 
