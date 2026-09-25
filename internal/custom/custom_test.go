@@ -51,25 +51,43 @@ func ended(t *testing.T, p *Proxy) Outcome {
 	}
 }
 
-// The program's output is passed on as it comes, held back while the
-// tap is closed — and not replayed — and passed on again; it is killed
-// as a group, at once, and that is an ending too.
-func TestOutputIsPassedOnAndHeldBack(t *testing.T) {
+// The program's output goes through the screen as it comes; while the
+// prompt's box is up, every chunk is followed by the box again, the
+// cursor saved around it, inside one synchronised update; Clear blanks
+// its place. The program is killed as a group, at once, and that is an
+// ending too.
+func TestTheBoxRidesOnEveryFrame(t *testing.T) {
 	out := &sink{}
-	p, err := Start("printf ONE; sleep 0.3; printf TWO; sleep 0.4; printf THREE; sleep 30", out, 80, 24)
+	scr := &screen{out: out, cols: 80, rows: 24}
+	p, err := Start("printf ONE; sleep 0.3; printf TWO; sleep 0.4; printf THREE; sleep 30", scr, 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
 	waitFor(t, "ONE", func() bool { return strings.Contains(out.String(), "ONE") })
-	p.Forward(false)
-	time.Sleep(500 * time.Millisecond)
-	if strings.Contains(out.String(), "TWO") {
-		t.Fatalf("held back, yet passed on:\n%s", out.String())
+	if s := out.String(); strings.Contains(s, syncBegin) || strings.Contains(s, saveCur) {
+		t.Errorf("with no box up the output goes through bare:\n%q", s)
 	}
-	p.Forward(true)
+	scr.Overlay("[box]")
+	waitFor(t, "TWO", func() bool { return strings.Contains(out.String(), "TWO") })
+	s := out.String()
+	i := strings.Index(s, "TWO")
+	if !strings.Contains(s[i:], saveCur+"\x1b[12;38H[box]\x1b[0m"+restoreCur+syncEnd) || !strings.HasSuffix(s[:i], syncBegin) {
+		t.Errorf("the box must ride on the frame, the cursor saved around it, as one update:\n%q", s[i-10:])
+	}
+	scr.Clear()
+	if c := out.String(); !strings.Contains(c, "\x1b[12;38H     ") {
+		t.Errorf("Clear must blank the box's place:\n%q", c[len(c)-80:])
+	}
 	waitFor(t, "THREE", func() bool { return strings.Contains(out.String(), "THREE") })
-	if strings.Contains(out.String(), "TWO") {
-		t.Errorf("what was held back must not come later:\n%s", out.String())
+	if s := out.String(); strings.Contains(s[strings.Index(s, "THREE"):], "[box]") {
+		t.Errorf("once cleared the box rides no more:\n%q", s)
+	}
+	if p.Idle(100 * time.Millisecond) {
+		t.Error("a program that just drew is not idle")
+	}
+	time.Sleep(700 * time.Millisecond)
+	if !p.Idle(500 * time.Millisecond) {
+		t.Error("a program that sits still is idle")
 	}
 	select {
 	case <-p.Done():

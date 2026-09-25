@@ -188,7 +188,7 @@ func TestGlobalPreviewOfACustomProfile(t *testing.T) {
 	m := newTestApp(t)
 	m.cfg.Profiles = append(m.cfg.Profiles, config.NewProfile("m", saver.KindCustom))
 	m.cfg.Profile = "m"
-	m = m.press("G", "P") // on preference, in [1]
+	m = m.press("G", "2", "P") // on preference's [2]; on [1] P does nothing
 	if m.preview == nil || m.preview.word != saver.WordNone || !strings.Contains(m.View(), "no command") {
 		t.Fatalf("no command must preview as the word:\n%s", m.View())
 	}

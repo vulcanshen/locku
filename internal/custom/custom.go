@@ -15,6 +15,7 @@
 package custom
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -73,14 +74,14 @@ func outcome(err error, last string) Outcome {
 	return o
 }
 
-// Proxy is the running program: its pty, and the tap that passes its
-// output on, or holds it back while the PIN prompt has the screen.
+// Proxy is the running program: its pty, and the pump that passes its
+// output on to the screen as it comes.
 type Proxy struct {
 	cmd      *exec.Cmd
 	ptmx     *os.File
 	out      io.Writer
 	mu       sync.Mutex
-	on       bool
+	last     time.Time // when the program last wrote anything
 	tail     tail
 	tailDone chan struct{}
 	done     chan Outcome  // the outcome, once
@@ -108,7 +109,7 @@ func Start(command string, out io.Writer, cols, rows int) (*Proxy, error) {
 		pr.Close()
 		return nil, err
 	}
-	p := &Proxy{cmd: cmd, ptmx: ptmx, out: out, on: true,
+	p := &Proxy{cmd: cmd, ptmx: ptmx, out: out, last: time.Now(),
 		tailDone: make(chan struct{}), done: make(chan Outcome, 1), finished: make(chan struct{})}
 	go func() {
 		defer close(p.tailDone)
@@ -118,20 +119,18 @@ func Start(command string, out io.Writer, cols, rows int) (*Proxy, error) {
 	return p, nil
 }
 
-// pump passes the program's output on while the tap is open, and drops
-// it while it is not; when the pty ends — the program has gone — the
-// program is reaped and its outcome delivered.
+// pump passes the program's output on, every byte, as it comes; when
+// the pty ends — the program has gone — the program is reaped and its
+// outcome delivered.
 func (p *Proxy) pump() {
 	buf := make([]byte, 32*1024)
 	for {
 		n, err := p.ptmx.Read(buf)
 		if n > 0 {
+			p.out.Write(buf[:n])
 			p.mu.Lock()
-			on := p.on
+			p.last = time.Now()
 			p.mu.Unlock()
-			if on {
-				p.out.Write(buf[:n])
-			}
 		}
 		if err != nil {
 			break
@@ -151,13 +150,12 @@ func (p *Proxy) pump() {
 // Done delivers the outcome once the program has ended, however it did.
 func (p *Proxy) Done() <-chan Outcome { return p.done }
 
-// Forward opens the tap, or closes it: while the PIN prompt has the
-// screen the program's output is read and dropped, so it never blocks
-// and never draws over the prompt.
-func (p *Proxy) Forward(on bool) {
+// Idle reports whether the program has drawn nothing for d: a program
+// that sits still, which will not fill the prompt's place by itself.
+func (p *Proxy) Idle(d time.Duration) bool {
 	p.mu.Lock()
-	p.on = on
-	p.mu.Unlock()
+	defer p.mu.Unlock()
+	return time.Since(p.last) > d
 }
 
 // Resize tells the pty its new size, which tells the program, as any
@@ -166,20 +164,14 @@ func (p *Proxy) Resize(cols, rows int) {
 	pty.Setsize(p.ptmx, &pty.Winsize{Rows: uint16(max(1, rows)), Cols: uint16(max(1, cols))})
 }
 
-// Redraw asks the program to paint itself whole, after the PIN prompt
-// has had the screen: the pty is made a column narrower and then its
-// size again — two real resizes, each a SIGWINCH to the program. A
-// signal alone was not enough (measured 2026-09-25, cmatrix): a curses
-// program told the size has not changed repaints only what it thinks
-// changed, against a screen that no longer shows what it last drew —
-// the frames it drew while the prompt was up were dropped — and the
-// old frame shows through. A size that really changed makes it lay the
-// screen out again from nothing.
-func (p *Proxy) Redraw(cols, rows int) {
-	p.Resize(cols-1, rows)
-	time.Sleep(40 * time.Millisecond)
-	p.Resize(cols, rows)
-}
+// Redraw asks the program to paint itself again — the signal a resize
+// sends, which a curses program answers with a whole repaint — for a
+// program that sits still after the prompt's place was blanked. One
+// that draws is not asked: nothing of what it drew was dropped, it
+// fills the place by itself, and a curses program asked starts its
+// picture over (measured 2026-09-25, cmatrix: a flash and the rain
+// from the top).
+func (p *Proxy) Redraw() { p.signal(syscall.SIGWINCH) }
 
 // Kill ends the program, its whole process group, at once, and waits
 // for it to be reaped. It is the lock's end, or the program's preview's.
@@ -231,47 +223,98 @@ func (t *tail) lastLine() string {
 	return t.last
 }
 
-// Terminal is the real terminal while a program has the screen: raw, so
-// every key is locku's and none is a signal; on the alternate screen,
-// so the user's own screen is there again at the end; its keys read by
-// one reader that can be called off, so a lock program can have the
-// terminal next without a read of ours in the way.
-type Terminal struct {
-	tty   *os.File
-	out   *os.File
-	state *term.State
-	keys  cancelreader.CancelReader
-	// The overlay's rectangle, the largest drawn since it was last
-	// cleared: what Clear has to cover.
-	box struct{ top, left, w, h int }
+// screen is the program's way to the terminal, and the prompt's. The
+// program's output goes through as it comes; while the prompt's box is
+// up, every chunk is followed by the box again — the cursor and its
+// attributes saved and restored around it, so the program never notices
+// — inside one synchronised update, so the terminal shows the frame
+// and the box as one (user, 2026-09-25: the picture goes on under the
+// prompt, as the board does under it on the other savers; and nothing
+// the program draws is dropped, so the screen never falls out of step
+// with it). Clear blanks the box's place; what the program draws next
+// fills it.
+type screen struct {
+	mu         sync.Mutex
+	out        io.Writer
+	cols, rows int
+	box        string
+	rect       struct{ top, left, w, h int }
 }
 
-// Overlay draws box — the PIN prompt's lines — over the middle of the
-// screen, and nothing else: the program's picture stays around it,
-// frozen (user, 2026-09-25: the prompt over the picture, not over a
-// ground of locku's, and no switch of screens under it).
-func (t *Terminal) Overlay(box string) {
-	cols, rows := t.Size()
-	top, left, w, h := paintBox(t.out, cols, rows, box)
-	if t.box.h == 0 {
-		t.box.top, t.box.left, t.box.w, t.box.h = top, left, w, h
+const (
+	syncBegin  = "\x1b[?2026h" // a synchronised update: what follows shows as one
+	syncEnd    = "\x1b[?2026l"
+	saveCur    = "\x1b7" // DECSC: the cursor, its attributes
+	restoreCur = "\x1b8" // DECRC
+)
+
+func (s *screen) Write(p []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.box == "" {
+		return s.out.Write(p)
+	}
+	var b bytes.Buffer
+	b.WriteString(syncBegin)
+	b.Write(p)
+	b.WriteString(saveCur)
+	s.paint(&b)
+	b.WriteString(restoreCur)
+	b.WriteString(syncEnd)
+	if _, err := s.out.Write(b.Bytes()); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+// paint writes the box into w and widens the rectangle it has taken.
+func (s *screen) paint(w io.Writer) {
+	top, left, wd, h := paintBox(w, s.cols, s.rows, s.box)
+	if h == 0 {
 		return
 	}
-	// The union with what was drawn before, so a box that grew and
-	// shrank is cleared whole.
-	right, bottom := max(t.box.left+t.box.w, left+w), max(t.box.top+t.box.h, top+h)
-	t.box.top, t.box.left = min(t.box.top, top), min(t.box.left, left)
-	t.box.w, t.box.h = right-t.box.left, bottom-t.box.top
+	if s.rect.h == 0 {
+		s.rect.top, s.rect.left, s.rect.w, s.rect.h = top, left, wd, h
+		return
+	}
+	right, bottom := max(s.rect.left+s.rect.w, left+wd), max(s.rect.top+s.rect.h, top+h)
+	s.rect.top, s.rect.left = min(s.rect.top, top), min(s.rect.left, left)
+	s.rect.w, s.rect.h = right-s.rect.left, bottom-s.rect.top
 }
 
-// Clear blanks where the overlay was. What was under it is the
-// program's to paint again — Redraw asks it to; a program that does not
-// answer is left with a blank where the prompt was, not with the prompt.
-func (t *Terminal) Clear() {
-	if t.box.h > 0 {
-		clearBox(t.out, t.box.top, t.box.left, t.box.w, t.box.h)
+// Overlay puts box — the PIN prompt's lines — over the middle of the
+// screen, and keeps it there over whatever the program draws.
+func (s *screen) Overlay(box string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.box = box
+	var b bytes.Buffer
+	b.WriteString(syncBegin + saveCur)
+	s.paint(&b)
+	b.WriteString(restoreCur + syncEnd)
+	s.out.Write(b.Bytes())
+}
+
+// Clear takes the box away and blanks its place, the largest it was.
+func (s *screen) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.box = ""
+	if s.rect.h > 0 {
+		var b bytes.Buffer
+		b.WriteString(syncBegin + saveCur)
+		clearBox(&b, s.rect.top, s.rect.left, s.rect.w, s.rect.h)
+		b.WriteString(restoreCur + syncEnd)
+		s.out.Write(b.Bytes())
 	}
-	t.box.top, t.box.left, t.box.w, t.box.h = 0, 0, 0, 0
+	s.rect.top, s.rect.left, s.rect.w, s.rect.h = 0, 0, 0, 0
+}
+
+// Resized tells the screen its new size, for where the box goes.
+func (s *screen) Resized(cols, rows int) {
+	s.mu.Lock()
+	s.cols, s.rows = cols, rows
+	s.mu.Unlock()
 }
 
 // paintBox writes box's lines centred on a cols × rows screen, each at
@@ -305,6 +348,20 @@ func clearBox(out io.Writer, top, left, w, h int) {
 	io.WriteString(out, b.String())
 }
 
+// Terminal is the real terminal while a program has the screen: raw, so
+// every key is locku's and none is a signal; on the alternate screen,
+// so the user's own screen is there again at the end; its keys read by
+// one reader that can be called off, so a lock program can have the
+// terminal next without a read of ours in the way; and a screen the
+// program's output and the prompt's box share.
+type Terminal struct {
+	tty   *os.File
+	out   *os.File
+	state *term.State
+	keys  cancelreader.CancelReader
+	scr   *screen
+}
+
 // Take puts the terminal into locku's hands: raw, on the alternate
 // screen, cleared, the cursor hidden.
 func Take(tty, out *os.File) (*Terminal, error) {
@@ -313,6 +370,8 @@ func Take(tty, out *os.File) (*Terminal, error) {
 		return nil, err
 	}
 	t := &Terminal{tty: tty, out: out, state: state}
+	cols, rows := t.Size()
+	t.scr = &screen{out: out, cols: cols, rows: rows}
 	t.out.WriteString("\x1b[?1049h\x1b[?25l\x1b[2J\x1b[H")
 	return t, nil
 }
@@ -324,16 +383,14 @@ func (t *Terminal) Give() {
 	term.Restore(t.tty.Fd(), t.state)
 }
 
-// Retake is Take again, after a lock program had the terminal.
-func (t *Terminal) Retake() error {
-	state, err := term.MakeRaw(t.tty.Fd())
-	if err != nil {
-		return err
-	}
-	t.state = state
-	t.out.WriteString("\x1b[?1049h\x1b[?25l\x1b[2J\x1b[H")
-	return nil
-}
+// Writer is where the program's output goes: through the screen.
+func (t *Terminal) Writer() io.Writer { return t.scr }
+
+// Overlay puts the PIN prompt's box over the program's picture, and
+// keeps it there; Clear takes it away; Resized follows the terminal.
+func (t *Terminal) Overlay(box string)     { t.scr.Overlay(box) }
+func (t *Terminal) Clear()                 { t.scr.Clear() }
+func (t *Terminal) Resized(cols, rows int) { t.scr.Resized(cols, rows) }
 
 // Size is the terminal's, in cells.
 func (t *Terminal) Size() (cols, rows int) {
@@ -385,7 +442,7 @@ func Preview(command string, tty, out *os.File) *Outcome {
 	}
 	defer t.Give()
 	cols, rows := t.Size()
-	p, err := Start(command, out, cols, rows)
+	p, err := Start(command, t.Writer(), cols, rows)
 	if err != nil {
 		o := Failed(err)
 		return &o
