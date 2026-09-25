@@ -105,6 +105,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the key after prefix that locks; empty binds none", run: (*AppModel).editBindKey})
 	case rowActivate:
 		out = append(out, m.activateAction())
+	case rowLock:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "every client on the server, or this session's alone", run: (*AppModel).chooseLock})
 	}
 	if it.kind == sideTool {
 		return out
@@ -323,7 +325,7 @@ func (m *AppModel) deactivateTool() tea.Cmd {
 func (m AppModel) install(out *bytes.Buffer) error {
 	name, t := m.tool()
 	if name == tools[toolTmux] {
-		return setup.Tmux(out, t.Conf, t.Idle, m.cfg.Tmux.BindKey)
+		return setup.Tmux(out, m.cfg.Tmux)
 	}
 	return setup.Screen(out, t.Conf, t.Idle)
 }
@@ -382,6 +384,11 @@ func (m *AppModel) choose(title string, values []string, current func(config.Pro
 
 func (m *AppModel) chooseRunner() tea.Cmd {
 	return m.choose("runner", saver.Runners, func(p config.Profile) string { return p.Runner })
+}
+
+// chooseLock is Enter on tmux's lock: lock-server, or lock-session.
+func (m *AppModel) chooseLock() tea.Cmd {
+	return m.openOptions("lock", config.TmuxLocks, m.cfg.Tmux.Lock, 0)
 }
 
 func (m *AppModel) chooseScene() tea.Cmd {
@@ -468,6 +475,9 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.edit(func(p *config.Profile) { p.Date = v })
 	case rowProfile:
 		m.cfg.Profile = v
+	case rowLock:
+		m.cfg.Tmux.Lock = v
+		return tea.Batch(m.options.close(), m.save(before), m.syncTool(m.cfg.Tmux.Conf))
 	case rowPIN:
 		// After the current PIN (ux.md §2.2): Remove is done on Enter, no
 		// confirm; New goes on to the new PIN and its confirmation.

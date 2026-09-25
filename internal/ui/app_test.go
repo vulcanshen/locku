@@ -319,8 +319,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowActivate {
 		t.Fatalf("tmux, activate row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, capLeft+"[2] tmux"+capRight) || strings.Contains(v, "integration") || strings.Contains(v, "config.yaml") || !strings.Contains(v, "activate") || !strings.Contains(v, "off") || !strings.Contains(v, "config file path") || !strings.Contains(v, "not set") || !strings.Contains(v, "────") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || strings.Contains(v, "tool ") || strings.Contains(v, "status") || strings.Contains(v, "Install") || strings.Contains(v, "installed") {
-		t.Errorf("tmux's rows are activate, config file path, a rule, lock-after-time, bind-key; the tag is integration:\n%s", v)
+	if v := m.View(); !strings.Contains(v, capLeft+"[2] tmux"+capRight) || strings.Contains(v, "integration") || strings.Contains(v, "config.yaml") || !strings.Contains(v, "activate") || !strings.Contains(v, "off") || !strings.Contains(v, "config file path") || !strings.Contains(v, "not set") || !strings.Contains(v, "────") || !strings.Contains(v, " lock ") || !strings.Contains(v, "lock-server") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || strings.Contains(v, "tool ") || strings.Contains(v, "status") || strings.Contains(v, "Install") || strings.Contains(v, "installed") {
+		t.Errorf("tmux's rows are activate, config file path, a rule, lock, lock-after-time, bind-key:\n%s", v)
 	}
 	m = m.press("j", "enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
@@ -366,6 +366,16 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if m.cfg.Tmux.Conf != "" || saved(t).Tmux.Conf != "" {
 		t.Errorf("unset: %q", m.cfg.Tmux.Conf)
 	}
+	// Under the rule, tmux's lock: the server's, or one session's
+	// (user, 2026-09-25).
+	m = m.press("j", "enter")
+	if m.rowAt().kind != rowLock || !m.options.isInteractive() {
+		t.Fatalf("lock: %+v %v", m.rowAt(), m.options.isInteractive())
+	}
+	m = m.press("j", "enter")
+	if m.cfg.Tmux.Lock != config.LockSession || saved(t).Tmux.Lock != config.LockSession || !strings.Contains(m.View(), "lock-session") {
+		t.Errorf("lock %q:\n%s", m.cfg.Tmux.Lock, m.View())
+	}
 	// The idle time is the tool's own, under its own name: tmux's
 	// lock-after-time changes, screen's idle does not.
 	m = m.press("j", "enter")
@@ -404,8 +414,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Errorf("screen conf %q", m.cfg.Screen.Conf)
 	}
 	for _, r := range m.rows() {
-		if r.kind == rowBindKey {
-			t.Errorf("screen has no key to bind: %+v", r)
+		if r.kind == rowBindKey || r.kind == rowLock {
+			t.Errorf("screen has no key to bind and no lock to choose: %+v", r)
 		}
 	}
 }
@@ -435,7 +445,7 @@ func TestActivateFromTheScreen(t *testing.T) {
 		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
 	}
 	// Off: a row changed is config.yaml's alone.
-	m = m.press("j", "j", "enter").typed("l").press("enter") // bind-key l
+	m = m.press("j", "j", "j", "enter").typed("l").press("enter") // bind-key l
 	if _, err := os.ReadFile(conf); err == nil || saved(t).Tmux.BindKey != "l" {
 		t.Fatalf("while off the file must not exist: %v", err)
 	}
@@ -454,10 +464,17 @@ func TestActivateFromTheScreen(t *testing.T) {
 	}
 	// On: the idle time changed is in the file at once, and so is the
 	// key emptied.
-	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("45").press("enter")
+	m = m.expireToast().press("j", "j", "j", "enter", "ctrl+u").typed("45").press("enter")
 	if b, _ := os.ReadFile(conf); !strings.Contains(string(b), "lock-after-time 45") || !strings.Contains(m.toast.msg, "wrote") {
 		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, b)
 	}
+	// So is the lock chosen: lock-session, and the hook that tells each
+	// session its lock.
+	m = m.expireToast().press("k", "enter", "j", "enter")
+	if b, _ := os.ReadFile(conf); m.cfg.Tmux.Lock != config.LockSession || !strings.Contains(string(b), `"locku=lock-session"`) || !strings.Contains(string(b), "session-created[90]") || !strings.Contains(string(b), "bind-key l lock-session") {
+		t.Errorf("lock-session while on:\n%s", b)
+	}
+	m = m.expireToast().press("j")
 	m = m.expireToast().press("j", "enter", "ctrl+u", "enter")
 	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "bind-key") {
 		t.Errorf("key emptied while on:\n%s", b)
@@ -489,7 +506,7 @@ func TestActivateFromTheScreen(t *testing.T) {
 		t.Errorf("toast %q, row %+v", m.toast.msg, m.rowAt())
 	}
 	// Off again: a row changed stays out of the file.
-	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("60").press("enter")
+	m = m.expireToast().press("j", "j", "j", "enter", "ctrl+u").typed("60").press("enter")
 	if b, _ := os.ReadFile(conf2); strings.Contains(string(b), "locku") {
 		t.Errorf("a change while off reached the file:\n%s", b)
 	}
@@ -556,7 +573,7 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
 	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate")) != 0 || strings.Contains(v, "bind-key") {

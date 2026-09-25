@@ -70,13 +70,13 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`n` new profile、`p` 預覽預設值；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile / saver 上：`P` 預覽、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽（任意鍵回來，不驗 PIN）、`q` 離開。
-**Integration** 的 tmux / screen 的 `[2]` 是 `activate`（on / off）、`config file path`（要寫的設定檔）、一條分隔線、然後工具自己的 key：閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind。`activate` 就是區塊在不在檔案裡，Enter 後 confirm 才寫；開著時改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊：`[2]` 名字（草稿未存接 `unsaved`）、`[1] locku`。`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
+**Integration** 的 tmux / screen 的 `[2]` 是 `activate`（on / off）、`config file path`（要寫的設定檔）、一條分隔線、然後工具自己的 key：tmux 的 `lock`（`lock-server` 整台，或 `lock-session` 只鎖這個 session）、閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind。`activate` 就是區塊在不在檔案裡，Enter 後 confirm 才寫；開著時改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊：`[2]` 名字（草稿未存接 `unsaved`）、`[1] locku`。`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
 
 ## 文件
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
-| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 33 條、MVP 驗收 | 1 |
+| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 34 條、MVP 驗收 | 1 |
 | [`docs/ui.md`](docs/ui.md) | 設定畫面兩個面板的 grid、鎖定畫布的點陣板、每個欄位怎麼呈現、popup 清單、PIN prompt 四個狀態、色帶、chrome、存檔 | 2 |
 | [`docs/ux.md`](docs/ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、畫布 prompt 事件表、hotkey 分層與撞字檢查、浮層、時間軸 | 3 |
 
@@ -85,7 +85,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ## 決定摘要
 
 - **鎖在 tmux / screen 之外，不在 pane 內。** pane 內的程式永遠看不到 prefix；tmux 的 lock-command 由 client 進程以 `system()` 同步執行、期間不讀任何鍵，screen 的 LOCKPRG 同理。這是唯一正確的 hook。
-- **tmux：整台 server 一起鎖，預設不綁熱鍵，鎖著的時候誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-server`（command alias，不跟你的 bind 撞；要熱鍵就在 `bind-key` 自己填一個，2026-09-25），所有 session 的所有 client 一起變保護程式；tmux 本身沒有「鎖著」的狀態，locku 在 `locku lock` 啟動時把全域 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`——attach 哪個 session 都一樣，PIN 對了才清掉，tty 消失不清。閒置鎖是 tmux 每個 session 各自計時，哪個畫面閒置就鎖哪個畫面。lock-command 是 locku 的絕對路徑，由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。
+- **tmux：預設整台 server 一起鎖（`lock` 可改成只鎖這個 session，2026-09-25），預設不綁熱鍵，鎖著的時候誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-server`（command alias，不跟你的 bind 撞；要熱鍵就在 `bind-key` 自己填一個，2026-09-25），所有 session 的所有 client 一起變保護程式；tmux 本身沒有「鎖著」的狀態，locku 在 `locku lock` 啟動時把全域 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`——attach 哪個 session 都一樣，PIN 對了才清掉，tty 消失不清。閒置鎖是 tmux 每個 session 各自計時，哪個畫面閒置就鎖哪個畫面。lock-command 是 locku 的絕對路徑，由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。`lock-session` 時旗立在 session 上、hooks 不變，別的 session 照常用；lock 程式從自己 session 的 lock-command 得知 session（`-t`），因為鎖定中用 tty 反查會拿到錯的 session（實測）。
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
@@ -112,7 +112,7 @@ pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死�
 側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形、
 tmux 預設的 `bind L`（跟使用者既有熱鍵撞，改 command alias；要綁的自己填 `bind-key`）、session 等級的 tmux 鎖（換個 session 就繞過，改整台）、
 閒置鎖升級成整台（雙螢幕會被另一邊鎖到）、一個 PIN 解全部 client（要輪詢，維持各自輸）、
-純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態就是 `activate` 列）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN、標題膠囊裡的 installed / uninstalled 狀態與串在標題後面的種類（狀態是 `activate` 列；種類搬到右上角一顆獨立膠囊後也拿掉，分類資訊多餘）、`[2]` 下框右側的 config 路徑（第一版就有，不是家族慣例）。
+純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態就是 `activate` 列）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN、標題膠囊裡的 installed / uninstalled 狀態與串在標題後面的種類（狀態是 `activate` 列；種類搬到右上角一顆獨立膠囊後也拿掉，分類資訊多餘）、`[2]` 下框右側的 config 路徑（第一版就有，不是家族慣例）、lock 程式用 tty 反查 session（鎖定中 list-clients 是空的，display-message -c 回錯的 session）。
 
 ## 目錄
 

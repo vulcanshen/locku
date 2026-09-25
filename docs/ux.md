@@ -66,6 +66,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把區塊寫進 config file path；tmux 有 server 在跑就即時套用；screen 連 shell rc）/ `[Enter] Deactivate`（confirm 後拿掉，tmux 連 server 上的一併拿掉）；路徑沒填時 disabled 並說 `set the config file path first`（2026-09-25） | 無 |
 | config file path | `[Enter] Edit`（on 時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
 | 分隔線 | 不可停 | 無 |
+| lock（tmux） | `[Enter] Choose`（lock-server / lock-session；on 時直接重寫區塊、tmux 換旗） | 無 |
 | lock-after-time（screen：idle） | `[Enter] Edit`（on 時直接重寫區塊、tmux 即時套用） | 無 |
 | bind-key（tmux） | `[Enter] Edit`（同上） | 無 |
 
@@ -87,7 +88,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 help 的內容看 focus 在哪：`[1]`，以及 profile / saver 的 `[2]`，是鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、
 navigate）；preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
-activate、config file path、lock-after-time / idle、bind-key（tmux）的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
+activate、config file path、lock（tmux）、lock-after-time / idle、bind-key（tmux）的說明——這時 help 是這個面板的字典，取代原本每列下面的說明列（2026-09-25，使用者：focus 在 `[2]` 且項目是
 preference 時只要 preference 的說明，只要）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
@@ -132,7 +133,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 | 欄位 | 行為 |
 |---|---|
 | name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
-| layout / size / font / time / date / runner / scene / profile | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / size / font / time / date / runner / scene / profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
 | bind-key（tmux；2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → ` · one key, e.g. l or C-l` 框留著、否則寫檔；activate on 就直接進檔案與 server，off 只存 config |

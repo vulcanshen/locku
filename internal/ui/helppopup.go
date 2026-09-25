@@ -92,10 +92,13 @@ func helpTool(name string) []helpEntry {
 		{"activate", "on: locku's block is in the file, and every row here is written into it the moment it changes; off: it is not. Enter turns it, after a confirm"},
 		{"config file path", "the file locku's block is written into; ~/ allowed"},
 		{"", "under the line: " + name + "'s own settings"},
-		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"},
 	}
 	if name == tools[toolTmux] {
-		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none"})
+		out = append(out, helpEntry{"lock", "what prefix : locku, and the bind-key, run — lock-server: every client on the server, and whoever attaches while it is locked; lock-session: this session's clients alone, the other sessions left as they are (a screensaver per workspace, not a wall between them)"})
+	}
+	out = append(out, helpEntry{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"})
+	if name == tools[toolTmux] {
+		out = append(out, helpEntry{"bind-key", "the key after prefix that runs the lock, as tmux spells it — l, C-l, F12; empty binds none"})
 	}
 	return out
 }

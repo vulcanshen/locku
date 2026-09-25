@@ -81,13 +81,28 @@ func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 // and the seconds the tool waits idle before it locks by itself, under
 // the tool's own name for that setting (user, 2026-09-25): tmux's
 // lock-after-time, screen's idle; 0 is never. tmux alone has a bind-key:
-// the key after prefix that locks every client — l, C-l, F12 — as tmux
-// spells it; empty binds nothing (user, 2026-09-25).
+// the key after prefix that locks — l, C-l, F12 — as tmux spells it;
+// empty binds nothing (user, 2026-09-25) — and a lock: which of tmux's
+// lock commands `locku`, and the bind-key, run. lock-server locks every
+// client on the server; lock-session the clients of this session alone,
+// the other sessions left as they are (user, 2026-09-25; the study in
+// .local/studies/lock.md: those two and not lock-client, whose mirror
+// on the next terminal stays lit).
 type Tmux struct {
 	Conf          string `yaml:"conf"`
 	LockAfterTime int    `yaml:"lock-after-time"`
 	BindKey       string `yaml:"bind-key"`
+	Lock          string `yaml:"lock"`
 }
+
+// The two locks a tmux integration may run, the default first.
+const (
+	LockServer  = "lock-server"
+	LockSession = "lock-session"
+)
+
+// TmuxLocks is what Tmux.Lock may be, for the options list.
+var TmuxLocks = []string{LockServer, LockSession}
 
 type Screen struct {
 	Conf string `yaml:"conf"`
@@ -176,7 +191,7 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
-		Tmux:             Tmux{LockAfterTime: DefaultIdle},
+		Tmux:             Tmux{LockAfterTime: DefaultIdle, Lock: LockServer},
 		Screen:           Screen{Idle: DefaultIdle},
 	}
 }
@@ -512,6 +527,9 @@ func (cfg Config) sanitized() (Config, string) {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
 	}
 	cfg.Tmux.BindKey = strings.TrimSpace(cfg.Tmux.BindKey)
+	if cfg.Tmux.Lock != LockSession {
+		cfg.Tmux.Lock = LockServer
+	}
 	return cfg, note
 }
 

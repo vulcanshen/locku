@@ -62,6 +62,7 @@ const (
 	rowBindKey  // tmux's key after prefix that locks, or none
 	rowActivate // locku's block in the tool's file: on, or off
 	rowRule     // the line between locku's rows and the tool's own
+	rowLock     // tmux's lock: lock-server, or lock-session
 )
 
 // row is one line of panel [2].
@@ -270,8 +271,13 @@ func (m AppModel) rows() []row {
 			active,
 			conf,
 			{kind: rowRule},
-			{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true},
 		}
+		// tmux alone chooses its lock: the server's, or this session's
+		// (user, 2026-09-25).
+		if name == tools[toolTmux] {
+			out = append(out, row{kind: rowLock, label: "lock", value: m.cfg.Tmux.Lock, color: value, stop: true})
+		}
+		out = append(out, row{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true})
 		// tmux alone binds a key: the one after prefix that locks every
 		// client, as tmux spells it; none is none (user, 2026-09-25).
 		if name == tools[toolTmux] {

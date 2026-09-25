@@ -145,20 +145,25 @@ func report(w io.Writer, path string, changed bool, verb string) {
 	}
 }
 
-// The tmux side (function.md §6.2). The lock is the whole server's, as
-// a screensaver is the whole machine's (user, 2026-09-24): `locku` locks
-// every client on the server, and while locku has the server marked
-// @locked — a global option every session sees — the hooks lock a
-// client that attaches to, or switches into, any session, since tmux's
-// own lock-server locks only the clients attached at that moment. The
-// idle lock stays tmux's per-session one: the screen that idles is the
-// screen that locks. No key is bound unless the user names one: a user
-// with a tmux.conf has keys of their own, so the lock is a command —
-// `prefix :` then `locku` — through a command alias, and a bind-key of
-// their choosing on top (user, 2026-09-25; empty binds nothing). The
-// alias and the hooks sit at a high index in their arrays, so the user's
-// own entries — at 0 — are untouched, and Remove can take exactly these
-// out again.
+// The tmux side (function.md §6.2). The lock is the whole server's by
+// default, as a screensaver is the whole machine's (user, 2026-09-24):
+// `locku` locks every client on the server, and while locku has the
+// server marked @locked — a global option every session sees — the
+// hooks lock a client that attaches to, or switches into, any session,
+// since tmux's own lock-server locks only the clients attached at that
+// moment. Or, since 2026-09-25 (user; the study in
+// .local/studies/lock.md), one session's: `locku` is lock-session, the
+// mark is set on the session, and the same hooks read a client's
+// session before the global (measured), so the other sessions are left
+// as they are — a screensaver per workspace, not a wall between them.
+// The idle lock stays tmux's per-session one either way: the screen
+// that idles is the screen that locks. No key is bound unless the user
+// names one: a user with a tmux.conf has keys of their own, so the lock
+// is a command — `prefix :` then `locku` — through a command alias, and
+// a bind-key of their choosing on top (empty binds nothing). The alias
+// and the hooks sit at a high index in their arrays, so the user's own
+// entries — at 0 — are untouched, and Remove can take exactly these out
+// again.
 const (
 	tmuxIndex = "90"
 	hookCmd   = `if -F "#{@locked}" lock-client`
@@ -172,59 +177,110 @@ const (
 // where nothing else says which server it belongs to.
 func lockCmd() string { return shellQuote(Binary()) + " lock -S '#{socket_path}'" }
 
-// tmuxLines is the block tmux.conf gets, with Integration › tmux's
-// lock-after-time as it is, and its bind-key when there is one.
-func tmuxLines(idle int, key string) []string {
+// sessionLockCmd is the same told its session too, for lock-session:
+// each session's OWN lock-command, set as the session is made
+// (sessionHook) with its id expanded in. It has to be this way round —
+// measured 2026-09-25: a locked client is no longer in list-clients, so
+// the lock cannot look its session up by its tty; display-message -c
+// falls back to the latest session, the wrong one. The id is quoted
+// because the command runs through the shell, which would read $0 as
+// its own name.
+func sessionLockCmd() string { return lockCmd() + " -t '#{session_id}'" }
+
+// sessionHook is what the session-created hook runs: the new session's
+// lock-command, its id baked in.
+func sessionHook() string { return `set -F lock-command "` + sessionLockCmd() + `"` }
+
+// who is whose lock `locku` is, for the comments and the report.
+func who(lock string) string {
+	if lock == config.LockSession {
+		return "this session's clients"
+	}
+	return "every client"
+}
+
+// noted is a line with its `# locku` comment at the column the others
+// keep, or after one space when the line is longer than that.
+func noted(line, comment string) string { return pad(line, 75) + " " + comment }
+
+// tmuxLines is the block tmux.conf gets, from Integration › tmux: the
+// idle time as it is, the lock `locku` runs, for lock-session the hook
+// that tells each session's lock its session, and the bind-key when
+// there is one.
+func tmuxLines(t config.Tmux) []string {
 	lines := []string{
 		`set -gF lock-command "` + lockCmd() + `"  # locku`,
-		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: 0 never`,
-		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-server"                              # locku: prefix : locku locks every client`,
-		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client`,
-		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions`,
+		noted(`set -g lock-after-time `+itoa(t.LockAfterTime), "# locku: 0 never"),
+		noted(`set -s "command-alias[`+tmuxIndex+`]" "locku=`+t.Lock+`"`, "# locku: prefix : locku locks "+who(t.Lock)),
+		noted(`set-hook -g "client-attached[`+tmuxIndex+`]" "if -F \"#{@locked}\" lock-client"`, "# locku: attaching while locked locks the client"),
+		noted(`set-hook -g "client-session-changed[`+tmuxIndex+`]" "if -F \"#{@locked}\" lock-client"`, "# locku: so does switching sessions"),
 	}
-	if key != "" {
-		lines = append(lines, pad(`bind-key `+key+` lock-server`, 76)+`# locku: prefix `+key+` locks every client`)
+	if t.Lock == config.LockSession {
+		lines = append(lines, noted(`set-hook -g "session-created[`+tmuxIndex+`]" "`+strings.ReplaceAll(sessionHook(), `"`, `\"`)+`"`, "# locku: a session's lock knows its session"))
+	}
+	if t.BindKey != "" {
+		lines = append(lines, noted(`bind-key `+t.BindKey+` `+t.Lock, "# locku: prefix "+t.BindKey+" locks "+who(t.Lock)))
 	}
 	return lines
 }
 
-// boundKey is the key the block in content binds, or "" when it binds
-// none — read off the file, so a key changed or dropped since the last
-// Setup can be unbound on the running server.
-func boundKey(content string) string {
+// bound is what the block in content binds — the key, and which lock —
+// read off the file, so a key or a lock changed since the last write
+// can be undone on the running server.
+func bound(content string) (key, lock string) {
 	i := strings.Index(content, blockBegin)
 	if i < 0 {
-		return ""
+		return "", ""
 	}
 	for _, l := range strings.Split(content[i:], "\n") {
 		if l == blockEnd {
 			break
 		}
-		if f := strings.Fields(l); len(f) >= 3 && f[0] == "bind-key" {
-			return f[1]
+		f := strings.Fields(l)
+		switch {
+		case len(f) >= 3 && f[0] == "bind-key":
+			key = f[1]
+		case strings.Contains(l, `"locku=`+config.LockSession+`"`):
+			lock = config.LockSession
+		case strings.Contains(l, `"locku=`+config.LockServer+`"`):
+			lock = config.LockServer
 		}
 	}
-	return ""
+	return key, lock
+}
+
+// boundIn is bound, for the file at path; a file that is not there
+// binds nothing.
+func boundIn(path string) (key, lock string) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return "", ""
+	}
+	return bound(string(b))
 }
 
 // tmuxSet is the same on a running server; tmuxUnset its undoing, one
 // for one.
-func tmuxSet(idle int, key string) [][]string {
+func tmuxSet(t config.Tmux) [][]string {
 	cmds := [][]string{
 		{"set", "-gF", "lock-command", lockCmd()},
-		{"set", "-g", "lock-after-time", itoa(idle)},
-		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-server"},
+		{"set", "-g", "lock-after-time", itoa(t.LockAfterTime)},
+		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=" + t.Lock},
 		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
 		{"set-hook", "-g", "client-session-changed[" + tmuxIndex + "]", hookCmd},
 	}
-	if key != "" {
-		cmds = append(cmds, []string{"bind-key", key, "lock-server"})
+	if t.Lock == config.LockSession {
+		cmds = append(cmds, []string{"set-hook", "-g", "session-created[" + tmuxIndex + "]", sessionHook()})
+	}
+	if t.BindKey != "" {
+		cmds = append(cmds, []string{"bind-key", t.BindKey, t.Lock})
 	}
 	return cmds
 }
 
-// tmuxUnset undoes tmuxSet one for one — the key that was bound
-// included — and then drops the mark a lock may have left.
+// tmuxUnset undoes tmuxSet one for one — then the session hook, the
+// key that was bound, and the mark a lock may have left on the server;
+// what each session holds is eachSession's to take off.
 func tmuxUnset(key string) [][]string {
 	cmds := [][]string{
 		{"set", "-gu", "lock-command"},
@@ -232,6 +288,7 @@ func tmuxUnset(key string) [][]string {
 		{"set", "-su", "command-alias[" + tmuxIndex + "]"},
 		{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
 		{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
+		{"set-hook", "-gu", "session-created[" + tmuxIndex + "]"},
 	}
 	if key != "" {
 		cmds = append(cmds, []string{"unbind-key", key})
@@ -249,41 +306,49 @@ func pad(s string, w int) string {
 	return s
 }
 
-// Tmux writes the block into the file at path — Integration › tmux's
-// conf, "~/…" allowed — with idle seconds of idleness before tmux locks
-// by itself (0: never) and key bound to the lock after prefix ("":
-// none), and, when a server is running, sets the same things on it
-// now; a key the file bound before, and this Setup does not, comes off
-// the server too.
-func Tmux(w io.Writer, path string, idle int, key string) error {
-	path, err := confPath(path, "tmux")
+// Tmux writes the block into the file at t.Conf — "~/…" allowed — and,
+// when a server is running, sets the same things on it now. A key the
+// file bound before, and this write does not, comes off the server; a
+// lock changed takes every mark off, the server's and each session's,
+// since a mark left over reads as locked under the other rule (the
+// study: a global mark after a switch to lock-session reads as every
+// session locked); and each session gets its own lock-command, or
+// loses it, as the lock says.
+func Tmux(w io.Writer, t config.Tmux) error {
+	path, err := confPath(t.Conf, "tmux")
 	if err != nil {
 		return err
 	}
-	was := boundIn(path)
-	changed, err := write(path, tmuxLines(idle, key))
+	wasKey, wasLock := boundIn(path)
+	changed, err := write(path, tmuxLines(t))
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "wrote")
-	cmds := tmuxSet(idle, key)
-	if was != "" && was != key {
-		cmds = append([][]string{{"unbind-key", was}}, cmds...)
+	cmds := tmuxSet(t)
+	if wasKey != "" && wasKey != t.BindKey {
+		cmds = append([][]string{{"unbind-key", wasKey}}, cmds...)
 	}
-	if !tmuxLive(w, cmds) {
+	switched := wasLock != "" && wasLock != t.Lock
+	if switched {
+		cmds = append([][]string{{"set", "-gu", "@locked"}, {"set-hook", "-gu", "session-created[" + tmuxIndex + "]"}}, cmds...)
+	}
+	tmux, ok := tmuxLive(w, cmds)
+	if !ok {
 		return nil
 	}
-	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks every client, %s, attaching while locked locks\n", keySays(key), idleSays(idle))
+	eachSession(tmux, func(id string) {
+		if t.Lock == config.LockSession {
+			exec.Command(tmux, "set", "-t", id, "-F", "lock-command", sessionLockCmd()).Run()
+		} else {
+			exec.Command(tmux, "set", "-u", "-t", id, "lock-command").Run()
+		}
+		if switched {
+			exec.Command(tmux, "set", "-u", "-t", id, "@locked").Run()
+		}
+	})
+	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks %s, %s, attaching while locked locks\n", keySays(t.BindKey), who(t.Lock), idleSays(t.LockAfterTime))
 	return nil
-}
-
-// boundIn is the key the block in the file at path binds, or "".
-func boundIn(path string) string {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return boundKey(string(b))
 }
 
 // keySays is the bound key in words, for what setup reports.
@@ -303,43 +368,61 @@ func idleSays(idle int) string {
 }
 
 // TmuxUndo takes the block out of the file at path and, when a server is
-// running, the same things off it — the key it bound included.
+// running, the same things off it — the key it bound, each session's
+// own lock-command, and every mark included.
 func TmuxUndo(w io.Writer, path string) error {
 	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
-	was := boundIn(path)
+	wasKey, _ := boundIn(path)
 	changed, err := erase(path)
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "removed locku's block from")
-	if !tmuxLive(w, tmuxUnset(was)) {
+	tmux, ok := tmuxLive(w, tmuxUnset(wasKey))
+	if !ok {
 		return nil
 	}
+	eachSession(tmux, func(id string) {
+		exec.Command(tmux, "set", "-u", "-t", id, "lock-command").Run()
+		exec.Command(tmux, "set", "-u", "-t", id, "@locked").Run()
+	})
 	fmt.Fprintln(w, "taken off the running tmux server too")
 	return nil
 }
 
-// tmuxLive runs each command on the running server, and reports whether
-// there was one to run them on.
-func tmuxLive(w io.Writer, cmds [][]string) bool {
+// tmuxLive runs each command on the running server, and reports the
+// tmux it ran them with — or that there was no server to run them on.
+func tmuxLive(w io.Writer, cmds [][]string) (string, bool) {
 	tmux, err := exec.LookPath("tmux")
 	if err != nil {
 		fmt.Fprintln(w, "tmux is not on PATH: the file is done, nothing applied")
-		return false
+		return "", false
 	}
 	if exec.Command(tmux, "has-session").Run() != nil {
 		fmt.Fprintln(w, "no tmux server is running: the file takes effect on the next one")
-		return false
+		return "", false
 	}
 	for _, args := range cmds {
 		if out, err := exec.Command(tmux, args...).CombinedOutput(); err != nil {
 			fmt.Fprintf(w, "tmux %s: %s\n", strings.Join(args, " "), strings.TrimSpace(string(out)))
 		}
 	}
-	return true
+	return tmux, true
+}
+
+// eachSession calls f with the id of every session on the running
+// server.
+func eachSession(tmux string, f func(id string)) {
+	out, err := exec.Command(tmux, "list-sessions", "-F", "#{session_id}").Output()
+	if err != nil {
+		return
+	}
+	for _, id := range strings.Fields(string(out)) {
+		f(id)
+	}
 }
 
 // screenLines is the block .screenrc gets: the idle time as

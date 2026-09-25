@@ -23,8 +23,19 @@ func TestMissingFileIsTheDefaults(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q for a missing file", note)
 	}
-	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.Tmux.LockAfterTime != 300 || cfg.Screen.Idle != 300 {
+	if cfg.HasPIN() || cfg.Profile != "clock" || !cfg.ShowStatus || cfg.PINPromptTimeout != 30 || cfg.Tmux.LockAfterTime != 300 || cfg.Tmux.Lock != LockServer || cfg.Screen.Idle != 300 {
 		t.Errorf("not the defaults: %+v", cfg)
+	}
+}
+
+// tmux's lock is one of two: lock-session as written, anything else is
+// lock-server (2026-09-25).
+func TestTmuxLockIsOneOfTwo(t *testing.T) {
+	for _, c := range []struct{ in, want string }{{"lock-session", LockSession}, {"lock-server", LockServer}, {"nonsense", LockServer}, {"", LockServer}} {
+		cfg, _ := LoadFile(write(t, "tmux:\n  lock: "+c.in+"\n"))
+		if cfg.Tmux.Lock != c.want {
+			t.Errorf("lock %q read as %q", c.in, cfg.Tmux.Lock)
+		}
 	}
 }
 
