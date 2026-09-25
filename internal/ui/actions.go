@@ -106,7 +106,7 @@ func (m AppModel) actions() []action {
 	case rowActivate:
 		out = append(out, m.activateAction())
 	case rowLock:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "every client on the server, or this session's alone", run: (*AppModel).chooseLock})
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how much a lock covers: the whole server, or one session", run: (*AppModel).chooseLock})
 	}
 	if it.kind == sideTool {
 		return out

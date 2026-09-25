@@ -94,7 +94,10 @@ func helpTool(name string) []helpEntry {
 		{"", "under the line: " + name + "'s own settings"},
 	}
 	if name == tools[toolTmux] {
-		out = append(out, helpEntry{"lock", "what prefix : locku, and the bind-key, run — lock-server: every client on the server, and whoever attaches while it is locked; lock-session: this session's clients alone, the other sessions left as they are (a screensaver per workspace, not a wall between them)"})
+		// The lock row is about how much a lock covers — not about what
+		// runs it, which is every trigger alike (user, 2026-09-25: a
+		// description that named the bind-key misled).
+		out = append(out, helpEntry{"lock", "how much a lock covers. lock-server: the whole server — every client, and whoever attaches to any session while it is locked. lock-session: only the session that locked — its clients, and whoever attaches to it; the other sessions go on as they were"})
 	}
 	out = append(out, helpEntry{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"})
 	if name == tools[toolTmux] {
