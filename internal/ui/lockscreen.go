@@ -167,8 +167,11 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 }
 
 // whoami is the status row's "user@host": the user running the lock and
-// the machine's short name.
-func whoami() (string, string) {
+// the machine's short name. A variable so a test can pin it: the row is
+// clipped to the terminal, and a long hostname (GitHub's macOS runner,
+// 62 characters without a dot, 2026-09-25) pushed the words a test looks
+// for off the end.
+var whoami = func() (string, string) {
 	name := os.Getenv("USER")
 	if u, err := user.Current(); err == nil && u.Username != "" {
 		name = u.Username
