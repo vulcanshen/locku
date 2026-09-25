@@ -152,11 +152,13 @@ func report(w io.Writer, path string, changed bool, verb string) {
 // client that attaches to, or switches into, any session, since tmux's
 // own lock-server locks only the clients attached at that moment. The
 // idle lock stays tmux's per-session one: the screen that idles is the
-// screen that locks. No key is bound: a user with a tmux.conf has keys
-// of their own, so the lock is a command — `prefix :` then `locku` —
-// through a command alias. The alias and the hooks sit at a high index
-// in their arrays, so the user's own entries — at 0 — are untouched, and
-// -d can take exactly these out again.
+// screen that locks. No key is bound unless the user names one: a user
+// with a tmux.conf has keys of their own, so the lock is a command —
+// `prefix :` then `locku` — through a command alias, and a bind-key of
+// their choosing on top (user, 2026-09-25; empty binds nothing). The
+// alias and the hooks sit at a high index in their arrays, so the user's
+// own entries — at 0 — are untouched, and Remove can take exactly these
+// out again.
 const (
 	tmuxIndex = "90"
 	hookCmd   = `if -F "#{@locked}" lock-client`
@@ -171,38 +173,70 @@ const (
 func lockCmd() string { return shellQuote(Binary()) + " lock -S '#{socket_path}'" }
 
 // tmuxLines is the block tmux.conf gets, with Integration › tmux's
-// lock-after-time as it is.
-func tmuxLines(idle int) []string {
-	return []string{
+// lock-after-time as it is, and its bind-key when there is one.
+func tmuxLines(idle int, key string) []string {
+	lines := []string{
 		`set -gF lock-command "` + lockCmd() + `"  # locku`,
 		`set -g lock-after-time ` + pad(itoa(idle), 4) + `                                                 # locku: 0 never`,
 		`set -s "command-alias[` + tmuxIndex + `]" "locku=lock-server"                              # locku: prefix : locku locks every client`,
 		`set-hook -g "client-attached[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client`,
 		`set-hook -g "client-session-changed[` + tmuxIndex + `]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions`,
 	}
+	if key != "" {
+		lines = append(lines, pad(`bind-key `+key+` lock-server`, 76)+`# locku: prefix `+key+` locks every client`)
+	}
+	return lines
+}
+
+// boundKey is the key the block in content binds, or "" when it binds
+// none — read off the file, so a key changed or dropped since the last
+// Setup can be unbound on the running server.
+func boundKey(content string) string {
+	i := strings.Index(content, blockBegin)
+	if i < 0 {
+		return ""
+	}
+	for _, l := range strings.Split(content[i:], "\n") {
+		if l == blockEnd {
+			break
+		}
+		if f := strings.Fields(l); len(f) >= 3 && f[0] == "bind-key" {
+			return f[1]
+		}
+	}
+	return ""
 }
 
 // tmuxSet is the same on a running server; tmuxUnset its undoing, one
 // for one.
-func tmuxSet(idle int) [][]string {
-	return [][]string{
+func tmuxSet(idle int, key string) [][]string {
+	cmds := [][]string{
 		{"set", "-gF", "lock-command", lockCmd()},
 		{"set", "-g", "lock-after-time", itoa(idle)},
 		{"set", "-s", "command-alias[" + tmuxIndex + "]", "locku=lock-server"},
 		{"set-hook", "-g", "client-attached[" + tmuxIndex + "]", hookCmd},
 		{"set-hook", "-g", "client-session-changed[" + tmuxIndex + "]", hookCmd},
 	}
+	if key != "" {
+		cmds = append(cmds, []string{"bind-key", key, "lock-server"})
+	}
+	return cmds
 }
 
-// tmuxUnset undoes tmuxSet one for one, and then drops the mark a lock
-// may have left.
-var tmuxUnset = [][]string{
-	{"set", "-gu", "lock-command"},
-	{"set", "-gu", "lock-after-time"},
-	{"set", "-su", "command-alias[" + tmuxIndex + "]"},
-	{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
-	{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
-	{"set", "-gu", "@locked"},
+// tmuxUnset undoes tmuxSet one for one — the key that was bound
+// included — and then drops the mark a lock may have left.
+func tmuxUnset(key string) [][]string {
+	cmds := [][]string{
+		{"set", "-gu", "lock-command"},
+		{"set", "-gu", "lock-after-time"},
+		{"set", "-su", "command-alias[" + tmuxIndex + "]"},
+		{"set-hook", "-gu", "client-attached[" + tmuxIndex + "]"},
+		{"set-hook", "-gu", "client-session-changed[" + tmuxIndex + "]"},
+	}
+	if key != "" {
+		cmds = append(cmds, []string{"unbind-key", key})
+	}
+	return append(cmds, []string{"set", "-gu", "@locked"})
 }
 
 func itoa(n int) string { return strconv.Itoa(n) }
@@ -215,25 +249,49 @@ func pad(s string, w int) string {
 	return s
 }
 
-// Tmux writes the block into the file at path — preference's tmux_conf,
-// "~/…" allowed — with idle seconds of idleness before tmux locks by
-// itself (0: never), and, when a server is running, sets the same
-// things on it now.
-func Tmux(w io.Writer, path string, idle int) error {
+// Tmux writes the block into the file at path — Integration › tmux's
+// conf, "~/…" allowed — with idle seconds of idleness before tmux locks
+// by itself (0: never) and key bound to the lock after prefix ("":
+// none), and, when a server is running, sets the same things on it
+// now; a key the file bound before, and this Setup does not, comes off
+// the server too.
+func Tmux(w io.Writer, path string, idle int, key string) error {
 	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
-	changed, err := write(path, tmuxLines(idle))
+	was := boundIn(path)
+	changed, err := write(path, tmuxLines(idle, key))
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "wrote")
-	if !tmuxLive(w, tmuxSet(idle)) {
+	cmds := tmuxSet(idle, key)
+	if was != "" && was != key {
+		cmds = append([][]string{{"unbind-key", was}}, cmds...)
+	}
+	if !tmuxLive(w, cmds) {
 		return nil
 	}
-	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku locks every client, %s, attaching while locked locks\n", idleSays(idle))
+	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks every client, %s, attaching while locked locks\n", keySays(key), idleSays(idle))
 	return nil
+}
+
+// boundIn is the key the block in the file at path binds, or "".
+func boundIn(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return boundKey(string(b))
+}
+
+// keySays is the bound key in words, for what setup reports.
+func keySays(key string) string {
+	if key == "" {
+		return ""
+	}
+	return " or prefix " + key
 }
 
 // idleSays is the idle time in words, for what setup reports.
@@ -245,18 +303,19 @@ func idleSays(idle int) string {
 }
 
 // TmuxUndo takes the block out of the file at path and, when a server is
-// running, the same things off it.
+// running, the same things off it — the key it bound included.
 func TmuxUndo(w io.Writer, path string) error {
 	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
+	was := boundIn(path)
 	changed, err := erase(path)
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "removed locku's block from")
-	if !tmuxLive(w, tmuxUnset) {
+	if !tmuxLive(w, tmuxUnset(was)) {
 		return nil
 	}
 	fmt.Fprintln(w, "taken off the running tmux server too")

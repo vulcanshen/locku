@@ -187,6 +187,7 @@ func TestSaveRoundTrip(t *testing.T) {
 	cfg := Default()
 	cfg.Profiles = append(cfg.Profiles, Profile{Name: "big", Saver: "clock", Time: "HH MM SS", Date: "YYYY-MM-DD"})
 	cfg.Profile = "big"
+	cfg.Tmux.BindKey = "C-l"
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
 	}
@@ -209,6 +210,9 @@ func TestSaveRoundTrip(t *testing.T) {
 	}
 	if s, ok := back.Active(); !ok || s.Name != "big" || s.Date != "YYYY-MM-DD" {
 		t.Errorf("active %+v %v", s, ok)
+	}
+	if b, _ := os.ReadFile(p); back.Tmux.BindKey != "C-l" || !strings.Contains(string(b), "    bind-key: C-l\n") {
+		t.Errorf("tmux's bind-key: %q in\n%s", back.Tmux.BindKey, b)
 	}
 	if left, _ := filepath.Glob(filepath.Join(filepath.Dir(p), ".config.yaml.*")); len(left) != 0 {
 		t.Errorf("temp files left: %v", left)

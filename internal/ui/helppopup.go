@@ -88,12 +88,15 @@ var helpPreference = []helpEntry{
 // helpTool is what each of a tool's rows means, the idle time under the
 // tool's own name for it.
 func helpTool(name string) []helpEntry {
-	return []helpEntry{
+	out := []helpEntry{
 		{"", "[2] " + name + " — what each row is"},
 		{"conf", "the file locku's block is written into by S and taken out of by X; ~/ allowed"},
 		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never — S again after a change"},
-		{"status", "whether the block is in the file now"},
 	}
+	if name == tools[toolTmux] {
+		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none — S again after a change"})
+	}
+	return append(out, helpEntry{"status", "whether the block is in the file now"})
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {

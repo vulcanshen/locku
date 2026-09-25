@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """End to end, on a real tmux with the real binary (function.md §12):
-the settings screen's Integration › tmux › [S] Setup writes the block;
-on a server started on it, `locku` locks every client and marks the
-server; a client attaching to ANY session meanwhile is locked by the
-hook; unlocking clears the mark, and a client attaching then is not
-locked; a terminal that dies under the lock leaves the mark, and the
-next client in meets the lock; [X] Remove takes it all out. No PIN is
+the settings screen's Integration › tmux › [S] Setup writes the block,
+the bind-key typed there included; on a server started on it, `locku`
+locks every client and marks the server; a client attaching to ANY
+session meanwhile is locked by the hook; unlocking clears the mark, and
+a client attaching then is not locked; a terminal that dies under the
+lock — prefix l having locked it — leaves the mark, and the next client
+in meets the lock; [X] Remove takes it all out. No PIN is
 set, so any key unlocks — the PIN itself is the unit tests' business.
 
     make e2e            # builds the binary and runs this
@@ -115,12 +116,13 @@ def settings(*keys):
     return b"".join(out)
 
 
-# 0. Setup from the screen: G to preference, k k up to tmux, S.
-screen = settings(b"G", b"k", b"k", b"S")
+# 0. Setup from the screen: G to preference, k k up to tmux, into [2],
+# down to bind-key and l typed into it, then S.
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"l", b"\r", b"S")
 text = open(conf).read() if os.path.exists(conf) else ""
-check("Setup from the settings screen wrote the block, every line marked, the lock command absolute",
+check("Setup from the settings screen wrote the block, every line marked, the lock command absolute, the key bound",
       "# >>> locku >>>" in text and "client-attached[90]" in text and 'lock-command "/' in text
-      and "socket_path" in text and "locku=lock-server" in text
+      and "socket_path" in text and "locku=lock-server" in text and "bind-key l lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
 check("the screen said so", b"wrote" in screen)
 
@@ -128,8 +130,9 @@ subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.D
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
 time.sleep(1.5)
 tmux("new-session", "-d", "-s", "u")  # a second session, nobody on it
-check("the server took the block: alias and hooks",
-      "locku=lock-server" in tmux("show", "-s", "command-alias") and "client-attached[90]" in tmux("show-hooks", "-g"))
+check("the server took the block: alias, hooks and the key",
+      "locku=lock-server" in tmux("show", "-s", "command-alias") and "client-attached[90]" in tmux("show-hooks", "-g")
+      and "lock-server" in tmux("list-keys", "-T", "prefix"))
 
 # 1. `locku` locks A and marks the server.
 tmux("locku")
@@ -161,9 +164,11 @@ for p in (pc, pb, pe):
     kill(p)
 time.sleep(0.5)
 
-# 5. A's terminal dies under the lock: the mark stays, the next client is locked.
-tmux("locku")
+# 5. prefix l locks A; A's terminal dies under the lock: the mark stays,
+# the next client is locked.
+os.write(fa, b"\x02l")
 time.sleep(1.5)
+check("prefix l locks A and marks the server", marked() and locks_running())
 kill(pa)
 time.sleep(1.5)
 check("the mark survives a terminal that died under the lock", marked())

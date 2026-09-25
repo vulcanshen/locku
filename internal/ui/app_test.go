@@ -319,8 +319,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowConf {
 		t.Fatalf("tmux, conf row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "not installed") || strings.Contains(v, "tool ") || strings.Contains(v, "idle_lock") {
-		t.Errorf("tmux's rows are conf, lock-after-time, status:\n%s", v)
+	if v := m.View(); !strings.Contains(v, "[2] tmux · integration") || !strings.Contains(v, "not set") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || !strings.Contains(v, "not installed") || strings.Contains(v, "tool ") || strings.Contains(v, "idle_lock") {
+		t.Errorf("tmux's rows are conf, lock-after-time, bind-key, status:\n%s", v)
 	}
 	m = m.press("enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
@@ -376,6 +376,24 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if m.cfg.Tmux.LockAfterTime != 45 || saved(t).Tmux.LockAfterTime != 45 || m.cfg.Screen.Idle != 300 {
 		t.Errorf("tmux idle %d, screen idle %d", m.cfg.Tmux.LockAfterTime, m.cfg.Screen.Idle)
 	}
+	// tmux alone has a bind-key: one key as tmux spells it, empty for
+	// none; two words are refused (user, 2026-09-25).
+	m = m.press("j", "enter")
+	if m.rowAt().kind != rowBindKey || m.input.title != "key" || m.input.value != "" {
+		t.Fatalf("bind-key box %+v, row %+v", m.input, m.rowAt())
+	}
+	m = m.typed("C l").press("enter")
+	if m.input.suffix != " · one key, e.g. l or C-l" || m.cfg.Tmux.BindKey != "" {
+		t.Fatalf("two words: suffix %q, key %q", m.input.suffix, m.cfg.Tmux.BindKey)
+	}
+	m = m.press("ctrl+u").typed("C-l").press("enter")
+	if m.cfg.Tmux.BindKey != "C-l" || saved(t).Tmux.BindKey != "C-l" || !strings.Contains(m.View(), "C-l") {
+		t.Errorf("bind-key %q:\n%s", m.cfg.Tmux.BindKey, m.View())
+	}
+	m = m.press("enter", "ctrl+u", "enter")
+	if m.cfg.Tmux.BindKey != "" || saved(t).Tmux.BindKey != "" || !strings.Contains(m.View(), "none") {
+		t.Errorf("emptied: %q:\n%s", m.cfg.Tmux.BindKey, m.View())
+	}
 	// screen, with its own usual file.
 	m = m.press("1", "j", "2", "enter")
 	if m.input.placeholder != "~/.screenrc" {
@@ -384,6 +402,11 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	m = m.press("tab", "enter")
 	if m.cfg.Screen.Conf != "~/.screenrc" || saved(t).Screen.Conf != "~/.screenrc" {
 		t.Errorf("screen conf %q", m.cfg.Screen.Conf)
+	}
+	for _, r := range m.rows() {
+		if r.kind == rowBindKey {
+			t.Errorf("screen has no key to bind: %+v", r)
+		}
 	}
 }
 
@@ -402,9 +425,10 @@ func TestSetupAndRemoveFromTheScreen(t *testing.T) {
 	if m.cfg.Tmux.Conf != conf || !strings.Contains(m.View(), "not installed") {
 		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
 	}
+	m = m.press("j", "j", "enter").typed("l").press("enter") // bind-key l
 	m = m.press("S")
 	b, err := os.ReadFile(conf)
-	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") {
+	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") || !strings.Contains(string(b), "bind-key l lock-server") {
 		t.Fatalf("after Setup: %v\n%s", err, b)
 	}
 	if !strings.Contains(m.toast.msg, "wrote") || !strings.Contains(m.View(), " installed") || strings.Contains(m.View(), "not installed") {
@@ -458,8 +482,11 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "conf", "lock-after-time", "status")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "conf", "lock-after-time", "bind-key", "status")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
+	}
+	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "status")) != 0 || strings.Contains(v, "bind-key") {
+		t.Errorf("on [2], screen: no key to bind:\n%s", v)
 	}
 	// Narrow: the PIN's line does not fit beside a 26-column key and is
 	// not cut — its end goes on under itself.
@@ -474,17 +501,17 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	}
 }
 
-// Every [2] is a table under a header row, Properties and Value, which
+// Every [2] is a table under a header row, Property and Value, which
 // the cursor skips (user, 2026-09-25).
 func TestEveryDetailHasAHeader(t *testing.T) {
 	m := newTestApp(t)
 	for _, keys := range [][]string{{}, {"G", "k", "k", "k", "k"}, {"G", "k", "k"}, {"G"}} { // a profile, a saver, tmux, preference
 		mm := m.press(keys...)
-		if r := mm.rows(); r[0].kind != rowHead || r[0].label != "Properties" || r[0].value != "Value" || r[0].stop {
+		if r := mm.rows(); r[0].kind != rowHead || r[0].label != "Property" || r[0].value != "Value" || r[0].stop {
 			t.Errorf("%v: first row %+v", keys, r[0])
 		}
 		mm = mm.press("2")
-		if v := mm.View(); !strings.Contains(v, "Properties") || !strings.Contains(v, "Value") || mm.rowAt().kind == rowHead {
+		if v := mm.View(); !strings.Contains(v, "Property ") || !strings.Contains(v, "Value") || strings.Contains(v, "Properties") || mm.rowAt().kind == rowHead {
 			t.Errorf("%v: the header, and the cursor not on it:\n%s", keys, v)
 		}
 	}

@@ -19,6 +19,7 @@ const (
 	inputDuplicate              // a copy's name
 	inputNumber                 // pin_prompt_timeout, wrong_pin_attempts, wrong_pin_attempt_cooldown, a tool's idle time
 	inputPath                   // tmux_conf / screen_conf, on an offer
+	inputBindKey                // tmux's bind-key: one key, or nothing
 	inputPINCurrent             // the PIN in force, before a change or a clear
 	inputPINNew                 // the new PIN
 	inputPINConfirm             // the new PIN again
