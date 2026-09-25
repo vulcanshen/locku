@@ -80,10 +80,13 @@ func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 // written into, as the user typed it — "~/…" allowed, empty is not set —
 // and the seconds the tool waits idle before it locks by itself, under
 // the tool's own name for that setting (user, 2026-09-25): tmux's
-// lock-after-time, screen's idle; 0 is never.
+// lock-after-time, screen's idle; 0 is never. tmux alone has a bind-key:
+// the key after prefix that locks every client — l, C-l, F12 — as tmux
+// spells it; empty binds nothing (user, 2026-09-25).
 type Tmux struct {
 	Conf          string `yaml:"conf"`
 	LockAfterTime int    `yaml:"lock-after-time"`
+	BindKey       string `yaml:"bind-key"`
 }
 
 type Screen struct {
@@ -106,13 +109,14 @@ func (c Config) Tool(name string) Tool {
 	return Tool{Conf: c.Tmux.Conf, Idle: c.Tmux.LockAfterTime}
 }
 
-// SetTool stores t as the tool called name.
+// SetTool stores t as the tool called name; what a Tool does not carry
+// — tmux's bind-key — stays as it is.
 func (c *Config) SetTool(name string, t Tool) {
 	if name == "screen" {
-		c.Screen = Screen{Conf: t.Conf, Idle: t.Idle}
+		c.Screen.Conf, c.Screen.Idle = t.Conf, t.Idle
 		return
 	}
-	c.Tmux = Tmux{Conf: t.Conf, LockAfterTime: t.Idle}
+	c.Tmux.Conf, c.Tmux.LockAfterTime = t.Conf, t.Idle
 }
 
 // Config is config.yaml, one field per key.
@@ -495,6 +499,7 @@ func (cfg Config) sanitized() (Config, string) {
 	for _, n := range []string{"tmux", "screen"} {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
 	}
+	cfg.Tmux.BindKey = strings.TrimSpace(cfg.Tmux.BindKey)
 	return cfg, note
 }
 

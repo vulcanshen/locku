@@ -19,7 +19,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 ```
 ╔ [1] locku ═════════════╗╭ [2] clock · unsaved ─────────────────────────────╮
-║ Profiles               ║│ Properties        Value                          │
+║ Profiles               ║│ Property          Value                          │
 ║ ● clock                ║│ name              clock                          │
 ║   clock2               ║│ saver             clock                          │
 ║   dino                 ║│ layout            row                            │
@@ -38,7 +38,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
-每個 `[2]` 第一列是表頭：`Properties` 與 `Value`，用側欄區塊標題的 Blue，不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
+每個 `[2]` 第一列是表頭：`Property` 與 `Value`（單數，2026-09-25 同日改），用側欄區塊標題的 Blue，不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
 都給標題列）。
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
@@ -110,11 +110,12 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 |---|---|---|
 | conf | 路徑照存的樣子；未設 `not set`（Yellow），Setup / Remove 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc` |
 | lock-after-time（screen 上是 idle） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱（2026-09-25，使用者），Setup 原樣填進去，各工具一份 | input popup，型別 `number`，清空 = 300 |
+| bind-key（只有 tmux） | 鍵照 tmux 的寫法（`l`、`C-l`、`F12`）；空顯示 `none`：prefix 之後按它就鎖整台，Setup 寫成 `bind-key <鍵> lock-server`（2026-09-25，使用者：prefix shortcut） | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → ` · one key, e.g. l or C-l` 框留著 |
 | status | 唯讀，不可停：`installed`（Green）/ `not installed`（Yellow），區塊在不在 conf 裡，每次畫都讀一次 | 無 |
 
 就是 property / value 兩欄，跟 profile 一樣（2026-09-25 修訂：原本第一列是 dim 的 `tool tmux`、最後一列叫 `block`、值是 `in the
 file`，使用者看不懂）。`[S] Setup` / `[X] Remove` 是這裡的 panel operation（`[1]` 上是 item operation），做完 toast 一行結果；
-`?` help 的 Integration 段說 S 與 X 各做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、lock-after-time / idle、status 三列的說明。
+`?` help 的 Integration 段說 S 與 X 各做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、lock-after-time / idle、bind-key（tmux）、status 這幾列的說明。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
 除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。

@@ -104,6 +104,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
 	case rowIdle:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "idle seconds before it locks; 0 never; setup again after", run: (*AppModel).editNumber})
+	case rowBindKey:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the key after prefix that locks; empty binds none; setup again after", run: (*AppModel).editBindKey})
 	}
 	if it.kind == sideTool {
 		return append(out, m.toolActions(true)...)
@@ -298,7 +300,7 @@ func (m *AppModel) setupTool() tea.Cmd {
 	var out bytes.Buffer
 	var err error
 	if name, t := m.tool(); name == tools[toolTmux] {
-		err = setup.Tmux(&out, t.Conf, t.Idle)
+		err = setup.Tmux(&out, t.Conf, t.Idle, m.cfg.Tmux.BindKey)
 	} else {
 		err = setup.Screen(&out, t.Conf, t.Idle)
 	}
@@ -513,6 +515,13 @@ func (m *AppModel) editPath() tea.Cmd {
 		placeholder: offer, accept: "save", action: inputPath}, m.layer())
 }
 
+// editBindKey is Enter on tmux's bind-key: the key as tmux spells it —
+// l, C-l, F12 — or nothing, which binds none (user, 2026-09-25).
+func (m *AppModel) editBindKey() tea.Cmd {
+	return m.input.ask(inputPopup{title: "key", prompt: "bind-key — the key after prefix that locks every client; empty binds none",
+		value: m.cfg.Tmux.BindKey, accept: "save", action: inputBindKey}, m.layer())
+}
+
 // ---- the PIN (ux.md §2.2): one box at a time, one question each.
 
 func (m *AppModel) setPIN() tea.Cmd { return m.askPIN("new PIN", inputPINNew) }
@@ -656,6 +665,18 @@ func (m *AppModel) commitInput() tea.Cmd {
 		}
 		before := m.snapshot()
 		m.editTool(func(t *config.Tool) { t.Conf = v })
+		return tea.Batch(m.input.close(), m.save(before))
+
+	case inputBindKey:
+		// One key as tmux names it: a space would make it two words on
+		// the line, a # the rest of the line a comment.
+		v = strings.TrimSpace(v)
+		if strings.ContainsAny(v, " \t#") {
+			m.input.suffix = " · one key, e.g. l or C-l"
+			return nil
+		}
+		before := m.snapshot()
+		m.cfg.Tmux.BindKey = v
 		return tea.Batch(m.input.close(), m.save(before))
 
 	case inputPINCurrent:

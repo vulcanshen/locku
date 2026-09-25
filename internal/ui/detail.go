@@ -17,14 +17,14 @@ import (
 // fields and colours a profile has, which a profile made of it from now
 // on starts as, and which [p] previews; changing them changes no profile
 // already made (user, 2026-09-24). A tool — tmux, screen — is its file
-// and its idle time, then a status: whether locku's block is in the
-// file; [S] Setup and [X] Remove are its panel operations (user,
-// 2026-09-25). Preference is the PIN, the active profile and the lock's
+// and its idle time — tmux's the key after prefix that locks, too —
+// then a status: whether locku's block is in the file; [S] Setup and
+// [X] Remove are its panel operations (user, 2026-09-25). Preference is the PIN, the active profile and the lock's
 // settings. What each setting means is in the ? help, on that panel.
 // Every key config.yaml has is a row here, except `profiles` and
 // `savers`, which ARE panel [1]; a tool's idle time under the tool's
 // own name for it. The first row of every [2] is the table's header,
-// Properties and Value (user, 2026-09-25).
+// Property and Value (user, 2026-09-25).
 //
 // Colours edit a DRAFT (user, 2026-09-24): the sliders move a copy, the
 // swatch row shows the saved colour and, when it differs, the draft
@@ -35,7 +35,7 @@ type rowKind int
 
 const (
 	rowNone rowKind = iota // no row: a panel with nothing to stop on
-	rowHead                // the table's header: Properties, Value
+	rowHead                // the table's header: Property, Value
 	rowName
 	rowSaver // a profile's saver: the class, read-only
 	rowLayout
@@ -54,9 +54,10 @@ const (
 	rowPINPromptTimeout
 	rowWrongPINAttempts
 	rowWrongPINCooldown
-	rowConf   // a tool's file
-	rowIdle   // a tool's idle time, under the tool's own name for it
-	rowStatus // whether locku's block is in the tool's file, read-only
+	rowConf    // a tool's file
+	rowIdle    // a tool's idle time, under the tool's own name for it
+	rowBindKey // tmux's key after prefix that locks, or none
+	rowStatus  // whether locku's block is in the tool's file, read-only
 )
 
 // row is one line of panel [2].
@@ -209,7 +210,7 @@ func offOr(n int) string {
 // rows is panel [2] for the current selection.
 func (m AppModel) rows() []row {
 	value := valueColor
-	head := row{kind: rowHead, label: "Properties", value: "Value"}
+	head := row{kind: rowHead, label: "Property", value: "Value"}
 	switch it := m.sideAt(); it.kind {
 	case sideSaver:
 		kind := saver.Kinds[it.ref]
@@ -259,12 +260,21 @@ func (m AppModel) rows() []row {
 		if setup.Installed(t.Conf) {
 			status.value, status.color = "installed", liveColor
 		}
-		return []row{
+		out := []row{
 			head,
 			conf,
 			{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true},
-			status,
 		}
+		// tmux alone binds a key: the one after prefix that locks every
+		// client, as tmux spells it; none is none (user, 2026-09-25).
+		if name == tools[toolTmux] {
+			bind := row{kind: rowBindKey, label: "bind-key", value: m.cfg.Tmux.BindKey, color: value, stop: true}
+			if bind.value == "" {
+				bind.value = "none"
+			}
+			out = append(out, bind)
+		}
+		return append(out, status)
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
