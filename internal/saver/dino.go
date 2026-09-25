@@ -11,9 +11,10 @@ import (
 // what is coming, at a random moment inside the window that clears it,
 // and now and then there is a jump for nothing when the way is clear
 // (user, 2026-09-24: endless, random obstacles, random jumps). Two of
-// its settings pick the art — the runner and the scene. Runners: the
-// T-Rex, or two of them one behind the other, each jumping on its own.
-// Scenes: grassland, with cacti; the desert, with pyramids.
+// its settings pick the art — the runner and the scene. Runners: a big
+// T-Rex, a small one, or two of either size one behind the other, each
+// jumping on its own (user, 2026-09-25: the six ways). Scenes:
+// grassland, with cacti; the desert, with pyramids.
 //
 // Everything here is in the scene's own pixels; the canvas scales them.
 
@@ -24,15 +25,23 @@ const (
 	KindClock = "clock"
 	KindDino  = "dino"
 
-	RunnerTRex    = "trex"
-	RunnerTwoTRex = "two-trex"
-	SceneGrass    = "grassland"
-	SceneDesert   = "desert"
+	// A runner's name reads its figures back to front — left to right
+	// on the screen (user, 2026-09-25): small-big is the small one
+	// behind and the big one in front. Before that day there were two,
+	// trex and two-trex; config reads them as big and big-small.
+	RunnerBig        = "big"
+	RunnerSmall      = "small"
+	RunnerBigBig     = "big-big"
+	RunnerSmallSmall = "small-small"
+	RunnerSmallBig   = "small-big"
+	RunnerBigSmall   = "big-small"
+	SceneGrass       = "grassland"
+	SceneDesert      = "desert"
 )
 
 var (
 	Kinds   = []string{KindClock, KindDino}
-	Runners = []string{RunnerTRex, RunnerTwoTRex}
+	Runners = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
 	Scenes  = []string{SceneGrass, SceneDesert}
 )
 
@@ -111,8 +120,8 @@ func beside(gap int, parts ...sprite) sprite {
 }
 
 // runnerArt is a runner: the figures that run, back to front, each
-// jumping on its own (user, 2026-09-24: two of them, the small one in
-// front and the big one behind).
+// jumping on its own (user, 2026-09-24: two of them, one behind the
+// other; 2026-09-25: either size, in either order, or one alone).
 type runnerArt struct {
 	figures []figure
 }
@@ -166,7 +175,7 @@ var trex = figure{
 	air: append(append(sprite{}, trexBody...), "....##.##...", "....#...#..."),
 }
 
-// A small T-Rex, eight wide and ten tall, to run in front of the big one.
+// A small T-Rex, eight wide and ten tall.
 var smallTRexBody = sprite{
 	"....####",
 	"....#.##",
@@ -186,10 +195,16 @@ var smallTRex = figure{
 	air: append(append(sprite{}, smallTRexBody...), "...#.#..", "...#.#.."),
 }
 
-var (
-	trexArt    = runnerArt{figures: []figure{trex}}
-	twoTRexArt = runnerArt{figures: []figure{trex, smallTRex}} // the big one behind, the small one in front
-)
+// runnerArts is the art each runner name picks: its figures as the
+// name reads them, back to front.
+var runnerArts = map[string]runnerArt{
+	RunnerBig:        {figures: []figure{trex}},
+	RunnerSmall:      {figures: []figure{smallTRex}},
+	RunnerBigBig:     {figures: []figure{trex, trex}},
+	RunnerSmallSmall: {figures: []figure{smallTRex, smallTRex}},
+	RunnerSmallBig:   {figures: []figure{smallTRex, trex}},
+	RunnerBigSmall:   {figures: []figure{trex, smallTRex}},
+}
 
 var (
 	cactus = sprite{
@@ -257,10 +272,10 @@ var (
 // runnerOf and sceneOf are the art a name picks; an unknown name is the
 // first choice, as a saver with no such setting would be.
 func runnerOf(name string) runnerArt {
-	if name == RunnerTwoTRex {
-		return twoTRexArt
+	if a, ok := runnerArts[name]; ok {
+		return a
 	}
-	return trexArt
+	return runnerArts[Runners[0]]
 }
 
 func sceneOf(name string) sceneArt {

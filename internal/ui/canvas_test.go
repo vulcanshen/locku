@@ -257,7 +257,7 @@ func TestSceneFitsAndPaints(t *testing.T) {
 			t.Errorf("size %d on %dx%d: k %d scene %dx%d, want k %d %dx%d", c.size, c.cols, c.rows, k, w, h, c.k, c.w, c.h)
 		}
 	}
-	d := saver.NewDino(3, saver.RunnerTRex, saver.SceneGrass)
+	d := saver.NewDino(3, saver.RunnerBig, saver.SceneGrass)
 	sc := d.Draw(50, 29)
 	b := paintScene(sc, 2, 200, 59)
 	if b.w != 100 || b.h != 59 {

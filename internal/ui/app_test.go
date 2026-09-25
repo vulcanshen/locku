@@ -692,7 +692,7 @@ func TestNewProfileOfASaver(t *testing.T) {
 	}
 	m = m.press("ctrl+u").typed("dino").press("enter")
 	p := m.cfg.Profiles[2]
-	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "trex" || p.Scene != "grassland" ||
+	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "big" || p.Scene != "grassland" ||
 		len(saved(t).Profiles) != 3 || saved(t).Profiles[2].Saver != "dino" {
 		t.Fatalf("profiles %+v", m.cfg.Profiles)
 	}
