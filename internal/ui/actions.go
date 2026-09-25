@@ -57,8 +57,17 @@ func (m AppModel) actions() []action {
 		case m.cfg.Profiles[it.ref].Name == m.cfg.Profile:
 			del.disabled, del.hint = true, "cannot delete: active"
 		}
+		// [a]: the lock shows this one from now on (user, 2026-09-25) —
+		// the dot moves, the file is written — without the walk to
+		// preference › profile, which stays the other way to the same
+		// setting.
+		use := action{key: "a", label: "Activate", hint: "the lock shows this profile from now on", run: (*AppModel).activateProfile}
+		if m.cfg.Profiles[it.ref].Name == m.cfg.Profile {
+			use.disabled, use.hint = true, "already active"
+		}
 		return []action{
 			edit,
+			use,
 			{key: "p", label: "Preview", hint: "the lock, showing this profile", run: (*AppModel).previewThis},
 			{key: "D", label: "Duplicate", hint: "a copy, under a new name", run: (*AppModel).duplicateProfile},
 			{key: "r", label: "Rename", hint: "this profile", run: (*AppModel).renameProfile},
@@ -363,6 +372,14 @@ func (m *AppModel) deleteProfile() tea.Cmd {
 	return m.confirm.ask(confirmPopup{title: "Delete profile", accept: "delete",
 		lines:  []string{"Delete " + m.cfg.Profiles[ref].Name + "?", "the config is written at once"},
 		action: confirmDeleteProfile, ref: ref}, m.layer())
+}
+
+// activateProfile is [a] on a profile in [1]: the profile under the
+// cursor becomes the one the lock shows.
+func (m *AppModel) activateProfile() tea.Cmd {
+	before := m.snapshot()
+	m.cfg.Profile = m.cfg.Profiles[m.sideAt().ref].Name
+	return m.save(before)
 }
 
 // ---- the tools (ux.md §A.1): the block written, or taken out.
