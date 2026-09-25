@@ -66,12 +66,53 @@ func TestIdleTimeIsHandedOn(t *testing.T) {
 		if l := strings.Join(tmuxLines(tm), "\n"); !strings.Contains(l, c.tmux) {
 			t.Errorf("idle %d, tmux:\n%s", c.idle, l)
 		}
-		if l := screenLines(c.idle)[0]; !strings.HasPrefix(l, c.screen) {
+		sc := config.Screen{Idle: c.idle}
+		if l := screenLines(sc)[0]; !strings.HasPrefix(l, c.screen) {
 			t.Errorf("idle %d, screen: %q", c.idle, l)
 		}
 		if s := tmuxSet(tm)[1]; s[2] != "lock-after-time" || s[3] != itoa(c.idle) {
 			t.Errorf("idle %d, live: %v", c.idle, s)
 		}
+		if s := screenSet(sc)[0]; strings.Join(s, " ") != c.screen {
+			t.Errorf("idle %d, screen live: %v", c.idle, s)
+		}
+	}
+}
+
+// The screen block is the tmux block's shape under screen's own names
+// (user, 2026-09-25): the idle time, and a `bind <key> lockscreen` when
+// a key is named — none by default, since C-a x is screen's own; what
+// is set on a running screen is what is unset, one for one, and the key
+// the file binds is read back off it.
+func TestScreenBindsAKeyWhenNamed(t *testing.T) {
+	plain, keyed := config.Screen{Idle: 300}, config.Screen{Idle: 300, Bind: "^L"}
+	if l := screenLines(plain); len(l) != 1 || strings.Contains(l[0], "bind") {
+		t.Errorf("no key: %v", l)
+	}
+	if l := screenLines(keyed); len(l) != 2 || !strings.HasPrefix(l[1], "bind ^L lockscreen ") || !strings.Contains(l[1], "# locku: C-a ^L locks, as C-a x does") {
+		t.Errorf("a key: %v", l)
+	}
+	set, unset := screenSet(keyed), screenUnset("^L")
+	if len(set) != 2 || strings.Join(set[1], " ") != "bind ^L lockscreen" || len(unset) != 2 || strings.Join(unset[0], " ") != "idle 0" || strings.Join(unset[1], " ") != "bind ^L" {
+		t.Errorf("live: set %v, unset %v", set, unset)
+	}
+	if u := screenUnset(""); len(u) != 1 {
+		t.Errorf("no key to unbind: %v", u)
+	}
+	if k := screenBound(Apply("bind l redisplay\n", screenLines(keyed))); k != "^L" {
+		t.Errorf("read off the file: %q", k)
+	}
+	if k := screenBound(Apply("bind l lockscreen\n", screenLines(plain))); k != "" {
+		t.Errorf("a key bound outside the block is not locku's: %q", k)
+	}
+	// A screen -ls listing is a line per session under a tab; its
+	// other lines are not sessions.
+	ls := "There are screens on:\n\t9092.probe\t(Attached)\n\t9100.other\t(Detached)\n2 Sockets in /tmp/screens.\n"
+	if got := screenSessionsOf(ls); len(got) != 2 || got[0] != "9092.probe" || got[1] != "9100.other" {
+		t.Errorf("sessions: %v", got)
+	}
+	if got := screenSessionsOf("No Sockets found in /tmp/screens.\n"); len(got) != 0 {
+		t.Errorf("no sessions: %v", got)
 	}
 }
 
@@ -80,7 +121,7 @@ func TestIdleTimeIsHandedOn(t *testing.T) {
 func TestEveryLineIsMarked(t *testing.T) {
 	server := config.Tmux{LockAfterTime: 300, Lock: config.LockServer}
 	session := config.Tmux{LockAfterTime: 300, Lock: config.LockSession, BindKey: "C-l"}
-	for _, l := range append(append(tmuxLines(server), tmuxLines(session)...), screenLines(300)...) {
+	for _, l := range append(append(tmuxLines(server), tmuxLines(session)...), screenLines(config.Screen{Idle: 300, Bind: "l"})...) {
 		if !strings.Contains(l, " # locku") {
 			t.Errorf("unmarked: %q", l)
 		}
@@ -259,7 +300,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	} {
 		t.Setenv("SHELL", c.shell)
 		var out bytes.Buffer
-		if err := Screen(&out, filepath.Join(h, ".screenrc"), 300); err != nil {
+		if err := Screen(&out, config.Screen{Conf: filepath.Join(h, ".screenrc"), Idle: 300}); err != nil {
 			t.Fatal(err)
 		}
 		b, err := os.ReadFile(filepath.Join(h, c.rc))
@@ -269,7 +310,7 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 		if !strings.Contains(string(b), blockBegin+"\n"+c.prefix) || !strings.Contains(string(b), "# locku") {
 			t.Errorf("%s:\n%s", c.shell, b)
 		}
-		if !strings.Contains(out.String(), "new shell") {
+		if !strings.Contains(out.String(), "new shell") || !strings.Contains(out.String(), "not on PATH") {
 			t.Errorf("%s output:\n%s", c.shell, out.String())
 		}
 		out.Reset()
@@ -279,24 +320,38 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 		if b, _ := os.ReadFile(filepath.Join(h, c.rc)); strings.Contains(string(b), "LOCKPRG") {
 			t.Errorf("%s after undo:\n%s", c.shell, b)
 		}
-		if err := Screen(&out, filepath.Join(h, ".screenrc"), 300); err != nil {
+		if err := Screen(&out, config.Screen{Conf: filepath.Join(h, ".screenrc"), Idle: 300}); err != nil {
 			t.Fatal(err)
 		}
 	}
-	b, _ := os.ReadFile(filepath.Join(h, ".screenrc"))
-	if !strings.Contains(string(b), "idle 300 lockscreen") || strings.Contains(string(b), "setenv") {
+	rc := filepath.Join(h, ".screenrc")
+	b, _ := os.ReadFile(rc)
+	if !strings.Contains(string(b), "idle 300 lockscreen") || strings.Contains(string(b), "setenv") || strings.Contains(string(b), "bind") || strings.Count(string(b), "# locku") != 1 {
 		t.Errorf(".screenrc:\n%s", b)
 	}
-	if err := ScreenUndo(new(bytes.Buffer), filepath.Join(h, ".screenrc")); err != nil {
+	// A key: one bind line more; emptied again, the line goes.
+	if err := Screen(new(bytes.Buffer), config.Screen{Conf: rc, Idle: 300, Bind: "l"}); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(filepath.Join(h, ".screenrc")); strings.Contains(string(b), "lockscreen") {
+	if b, _ := os.ReadFile(rc); !strings.Contains(string(b), "bind l lockscreen") || strings.Count(string(b), "# locku") != 2 {
+		t.Errorf("with a key:\n%s", b)
+	}
+	if err := Screen(new(bytes.Buffer), config.Screen{Conf: rc, Idle: 300}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "bind") || strings.Count(string(b), "# locku") != 1 {
+		t.Errorf("key emptied:\n%s", b)
+	}
+	if err := ScreenUndo(new(bytes.Buffer), rc); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "lockscreen") {
 		t.Errorf(".screenrc after undo:\n%s", b)
 	}
 	// Unset, nothing is written — not even the shell rc.
 	h3 := t.TempDir()
 	t.Setenv("HOME", h3)
-	if err := Screen(new(bytes.Buffer), "", 300); err == nil || !strings.Contains(err.Error(), "screen: no file set") {
+	if err := Screen(new(bytes.Buffer), config.Screen{Idle: 300}); err == nil || !strings.Contains(err.Error(), "screen: no file set") {
 		t.Errorf("empty path: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(h3, ".profile")); err == nil {

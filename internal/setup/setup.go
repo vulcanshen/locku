@@ -347,16 +347,17 @@ func Tmux(w io.Writer, t config.Tmux) error {
 			exec.Command(tmux, "set", "-u", "-t", id, "@locked").Run()
 		}
 	})
-	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks %s, %s, attaching while locked locks\n", keySays(t.BindKey), who(t.Lock), idleSays(t.LockAfterTime))
+	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks %s, %s, attaching while locked locks\n", keySays("prefix", t.BindKey), who(t.Lock), idleSays(t.LockAfterTime))
 	return nil
 }
 
-// keySays is the bound key in words, for what setup reports.
-func keySays(key string) string {
+// keySays is the bound key in words, after the tool's prefix, for what
+// setup reports.
+func keySays(prefix, key string) string {
 	if key == "" {
 		return ""
 	}
-	return " or prefix " + key
+	return " or " + prefix + " " + key
 }
 
 // idleSays is the idle time in words, for what setup reports.
@@ -425,27 +426,103 @@ func eachSession(tmux string, f func(id string)) {
 	}
 }
 
-// screenLines is the block .screenrc gets: the idle time as
-// screen's idle (0 turns it off there too).
-func screenLines(idle int) []string {
-	return []string{"idle " + itoa(idle) + " lockscreen   # locku: 0 never"}
+// The screen side (function.md §6.2), the tmux side's shape under
+// screen's own names (user, 2026-09-25). screen has no server: each
+// screen is a process of its own, so there is no lock to scope, and no
+// hooks, so a lock is not remembered for whoever attaches next. What it
+// has is a lock program — LOCKPRG, read by the attacher, the front end
+// on the terminal, from the environment of the shell that ran `screen`;
+// .screenrc's own `setenv` never reaches that process (measured
+// 2026-09-24) — which is why LOCKPRG goes into the shell's rc and not
+// the screenrc; an idle timer, `idle N lockscreen`, under screen's own
+// name for it; and its own key for the lock, C-a x, built in, which the
+// user may double with a `bind <key> lockscreen` of their own (empty
+// binds nothing: C-a x locks anyway). Every line is marked `# locku`
+// at its end; screen reads a trailing comment fine (measured
+// 2026-09-25, screen 4.00.03).
+const screenLock = "lockscreen"
+
+// screenLines is the block the screenrc gets, from Integration › screen:
+// the idle time as screen's idle (0 turns it off there too), and the
+// bind when there is one.
+func screenLines(s config.Screen) []string {
+	lines := []string{"idle " + itoa(s.Idle) + " " + screenLock + "   # locku: 0 never"}
+	if s.Bind != "" {
+		lines = append(lines, "bind "+s.Bind+" "+screenLock+"   # locku: C-a "+s.Bind+" locks, as C-a x does")
+	}
+	return lines
 }
 
-// Screen writes `idle N lockscreen` into the file at rc — Integration ›
-// screen's conf — and LOCKPRG into the shell's rc file. LOCKPRG has to be
-// in the environment of the shell that runs `screen` — screen's front
-// end reads it, and .screenrc's own `setenv` never reaches that process
-// (function.md §6.2, measured 2026-09-24) — so the rc file it is.
-func Screen(w io.Writer, rc string, idle int) error {
-	rc, err := confPath(rc, "screen")
+// screenBound is the key the block in content binds, read off the
+// file, so a key changed since the last write can be unbound on the
+// running screens; a key bound outside the block is not locku's.
+func screenBound(content string) string {
+	i := strings.Index(content, blockBegin)
+	if i < 0 {
+		return ""
+	}
+	for _, l := range strings.Split(content[i:], "\n") {
+		if l == blockEnd {
+			break
+		}
+		if f := strings.Fields(l); len(f) >= 3 && f[0] == "bind" && f[2] == screenLock {
+			return f[1]
+		}
+	}
+	return ""
+}
+
+// screenBoundIn is screenBound, for the file at path; a file that is
+// not there binds nothing.
+func screenBoundIn(path string) string {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return screenBound(string(b))
+}
+
+// screenSet is the same on a running screen, sent with -X; screenUnset
+// its undoing, one for one: idle off, and the key that was bound
+// unbound — `bind <key>` with no command takes the binding off.
+func screenSet(s config.Screen) [][]string {
+	cmds := [][]string{{"idle", itoa(s.Idle), screenLock}}
+	if s.Bind != "" {
+		cmds = append(cmds, []string{"bind", s.Bind, screenLock})
+	}
+	return cmds
+}
+
+func screenUnset(key string) [][]string {
+	cmds := [][]string{{"idle", "0"}}
+	if key != "" {
+		cmds = append(cmds, []string{"bind", key})
+	}
+	return cmds
+}
+
+// Screen writes the block into the file at s.Conf — Integration ›
+// screen's conf, "~/…" allowed — LOCKPRG into the shell's rc file, and,
+// when screens are running, sets the idle time and the key on each of
+// them now (measured 2026-09-25, screen 4.00.03: `screen -S <session>
+// -X idle` and `-X bind` reach a running session, attached or not). A
+// key the file bound before, and this write does not, comes off them.
+// What cannot be set on a running screen is LOCKPRG itself: it is the
+// attacher's environment, fixed when `screen` or `screen -r` ran, so a
+// screen attached from a shell without it locks with screen's own lock
+// until it is detached and attached again from a new shell — the
+// report says so.
+func Screen(w io.Writer, s config.Screen) error {
+	path, err := confPath(s.Conf, "screen")
 	if err != nil {
 		return err
 	}
-	changed, err := write(rc, screenLines(idle))
+	wasKey := screenBoundIn(path)
+	changed, err := write(path, screenLines(s))
 	if err != nil {
 		return err
 	}
-	report(w, rc, changed, "wrote")
+	report(w, path, changed, "wrote")
 
 	exe := Binary()
 	shellRC, line := shellRCLine(os.Getenv("SHELL"), exe)
@@ -455,20 +532,30 @@ func Screen(w io.Writer, rc string, idle int) error {
 	}
 	report(w, shellRC, changed, "wrote")
 	fmt.Fprintf(w, "LOCKPRG=%s takes effect in a new shell; a screen session already running: detach, then `screen -r` from that shell\n", exe)
+	cmds := screenSet(s)
+	if wasKey != "" && wasKey != s.Bind {
+		cmds = append([][]string{{"bind", wasKey}}, cmds...)
+	}
+	if n, ok := screenLive(w, cmds); ok {
+		fmt.Fprintf(w, "applied to %d running screen session(s): C-a x%s locks, %s — with the LOCKPRG each was attached with\n", n, keySays("C-a", s.Bind), idleSays(s.Idle))
+	}
 	return nil
 }
 
-// ScreenUndo takes the blocks out of the file at rc and the shell's rc.
-func ScreenUndo(w io.Writer, rc string) error {
-	rc, err := confPath(rc, "screen")
+// ScreenUndo takes the blocks out of the file at path and the shell's rc
+// and, when screens are running, the same things off them — the idle
+// timer, and the key the file bound.
+func ScreenUndo(w io.Writer, path string) error {
+	path, err := confPath(path, "screen")
 	if err != nil {
 		return err
 	}
-	changed, err := erase(rc)
+	wasKey := screenBoundIn(path)
+	changed, err := erase(path)
 	if err != nil {
 		return err
 	}
-	report(w, rc, changed, "removed locku's block from")
+	report(w, path, changed, "removed locku's block from")
 	shellRC, _ := shellRCLine(os.Getenv("SHELL"), "")
 	changed, err = erase(shellRC)
 	if err != nil {
@@ -476,7 +563,59 @@ func ScreenUndo(w io.Writer, rc string) error {
 	}
 	report(w, shellRC, changed, "removed locku's block from")
 	fmt.Fprintln(w, "LOCKPRG is gone from new shells; a shell already open still has it")
+	if n, ok := screenLive(w, screenUnset(wasKey)); ok {
+		fmt.Fprintf(w, "taken off %d running screen session(s) too\n", n)
+	}
 	return nil
+}
+
+// screenLive sends each command to every running screen session, and
+// reports how many there were — or that there was none to send them to.
+// A session that will not take one is said, and the rest go on: best
+// effort, as on tmux.
+func screenLive(w io.Writer, cmds [][]string) (int, bool) {
+	screen, err := exec.LookPath("screen")
+	if err != nil {
+		fmt.Fprintln(w, "screen is not on PATH: the file is done, nothing applied")
+		return 0, false
+	}
+	sessions := screenSessions(screen)
+	if len(sessions) == 0 {
+		fmt.Fprintln(w, "no screen session is running: the file takes effect on the next one")
+		return 0, false
+	}
+	for _, id := range sessions {
+		for _, args := range cmds {
+			argv := append([]string{"-S", id, "-X"}, args...)
+			if out, err := exec.Command(screen, argv...).CombinedOutput(); err != nil {
+				fmt.Fprintf(w, "screen %s: %s\n", strings.Join(argv, " "), strings.TrimSpace(string(out)))
+			}
+		}
+	}
+	return len(sessions), true
+}
+
+// screenSessions is every session `screen -ls` lists, as pid.name — the
+// form -S takes without ambiguity. The listing is a line per session
+// under a tab, `pid.name (state)`; its exit code says nothing (1 with
+// no session, measured 2026-09-25), so only the lines are read.
+func screenSessions(screen string) []string {
+	out, _ := exec.Command(screen, "-ls").CombinedOutput()
+	return screenSessionsOf(string(out))
+}
+
+// screenSessionsOf is screenSessions, off the listing.
+func screenSessionsOf(ls string) []string {
+	var ids []string
+	for _, l := range strings.Split(ls, "\n") {
+		if !strings.HasPrefix(l, "\t") {
+			continue
+		}
+		if f := strings.Fields(l); len(f) >= 1 && strings.Contains(f[0], ".") {
+			ids = append(ids, f[0])
+		}
+	}
+	return ids
 }
 
 // shellRCLine is the rc file and the line for the shell at shellPath.

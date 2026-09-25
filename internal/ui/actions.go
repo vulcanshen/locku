@@ -108,7 +108,12 @@ func (m AppModel) actions() []action {
 	case rowIdle:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "idle seconds before it locks; 0 never", run: (*AppModel).editNumber})
 	case rowBindKey:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the key after prefix that locks; empty binds none", run: (*AppModel).editBindKey})
+		name, _ := m.tool()
+		hint := "the key after " + toolPrefix[name] + " that locks; empty binds none"
+		if name == tools[toolScreen] {
+			hint += " — C-a x locks anyway"
+		}
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: hint, run: (*AppModel).editBindKey})
 	case rowActivate:
 		out = append(out, m.activateAction())
 	case rowLock:
@@ -156,7 +161,7 @@ func (m AppModel) activateAction() action {
 	if name == tools[toolTmux] {
 		a.hint += ", and a running server"
 	} else {
-		a.hint += ", and LOCKPRG in the shell rc"
+		a.hint += ", LOCKPRG in the shell rc, and running screens"
 	}
 	if t.Conf == "" {
 		a.disabled, a.hint = true, "set the config file path first"
@@ -363,7 +368,7 @@ func (m *AppModel) activateTool() tea.Cmd {
 	name, t := m.tool()
 	then := "a running server takes it at once"
 	if name != tools[toolTmux] {
-		then = "LOCKPRG goes into the shell rc too"
+		then = "LOCKPRG goes into the shell rc too, running screens take the rest at once"
 	}
 	return m.confirm.ask(confirmPopup{title: "Activate " + name + " integration", accept: "activate",
 		lines:  []string{"Write locku's block into " + t.Conf + "?", then + "; from then on a change here is written at once"},
@@ -379,18 +384,17 @@ func (m *AppModel) deactivateTool() tea.Cmd {
 		action: confirmDeactivate, ref: m.sideAt().ref}, m.layer())
 }
 
-// install writes the tool's block as its rows say — for tmux onto a
-// running server too — reporting into out.
+// install writes the tool's block as its rows say — onto a running tmux
+// server, or running screens, too — reporting into out.
 func (m AppModel) install(out *bytes.Buffer) error {
-	name, t := m.tool()
-	if name == tools[toolTmux] {
+	if name, _ := m.tool(); name == tools[toolTmux] {
 		return setup.Tmux(out, m.cfg.Tmux)
 	}
-	return setup.Screen(out, t.Conf, t.Idle)
+	return setup.Screen(out, m.cfg.Screen)
 }
 
-// uninstall takes the tool's block out of the file at conf, and for tmux
-// off a running server, reporting into out.
+// uninstall takes the tool's block out of the file at conf, and off a
+// running tmux server or running screens, reporting into out.
 func (m AppModel) uninstall(out *bytes.Buffer, conf string) error {
 	if name, _ := m.tool(); name == tools[toolTmux] {
 		return setup.TmuxUndo(out, conf)
@@ -633,11 +637,17 @@ func (m *AppModel) editPath() tea.Cmd {
 		placeholder: offer, accept: "save", action: inputPath}, m.layer())
 }
 
-// editBindKey is Enter on tmux's bind-key: the key as tmux spells it —
-// l, C-l, F12 — or nothing, which binds none (user, 2026-09-25).
+// editBindKey is Enter on a tool's key: tmux's bind-key, the key as
+// tmux spells it — l, C-l, F12 — or screen's bind, as screen spells it
+// — l, ^L — or nothing, which binds none (user, 2026-09-25).
 func (m *AppModel) editBindKey() tea.Cmd {
-	return m.input.ask(inputPopup{title: "key", prompt: "bind-key — the key after prefix that locks every client; empty binds none",
-		value: m.cfg.Tmux.BindKey, accept: "save", action: inputBindKey}, m.layer())
+	name, _ := m.tool()
+	prompt := toolBind[name] + " — the key after " + toolPrefix[name] + " that locks; empty binds none"
+	if name == tools[toolScreen] {
+		prompt += ", and C-a x locks anyway"
+	}
+	return m.input.ask(inputPopup{title: "key", prompt: prompt,
+		value: m.bindOf(name), accept: "save", action: inputBindKey}, m.layer())
 }
 
 // editCommand is Enter on a custom saver's command: the line as it is,
@@ -803,16 +813,20 @@ func (m *AppModel) commitInput() tea.Cmd {
 		return tea.Batch(m.input.close(), m.save(before))
 
 	case inputBindKey:
-		// One key as tmux names it: a space would make it two words on
-		// the line, a # the rest of the line a comment.
+		// One key as the tool names it: a space would make it two words
+		// on the line, a # the rest of the line a comment.
 		v = strings.TrimSpace(v)
+		name, t := m.tool()
 		if strings.ContainsAny(v, " \t#") {
 			m.input.suffix = " · one key, e.g. l or C-l"
+			if name == tools[toolScreen] {
+				m.input.suffix = " · one key, e.g. l or ^L"
+			}
 			return nil
 		}
 		before := m.snapshot()
-		m.cfg.Tmux.BindKey = v
-		return tea.Batch(m.input.close(), m.save(before), m.syncTool(m.cfg.Tmux.Conf))
+		m.setBind(name, v)
+		return tea.Batch(m.input.close(), m.save(before), m.syncTool(t.Conf))
 
 	case inputPINCurrent:
 		if !m.cfg.CheckPIN(v) {
