@@ -6,6 +6,7 @@
 package config
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
@@ -624,6 +625,59 @@ func (cfg *Config) SetPIN(pin string) error {
 	}
 	cfg.PINHash = string(h)
 	return nil
+}
+
+// NewPIN is a PIN made for the user by `locku pin reset`: eight digits
+// from crypto/rand — a PIN, typed at a lock, not a password (user,
+// 2026-09-25: as elasticsearch resets a password, a new one made and
+// shown once, never an empty one).
+func NewPIN() (string, error) {
+	var b [8]byte
+	if _, err := rand.Read(b[:]); err != nil {
+		return "", err
+	}
+	out := make([]byte, len(b))
+	for i, v := range b {
+		out[i] = '0' + v%10
+	}
+	return string(out), nil
+}
+
+// LoadPINHash is the file's pin_hash as it is now, for a lock already
+// up: a reset writes a new hash under it (user, 2026-09-25). ok is
+// false when the file cannot be read, parsed, or holds no bcrypt hash,
+// so the lock keeps the hash it has rather than opening for a file that
+// went bad meanwhile.
+func LoadPINHash() (hash string, ok bool) {
+	b, err := os.ReadFile(Path())
+	if err != nil {
+		return "", false
+	}
+	var raw struct {
+		PINHash string `yaml:"pin_hash"`
+	}
+	if err := yaml.Unmarshal(b, &raw); err != nil {
+		return "", false
+	}
+	if raw.PINHash != "" {
+		if _, err := bcrypt.Cost([]byte(raw.PINHash)); err != nil {
+			return "", false
+		}
+	}
+	return raw.PINHash, true
+}
+
+// DataDir is where locku keeps what is not configuration — the log of
+// PIN resets: $LOCKU_DATA, or ~/.locku/data (user, 2026-09-25).
+func DataDir() string {
+	if d := os.Getenv("LOCKU_DATA"); d != "" {
+		return d
+	}
+	h, err := os.UserHomeDir()
+	if err != nil {
+		h = "."
+	}
+	return filepath.Join(h, ".locku", "data")
 }
 
 // CheckPINLength is the one rule a PIN has (function.md §4.2).

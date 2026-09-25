@@ -138,6 +138,16 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 - debounce，固定不可設定：每次錯誤後 1 秒內顯示錯誤訊息並吞掉所有輸入，之後清空輸入回到可輸入。目的是明確的「錯了」回饋，且不能用連打 Enter 閃過訊息。
 - 連續錯誤冷卻，config 設定，預設關閉：連續錯 `wrong_pin_attempts` 次後進入冷卻 `wrong_pin_attempt_cooldown` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`wrong_pin_attempts: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。
 
+### 4.5 忘記 PIN：`locku pin reset`（2026-09-25，使用者定案）
+
+前提照 0.1：locku 不是安全邊界，能用這個帳號執行指令的人本來就能 `pkill -9 -f "locku lock"`（進程結束 = 解鎖）或改 `pin_hash`。所以忘記 PIN 的路不假裝比帳號權限更安全，也不弱於它——它把「你自己從另一個 shell 把鎖處理掉」變成一個乾淨、有名字、有紀錄的動作。
+
+- **`locku pin reset`**，從任何一個你自己的 shell 跑（另一個終端機視窗、SSH、lock-session 模式下 attach 別的 session）。問兩次：先 `[y/N]`，再**登入密碼**（帳號就是邊界，拿它當確認；靜態 binary 沒有 PAM，用 `su <user> -c true` 開在 locku 自己的 pty 上、把密碼打進它的 prompt、看退出碼——輸錯 su 自己會拖時間）。兩關都過才**產生一組新 PIN**（crypto/rand 八位數字）、把它的 bcrypt 覆蓋 config 的 `pin_hash`、在畫面上**顯示一次**，之後到設定畫面用它換成自己要的——這招照 elasticsearch 的 reset password：永遠不把 `pin_hash` 清空、永遠不留一個開著的鎖。
+- **紀錄**：每次 reset（成功或密碼錯被拒）在 `~/.locku/data/pin-resets.log` 追加一行（時間、`user@host`、結果），**不寫 PIN**；目錄可用 `$LOCKU_DATA` 改。
+- **鎖定中的 locku 每次按鍵先重讀一次 `pin_hash`**（只讀這個值、不重讀整份 config）：reset 之後回到被鎖的 client，新 PIN 直接能用、舊的不能；tmux 全域鎖著的每個 client 各自輸一次（維持 9/24 的各自輸）。檔案讀不到、解析失敗、hash 不是 bcrypt → 沿用記憶體裡的 hash（鎖定中檔案壞掉不能變成開鎖）；檔案裡 `pin_hash` 變空 → 視同無 PIN，任意鍵解鎖。preview 不重讀。
+- 沒有終端機（stdin 不是 tty）不跑；config 讀不到（解析失敗、`pin_hash` 不是 bcrypt）不跑——不然會把預設值連新 PIN 一起寫回去蓋掉使用者的檔。
+- 否決：在鎖定畫面做「忘記密碼」入口（長按、特殊序列、安全問題——路人也能按，等於沒鎖）；恢復碼（比帳號權限弱的東西不值得多一套流程）；把 `pin_hash` 清空當 reset（會留一個無 PIN 的鎖）。可選的 PIN 提示（`pin_hint`）未做，使用者未定。
+
 ## 5. 螢幕保護內容
 
 ### 5.1 兩層：saver 出內容，畫布出畫法
@@ -248,6 +258,7 @@ dino 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一個
 |---|---|
 | `locku` | 開啟設定 TUI，見 6.1。不會鎖 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
+| `locku pin reset` | 忘記 PIN 時的路（2026-09-25）：`[y/N]`、登入密碼，然後產生一組新 PIN 顯示一次並寫進 config，鎖定中的 locku 下一鍵就認得，見 4.5 |
 | （`locku` › Integration） | tmux / screen 的整合設定在設定 TUI 裡做：`[2]` 的 `activate` 開關寫進設定檔、拿掉，見 6.2（2026-09-25 取代 `locku setup [-d]` 指令） |
 | `locku version` | 版本 |
 
@@ -459,6 +470,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 34. （2026-09-25，使用者定案）tmux 多一列 `lock`：鎖的範圍，`lock-server`（預設）或 `lock-session`，用 tmux 的指令名；`?` 的說明只講範圍、不提 bind-key（同日修訂，使用者：會誤導）（研究 `.local/studies/lock.md` §5 只給這兩檔、不給 client 檔：client 級鎖旁邊鏡像視窗還亮著，語意不成立）。session 模式：alias 與 bind-key 指向 lock-session、旗立在 session（`set -t <id> @locked`）、hooks 不變；lock 程式的 session 由該 session 自己的 lock-command 帶進來（`locku lock -S <socket> -t '<session_id>'`，session-created hook 烘入、activate 時對既有 session 逐一設），因為實測鎖定中的 client 用 tty 反查會拿到錯的 session（研究 §7 的作法否決）。換 lock 清所有旗與 hook。「解鎖一次全亮」不做（維持 9/24 的各自輸）。e2e 加一輪 lock-session：旗只在 session、attach 另一個 session 不受影響。
 35. （2026-09-25，使用者定案）第三種 saver **custom**：使用者自己輸入指令當保護程式的動畫，locku 管鎖、PIN、整合。程式在 locku 開的 pty 上、自己一個 process group，輸出直通真 tty，按鍵留在 locku；**不干涉生命週期**——不重啟、不讀畫面，鎖結束就 SIGKILL 整個 group；按鍵時暫停轉發、換成只有 PIN 框的 lock 程式，Esc / 逾時後恢復並送 SIGWINCH 讓程式重畫。程式結束就用 locku 的板子照實寫 `EXIT <code>`（訊號是 128 + 號碼，跟 shell 一樣；沒跑起來是 `NONE`），`EXIT` 金色、數字 0 綠 / 其他橘、`NONE` 紅，large → small 退階，狀態列紅字寫原因，不重啟（同日三版：COMPLETED / ERROR → DONE / ERROR（字太多）→ 直接寫退出碼，使用者：更真實、也不用取名；顏色再修訂為字母金、數字上色）。custom 沒有 fg / bg（同日修訂，使用者）：PIN 框與板子用預設底色。否決：VT 模擬器路線、自動重啟、黑畫面加紅字。細節 5.5，驗收 `e2e/custom_lock.py`。
 36. （2026-09-25，使用者定案）screen 的整合補到跟 tmux 一樣，**原理照 tmux 那邊的作法、名字用 screen 自己的**：`[2]` 是 activate、config file path、分隔線、`idle`、`bind`；`bind` 是 C-a 之後鎖的鍵，照 screen 的 `bind` 寫法（`l`、`^L`），config key `screen.bind`，有值就在區塊多寫 `bind <鍵> lockscreen`，空就不綁（`C-a x` 內建就是鎖，`?` 要說）；跟 tmux 的 bind-key 一樣不進 `Tool`，`SetTool` 不動它；同樣拒收空白與 `#`。**沒有 `lock` 列**：screen 沒有 server，每個 screen 是自己一個 process、LOCKPRG 跟著 shell，沒有範圍可選、不硬造。**即時套用照 tmux**：`screen -ls` 列出的每個 session `-X idle` / `-X bind`，off 反向一條對一條，best effort、失敗靜默、toast 回報；LOCKPRG 套不進 attacher，toast 與 `?` 說明講明（從沒有 LOCKPRG 的 shell attach 的 session，在重新 attach 前跑的是 screen 內建的 `Key:` 鎖）。曾考慮不即時套、只寫檔並提示 `C-a :source ~/.screenrc`——否決：那樣使用者每改一列就得自己 source，跟「開一次，之後隨設即得」相違；實測 4.00.03 的 `-X` 穩定，選即時套。`?` 說明多一條 LOCKPRG 住在 shell rc。驗收 `e2e/screen_lock.py`（真的 screen 4.00.03，自己的 SCREENDIR），Makefile `e2e` 第三個跑。
+37. （2026-09-25，使用者定案）忘記 PIN：`locku pin reset`——`[y/N]` 後要**登入密碼**當確認（帳號是唯一的邊界，用 `su` 在 pty 上驗），過了就**產生新 PIN 覆蓋** config 並顯示一次（照 elasticsearch reset password，不把 `pin_hash` 清空），reset 紀錄寫 `~/.locku/data/pin-resets.log`（不含 PIN）；鎖定中的 locku 每次按鍵重讀 `pin_hash`，新 PIN 下一鍵就能用、檔案壞掉不變、清空視同無 PIN。否決：鎖定畫面上的忘記密碼入口、恢復碼、清空 hash。見 4.5。
 
 ## 11. 待決清單
 
@@ -487,3 +499,4 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 - screen 一輪（2026-09-25，`make e2e` 的 `screen_lock.py` 在真的 macOS screen 4.00.03 上跑，自己的 SCREENDIR、HOME、SHELL=/bin/sh）：先開一個 session 在還沒有區塊的 rc 上（環境裡有 LOCKPRG，等於新 shell）；設定畫面填 `bind l`、activate 打開：rc 有區塊（`idle 300 lockscreen`、`bind l lockscreen`，每行 `# locku`，使用者自己的 `startup_message off` 留著）、`~/.profile` 有 `export LOCKPRG=<絕對路徑>`；`C-a x` 出點陣板、任意鍵解；`C-a l` 也出點陣板——這個 session 是在沒有 bind 的檔上開的，證明 `-X bind` 即時到了；再開一個 session 在有區塊的檔上，`C-a l` 一樣鎖；畫面上把 idle 改 2，檔案立刻是 `idle 2 lockscreen`、跑著的 session 兩秒後自己鎖；activate 關掉：兩個檔的區塊都消失、跑著的 session 不再自己鎖、`C-a l` 不再鎖。toast 只驗前幾個字（80 欄一行放不下整句）。
 - tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix+d、prefix+c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix+d 才 detach）。
 - custom saver（2026-09-25，`make e2e` 的 `custom_lock.py` 在 pty 上跑真的 binary）：程式的輸出出現在終端機、程式在跑；無 PIN 任意鍵結束並殺掉程式；設 PIN 後按鍵出 PIN 框、期間輸出停住、Esc 後輸出恢復、PIN 結束並殺程式；`echo boom >&2; exit 3` / `exit 0` / 沒填指令三種都出現點陣板與對應狀態列文字（`exit 3 · boom` / `exited 0` / `no command`）且鎖不退；本機有 cmatrix 就跑 cmatrix、按鍵出框、PIN 結束並殺乾淨。
+- 忘記 PIN（2026-09-25，cmd 套件測試在 pty 上跑）：`locku pin reset` 問 `[y/N]` 與登入密碼，兩關過才產生八位數 PIN、寫檔、顯示一次、寫 log（不含 PIN）；密碼錯或答 n 什麼都不變、密碼錯也留紀錄；stdin 不是 tty 不跑。鎖定中（ui 測試）：檔案換了新 hash，舊 PIN 不開、新 PIN 開；檔案壞掉沿用原 hash；檔案清空任意鍵開。

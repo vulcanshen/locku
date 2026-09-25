@@ -16,6 +16,7 @@ import (
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/custom"
+	"github.com/vulcanshen/locku/internal/login"
 	"github.com/vulcanshen/locku/internal/saver"
 	"github.com/vulcanshen/locku/internal/tmux"
 	"github.com/vulcanshen/locku/internal/ui"
@@ -30,6 +31,10 @@ const usage = `locku — a screensaver with a PIN, for the terminal
                              -S is the tmux server's socket and -t, for
                              lock-session, the session's id, both passed by
                              the lock-command the settings screen writes
+  locku pin reset            a new PIN, made and shown once, after y/N and
+                             your login password — the way back from a PIN
+                             forgotten; a lock already up takes it at its
+                             next key
   locku version              the version
   locku help                 this
 `
@@ -46,6 +51,8 @@ func main() {
 		os.Exit(runSettings())
 	case args[0] == "lock":
 		os.Exit(runLock(lockArgs(args[1:])))
+	case args[0] == "pin" && len(args) > 1 && args[1] == "reset":
+		os.Exit(pinReset(os.Stdin, os.Stdout, login.Verify))
 	case args[0] == "version":
 		fmt.Println("locku " + version.Display())
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":

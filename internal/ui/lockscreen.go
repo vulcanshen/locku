@@ -253,7 +253,18 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 	// A preview is a look at the saver, not the lock: any key hands back,
 	// PIN or no PIN — the PIN is `locku lock`'s business (user,
 	// 2026-09-25). The status row still reads as the lock's would.
-	if m.noPIN || m.preview {
+	if m.preview {
+		return m.unlock()
+	}
+	// The PIN is read off the file at every key, not once at the start,
+	// so a reset from another shell — `locku pin reset`, a new hash
+	// written under a lock already up — takes at the next key (user,
+	// 2026-09-25); a file that cannot be read keeps the hash the lock
+	// has.
+	if h, ok := config.LoadPINHash(); ok {
+		m.cfg.PINHash, m.noPIN = h, h == ""
+	}
+	if m.noPIN {
 		return m.unlock()
 	}
 	if !m.prompt.anim.owns() {
