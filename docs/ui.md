@@ -111,7 +111,7 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 | activate | `on`（Green）/ `off`：區塊在不在 config file path 裡，每次畫都讀一次（同日第四版，使用者：回歸 property / value，取代按鈕與標題裡的狀態） | Enter → confirm popup 才執行：on 把區塊寫進檔案（tmux 有 server 在跑就即時套用；screen 連 shell rc），off 拿掉；config file path 沒填時 disabled 並說 `set the config file path first` |
 | config file path（原 conf） | 路徑照存的樣子；未設 `not set`（Yellow），activate 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc`；on 的時候改路徑，區塊搬到新檔、清空就拿掉 |
 | ── 分隔線 | Surface2 一條線，不可停：上面是 locku 的設定，下面是寫進工具設定檔的 key | 無 |
-| lock（只有 tmux） | `lock-server` / `lock-session`：`locku` 與 bind-key 跑哪個鎖——整台，或只有這個 session 的 client（2026-09-25，使用者；研究 `.local/studies/lock.md`） | options popup，兩個值；on 時改了立刻重寫區塊、server 換旗 |
+| lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名（2026-09-25，使用者；研究 `.local/studies/lock.md`；`?` 說明只講範圍） | options popup，兩個值；on 時改了立刻重寫區塊、server 換旗 |
 | lock-after-time（screen 上是 idle） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱（2026-09-25，使用者），activate on 時原樣寫進去、一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
 | bind-key（只有 tmux） | 鍵照 tmux 的寫法（`l`、`C-l`、`F12`）；空顯示 `none`：prefix 之後按它就鎖整台，寫成 `bind-key <鍵> <lock>`（2026-09-25，使用者：prefix shortcut） | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → ` · one key, e.g. l or C-l` 框留著 |
 
