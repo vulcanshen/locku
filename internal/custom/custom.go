@@ -29,42 +29,47 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/creack/pty"
 	"github.com/muesli/cancelreader"
+
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // Outcome is how the program ended: the word for the board, and the
 // note for the status row.
 type Outcome struct {
-	Word string // ERROR, or COMPLETED
-	Note string // custom saver: exit 127 · sh: x: command not found
+	Word saver.Word // EXIT 3, EXIT 139, or NONE
+	Note string     // custom saver: exit 127 · sh: x: command not found
 }
 
 // NoCommand is the outcome of a profile with no command set.
-func NoCommand() Outcome { return Outcome{Word: "ERROR", Note: "custom saver: no command"} }
+func NoCommand() Outcome { return Outcome{Word: saver.WordNone, Note: "custom saver: no command"} }
 
 // Failed is the outcome of a program that could not be started at all.
-func Failed(err error) Outcome { return Outcome{Word: "ERROR", Note: "custom saver: " + err.Error()} }
+func Failed(err error) Outcome {
+	return Outcome{Word: saver.WordNone, Note: "custom saver: " + err.Error()}
+}
 
-// outcome reads the end of a program off its Wait: 0 is COMPLETED —
-// it was not meant to complete, but it did, on its own; anything else
-// is ERROR, with the code or the signal, and the last thing it said on
-// stderr when it said anything.
+// outcome reads the end of a program off its Wait: the code, as a shell
+// would report it — 0 for an ending on its own, which it was not meant
+// to have; 128 and the signal's number for a program killed — and the
+// last thing it said on stderr, when it said anything (user,
+// 2026-09-25: the code itself, not a word for it).
 func outcome(err error, last string) Outcome {
 	if err == nil {
-		return Outcome{Word: "COMPLETED", Note: "custom saver exited 0"}
+		return Outcome{Word: saver.ExitWord(0), Note: "custom saver exited 0"}
 	}
-	note := "custom saver: " + err.Error()
+	o := Outcome{Word: saver.WordNone, Note: "custom saver: " + err.Error()}
 	var ee *exec.ExitError
 	if errors.As(err, &ee) {
 		if ws, ok := ee.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
-			note = "custom saver: killed: " + ws.Signal().String()
+			o = Outcome{Word: saver.ExitWord(128 + int(ws.Signal())), Note: "custom saver: killed: " + ws.Signal().String()}
 		} else {
-			note = fmt.Sprintf("custom saver: exit %d", ee.ExitCode())
+			o = Outcome{Word: saver.ExitWord(ee.ExitCode()), Note: fmt.Sprintf("custom saver: exit %d", ee.ExitCode())}
 		}
 	}
 	if last != "" {
-		note += " · " + last
+		o.Note += " · " + last
 	}
-	return Outcome{Word: "ERROR", Note: note}
+	return o
 }
 
 // Proxy is the running program: its pty, and the tap that passes its

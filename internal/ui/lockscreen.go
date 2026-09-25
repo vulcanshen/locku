@@ -24,11 +24,16 @@ type LockModel struct {
 	cfg     config.Config
 	problem string
 	clock   saver.Clock
-	game    *saver.Dino  // the dino run, when that is the profile's saver; the clock is idle then
-	word    saver.Word   // a custom saver's ending on the board; the clock is idle then
-	note    string       // the custom saver's ending, in red on the status row
-	style   config.Style // the active profile's colours
-	noPIN   bool
+	game    *saver.Dino // the dino run, when that is the profile's saver; the clock is idle then
+	word    saver.Word  // a custom saver's ending on the board; the clock is idle then
+	note    string      // the custom saver's ending, in red on the status row
+	// The accent (2026-09-25): the colour the code after EXIT wears, and
+	// the rune it starts at — green for 0, red for the rest, while EXIT
+	// keeps the gold; 0 accents nothing.
+	accent     lipgloss.Color
+	accentFrom int
+	style      config.Style // the active profile's colours
+	noPIN      bool
 
 	width, height int
 	layout        layout   // what the board spells now, block by block
@@ -84,17 +89,30 @@ type TTYGoneMsg struct{}
 func NewLock(cfg config.Config, problem string) LockModel { return newLock(cfg, problem, false) }
 
 // NewLockWord is the lock for a custom saver's program that has ended
-// (function.md §5.6): the word on the board, in the clock's face at the
-// largest size that fits, and the note in red on the status row.
-func NewLockWord(cfg config.Config, problem, word, note string) LockModel {
+// (function.md §5.5): the word on the board — EXIT and its code, or
+// NONE — in the clock's face at the largest size that fits, and the
+// note in red on the status row.
+func NewLockWord(cfg config.Config, problem string, word saver.Word, note string) LockModel {
 	return newLock(cfg, problem, false).withWord(word, note)
 }
 
 // withWord puts word on the board in place of whatever the profile
 // draws, and note on the status row.
-func (m LockModel) withWord(word, note string) LockModel {
-	m.word, m.note, m.game = saver.Word(word), note, nil
+func (m LockModel) withWord(word saver.Word, note string) LockModel {
+	m.word, m.note, m.game = word, note, nil
 	m.scale, m.face = 3, faceOf("3x7")
+	// A custom profile has no colours of its own (user, 2026-09-25): the
+	// board's ground is the default, and EXIT the default gold; the code
+	// after it wears the green of a thing that is on for 0, and the red
+	// a wrong PIN wears for anything else — as NONE does, all of it.
+	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
+	m.accent, m.accentFrom = warnColor, len("EXIT ")
+	if word.Fine() {
+		m.accent = liveColor
+	}
+	if word == saver.WordNone {
+		m.style.FG, m.accentFrom = string(warnColor), 0
+	}
 	return m
 }
 
@@ -104,6 +122,7 @@ func (m LockModel) withWord(word, note string) LockModel {
 func NewLockPrompt(cfg config.Config, problem string) LockModel {
 	m := newLock(cfg, problem, false)
 	m.promptOnly, m.game = true, nil
+	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
 	m.initCmd = m.openPrompt()
 	return m
 }
@@ -345,6 +364,7 @@ func (m *LockModel) refit() board {
 		s = m.word
 	}
 	m.layout, m.plain = fit(m.face, s, m.now(), m.width, rows, m.scale)
+	m.layout.accentFrom = m.accentFrom
 	return paint(m.face, m.layout, m.width, rows)
 }
 
@@ -415,7 +435,7 @@ func (m LockModel) View() string {
 			// profile's ground alone.
 			out = plainRows(nil, bg, fg, m.width, rows, dimmed)
 		case len(m.layout.blocks) > 0 || m.game != nil:
-			out = boardRows(m.shown, bg, fg, m.width, dimmed)
+			out = boardRows(m.shown, bg, fg, m.accent, m.width, dimmed)
 		default:
 			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)
 		}

@@ -22,7 +22,7 @@ func TestCustomSaverHasACommand(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindCustom {
 		t.Fatalf("the custom saver sits above the tools, not %+v", it)
 	}
-	if v := m.View(); !strings.Contains(v, "your own program") || !strings.Contains(v, "command") || !strings.Contains(v, "not set") || strings.Contains(v, "layout") || strings.Contains(v, "runner") {
+	if v := m.View(); !strings.Contains(v, "your own program") || !strings.Contains(v, "command") || !strings.Contains(v, "not set") || strings.Contains(v, "layout") || strings.Contains(v, "runner") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") {
 		t.Errorf("the custom saver's [2]:\n%s", v)
 	}
 	m = m.press("2")
@@ -45,7 +45,7 @@ func TestCustomSaverHasACommand(t *testing.T) {
 	}
 	_ = p
 	_ = ok
-	if v := m.press("2").View(); !strings.Contains(v, "cmatrix -b") || strings.Contains(v, "layout") {
+	if v := m.press("2").View(); !strings.Contains(v, "cmatrix -b") || strings.Contains(v, "layout") || strings.Contains(v, " bg ") || hotkeyIndex(m.press("2", " ").menu.menuKeys(), "S") >= 0 {
 		t.Errorf("the custom profile's rows:\n%s", v)
 	}
 	// Emptied again, the command is none.
@@ -57,7 +57,7 @@ func TestCustomSaverHasACommand(t *testing.T) {
 	// inside the screen; one with a command hands the terminal to the
 	// program — a command for Bubble Tea, not a lock inside the screen.
 	m = m.press("P")
-	if m.preview == nil || m.preview.word != saver.WordError || !strings.Contains(m.View(), "no command") {
+	if m.preview == nil || m.preview.word != saver.WordNone || !strings.Contains(m.View(), "no command") {
 		t.Fatalf("no command must preview as the word:\n%s", m.View())
 	}
 	m = m.press("x", "enter").typed("cmatrix").press("enter", "P")
@@ -74,33 +74,66 @@ func TestCommandIsTheCustomKindsAlone(t *testing.T) {
 		t.Fatal(err)
 	}
 	cfg, note := config.LoadFile(path)
-	if note != "" || cfg.Profiles[0].Command != "cmatrix -b" || cfg.Profiles[0].Layout != "" || cfg.Profiles[1].Command != "" {
+	if note != "" || cfg.Profiles[0].Command != "cmatrix -b" || cfg.Profiles[0].Layout != "" || cfg.Profiles[0].BG != "" || cfg.Profiles[1].Command != "" {
 		t.Errorf("note %q, profiles %+v", note, cfg.Profiles)
+	}
+	// Saved, a custom profile has no colours (user, 2026-09-25).
+	if err := config.SaveFile(path, cfg); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(path)
+	s := string(b)
+	i, j := strings.Index(s, "saver: custom"), strings.Index(s, "- name: k")
+	if i < 0 || j < i || strings.Contains(s[i:j], "bg:") || strings.Contains(s[i:j], "fg:") || !strings.Contains(s[i:j], "command: cmatrix -b") {
+		t.Errorf("saved:\n%s", s)
 	}
 }
 
-// A word on the board (user, 2026-09-25): ERROR or COMPLETED in the
-// clock's face at the largest size that fits, the note on the status
-// row in red; and the prompt-only lock, up from the first frame, ends
-// with Back when the prompt closes and without it for the PIN.
+// A word on the board (user, 2026-09-25): EXIT and the code in the
+// clock's face at the largest size that fits — EXIT in the gold, the
+// code green for 0 and red otherwise — the note on the status row in
+// red; and the prompt-only lock, up from the first frame, ends with
+// Back when the prompt closes and without it for the PIN.
 func TestWordLockAndPromptOnly(t *testing.T) {
 	cfg := config.Default()
-	lk := NewLockWord(cfg, "", "ERROR", "custom saver: exit 3 · boom")
-	lk, _ = lk.step(tea.WindowSizeMsg{Width: 120, Height: 40})
-	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].lines[0] != "ERROR" || lk.layout.blocks[0].k != 3 {
-		t.Fatalf("the board must spell ERROR at the largest size: %+v", lk.layout)
+	lk := NewLockWord(cfg, "", saver.ExitWord(3), "custom saver: exit 3 · boom")
+	lk, _ = lk.step(tea.WindowSizeMsg{Width: 160, Height: 40})
+	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].lines[0] != "EXIT 3" || lk.layout.blocks[0].k != 3 || lk.style.FG != config.DefaultFG || lk.style.BG != config.DefaultBG || lk.accent != warnColor {
+		t.Fatalf("the board must spell EXIT 3 at the largest size, gold with a red code: %+v %+v %v", lk.layout, lk.style, lk.accent)
+	}
+	// The letters wear the gold, the code the accent: every accented
+	// pixel lies right of every plain lit one.
+	plainMax, accMin := -1, lk.shown.w
+	for y := 0; y < lk.shown.h; y++ {
+		for x := 0; x < lk.shown.w; x++ {
+			i := y*lk.shown.w + x
+			switch {
+			case !lk.shown.lit[i]:
+			case lk.shown.tone[i]:
+				accMin = min(accMin, x)
+			default:
+				plainMax = max(plainMax, x)
+			}
+		}
+	}
+	if plainMax < 0 || accMin == lk.shown.w || accMin <= plainMax {
+		t.Errorf("the code must be the accented part, right of EXIT: plain to %d, accent from %d", plainMax, accMin)
 	}
 	if v := lk.View(); !strings.Contains(v, "custom saver: exit 3 · boom") {
 		t.Errorf("the note is missing:\n%s", v)
 	}
-	// Narrower, the word steps down; narrower still, it is drawn as text.
-	lk, _ = NewLockWord(cfg, "", "COMPLETED", "n").step(tea.WindowSizeMsg{Width: 100, Height: 20})
-	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].k != 1 {
-		t.Errorf("at 100 columns COMPLETED fits small: %+v %v", lk.layout, lk.plain)
+	// EXIT 0's code is green; narrower, the word steps down; narrower
+	// still, it is drawn as text. NONE is red, all of it.
+	lk, _ = NewLockWord(cfg, "", saver.ExitWord(0), "n").step(tea.WindowSizeMsg{Width: 60, Height: 20})
+	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].k != 1 || lk.accent != liveColor || lk.style.FG != config.DefaultFG {
+		t.Errorf("at 60 columns EXIT 0 fits small, gold with a green code: %+v %v %+v", lk.layout, lk.plain, lk.style)
 	}
-	lk, _ = NewLockWord(cfg, "", "COMPLETED", "n").step(tea.WindowSizeMsg{Width: 20, Height: 8})
-	if len(lk.layout.blocks) != 0 || len(lk.plain) != 1 || lk.plain[0] != "COMPLETED" {
-		t.Errorf("at 20 columns COMPLETED is text: %+v %v", lk.layout, lk.plain)
+	lk, _ = NewLockWord(cfg, "", saver.ExitWord(0), "n").step(tea.WindowSizeMsg{Width: 20, Height: 8})
+	if len(lk.layout.blocks) != 0 || len(lk.plain) != 1 || lk.plain[0] != "EXIT 0" {
+		t.Errorf("at 20 columns EXIT 0 is text: %+v %v", lk.layout, lk.plain)
+	}
+	if lk := NewLockWord(cfg, "", saver.WordNone, "custom saver: no command"); lk.style.FG != string(warnColor) || lk.accentFrom != 0 {
+		t.Errorf("NONE is red, all of it: %+v %d", lk.style, lk.accentFrom)
 	}
 
 	if err := cfg.SetPIN("1234"); err != nil {
@@ -116,7 +149,7 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 	}
 	// The ground is the profile's colour alone, no clock on it: the top
 	// row is a bare, dimmed ground row.
-	ground := plainRows(nil, lipgloss.Color(cfg.Profiles[0].BG), lipgloss.Color(cfg.Profiles[0].FG), 100, 29, true)[0]
+	ground := plainRows(nil, lipgloss.Color(config.DefaultBG), lipgloss.Color(config.DefaultFG), 100, 29, true)[0]
 	if v := p.View(); !strings.HasPrefix(v, ground) {
 		t.Errorf("a prompt-only lock draws no board:\n%s", v)
 	}

@@ -46,10 +46,15 @@ var pixelCell = pixelGlyph + " "
 type board struct {
 	w, h int
 	lit  []bool
+	// tone: lit in the accent colour rather than the fg — the code after
+	// EXIT on a custom saver's ending board (2026-09-25). The one board
+	// with two lit colours.
+	tone []bool
 }
 
 func newBoard(w, h int) board {
-	return board{w: max(0, w), h: max(0, h), lit: make([]bool, max(0, w)*max(0, h))}
+	n := max(0, w) * max(0, h)
+	return board{w: max(0, w), h: max(0, h), lit: make([]bool, n), tone: make([]bool, n)}
 }
 
 func (b board) at(x, y int) bool { return b.lit[y*b.w+x] }
@@ -60,11 +65,30 @@ func (b *board) set(x, y int) {
 	}
 }
 
+// mark makes the pixel at x, y the accent's when it is lit.
+func (b *board) mark(x, y int) {
+	if x >= 0 && x < b.w && y >= 0 && y < b.h {
+		b.tone[y*b.w+x] = true
+	}
+}
+
 func (b board) same(o board) bool { return b.w == o.w && b.h == o.h }
 
 func (b board) clone() board {
-	c := board{w: b.w, h: b.h, lit: make([]bool, len(b.lit))}
+	c := board{w: b.w, h: b.h, lit: make([]bool, len(b.lit)), tone: make([]bool, len(b.tone))}
 	copy(c.lit, b.lit)
+	copy(c.tone, b.tone)
+	return c
+}
+
+// toned is a clone of b wearing o's tones: a reveal from b to o changes
+// the pixels one by one, but the colours are the destination's from
+// the first frame.
+func (b board) toned(o board) board {
+	c := b.clone()
+	if b.same(o) {
+		copy(c.tone, o.tone)
+	}
 	return c
 }
 
@@ -135,8 +159,11 @@ type placed struct {
 // layout is what the board draws: the blocks in the order they sit, one
 // under the other, or — beside — left to right.
 type layout struct {
-	blocks []placed
-	beside bool
+	// accentFrom is the rune of the first block's first line from which
+	// the pixels are the accent's: the code after EXIT; 0 accents nothing.
+	accentFrom int
+	blocks     []placed
+	beside     bool
 }
 
 // blockGap is the room between two blocks, in cells along the axis they
@@ -223,7 +250,7 @@ func paint(f face, l layout, cols, rows int) board {
 	if l.beside {
 		x0, y0 = (b.w-total)/2, 0
 	}
-	for _, p := range l.blocks {
+	for bi, p := range l.blocks {
 		bw, bh := blockSize(f, p.lines, p.k)
 		ox, oy := (b.w-bw)/2, y0
 		if l.beside {
@@ -233,7 +260,11 @@ func paint(f face, l layout, cols, rows int) board {
 			if line == "" {
 				continue
 			}
-			stampLine(&b, f, line, p.k, ox+(bw-lineW(f, line, p.k))/2, oy+i*(f.h*p.k+gap(p.k)))
+			from := 0
+			if bi == 0 && i == 0 {
+				from = l.accentFrom
+			}
+			stampLine(&b, f, line, p.k, ox+(bw-lineW(f, line, p.k))/2, oy+i*(f.h*p.k+gap(p.k)), from)
 		}
 		if l.beside {
 			x0 += bw + l.blockGap()
@@ -244,9 +275,11 @@ func paint(f face, l layout, cols, rows int) board {
 	return b
 }
 
-// stampLine lights line on b at scale k, its top-left cell at x, y.
-func stampLine(b *board, f face, line string, k, x, y int) {
+// stampLine lights line on b at scale k, its top-left cell at x, y; the
+// runes from accentFrom on, when it is above 0, are marked the accent's.
+func stampLine(b *board, f face, line string, k, x, y, accentFrom int) {
 	g := gap(k)
+	n := 0
 	for _, r := range line {
 		if gl, ok := f.g[r]; ok && r != ' ' {
 			for fy := 0; fy < f.h; fy++ {
@@ -257,12 +290,16 @@ func stampLine(b *board, f face, line string, k, x, y int) {
 					for dy := 0; dy < k; dy++ {
 						for dx := 0; dx < k; dx++ {
 							b.set(x+fx*k+dx, y+fy*k+dy)
+							if accentFrom > 0 && n >= accentFrom {
+								b.mark(x+fx*k+dx, y+fy*k+dy)
+							}
 						}
 					}
 				}
 			}
 		}
 		x += glyphCells(f, r, k) + g
+		n++
 	}
 }
 
@@ -319,26 +356,30 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // escape sequences rather than one per cell. An odd terminal leaves its
 // rightmost column blank (function.md §5.3). While dimmed — the PIN prompt
 // is up — the lit pixels step back to Surface2 and become its backdrop.
-func boardRows(b board, bg, fg lipgloss.Color, cols int, dimmed bool) []string {
+func boardRows(b board, bg, fg, accent lipgloss.Color, cols int, dimmed bool) []string {
 	if dimmed {
-		fg = backdropColor
+		fg, accent = backdropColor, backdropColor
 	}
 	off := lipgloss.NewStyle().Foreground(bg)
 	on := lipgloss.NewStyle().Foreground(fg)
+	acc := lipgloss.NewStyle().Foreground(accent)
 	tail := spaces(cols - b.w*2)
 	rows := make([]string, b.h)
 	for y := 0; y < b.h; y++ {
 		var sb strings.Builder
 		for x := 0; x < b.w; {
-			lit := b.at(x, y)
+			lit, tone := b.at(x, y), b.tone[y*b.w+x]
 			run := x
-			for run < b.w && b.at(run, y) == lit {
+			for run < b.w && b.at(run, y) == lit && b.tone[y*b.w+run] == tone {
 				run++
 			}
 			cells := strings.Repeat(pixelCell, run-x)
-			if lit {
+			switch {
+			case lit && tone:
+				sb.WriteString(acc.Render(cells))
+			case lit:
 				sb.WriteString(on.Render(cells))
-			} else {
+			default:
 				sb.WriteString(off.Render(cells))
 			}
 			x = run

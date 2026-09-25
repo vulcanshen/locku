@@ -1,6 +1,9 @@
 package saver
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 // KindCustom is the third kind of saver: a program of the user's own,
 // run on a terminal of its own, as the saver (user, 2026-09-25: they
@@ -10,20 +13,28 @@ import "time"
 // the program ended, when it does.
 const KindCustom = "custom"
 
-// Word is one word on the board, in the clock's own face and sizes —
-// ERROR, COMPLETED — for a custom saver's program that has ended (user,
-// 2026-09-25: an ending is shown in locku's own format, the word stepped
-// large to small as the terminal allows, the reason on the status row;
-// the program is not restarted — it was meant to run for ever, and its
-// ending is what the user has to know about). It never changes.
+// Word is what the board says of a custom saver's program that has
+// ended, in the clock's own face and sizes: EXIT and its code, as a
+// shell would report it, or NONE when nothing ran (user, 2026-09-25: an
+// ending is shown in locku's own format, the word stepped large to
+// small as the terminal allows, the reason on the status row; the
+// program is not restarted — it was meant to run for ever, and its
+// ending is what the user has to know about. The code itself is the
+// truest word for it: COMPLETED / ERROR, then DONE / ERROR, were tried
+// the same day and dropped). It never changes.
 type Word string
 
-// The two words: a program that ended on its own with 0, which it was
-// not meant to do, and one that failed, could not be run, or was killed.
-const (
-	WordCompleted Word = "COMPLETED"
-	WordError     Word = "ERROR"
-)
+// WordNone is the board's word when no program ran: none set, or one
+// that could not be started.
+const WordNone Word = "NONE"
+
+// ExitWord is the board's word for a program that ended with code — a
+// signal counted as a shell counts it, 128 and the signal's number.
+func ExitWord(code int) Word { return Word("EXIT " + strconv.Itoa(code)) }
+
+// Fine reports whether w is the one ending a program means to have:
+// EXIT 0, green on the board; every other word is red.
+func (w Word) Fine() bool { return w == ExitWord(0) }
 
 func (w Word) Blocks(time.Time) []Block { return []Block{{Variants: [][]string{{string(w)}}}} }
 func (w Word) Beside() bool             { return false }

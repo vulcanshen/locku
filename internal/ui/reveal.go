@@ -41,7 +41,7 @@ func newReveal(from, to board) *reveal {
 	}
 	rand.Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
 	return &reveal{
-		cur:   from.clone(),
+		cur:   from.toned(to),
 		to:    to,
 		order: order,
 		step:  (len(order) + revealFrames - 1) / revealFrames,

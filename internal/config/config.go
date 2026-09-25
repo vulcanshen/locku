@@ -57,8 +57,11 @@ type Profile struct {
 	Font   string `yaml:"font,omitempty"`
 	Time   string `yaml:"time,omitempty"`
 	Date   string `yaml:"date,omitempty"`
-	BG     string `yaml:"bg"`
-	FG     string `yaml:"fg"`
+	// The board's two colours — left out of the file for a custom
+	// profile, which has none (user, 2026-09-25: the picture is the
+	// program's; its PIN prompt and its ending board wear the defaults).
+	BG string `yaml:"bg,omitempty"`
+	FG string `yaml:"fg,omitempty"`
 	// The dino run's own (2026-09-24): who runs, and where. A clock
 	// leaves them out of the file.
 	Runner string `yaml:"runner,omitempty"`
@@ -168,9 +171,9 @@ func NewProfile(name, kind string) Profile {
 	case saver.KindDino:
 		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
 	case saver.KindCustom:
-		// No program until the user names one; the colours are the PIN
-		// prompt's, and the board's when the program ends.
-		return Profile{Name: name, Saver: kind, BG: DefaultBG, FG: DefaultFG}
+		// No program until the user names one, and no colours: the
+		// picture is the program's (user, 2026-09-25).
+		return Profile{Name: name, Saver: kind}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -439,6 +442,8 @@ func tidy(p Profile, kind string) Profile {
 	switch {
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Scene = "", "", "", "", "", "", ""
+		p.BG, p.FG = "", ""
+		return p
 	case kind == saver.KindDino:
 		p.Command = ""
 		if p.Runner == "" {
