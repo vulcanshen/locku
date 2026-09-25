@@ -91,15 +91,15 @@ func TestCommandIsTheCustomKindsAlone(t *testing.T) {
 
 // A word on the board (user, 2026-09-25): EXIT and the code in the
 // clock's face at the largest size that fits — EXIT in the gold, the
-// code green for 0 and red otherwise — the note on the status row in
+// code green for 0 and peach otherwise, NONE red — the note on the status row in
 // red; and the prompt-only lock, up from the first frame, ends with
 // Back when the prompt closes and without it for the PIN.
 func TestWordLockAndPromptOnly(t *testing.T) {
 	cfg := config.Default()
 	lk := NewLockWord(cfg, "", saver.ExitWord(3), "custom saver: exit 3 · boom")
 	lk, _ = lk.step(tea.WindowSizeMsg{Width: 160, Height: 40})
-	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].lines[0] != "EXIT 3" || lk.layout.blocks[0].k != 3 || lk.style.FG != config.DefaultFG || lk.style.BG != config.DefaultBG || lk.accent != warnColor {
-		t.Fatalf("the board must spell EXIT 3 at the largest size, gold with a red code: %+v %+v %v", lk.layout, lk.style, lk.accent)
+	if len(lk.layout.blocks) == 0 || lk.layout.blocks[0].lines[0] != "EXIT 3" || lk.layout.blocks[0].k != 3 || lk.style.FG != config.DefaultFG || lk.style.BG != config.DefaultBG || lk.accent != peachColor {
+		t.Fatalf("the board must spell EXIT 3 at the largest size, gold with a peach code: %+v %+v %v", lk.layout, lk.style, lk.accent)
 	}
 	// The letters wear the gold, the code the accent: every accented
 	// pixel lies right of every plain lit one.

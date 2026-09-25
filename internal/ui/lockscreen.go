@@ -103,10 +103,11 @@ func (m LockModel) withWord(word saver.Word, note string) LockModel {
 	m.scale, m.face = 3, faceOf("3x7")
 	// A custom profile has no colours of its own (user, 2026-09-25): the
 	// board's ground is the default, and EXIT the default gold; the code
-	// after it wears the green of a thing that is on for 0, and the red
-	// a wrong PIN wears for anything else — as NONE does, all of it.
+	// after it wears the green of a thing that is on for 0, and peach for
+	// anything else. NONE — nothing ran — wears the red a wrong PIN
+	// wears, all of it (user: red is NONE's alone).
 	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
-	m.accent, m.accentFrom = warnColor, len("EXIT ")
+	m.accent, m.accentFrom = peachColor, len("EXIT ")
 	if word.Fine() {
 		m.accent = liveColor
 	}
