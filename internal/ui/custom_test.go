@@ -140,13 +140,25 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
 	}
-	p := NewLockPrompt(cfg, "")
-	if p.initCmd == nil || !p.prompt.anim.isActive() {
-		t.Fatal("the prompt must be up from the first frame")
+	var painted []string
+	p := NewLockPrompt(cfg, "", 100, 30, func(box string) { painted = append(painted, box) })
+	if p.initCmd == nil || !p.prompt.anim.isActive() || p.width != 100 {
+		t.Fatal("the prompt must be up from the first frame, at the size given")
 	}
-	p, _ = p.step(tea.WindowSizeMsg{Width: 100, Height: 30})
+	// Every step paints the box, through the callback: the animation's
+	// frames, and the keys.
+	var pm tea.Model = p
 	for i := 0; i < 20 && !p.prompt.anim.isInteractive(); i++ {
-		p, _ = p.step(AnimTickMsg{Target: "pinprompt"})
+		pm, _ = pm.(LockModel).Update(AnimTickMsg{Target: "pinprompt"})
+		p = pm.(LockModel)
+	}
+	if len(painted) == 0 || !strings.Contains(painted[len(painted)-1], glyphLock) {
+		t.Fatalf("the box must be painted through the callback: %d paints", len(painted))
+	}
+	n := len(painted)
+	pm, _ = pm.(LockModel).Update(tea.KeyMsg{Type: tea.KeyEsc})
+	if len(painted) != n || !pm.(LockModel).Back() {
+		t.Errorf("Esc ends the prompt without painting again: %d paints, back %v", len(painted)-n, pm.(LockModel).Back())
 	}
 	// The ground is the profile's colour alone, no clock on it: the top
 	// row is a bare, dimmed ground row.

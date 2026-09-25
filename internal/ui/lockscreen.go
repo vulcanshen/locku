@@ -65,7 +65,13 @@ type LockModel struct {
 	// board.
 	promptOnly bool
 	back       bool
+	over       bool // ended: unlocked, gone, or back — nothing more to paint
 	initCmd    tea.Cmd
+	// paint draws the prompt's box for a prompt-only lock that has no
+	// renderer of its own: the custom saver's, where the box goes over
+	// the program's frozen picture and nothing else may be drawn (user,
+	// 2026-09-25).
+	paint func(box string)
 
 	now func() time.Time
 }
@@ -118,12 +124,15 @@ func (m LockModel) withWord(word saver.Word, note string) LockModel {
 }
 
 // NewLockPrompt is the PIN prompt alone, for the custom saver: up from
-// the first frame, over a screen of the profile's colour; Esc or the
-// timeout ends the program with Back set, the right PIN with it clear.
-func NewLockPrompt(cfg config.Config, problem string) LockModel {
+// the first frame, drawn by paint over the program's frozen picture on
+// a cols × rows screen; Esc or the timeout ends the program with Back
+// set, the right PIN with it clear.
+func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string)) LockModel {
 	m := newLock(cfg, problem, false)
-	m.promptOnly, m.game = true, nil
+	m.promptOnly, m.game, m.paint = true, nil, paint
 	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
+	m.width, m.height = cols, rows
+	m.prompt.setSize(cols, rows)
 	m.initCmd = m.openPrompt()
 	return m
 }
@@ -174,7 +183,11 @@ func whoami() (string, string) {
 func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
 
 func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	return m.step(msg)
+	m, cmd := m.step(msg)
+	if m.promptOnly && m.paint != nil && !m.over {
+		m.paint(m.prompt.view(m.now()))
+	}
+	return m, cmd
 }
 
 // step is Update with the concrete type, so the settings screen can host a
@@ -190,7 +203,7 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		m.shown = m.refit()
 		return m, m.clockTick()
 	case TTYGoneMsg:
-		m.gone = true
+		m.gone, m.over = true, true
 		return m, tea.Quit
 	case clockTickMsg:
 		if msg.gen != m.tickGen {
@@ -318,7 +331,7 @@ func (m *LockModel) openPrompt() tea.Cmd {
 // program is waiting for the screen: this lock ends, with Back.
 func (m *LockModel) closePrompt(timedOut bool) tea.Cmd {
 	if m.promptOnly {
-		m.back = true
+		m.back, m.over = true, true
 		return tea.Quit
 	}
 	m.promptGen++
@@ -359,6 +372,7 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 		m.unlocked = true
 		return m, nil
 	}
+	m.over = true
 	return m, tea.Quit
 }
 
