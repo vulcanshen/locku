@@ -40,16 +40,23 @@ brews:
   - repository:
       owner: vulcanshen
       name: homebrew-tap
-      token: "{{ .Env.ACTION_TOKEN }}"
+      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a
+      # release run by hand takes the shell's; the workflow hands it a
+      # PAT when one is set, since the built-in token cannot write to the
+      # tap repository.
+      token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/locku"
-    description: "screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty: an LED-board clock, any key asks for the PIN"
+    description: "screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty: an LED-board clock, a dino run, or a program of your own; any key asks for the PIN"
     caveats: |
-      `locku setup` writes the lock into ~/.tmux.conf (lock-command,
-      lock-after-time, prefix L) and ~/.screenrc plus your shell rc
-      (LOCKPRG). `locku` sets the PIN and the savers; without a PIN the
-      lock is a screensaver that any key ends.
+      `locku` is the settings screen: the PIN, the savers and their
+      profiles, and Integration › tmux / screen — turn `activate` on
+      there and locku writes its block into ~/.tmux.conf (applied to a
+      running server too) or ~/.screenrc plus your shell rc (LOCKPRG).
+      Without a PIN the lock is a screensaver that any key ends. A PIN
+      forgotten: `locku pin reset`, from any shell of your own.
 
       A Nerd Font terminal profile is required: the board's pixels are
-      Nerd Font glyphs.
+      Nerd Font glyphs. macOS and Linux (WSL too); Windows is not
+      supported.
     test: |
       system "#{bin}/locku", "version"
