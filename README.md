@@ -7,7 +7,7 @@
 不設 PIN 就是純螢幕保護，任何鍵解鎖。
 
 > 設計 2026-09-24 定案，同日實作完成第一版；2026-09-25 加 Integration 的 `activate`、dino 與 custom saver、`locku pin reset`，文件同日對齊程式碼重寫。
-> 單元測試（`make check`，含 race detector）與 tmux / custom / screen 三套 pty 端到端測試皆通過。尚未發版（v0.1.0 待英文 README、brew formula、tag）。
+> 單元測試（`make check`，含 race detector）與 tmux / custom / screen 三套 pty 端到端測試皆通過。v0.1.0 於 2026-09-25 發版：GitHub Release 附四個平台的 tarball 與 checksums，brew formula 已進 vulcanshen/homebrew-tap。
 
 **平台**：macOS 與 Linux（WSL 可）。不支援 Windows：鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品（2026-09-25，使用者定案）。
 
@@ -36,7 +36,15 @@ make build      # → ./locku（CGO_ENABLED=0 靜態）
 ./locku lock    # 現在就鎖
 ```
 
-brew formula 與 install.sh 在 v0.1.0 發版後可用。**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square。
+或不從原始碼：
+
+```bash
+brew install vulcanshen/tap/locku
+# 或
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
+```
+
+**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square。
 
 ## 鎖定畫面
 
@@ -163,4 +171,3 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make ch
 
 1. 8 小時 CPU / 記憶體觀察（§12 最後一項）。
 2. README 英文版。
-3. brew formula（vulcanshen/homebrew-tap）：v0.1.0 的 tag push 上去後由 release workflow 推。
