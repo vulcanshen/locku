@@ -12,7 +12,13 @@
 
 > _When in doubt, hit_ **`Space`**.
 
-locku is the fifth member of the `u`-family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (browser) — and a lock-screen implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md). The design, every decision dated in place and the rejected approaches with it, is in [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md) and [`docs/ux.md`](docs/ux.md); the developer's notes — the decisions in short, what was rejected, the layout of the code, the tests, the release flow — in [`docs/dev-remarks.md`](docs/dev-remarks.md).
+locku is the fifth member of the `u`-family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (browser) — and a lock-screen implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md). The design, every decision dated in place and the rejected approaches with it, is in [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md) and [`docs/ux.md`](docs/ux.md); the developer's notes — the decisions in short, what was rejected, the layout of the code, building from source, the tests, the release flow — in [`docs/dev-remarks.md`](docs/dev-remarks.md).
+
+## Demo
+
+![demo](docs/demo.gif)
+
+`locku lock` turns the terminal into the clock board; a key brings up the PIN prompt, a wrong PIN turns it red, the right one gives the terminal back. Then the settings screen: a profile's settings in `[2]`, the dino and a program of your own (cmatrix) previewed with `p`, `Space` listing what can be done on the row, and tmux under Integration.
 
 ## What you see
 
@@ -47,14 +53,7 @@ brew install vulcanshen/tap/locku
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
 ```
 
-**From source**:
-
-```bash
-git clone https://github.com/vulcanshen/locku.git
-cd locku
-make build      # → ./locku (CGO_ENABLED=0, static)
-make install    # → $GOBIN
-```
+Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
 **A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes.
 
@@ -266,9 +265,7 @@ screen:
 | any key | open the PIN prompt (the key is not input) |
 | `Enter` · `Esc` · `Backspace` | submit · back to the saver · delete a digit |
 
-## Status
-
-**v0.1.0** — the three savers, the PIN and `locku pin reset`, tmux and screen integration with `activate`. See [CHANGELOG.md](CHANGELOG.md).
+## Limits
 
 Not there, on purpose:
 - **Windows** — the lock stands on the tty, the pty, `su` and tmux / screen; a native port would be another product
@@ -276,32 +273,11 @@ Not there, on purpose:
 - **locking the Linux virtual console** (Alt+F1 … F7) — vlock's territory
 - **a "forgot my PIN" entry on the lock screen** — the way back is `locku pin reset`, from a shell, with your login password
 
-## Built with
+## Links
 
-Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss), [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay) for the floats, [creack/pty](https://github.com/creack/pty) for the custom saver's program and the login check, `golang.org/x/crypto/bcrypt` for the PIN, and `gopkg.in/yaml.v3` for the config. Colours are catppuccin-mocha.
-
-## Docs
-
-| File | Answers | Read |
-|---|---|---|
-| [`docs/function.md`](docs/function.md) | Why the lock stands outside tmux / screen, the one contract for the three entry points, the signal table, the state machine, the PIN and the no-PIN mode, the three savers, the canvas renderer, the CLI, the config, how Integration writes the files, the decision list, the acceptance | 1st |
-| [`docs/ui.md`](docs/ui.md) | The grid of the settings screen's two panels, the lock canvas, how every field is drawn, the popups, the PIN prompt's four states, the palette, saving | 2nd |
-| [`docs/ux.md`](docs/ux.md) | Core-key semantics, what the Space menu holds, the global `?`, how each field is filled in, the PIN's three questions, the hotkey layers, the floats, the timeline | 3rd |
-| [`docs/dev-remarks.md`](docs/dev-remarks.md) | The developer's notes: where things stand, the decisions in short, what was rejected, the layout of the code, the tests, the release flow, what is next | — |
-| [`docs/icon.svg`](docs/icon.svg) | The icon: the family's block-letter mark on a black square | — |
-
-The docs are in Traditional Chinese, every decision dated in place.
-
-## Development
-
-```
-make build     → ./locku
-make check     fmt-check + vet + go test -race, before a commit
-make e2e       end to end on a real tmux, a pty and a real screen (needs tmux, screen and python3); your own servers and sessions are not touched
-make lock      build and lock this terminal
-```
-
-What the tests cover, and how a release is cut: [`docs/dev-remarks.md`](docs/dev-remarks.md).
+- [CHANGELOG.md](CHANGELOG.md) — what each release changed
+- [`docs/dev-remarks.md`](docs/dev-remarks.md) — the developer's notes: how it works, why, the design docs, building and testing
+- The rest of the `u`-family: [kbu](https://github.com/vulcanshen/kbu), [filu](https://github.com/vulcanshen/filu), [sshu](https://github.com/vulcanshen/sshu), [webu](https://github.com/vulcanshen/webu)
 
 ## License
 
