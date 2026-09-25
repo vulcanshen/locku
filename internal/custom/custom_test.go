@@ -183,3 +183,50 @@ func TestOverlayTouchesOnlyItsBox(t *testing.T) {
 		t.Errorf("nothing to paint: %d,%d %dx%d", top, left, w, h)
 	}
 }
+
+// The box never goes into the middle of what the program is saying: a
+// chunk that ends inside an escape sequence, or inside a character, is
+// cut before it, and the rest waits for the next chunk (measured
+// 2026-09-25, cmatrix: a box put into a cursor move left its digits on
+// the screen as text).
+func TestTheBoxNeverCutsASequence(t *testing.T) {
+	for _, c := range []struct {
+		in   string
+		want int
+	}{
+		{"abc", 3},
+		{"abc\x1b[3;1", 3},
+		{"abc\x1b[3;133H", 11},
+		{"abc\x1b]0;title", 3},
+		{"abc\x1b]0;title\x07", 13},
+		{"abc\x1b]0;t\x1b\\", 10},
+		{"abc\x1b(", 3},
+		{"abc\x1b(B", 6},
+		{"abc\x1b7", 5},
+		{"abc\x1b", 3},
+		{"ab\xe4\xb8", 2},
+		{"ab\xe4\xb8\xad", 5},
+		{"ab\xf0\x9f\x98", 2},
+		{"\x1b[31mred\x1b[0m", 12},
+	} {
+		if got := safeCut([]byte(c.in)); got != c.want {
+			t.Errorf("safeCut(%q) = %d, want %d", c.in, got, c.want)
+		}
+	}
+	var out bytes.Buffer
+	scr := &screen{out: &out, cols: 80, rows: 24, box: "[b]"}
+	scr.Write([]byte("abc\x1b[3;1"))
+	scr.Write([]byte("33Hxyz"))
+	s := out.String()
+	if !strings.Contains(s, "\x1b[3;133Hxyz") || strings.Contains(s, "\x1b[3;1\x1b7") {
+		t.Errorf("the sequence must reach the terminal whole:\n%q", s)
+	}
+	if i, j := strings.Index(s, "abc"), strings.Index(s, "[b]"); i < 0 || j < i {
+		t.Errorf("the box must follow the first cut:\n%q", s)
+	}
+	scr.Write([]byte("\x1b[5;5"))
+	scr.Clear()
+	if !strings.HasSuffix(out.String()[:len(out.String())-len(syncBegin+saveCur+"\x1b[0m\x1b[11;39H   "+restoreCur+syncEnd)], "\x1b[5;5") {
+		t.Errorf("Clear must let what was held out first:\n%q", out.String())
+	}
+}
