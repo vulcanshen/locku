@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 	"github.com/creack/pty"
 	"github.com/muesli/cancelreader"
@@ -230,6 +231,68 @@ type Terminal struct {
 	out   *os.File
 	state *term.State
 	keys  cancelreader.CancelReader
+	// The overlay's rectangle, the largest drawn since it was last
+	// cleared: what Clear has to cover.
+	box struct{ top, left, w, h int }
+}
+
+// Overlay draws box — the PIN prompt's lines — over the middle of the
+// screen, and nothing else: the program's picture stays around it,
+// frozen (user, 2026-09-25: the prompt over the picture, not over a
+// ground of locku's, and no switch of screens under it).
+func (t *Terminal) Overlay(box string) {
+	cols, rows := t.Size()
+	top, left, w, h := paintBox(t.out, cols, rows, box)
+	if t.box.h == 0 {
+		t.box.top, t.box.left, t.box.w, t.box.h = top, left, w, h
+		return
+	}
+	// The union with what was drawn before, so a box that grew and
+	// shrank is cleared whole.
+	right, bottom := max(t.box.left+t.box.w, left+w), max(t.box.top+t.box.h, top+h)
+	t.box.top, t.box.left = min(t.box.top, top), min(t.box.left, left)
+	t.box.w, t.box.h = right-t.box.left, bottom-t.box.top
+}
+
+// Clear blanks where the overlay was. What was under it is the
+// program's to paint again — Redraw asks it to; a program that does not
+// answer is left with a blank where the prompt was, not with the prompt.
+func (t *Terminal) Clear() {
+	if t.box.h > 0 {
+		clearBox(t.out, t.box.top, t.box.left, t.box.w, t.box.h)
+	}
+	t.box.top, t.box.left, t.box.w, t.box.h = 0, 0, 0, 0
+}
+
+// paintBox writes box's lines centred on a cols × rows screen, each at
+// its own position, and returns the rectangle they took. Nothing
+// outside the lines is touched.
+func paintBox(out io.Writer, cols, rows int, box string) (top, left, w, h int) {
+	lines := strings.Split(strings.TrimRight(box, "\n"), "\n")
+	if box == "" || len(lines) == 0 {
+		return 0, 0, 0, 0
+	}
+	for _, l := range lines {
+		w = max(w, ansi.StringWidth(l))
+	}
+	h = len(lines)
+	top, left = max(0, (rows-h)/2), max(0, (cols-w)/2)
+	var b strings.Builder
+	for i, l := range lines {
+		fmt.Fprintf(&b, "\x1b[%d;%dH%s\x1b[0m", top+i+1, left+1, l)
+	}
+	io.WriteString(out, b.String())
+	return top, left, w, h
+}
+
+// clearBox blanks the rectangle, in the terminal's own colours.
+func clearBox(out io.Writer, top, left, w, h int) {
+	var b strings.Builder
+	blank := strings.Repeat(" ", w)
+	for i := 0; i < h; i++ {
+		fmt.Fprintf(&b, "\x1b[0m\x1b[%d;%dH%s", top+i+1, left+1, blank)
+	}
+	io.WriteString(out, b.String())
 }
 
 // Take puts the terminal into locku's hands: raw, on the alternate
@@ -299,10 +362,6 @@ func (t *Terminal) Cancel() {
 		t.keys = nil
 	}
 }
-
-// Canceled reports whether err is a read called off, not a key and not
-// a terminal gone.
-func Canceled(err error) bool { return errors.Is(err, cancelreader.ErrCanceled) }
 
 // Preview runs command on the terminal until a key, or until the
 // program ends: a look at it from the settings screen (function.md

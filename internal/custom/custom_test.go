@@ -138,3 +138,30 @@ func TestSizeReachesTheProgram(t *testing.T) {
 	p.Resize(50, 20)
 	waitFor(t, "the new size", func() bool { return strings.Contains(out.String(), "20 50") })
 }
+
+// The prompt's box goes over the screen's middle, each line at its own
+// place and nothing else touched; Clear blanks exactly that rectangle.
+func TestOverlayTouchesOnlyItsBox(t *testing.T) {
+	var out bytes.Buffer
+	top, left, w, h := paintBox(&out, 80, 24, "+----+\n|\x1b[31m ab \x1b[0m|\n+----+")
+	if top != 10 || left != 37 || w != 6 || h != 3 {
+		t.Errorf("box at %d,%d %dx%d", top, left, w, h)
+	}
+	s := out.String()
+	for i, want := range []string{"\x1b[11;38H+----+", "\x1b[12;38H|\x1b[31m ab \x1b[0m|", "\x1b[13;38H+----+"} {
+		if !strings.Contains(s, want) {
+			t.Errorf("line %d not placed: %q", i, s)
+		}
+	}
+	if strings.Contains(s, "\x1b[2J") || strings.Contains(s, "\x1b[?1049") {
+		t.Errorf("the overlay must not clear or switch the screen: %q", s)
+	}
+	out.Reset()
+	clearBox(&out, top, left, w, h)
+	if c := out.String(); strings.Count(c, "\x1b[0m\x1b[") != 3 || !strings.Contains(c, "\x1b[11;38H      ") || !strings.Contains(c, "\x1b[13;38H      ") {
+		t.Errorf("clear must blank the three rows and nothing more: %q", c)
+	}
+	if top, left, w, h := paintBox(&out, 80, 24, ""); w != 0 || h != 0 || top != 0 || left != 0 {
+		t.Errorf("nothing to paint: %d,%d %dx%d", top, left, w, h)
+	}
+}

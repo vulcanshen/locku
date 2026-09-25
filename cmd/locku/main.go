@@ -26,11 +26,14 @@ import (
 const usage = `locku — a screensaver with a PIN, for the terminal
 
   locku                      settings: the PIN, the savers, the colours
-  locku lock [-S socket] [-t session]
-                             lock this terminal — what tmux and screen run;
-                             -S is the tmux server's socket and -t, for
-                             lock-session, the session's id, both passed by
-                             the lock-command the settings screen writes
+  locku lock                 lock this terminal: what tmux's lock-command
+                             and screen's LOCKPRG run, and what a bare tty
+                             runs by hand. tmux's lock-command, written by
+                             the settings screen, adds -S <socket> — the
+                             server to mark locked — and, for lock-session,
+                             -t <session> — the session to mark; you never
+                             type them. screen runs it as SCREEN-LOCK with
+                             no arguments at all.
   locku pin reset            a new PIN, made and shown once, after y/N and
                              your login password — the way back from a PIN
                              forgotten; a lock already up takes it at its
@@ -190,17 +193,15 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 				t.Give()
 				return 0, true
 			}
+			// The picture stops where it is; the prompt goes over it.
 			p.Forward(false)
-			t.Give()
-			unlocked, back := runPrompt(cfg, problem)
+			unlocked, back := runPrompt(cfg, problem, t)
 			if !back {
 				p.Kill()
+				t.Give()
 				return 0, unlocked
 			}
-			if err := t.Retake(); err != nil {
-				p.Kill()
-				return 0, false
-			}
+			t.Clear()
 			p.Forward(true)
 			p.Redraw()
 			keys = t.Key()
@@ -208,16 +209,20 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 	}
 }
 
-// runPrompt is the PIN prompt on its own, a lock program over a clear
-// screen: it reports whether the PIN unlocked, and whether the prompt
-// closed instead — Esc, the timeout — so the program's picture is to
-// come back. A prompt that cannot even run leaves the lock as it is,
-// the program back on the screen.
-func runPrompt(cfg config.Config, problem string) (unlocked, back bool) {
+// runPrompt is the PIN prompt on its own, a lock program with no
+// renderer that draws its box through t.Overlay, over the program's
+// frozen picture, and nothing else (user, 2026-09-25: a ground of
+// locku's hid the picture, and a switch of screens under the prompt
+// left it to be painted again). It reports whether the PIN unlocked,
+// and whether the prompt closed instead — Esc, the timeout — so the
+// picture is to come back. A prompt that cannot even run leaves the
+// lock as it is, the program back on the screen.
+func runPrompt(cfg config.Config, problem string, t *custom.Terminal) (unlocked, back bool) {
 	var p *tea.Program
 	in := ui.LockInput(os.Stdin, func() { p.Send(ui.TTYGoneMsg{}) })
-	p = tea.NewProgram(ui.NewLockPrompt(cfg, problem),
-		tea.WithAltScreen(),
+	cols, rows := t.Size()
+	p = tea.NewProgram(ui.NewLockPrompt(cfg, problem, cols, rows, t.Overlay),
+		tea.WithoutRenderer(),
 		tea.WithoutSignalHandler(),
 		tea.WithInput(in),
 	)
