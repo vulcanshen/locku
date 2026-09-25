@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """End to end, on a real tmux with the real binary (function.md §12):
-the settings screen's Integration › tmux › Install writes the block,
+the settings screen's Integration › tmux › activate writes the block,
 the bind-key typed there included; on a server started on it, `locku`
 locks every client and marks the server; a client attaching to ANY
 session meanwhile is locked by the hook; unlocking clears the mark, and
 a client attaching then is not locked; a terminal that dies under the
 lock — prefix l having locked it — leaves the mark, and the next client
-in meets the lock; Uninstall takes it all out. No PIN is
+in meets the lock; activate off takes it all out. No PIN is
 set, so any key unlocks — the PIN itself is the unit tests' business.
 
     make e2e            # builds the binary and runs this
@@ -116,12 +116,12 @@ def settings(*keys):
     return b"".join(out)
 
 
-# 0. Install from the screen: G to preference, k k up to tmux, into [2],
-# down to bind-key and l typed into it, down to the button, Enter, and
-# Enter on the confirm.
-screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"l", b"\r", b"j", b"\r", b"\r")
+# 0. Activate from the screen: G to preference, k k up to tmux, into
+# [2], down past the path and the idle time to bind-key and l typed into
+# it, back up to activate, Enter, and Enter on the confirm.
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
 text = open(conf).read() if os.path.exists(conf) else ""
-check("Install from the settings screen wrote the block, every line marked, the lock command absolute, the key bound",
+check("activate from the settings screen wrote the block, every line marked, the lock command absolute, the key bound",
       "# >>> locku >>>" in text and "client-attached[90]" in text and 'lock-command "/' in text
       and "socket_path" in text and "locku=lock-server" in text and "bind-key l lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
@@ -181,10 +181,10 @@ check("D's unlock clears the mark", not marked())
 tmux("kill-server")
 kill(pd)
 
-# 6. Uninstall from the screen: the button is the last row, then Enter
-# on the confirm.
-screen = settings(b"G", b"k", b"k", b"2", b"G", b"\r", b"\r")
-check("Uninstall from the settings screen took the block out", "locku" not in open(conf).read())
+# 6. Deactivate from the screen: activate is the first row, Enter, then
+# Enter on the confirm.
+screen = settings(b"G", b"k", b"k", b"2", b"\r", b"\r")
+check("deactivate from the settings screen took the block out", "locku" not in open(conf).read())
 check("the screen said so", b"removed" in screen)
 
 print("ALL OK" if ok else "SOMETHING FAILED")

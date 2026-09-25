@@ -316,13 +316,13 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Fatalf("above preference sits screen, not %+v", it)
 	}
 	m = m.press("k", "2")
-	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowConf {
-		t.Fatalf("tmux, conf row: %+v %+v", it, m.rowAt())
+	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowActivate {
+		t.Fatalf("tmux, activate row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, "[2] tmux") || !strings.Contains(v, "integration") || !strings.Contains(v, "uninstalled") || !strings.Contains(v, "not set") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || !strings.Contains(v, "Install") || strings.Contains(v, "tool ") || strings.Contains(v, "status") {
-		t.Errorf("tmux's rows are conf, lock-after-time, bind-key, Install; the title says uninstalled:\n%s", v)
+	if v := m.View(); !strings.Contains(v, capLeft+"[2] tmux"+capRight) || !strings.Contains(v, capLeft+"integration"+capRight+"╗") || !strings.Contains(v, "activate") || !strings.Contains(v, "off") || !strings.Contains(v, "config file path") || !strings.Contains(v, "not set") || !strings.Contains(v, "────") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || strings.Contains(v, "tool ") || strings.Contains(v, "status") || strings.Contains(v, "Install") || strings.Contains(v, "installed") {
+		t.Errorf("tmux's rows are activate, config file path, a rule, lock-after-time, bind-key; the tag is integration:\n%s", v)
 	}
-	m = m.press("enter")
+	m = m.press("j", "enter")
 	if m.input.title != "path" || m.input.placeholder != "~/.tmux.conf" || m.input.value != "" {
 		t.Fatalf("box %+v", m.input)
 	}
@@ -395,7 +395,7 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Errorf("emptied: %q:\n%s", m.cfg.Tmux.BindKey, m.View())
 	}
 	// screen, with its own usual file.
-	m = m.press("1", "j", "2", "enter")
+	m = m.press("1", "j", "2", "j", "enter")
 	if m.input.placeholder != "~/.screenrc" {
 		t.Fatalf("offer %q", m.input.placeholder)
 	}
@@ -410,125 +410,106 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	}
 }
 
-// The tool's last row is the button: Install writes the block into the
-// file after a confirm, and once it is in — the title says installed —
-// a row changed is written at once, a conf moved takes the block along,
-// and the button is Uninstall (user, 2026-09-25: a row on the screen in
-// place of S and X; install once, then what is set is what is in).
-func TestInstallAndUninstallFromTheScreen(t *testing.T) {
+// A tool's activate row is on while locku's block is in the file and
+// off while it is not: Enter turns it, after a confirm, and once it is
+// on a row changed is written at once, a config file path moved takes
+// the block along, and off takes it out (user, 2026-09-25: property and
+// value throughout, in place of a button; turn it on once, then what is
+// set is what is in).
+func TestActivateFromTheScreen(t *testing.T) {
 	t.Setenv("PATH", t.TempDir())                // no tmux: the file only
-	m := newTestApp(t).press("G", "k", "k", "2") // tmux, [2]
+	m := newTestApp(t).press("G", "k", "k", "2") // tmux, [2]: activate
 	if hotkeyIndex(m.press("1", " ").menu.menuKeys(), "S") >= 0 || hotkeyIndex(m.press(" ").menu.menuKeys(), "S") >= 0 {
 		t.Fatal("S is no longer a key")
 	}
-	m = m.press("G")
-	if m.rowAt().kind != rowInstall || m.rowAt().value != "Install" {
-		t.Fatalf("the last stop is the button: %+v", m.rowAt())
-	}
-	// The button is not a row of the table: it sits under a rule on the
-	// last line of [2], centred, once.
-	v := m.View()
-	lines := strings.Split(v, "\n")
-	at := -1
-	for i, l := range lines {
-		if strings.Contains(l, " Install ") {
-			at = i
-		}
-	}
-	if strings.Count(v, " Install ") != 1 || at < 2 || !strings.Contains(lines[at+1], "╝") || !strings.Contains(lines[at-1], "────") {
-		t.Fatalf("the button must be the last line, under a rule:\n%s", v)
-	}
-	pre := dispW(lines[at][:strings.Index(lines[at], " Install ")]) + 1
-	left := pre - (sideW + 1)
-	right := (m.width - sideW - 2) - left - dispW("Install")
-	if left < 10 || right < 10 || max(left-right, right-left) > 4 {
-		t.Errorf("the button is not centred: %d left, %d right:\n%s", left, right, v)
+	if m.rowAt().kind != rowActivate || m.rowAt().value != "off" {
+		t.Fatalf("the first stop is activate, off: %+v", m.rowAt())
 	}
 	m = m.press("enter")
-	if !strings.Contains(m.toast.msg, "set conf first") || m.confirm.isActive() {
-		t.Fatalf("Install without a file: %q", m.toast.msg)
+	if !strings.Contains(m.toast.msg, "config file path first") || m.confirm.isActive() {
+		t.Fatalf("activate without a file: %q", m.toast.msg)
 	}
 	conf := filepath.Join(t.TempDir(), "tmux.conf")
-	m = m.expireToast().press("g", "g", "enter", "ctrl+u").typed(conf).press("enter")
-	if m.cfg.Tmux.Conf != conf || !strings.Contains(m.View(), "uninstalled") {
+	m = m.expireToast().press("j", "enter", "ctrl+u").typed(conf).press("enter")
+	if m.cfg.Tmux.Conf != conf || m.rowAt().kind != rowConf {
 		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
 	}
-	// Not installed: a row changed is config.yaml's alone.
+	// Off: a row changed is config.yaml's alone.
 	m = m.press("j", "j", "enter").typed("l").press("enter") // bind-key l
 	if _, err := os.ReadFile(conf); err == nil || saved(t).Tmux.BindKey != "l" {
-		t.Fatalf("before Install the file must not exist: %v", err)
+		t.Fatalf("while off the file must not exist: %v", err)
 	}
-	// Install: a confirm, then the block, and the title says so.
-	m = m.press("j", "enter")
-	if !m.confirm.isInteractive() || m.confirm.action != confirmInstallTool || !strings.Contains(m.View(), "Write locku's block into") {
-		t.Fatalf("Install must confirm:\n%s", m.View())
+	// On: a confirm, then the block, and the row says so.
+	m = m.press("g", "g", "enter")
+	if !m.confirm.isInteractive() || m.confirm.action != confirmActivate || !strings.Contains(m.View(), "Write locku's block into") {
+		t.Fatalf("activate must confirm:\n%s", m.View())
 	}
 	m = m.press("enter")
 	b, err := os.ReadFile(conf)
 	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") || !strings.Contains(string(b), "bind-key l lock-server") {
-		t.Fatalf("after Install: %v\n%s", err, b)
+		t.Fatalf("after activate: %v\n%s", err, b)
 	}
-	if v := m.View(); !strings.Contains(m.toast.msg, "wrote") || !strings.Contains(v, " installed ") || strings.Contains(v, "uninstalled") || m.rowAt().value != "Uninstall" {
-		t.Errorf("toast %q, screen:\n%s", m.toast.msg, v)
+	if !strings.Contains(m.toast.msg, "wrote") || m.rowAt().value != "on" || strings.Contains(m.View(), "installed") {
+		t.Errorf("toast %q, row %+v:\n%s", m.toast.msg, m.rowAt(), m.View())
 	}
-	// Installed: the idle time changed is in the file at once, and so
-	// is the key emptied.
-	m = m.expireToast().press("k", "k", "enter", "ctrl+u").typed("45").press("enter")
+	// On: the idle time changed is in the file at once, and so is the
+	// key emptied.
+	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("45").press("enter")
 	if b, _ := os.ReadFile(conf); !strings.Contains(string(b), "lock-after-time 45") || !strings.Contains(m.toast.msg, "wrote") {
-		t.Errorf("idle changed while installed, toast %q:\n%s", m.toast.msg, b)
+		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, b)
 	}
 	m = m.expireToast().press("j", "enter", "ctrl+u", "enter")
 	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "bind-key") {
-		t.Errorf("key emptied while installed:\n%s", b)
+		t.Errorf("key emptied while on:\n%s", b)
 	}
-	// The conf moved: the block goes with it, out of the old file.
+	// The file moved: the block goes with it, out of the old file.
 	conf2 := filepath.Join(t.TempDir(), "tmux.conf")
-	m = m.expireToast().press("g", "g", "enter", "ctrl+u").typed(conf2).press("enter")
+	m = m.expireToast().press("g", "g", "j", "enter", "ctrl+u").typed(conf2).press("enter")
 	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "locku") {
 		t.Errorf("the old file keeps the block:\n%s", b)
 	}
-	if b, _ := os.ReadFile(conf2); !strings.Contains(string(b), "lock-after-time 45") || !strings.Contains(m.View(), " installed ") {
+	if b, _ := os.ReadFile(conf2); !strings.Contains(string(b), "lock-after-time 45") || m.press("k").rowAt().value != "on" {
 		t.Errorf("the new file:\n%s\n%s", b, m.View())
 	}
-	// The menu on the button says what Enter does.
-	m = m.expireToast().press("G", " ")
-	if !strings.Contains(m.View(), "Uninstall") {
-		t.Errorf("the button's menu:\n%s", m.View())
+	// The menu on activate says what Enter does.
+	m = m.expireToast().press("k", " ")
+	if !strings.Contains(m.View(), "Deactivate") {
+		t.Errorf("activate's menu:\n%s", m.View())
 	}
-	// Uninstall asks, then takes the block out.
+	// Off asks, then takes the block out.
 	m = m.press("esc", "enter")
-	if !m.confirm.isInteractive() || m.confirm.action != confirmRemoveTool {
-		t.Fatal("Uninstall must confirm")
+	if !m.confirm.isInteractive() || m.confirm.action != confirmDeactivate {
+		t.Fatal("deactivate must confirm")
 	}
 	m = m.press("enter")
 	if b, _ := os.ReadFile(conf2); strings.Contains(string(b), "locku") {
-		t.Errorf("after Uninstall:\n%s", b)
+		t.Errorf("after deactivate:\n%s", b)
 	}
-	if !strings.Contains(m.toast.msg, "removed") || !strings.Contains(m.View(), "uninstalled") || m.rowAt().value != "Install" {
-		t.Errorf("toast %q, screen:\n%s", m.toast.msg, m.View())
+	if !strings.Contains(m.toast.msg, "removed") || m.rowAt().value != "off" {
+		t.Errorf("toast %q, row %+v", m.toast.msg, m.rowAt())
 	}
-	// Uninstalled again: a row changed stays out of the file.
-	m = m.expireToast().press("k", "enter", "ctrl+u").typed("60").press("enter")
+	// Off again: a row changed stays out of the file.
+	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("60").press("enter")
 	if b, _ := os.ReadFile(conf2); strings.Contains(string(b), "locku") {
-		t.Errorf("a change while uninstalled reached the file:\n%s", b)
+		t.Errorf("a change while off reached the file:\n%s", b)
 	}
 }
 
 // The title's chips: one grey strip on a panel without the keys; with
-// them the first lights in the border's colour and installed / unsaved
-// in theirs, uninstalled keeping the grey (user, 2026-09-25).
+// them the border's colour on the name and the tag, and installed /
+// unsaved in theirs (user, 2026-09-25).
 func TestChipFill(t *testing.T) {
-	name, kind := chip{text: "[2] tmux", border: true}, chip{text: "integration"}
-	on, off := chip{text: "installed", fill: liveColor}, chip{text: "uninstalled"}
-	for _, c := range []chip{name, kind, on, off} {
+	name, tag := chip{text: "[2] clock", border: true}, chip{text: "profile", border: true}
+	hot, cold := chip{text: "unsaved", fill: yellowColor}, chip{text: "plain"}
+	for _, c := range []chip{name, tag, hot, cold} {
 		if f := chipFill(c, borderDim, false); f != borderDim {
 			t.Errorf("unfocused, %q wears %v", c.text, f)
 		}
 	}
-	if chipFill(name, focusColor, true) != focusColor || chipFill(kind, focusColor, true) != borderDim ||
-		chipFill(on, focusColor, true) != liveColor || chipFill(off, focusColor, true) != borderDim {
-		t.Errorf("focused: name %v, kind %v, installed %v, uninstalled %v",
-			chipFill(name, focusColor, true), chipFill(kind, focusColor, true), chipFill(on, focusColor, true), chipFill(off, focusColor, true))
+	if chipFill(name, focusColor, true) != focusColor || chipFill(tag, focusColor, true) != focusColor ||
+		chipFill(hot, focusColor, true) != yellowColor || chipFill(cold, focusColor, true) != borderDim {
+		t.Errorf("focused: name %v, tag %v, unsaved %v, plain %v",
+			chipFill(name, focusColor, true), chipFill(tag, focusColor, true), chipFill(hot, focusColor, true), chipFill(cold, focusColor, true))
 	}
 }
 
@@ -577,10 +558,10 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "conf", "lock-after-time", "bind-key", "Install")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
-	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "Install")) != 0 || strings.Contains(v, "bind-key") {
+	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate")) != 0 || strings.Contains(v, "bind-key") {
 		t.Errorf("on [2], screen: no key to bind:\n%s", v)
 	}
 	// Narrow: the PIN's line does not fit beside a 26-column key and is
@@ -646,7 +627,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 		t.Fatalf("the first saver sits under the profiles, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, "[2] clock") || !strings.Contains(v, " saver ") ||
+	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, capLeft+"[2] clock"+capRight) || !strings.Contains(v, capLeft+"saver"+capRight) ||
 		!strings.Contains(v, "clock, clock2") || !strings.Contains(v, "defaults") || strings.Contains(v, "unsaved") {
 		t.Errorf("a saver's screen:\n%s", v)
 	}
@@ -859,7 +840,7 @@ func TestColourDraftSaveReset(t *testing.T) {
 	if m.draftOf(key, clock).BG != "#ff3244" || clock.BG != config.DefaultBG || saved(t).Profiles[0].BG != config.DefaultBG {
 		t.Errorf("draft %q cfg %q", m.draftOf(key, clock).BG, clock.BG)
 	}
-	if v := m.View(); !m.dirtyOf(key, clock) || !strings.Contains(v, " unsaved ") ||
+	if v := m.View(); !m.dirtyOf(key, clock) || !strings.Contains(v, " unsaved"+capRight) ||
 		!strings.Contains(v, "#313244") || !strings.Contains(v, "→") || !strings.Contains(v, "#ff3244") {
 		t.Errorf("the draft is not shown:\n%s", v)
 	}

@@ -358,14 +358,14 @@ func (m AppModel) View() string {
 	var panels string
 	switch {
 	case m.width < narrowW && m.focus == panelSide:
-		panels = panelFrame(m.width-2, m.sidebarBody(m.width-2, innerH), sideChips, "", true)
+		panels = panelFrame(m.width-2, m.sidebarBody(m.width-2, innerH), sideChips, "", "", true)
 	case m.width < narrowW:
-		panels = panelFrame(m.width-2, m.detailBody(m.width-2, innerH), m.detailChips(), hint, true)
+		panels = panelFrame(m.width-2, m.detailBody(m.width-2, innerH), m.detailChips(), m.detailKind(), hint, true)
 	default:
 		w2 := m.width - sideW - 2
 		panels = joinHorizontal(
-			panelFrame(sideW-2, m.sidebarBody(sideW-2, innerH), sideChips, "", m.focus == panelSide),
-			panelFrame(w2, m.detailBody(w2, innerH), m.detailChips(), hint, m.focus == panelDetail))
+			panelFrame(sideW-2, m.sidebarBody(sideW-2, innerH), sideChips, "", "", m.focus == panelSide),
+			panelFrame(w2, m.detailBody(w2, innerH), m.detailChips(), m.detailKind(), hint, m.focus == panelDetail))
 	}
 	footer := keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.width)
 	out := panels + "\n" + footer

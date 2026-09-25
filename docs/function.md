@@ -234,7 +234,7 @@ dino 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一個
 |---|---|
 | `locku` | 開啟設定 TUI，見 6.1。不會鎖 |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
-| （`locku` › Integration） | tmux / screen 的整合設定在設定 TUI 裡做：`[2]` 底部的 Install 寫進設定檔、Uninstall 拿掉，見 6.2（2026-09-25 取代 `locku setup [-d]` 指令） |
+| （`locku` › Integration） | tmux / screen 的整合設定在設定 TUI 裡做：`[2]` 的 `activate` 開關寫進設定檔、拿掉，見 6.2（2026-09-25 取代 `locku setup [-d]` 指令） |
 | `locku version` | 版本 |
 
 argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`。原因：screen 的 LOCKPRG 由 screen 直接 execl，不經 shell、不能帶參數，argv[0] 固定為 SCREEN-LOCK（macOS /usr/bin/screen 二進位內可見此字串）。這是 screen 唯一能把「要鎖」這個意圖傳給 locku 的通道。execl 也不搜 PATH，所以 LOCKPRG 必須是絕對路徑。
@@ -247,8 +247,8 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`。原因：screen 的 LOCKPRG �
 - 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24，原本是另一個 `x` 熱鍵加 confirm）。
 - saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
 - profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：layout、time、date……，以及 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（修訂 2026-09-24：使用者調歪過一次調不回來）。
-- preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，側欄的 `●` 只顯示。每一列的意思：focus 在 preference 的 `[2]` 時按 `?`，help 就**只有**這幾列的說明（自動換行），沒有鍵的清單；其他地方的 `?` 是鍵（2026-09-25：原本列在每列下面，使用者要搬到 help，而且 `[2]` 上只要 preference 的說明）。tmux / screen 的 `[2]` 同理，只有 conf、lock-after-time（screen 是 idle）、tmux 的 bind-key、Install 按鈕的說明。
-- Integration（2026-09-25，取代 `locku setup` 指令）：側欄第三個區塊，`tmux` 與 `screen` 各一項，各自有 `conf`（要寫的檔案）與閒置幾秒自動鎖，後者**用工具自己的設定名稱**：tmux 是 `lock-after-time`、screen 是 `idle`（2026-09-25 修訂，使用者：tmux 就用 tmux 的設定名稱；同日早上兩個都叫 `idle_lock`，config key 一併改、舊 key 自動轉），各自獨立、不再共用一個值；預設 300，0 關閉；tmux 再多一列 `bind-key`（2026-09-25，使用者：prefix shortcut）：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`、`F12`），Enter 開 input 框；有值就在區塊多寫一行 `bind-key <鍵> lock-server`、有 server 在跑就即時 bind；清空就是不綁，那一行不寫、server 上原本綁的鍵 unbind；含空白或 `#` 拒收；screen 沒有這列。區塊在不在檔案裡是**狀態不是屬性**，不在列表裡，在 `[2]` 標題膠囊鏈的尾巴：`installed` / `uninstalled`，每次畫都讀檔——`[2]` 沒 focus 時三顆一起是 unfocus 的灰，focus 時 `installed` 綠、`uninstalled` 留灰（同日修訂，使用者）（2026-09-25 第三次修訂：早上是 dim 的 `tool` 名稱加 `block` `in the file` 兩列，使用者說看不懂、`[2]` 應該就是 property / value 兩欄；中午是一列 `status`）。`[2]` 底部一條分隔線下方、置中一顆**按鈕** `Install` / `Uninstall`，平常不亮、cursor 移到才亮（同日修訂，使用者：按鈕不是表格的列，要看得出 focus 在它上面）——Enter 跳 confirm 才執行：Install 把區塊寫進 conf（tmux 有 server 在跑就即時套用）、Uninstall 拿掉；`conf` 沒填時 disabled 並說明（2026-09-25 定案，取代同日早上的 `[S]` / `[X]` 熱鍵——畫面上看不到，使用者無法直觀知道）。**裝一次，之後隨設即得**：裝著時上面任何一列改動就直接重寫區塊、tmux 即時套到 server，conf 改路徑就把區塊從舊檔搬到新檔、清空就拿掉；沒裝就只寫 config.yaml，Install 仍由使用者按。兩個純方案各有硬傷才折衷：純隨設即得會在 conf 打錯時生檔、Remove 只能等於清 conf、不能先填好再裝；純按鈕會 stale——改了 lock-after-time 檔案裡還是舊值。`conf` 是 locku 唯二的自由輸入，用 webu 的 input 作法：框裡先 dim 顯示一個**提議**——目前值，沒有就是慣例的 `~/.tmux.conf` / `~/.screenrc`——Tab 接手編輯、Backspace 拒絕、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改。
+- preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，側欄的 `●` 只顯示。每一列的意思：focus 在 preference 的 `[2]` 時按 `?`，help 就**只有**這幾列的說明（自動換行），沒有鍵的清單；其他地方的 `?` 是鍵（2026-09-25：原本列在每列下面，使用者要搬到 help，而且 `[2]` 上只要 preference 的說明）。tmux / screen 的 `[2]` 同理，只有 activate、config file path、lock-after-time（screen 是 idle）、tmux 的 bind-key 的說明。
+- Integration（2026-09-25，取代 `locku setup` 指令）：側欄第三個區塊，`tmux` 與 `screen` 各一項，各自有 `config file path`（要寫的檔案；同日中午叫 `conf`）與閒置幾秒自動鎖，後者**用工具自己的設定名稱**：tmux 是 `lock-after-time`、screen 是 `idle`（2026-09-25 修訂，使用者：tmux 就用 tmux 的設定名稱；同日早上兩個都叫 `idle_lock`，config key 一併改、舊 key 自動轉），各自獨立、不再共用一個值；預設 300，0 關閉；tmux 再多一列 `bind-key`（2026-09-25，使用者：prefix shortcut）：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`、`F12`），Enter 開 input 框；有值就在區塊多寫一行 `bind-key <鍵> lock-server`、有 server 在跑就即時 bind；清空就是不綁，那一行不寫、server 上原本綁的鍵 unbind；含空白或 `#` 拒收；screen 沒有這列。`[2]` 的版面（2026-09-25 傍晚定案，使用者：回歸 property / value）：表頭下第一列 `activate`——`on` / `off`，就是區塊在不在檔案裡，每次畫都讀檔；第二列 `config file path`；一條分隔線；然後工具自己的 key（閒置鎖、tmux 的 bind-key），分隔線區隔「locku 的設定」與「寫進工具設定檔的 key」。`activate` 的 Enter 跳 confirm 才執行：on 把區塊寫進檔案（tmux 有 server 在跑就即時套用）、off 拿掉；路徑沒填時 disabled 並說明。同日的前幾版都否決：早上一列 dim 的 `tool` 名稱加 `block` `in the file`（看不懂）、中午一列 `status`、下午狀態放進標題膠囊加 `[S]` / `[X]` 熱鍵（畫面上看不到，使用者無法直觀知道）、再來底部分隔線下一顆 Install / Uninstall 按鈕（風格不對）。**開一次，之後隨設即得**：on 時任何一列改動就直接重寫區塊、tmux 即時套到 server，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉；off 就只寫 config.yaml，activate 仍由使用者開。兩個純方案各有硬傷才折衷：純隨設即得會在 conf 打錯時生檔、Remove 只能等於清 conf、不能先填好再裝；純按鈕會 stale——改了 lock-after-time 檔案裡還是舊值。`conf` 是 locku 唯二的自由輸入，用 webu 的 input 作法：框裡先 dim 顯示一個**提議**——目前值，沒有就是慣例的 `~/.tmux.conf` / `~/.screenrc`——Tab 接手編輯、Backspace 拒絕、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改。
 - 每個 `[2]`——profile、saver、tmux / screen、preference——第一列都是表頭 `Property` / `Value`，側欄區塊標題的 Blue，不可停（2026-09-25，使用者：所有 panel 2 都給標題列；同日改成單數 Property）。
 - 試鎖：從 TUI 直接進入 `locku lock` 的流程，解鎖後回到 TUI；全域 `P` 看啟用中的 saver，側欄 saver 上的 `p` 看那一個，兩者都帶著顏色草稿。
 - 寫出 `~/.config/locku/config.yaml`，權限 600。
@@ -257,11 +257,11 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 
 ### 6.2 Integration 的 Setup / Remove 怎麼寫
 
-（2026-09-25：從 CLI `locku setup [-d]` 搬進 TUI 的 Integration 區塊，同日從 `[S]` / `[X]` 熱鍵改成 `[2]` 底部的 Install / Uninstall 按鈕，Enter 後 confirm；下文的「setup」指寫入這個動作。）只寫受管區塊，區塊外一個字都不動；再寫一次就是替換區塊，冪等——裝著的時候每改一列就這樣重寫一次。
+（2026-09-25：從 CLI `locku setup [-d]` 搬進 TUI 的 Integration 區塊，同日從 `[S]` / `[X]` 熱鍵、再從底部的 Install 按鈕，改成 `[2]` 第一列 `activate` 的開關，Enter 後 confirm；下文的「setup」指寫入這個動作。）只寫受管區塊，區塊外一個字都不動；再寫一次就是替換區塊，冪等——裝著的時候每改一列就這樣重寫一次。
 
 | 目標 | 檔案 | 區塊內容 |
 |---|---|---|
-| tmux | Integration › tmux 的 `conf`（使用者輸入，`~/` 可用，不存在就建；沒設按鈕就 disabled、說先填 conf，不猜） | `set -gF lock-command "<locku 的絕對路徑> lock -S '#{socket_path}'"`、`set -g lock-after-time <tmux 的 lock-after-time>`、`set -s "command-alias[90]" "locku=lock-server"`、`set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"`、`set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client"`，Integration › tmux › bind-key 有填就再一行 `bind-key <鍵> lock-server`；每一行尾巴都有 `# locku` 註解 |
+| tmux | Integration › tmux 的 `conf`（使用者輸入，`~/` 可用，不存在就建；沒設 activate 就 disabled、說先填 config file path，不猜） | `set -gF lock-command "<locku 的絕對路徑> lock -S '#{socket_path}'"`、`set -g lock-after-time <tmux 的 lock-after-time>`、`set -s "command-alias[90]" "locku=lock-server"`、`set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"`、`set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client"`，Integration › tmux › bind-key 有填就再一行 `bind-key <鍵> lock-server`；每一行尾巴都有 `# locku` 註解 |
 | screen | Integration › screen 的 `conf`（同上），加上 shell rc：`$SHELL` 是 zsh 寫 `~/.zshrc`、bash 寫 `~/.bashrc`、fish 寫 `~/.config/fish/config.fish` | `.screenrc`：`idle 300 lockscreen`；shell rc：`export LOCKPRG=<絕對路徑>`（fish 是 `set -gx LOCKPRG <絕對路徑>`） |
 
 區塊標記：
@@ -272,8 +272,8 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 # <<< locku <<<
 ```
 
-- 路徑由使用者在 Integration 各項的 `conf` 輸入（2026-09-24 起在 preference，2026-09-25 搬來）：沒設時 Install / Uninstall 按鈕是 disabled 並說 `set conf first`，什麼都不寫（screen 連 shell rc 也不寫）；原本「`~/.tmux.conf` 不在就找 `~/.config/tmux/tmux.conf`」的猜法拿掉。相對路徑拒收，它會落在程式剛好執行的目錄。
-- tmux 有 server 在跑時同時即時套用同樣五條（`tmux set -gF lock-command …` 等），有 bind-key 就多 `bind-key <鍵> lock-server`；Uninstall 時反向 `set -gu` / `set -su` / `set-hook -gu` 一條對一條拿掉、綁過的鍵 `unbind-key`、再清 `@locked`。Setup 時檔案裡原本綁的鍵跟這次不同（改了或清空），先 `unbind-key` 舊的再套用（2026-09-25）；綁過與否看的是檔案裡區塊的 `bind-key` 行，不另外記。unbind 之後那個鍵 tmux 內建的功能（例如 `l` 的 last-window）要 server 重啟才回來。沒有 tmux 或沒有 server 就跳過並說明。結果以 toast 一行回報（原本印在終端機的幾行，以 ` · ` 接起來）。
+- 路徑由使用者在 Integration 各項的 `conf` 輸入（2026-09-24 起在 preference，2026-09-25 搬來）：沒設時 `activate` 是 disabled 並說 `set the config file path first`，什麼都不寫（screen 連 shell rc 也不寫）；原本「`~/.tmux.conf` 不在就找 `~/.config/tmux/tmux.conf`」的猜法拿掉。相對路徑拒收，它會落在程式剛好執行的目錄。
+- tmux 有 server 在跑時同時即時套用同樣五條（`tmux set -gF lock-command …` 等），有 bind-key 就多 `bind-key <鍵> lock-server`；activate off 時反向 `set -gu` / `set -su` / `set-hook -gu` 一條對一條拿掉、綁過的鍵 `unbind-key`、再清 `@locked`。Setup 時檔案裡原本綁的鍵跟這次不同（改了或清空），先 `unbind-key` 舊的再套用（2026-09-25）；綁過與否看的是檔案裡區塊的 `bind-key` 行，不另外記。unbind 之後那個鍵 tmux 內建的功能（例如 `l` 的 last-window）要 server 重啟才回來。沒有 tmux 或沒有 server 就跳過並說明。結果以 toast 一行回報（原本印在終端機的幾行，以 ` · ` 接起來）。
 - tmux 那五行的道理（2026-09-24，使用者定案，全部以 pty 實測 tmux 3.7c）：
   - **預設不綁熱鍵**。用戶既然在用 tmux 就有自己一套 bind，`bind L` 會撞。改用 command alias：`prefix :` 然後打 `locku`，就是 `lock-server`（整台的 client 全鎖）；shell 裡 `tmux locku` 也一樣。要熱鍵的自己在 Integration › tmux › `bind-key` 填一個（2026-09-25，使用者：prefix shortcut），寫成 `bind-key <鍵> lock-server`——鍵是使用者選的，撞不撞他自己知道。
   - **每行尾巴 `# locku`**，加上受管區塊的頭尾標記，手動要移也認得出來；alias 與 hook 放在陣列的 90 號，不碰使用者自己的 0 號。
@@ -284,7 +284,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 - screen 的 LOCKPRG 只能走 shell 環境（實測 2026-09-24，macOS screen 4.00.03，以探針程式經 pty 驗證）。原本想走 `.screenrc` 的 `setenv LOCKPRG` 一個檔搞定，實測不通：按 `C-a x` 出現的是 screen 內建的 `Key:` 鎖，探針沒被呼叫。原因是 `lockscreen` 由 attacher（接著終端機的前端進程）呼叫 `getenv`，而 `.screenrc` 只有後端讀、`setenv` 改的是後端與視窗內 shell 的環境；attacher 的環境在 `screen` 或 `screen -r` 執行那一刻就固定了。環境變數路線則完全符合設計：LOCKPRG 被 execl、`argv[0]` 是 `SCREEN-LOCK`、stdin 是 tty。所以 setup 寫 shell rc 的受管區塊，並提示：新開 shell 才有這個變數；已在跑的 session 不必重啟，detach 後從新 shell `screen -r` 即可，因為 attacher 是新進程。
 - 絕對路徑偏好 PATH 上找到的那個（通常是 brew 的 symlink），不用解析 symlink 後的 Cellar 路徑，升級版本後才不會失效。
 - 執行後印出改了哪個檔、有沒有即時套用、還需要做什麼（screen：新開 shell；已在跑的 session detach 後從新 shell 重新 attach）。
-- 不備份。移除用 `[2]` 的 Uninstall 按鈕（confirm 後；2026-09-25 早上是 `[X]` 熱鍵，前一天是 `locku setup -d`）：把受管區塊從檔案拿掉、有 server 在跑就一併拿掉；區塊前面補的空行也一起拿掉，其餘一個字不動；沒有區塊就說沒有；檔案不存在不會生出來。screen 的 Remove 同時清 `.screenrc` 與 shell rc 的區塊。`[2]` 標題尾巴的膠囊每次畫都讀一次檔案，說區塊在不在。
+- 不備份。移除就是 `[2]` 的 `activate` 關掉（confirm 後；2026-09-25 下午是 Uninstall 按鈕、早上是 `[X]` 熱鍵，前一天是 `locku setup -d`）：把受管區塊從檔案拿掉、有 server 在跑就一併拿掉；區塊前面補的空行也一起拿掉，其餘一個字不動；沒有區塊就說沒有；檔案不存在不會生出來。screen 的 Remove 同時清 `.screenrc` 與 shell rc 的區塊。`[2]` 的 `activate` 列每次畫都讀一次檔案，說區塊在不在。
 ## 7. 設定與儲存
 
 只有一個檔：`~/.config/locku/config.yaml`
@@ -330,11 +330,11 @@ pin_prompt_timeout: 30          # PIN 框連續幾秒無按鍵就收起，每次
 wrong_pin_attempts: 0           # 連續輸錯幾次進冷卻，0 = 關閉，見 4.4
 wrong_pin_attempt_cooldown: 30  # 冷卻秒數
 tmux:                           # Integration › tmux（2026-09-25：從頂層 tmux_conf / idle_lock 搬來，舊 key 自動轉）
-  conf: "~/.tmux.conf"          # Install 寫的檔；空 = 未設定，按鈕不能按
+  conf: "~/.tmux.conf"          # activate 寫的檔（畫面上叫 config file path）；空 = 未設定，activate 不能開
   lock-after-time: 300          # 閒置幾秒自動鎖，用 tmux 自己的名字（同日改名，早上的 idle_lock 自動轉）；0 = 不自動鎖
   bind-key: ""                  # prefix 之後鎖整台的鍵，照 tmux 寫法（l、C-l、F12）；空 = 不綁（2026-09-25）
 screen:                         # Integration › screen，各自一份，不跟 tmux 共用
-  conf: "~/.screenrc"           # Install 寫的檔；shell rc 另由 $SHELL 決定
+  conf: "~/.screenrc"           # 同上；shell rc 另由 $SHELL 決定
   idle: 300                     # 同上，用 screen 自己的名字
 ```
 
@@ -344,13 +344,13 @@ screen:                         # Integration › screen，各自一份，不跟
 - config 是 profile 的唯一來源，命令列不提供覆蓋。
 - `profile` 指向不存在的 name、或 `profiles` 為空：用內建預設 clock，狀態列顯示 config error，不算損毀。
 - 讀取失敗的處理見 4.3。
-- 閒置多久自動鎖由各工具自己的那一列決定——tmux 的 `lock-after-time`、screen 的 `idle`，名字就是工具自己的（2026-09-25 拆開並改名，原本一個共用的 `idle_lock`；更早是寫死 300 在區塊裡），Install 原樣填進去，裝著時一改就重寫；locku 自己不計時。
+- 閒置多久自動鎖由各工具自己的那一列決定——tmux 的 `lock-after-time`、screen 的 `idle`，名字就是工具自己的（2026-09-25 拆開並改名，原本一個共用的 `idle_lock`；更早是寫死 300 在區塊裡），activate on 時原樣寫進去、一改就重寫；locku 自己不計時。
 
 ## 8. 安裝與整合（README 要交付的內容）
 
 順序不限：不設定就是純螢幕保護，任何鍵解鎖；要密碼再執行 `locku` 設 PIN。
 
-在 `locku` 側欄 Integration › tmux 的 `[2]` 底部按 Install（confirm 後）直接寫進設定檔，做法見 6.2；裝了以後改任何一列就直接重寫。以下是它寫的內容，手動設定也是同一份：
+在 `locku` 側欄 Integration › tmux 的 `[2]` 把 `activate` 打開（confirm 後）直接寫進設定檔，做法見 6.2；開著時改任何一列就直接重寫。以下是它寫的內容，手動設定也是同一份：
 
 tmux，寫進 Integration › tmux › conf（慣例 `~/.tmux.conf`）：
 
@@ -365,7 +365,7 @@ bind-key l lock-server                                                      # lo
 # <<< locku <<<
 ```
 
-最後那行只在 Integration › tmux › bind-key 有填時才寫（這裡填的是 `l`）。鎖：`prefix :` 打 `locku`（或 shell 的 `tmux locku`，填了 bind-key 就 `prefix l`）整台的 client 全鎖，閒置 300 秒的畫面也鎖；鎖著的時候誰 attach 哪個 session 都會看到保護程式。移除：同一列變成 Uninstall。
+最後那行只在 Integration › tmux › bind-key 有填時才寫（這裡填的是 `l`）。鎖：`prefix :` 打 `locku`（或 shell 的 `tmux locku`，填了 bind-key 就 `prefix l`）整台的 client 全鎖，閒置 300 秒的畫面也鎖；鎖著的時候誰 attach 哪個 session 都會看到保護程式。移除：`activate` 關掉。
 
 screen，寫進 Integration › screen › conf（慣例 `~/.screenrc`）：
 
@@ -412,7 +412,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 18. 第一幀不動畫；之後內容變更只對有變的像素做 splash 式 shuffle 揭露。
 19. 顏色是每個 saver 自己的 bg / fg（修訂 2026-09-24，原為全域 Settings › style），bg 預設 surface0、fg 預設 gold；以 RGB slider 設定、config 存 hex；滑桿改草稿，`S` 存、`R` 丟，`q` 遇到未存草稿先問。
 20. 時間與日期是兩個獨立區塊，各自排版、各自退階：時間先拿整個畫布，日期拿剩下的（row 在下、column 在左）；每個區塊先降 size 再去單位（時間去秒、日期去年）；日期塞不下就不畫，時間塞不下才一般文字；config 不改。（2026-09-24 修訂三次，最後由使用者定案。）
-21. 整合設定寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用。（2026-09-24 修訂）要寫的檔案由使用者輸入，沒設就報錯，不猜路徑；每一行尾巴 `# locku` 註解，手動也好移。（2026-09-25 修訂）原本是 CLI `locku setup [-d]`，改成 TUI 側欄 Integration 區塊的 `[S] Setup` / `[X] Remove`，指令拿掉；「不做 TUI popup」仍成立——它是 `[1]` 的一個區塊加 `[2]` 的列，不是 popup。（同日再修訂）熱鍵畫面上看不到，改成 `[2]` 底部的 Install / Uninstall 按鈕，Enter 後 confirm 才執行——confirm 是 message class，不是 Integration popup；見 33。
+21. 整合設定寫入設定檔的受管區塊，冪等；tmux 有 server 時即時套用。（2026-09-24 修訂）要寫的檔案由使用者輸入，沒設就報錯，不猜路徑；每一行尾巴 `# locku` 註解，手動也好移。（2026-09-25 修訂）原本是 CLI `locku setup [-d]`，改成 TUI 側欄 Integration 區塊的 `[S] Setup` / `[X] Remove`，指令拿掉；「不做 TUI popup」仍成立——它是 `[1]` 的一個區塊加 `[2]` 的列，不是 popup。（同日再修訂）熱鍵畫面上看不到，改成 `[2]` 第一列 `activate` 的開關（中間曾是底部一顆按鈕），Enter 後 confirm 才執行——confirm 是 message class，不是 Integration popup；見 33。
 30. （2026-09-24，使用者定案）設定改名，三個都帶 lock 字看不出誰是誰：`prompt_timeout` → `pin_prompt_timeout`、`lockout_after` → `wrong_pin_attempts`、`lockout_seconds` → `wrong_pin_attempt_cooldown`；新增 `idle_lock`（閒置幾秒自動鎖，預設 300，0 關閉），一個值給所有拿 locku 當螢幕保護的工具：tmux 的 lock-after-time、screen 的 idle，setup 寫進去。舊 key 讀進來自動轉。（2026-09-25 再改：拆成各工具一份、用工具自己的名字，見 32。）
 29. （2026-09-24，使用者定案）tmux 不綁熱鍵，改 command alias `locku`（`prefix :` 打 `locku`），不跟使用者既有的 bind 撞。（2026-09-25 修訂：預設仍不綁，但使用者可在 Integration › tmux › `bind-key` 自己填一個鍵，Setup 多寫一行 `bind-key <鍵> lock-server`、有 server 就即時 bind；空就不綁，見 32。）「鎖著的時候誰進來都被鎖」用全域 user option `@locked` 加 `client-attached` / `client-session-changed` hook 做到：`locku lock` 啟動時設、正常解鎖時清、tty 消失不清；lock-command 是 locku 的絕對路徑並以 `set -gF` 帶 `#{socket_path}` 給 `locku lock -S`。以 pty 端到端測試（`make e2e`）驗收。
 31. （2026-09-24，使用者定案）鎖的範圍是**整台 tmux server**，不是 session：`locku` = `lock-server`，標記全域，attach 任何 session 都被鎖；螢幕保護程式保護的是整台，session 等級的鎖換個 session 就繞過。閒置鎖維持 tmux 的每 session 計時、不升級成整台；解鎖維持每個 client 各自輸 PIN、不輪詢。一份 config、一個區塊、一個 profile 對整台。
@@ -424,7 +424,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 27. （2026-09-24，使用者定案）側欄分三個區塊，順序 Profiles → Savers → Settings：**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是說明加預設值，動作 `[n] New`、`[p] Preview`；**Settings › preference**。
 28. （2026-09-24，使用者定案）每種 saver 有一組預設值存在 config 的 `savers`，欄位同它的 profile；只影響之後新增的 profile，不動既有的；`[p]` 在 saver 上用預設值預覽。內建：clock 是 row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`，dino 是 trex / grassland，顏色同 splash。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
 32. （2026-09-25，使用者定案）側欄多第三個區塊 **Integration**（順序 Profiles → Savers → Integration → Settings），`tmux` 與 `screen` 各一項：原 preference 的 `tmux_conf` / `screen_conf` 搬來當各自的 `conf`，`idle_lock` 不再共用、各工具一份；`[2]` 就是 `conf` + 閒置鎖 + 唯讀的 `status`（installed / not installed；同日修訂：原本多一列 tool 名稱、status 叫 block，使用者看不懂）；`[S] Setup` / `[X] Remove` 取代 CLI `locku setup [-d]`，指令拿掉。preference 每列下面的說明列拿掉，說明搬到 `?` help：focus 在 preference 的 `[2]` 時 `?` **只有**這些說明、自動換行，沒有鍵；tmux / screen 的 `[2]` 同理只有它們的；`[1]` 與 profile / saver 的 `[2]` 上 `?` 是鍵（同日修訂兩次：先是說明段跟著 cursor 附在鍵後面，使用者說要「只有」說明、而且要 wrap）。config 的 `tmux_conf` / `screen_conf` / `idle_lock` 自動轉成 `tmux: {conf, lock-after-time}` / `screen: {conf, idle}`——閒置鎖用工具自己的設定名稱（同日第三次修訂，使用者：tmux 就用 tmux 的 `lock-after-time`；早上寫出的 `tmux.idle_lock` / `screen.idle_lock` 也自動轉）。每個 `[2]` 第一列是表頭 `Property` / `Value`（同日，使用者：所有 panel 2 都給標題列；再同日改成單數 Property）。tmux 的 `[2]` 再多一列 `bind-key`（同日，使用者：prefix shortcut，跳輸入框，有值就幫使用者加 tmux 熱鍵、空就拿掉）：列名與 config key `tmux.bind-key` 都用 tmux 自己的指令名；Enter 開 input 框，有值就多寫 `bind-key <鍵> lock-server` 並即時 bind，空字串就那行不寫、server 上 unbind；Uninstall 一併 unbind。
-33. （2026-09-25，使用者定案）整合的寫入全在 TUI，使用者不用再跑去 CLI：`[2]` 底部一條分隔線下方、置中一顆 **Install / Uninstall 按鈕**，平常不亮、cursor 到才亮（Enter → confirm → 執行；取代同日早上的 `[S]` / `[X]` 熱鍵，畫面上看不到、使用者無法直觀知道），**裝一次，之後隨設即得**——裝著時任何一列改動直接重寫區塊並套到 server，conf 改路徑就搬區塊、清空就拿掉；沒裝只寫 config.yaml。兩個純方案都否決：純隨設即得（conf 打錯就生檔、Remove 只能等於清 conf、不能先填好再裝）、純按鈕（改了值檔案 stale）。`status` 從列表拿掉——那是狀態不是屬性——放在 `[2]` 標題的膠囊鏈尾巴，`installed` 綠 / `uninstalled` 灰。標題改成家族的 **powerline 膠囊鏈**（sshu `panelChip`、filu `singleChip`、webu `tabChain`；locku 是唯一還畫純文字標題的成員）：`[2] <名字>` 邊框色、種類 `profile` / `saver` / `integration` / `settings` 灰、狀態各自上色——但只在面板 focus 時：沒 focus 整條一起是 unfocus 的灰，`uninstalled` 永遠灰（同日修訂，使用者：原版 uninstalled 用 peach、按鈕是表格最後一列且常亮）；` · ` 的三格換成一格接縫；profile 也補上 `profile` 這段；`[1] locku` 一顆。同日：**preview 不驗 PIN**，任意鍵就回設定畫面，PIN 是 `locku lock` 的事；狀態列仍照真的鎖顯示。
+33. （2026-09-25，使用者定案）整合的寫入全在 TUI，使用者不用再跑去 CLI：`[2]` 表頭下第一列 **`activate`（on / off）** 就是區塊在不在檔案裡，Enter → confirm → 執行（取代同日早上的 `[S]` / `[X]` 熱鍵——畫面上看不到、使用者無法直觀知道——與下午底部的 Install / Uninstall 按鈕——風格不對，回歸 property / value）；第二列 `config file path`（原 `conf`）；一條分隔線區隔 locku 的設定與工具自己的 key（閒置鎖、bind-key）。**開一次，之後隨設即得**——on 時任何一列改動直接重寫區塊並套到 server，路徑改了就搬區塊、清空就拿掉；off 只寫 config.yaml。兩個純方案都否決：純隨設即得（conf 打錯就生檔、Remove 只能等於清 conf、不能先填好再裝）、純按鈕（改了值檔案 stale）。`status` 列拿掉，狀態就是 `activate` 的值（下午曾放在標題膠囊尾巴，`installed` 綠 / `uninstalled` 灰）。標題改成家族的 **powerline 膠囊**（sshu `panelChip`、filu `singleChip`、webu `tabChain`；locku 是唯一還畫純文字標題的成員）：左上 `[2] <名字>` 邊框色，顏色草稿未存時接一顆 `unsaved`（focus 時黃、沒 focus 整條灰）；種類 `profile` / `saver` / `integration` / `settings` 是**右上角另一顆獨立的膠囊**、邊框色（同日第三版，使用者：第二階層拉到右上角、不跟 title 串接；前一版串在左邊、灰色）；膠囊字緊貼圓頭 cap、不留空白（使用者：圓角後多了一個空白），接縫兩側各一格；`[1] locku` 一顆。同日：**preview 不驗 PIN**，任意鍵就回設定畫面，PIN 是 `locku lock` 的事；狀態列仍照真的鎖顯示。
 
 ## 11. 待決清單
 
@@ -447,7 +447,7 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 - config 不存在時進入無 PIN 模式：saver 照常顯示、標明未設定 PIN、任何按鍵結束。
 - 設定 TUI 寫出的 config 能被 `locku lock` 讀取。
 - LOCKPRG 指向 locku 本體時，screen `lockscreen` 進入鎖定而不是設定 TUI。
-- Integration › tmux 的 Install 寫兩次，設定檔內容相同；有 server 時 `tmux show -g lock-command` 立即是 `<絕對路徑> lock -S '<socket>'`；Uninstall 後區塊消失、server 上五條（有 bind-key 是六條）都拿掉（setup 套件測試；TUI 的 Install / Uninstall 在 app 測試與 `make e2e` 裡真的按；裝著時改 lock-after-time、清 bind-key、搬 conf 都在 app 測試裡驗檔案）。
-- 鎖著的時候誰進來都被鎖（2026-09-24，`make e2e` 在真的 tmux 3.7c 上跑）：`locku` 後 client A 看到點陣板、全域標 `@locked`；B 此時 attach 同一個 session、E attach 另一個 session，都看到點陣板；A 解鎖後 `@locked` 消失、B 與 E 仍鎖著直到各自解鎖；之後 attach 的 C 不被鎖；設定畫面填的 `bind-key l` 寫進區塊、server 上有這個 bind（2026-09-25）；A 這次由 `prefix l` 鎖住，鎖定中 A 的終端機死掉，`@locked` 留著，接著 attach 的 D 被鎖、D 解鎖才清掉；Uninstall 後區塊消失。
+- Integration › tmux 的 activate 開著寫兩次，設定檔內容相同；有 server 時 `tmux show -g lock-command` 立即是 `<絕對路徑> lock -S '<socket>'`；activate 關掉後區塊消失、server 上五條（有 bind-key 是六條）都拿掉（setup 套件測試；TUI 的 activate 在 app 測試與 `make e2e` 裡真的按；on 時改 lock-after-time、清 bind-key、搬 config file path 都在 app 測試裡驗檔案）。
+- 鎖著的時候誰進來都被鎖（2026-09-24，`make e2e` 在真的 tmux 3.7c 上跑）：`locku` 後 client A 看到點陣板、全域標 `@locked`；B 此時 attach 同一個 session、E attach 另一個 session，都看到點陣板；A 解鎖後 `@locked` 消失、B 與 E 仍鎖著直到各自解鎖；之後 attach 的 C 不被鎖；設定畫面填的 `bind-key l` 寫進區塊、server 上有這個 bind（2026-09-25）；A 這次由 `prefix l` 鎖住，鎖定中 A 的終端機死掉，`@locked` 留著，接著 attach 的 D 被鎖、D 解鎖才清掉；activate 關掉後區塊消失。
 - shell 環境有 LOCKPRG 時 `C-a x` 進的是 locku（2026-09-24 以探針實測通過；`.screenrc` 的 `setenv` 路線實測不通，6.2 已改為 shell rc）。
 - tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix+d、prefix+c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix+d 才 detach）。

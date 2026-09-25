@@ -64,8 +64,8 @@ var helpKeys = []helpEntry{
 	{"P", "preview the lock showing this profile"},
 	{"S", "save its colour draft to config.yaml"},
 	{"R", "reset the draft to the saved colours"},
-	{"", "[2] tmux, screen — the button at the foot"},
-	{"Enter", "Install: locku's block into the file (tmux: and onto a running server), after a confirm — and from then on a row changed is written at once; Uninstall: out again"},
+	{"", "[2] tmux, screen"},
+	{"Enter", "on activate: on writes locku's block into the file (tmux: and onto a running server), after a confirm — and from then on a row changed is written at once; off takes it out"},
 	{"", "Navigate"},
 	{"j · k", "next / previous row"},
 	{"u · d", "half a page"},
@@ -89,13 +89,15 @@ var helpPreference = []helpEntry{
 func helpTool(name string) []helpEntry {
 	out := []helpEntry{
 		{"", "[2] " + name + " — what each row is"},
-		{"conf", "the file locku's block is written into by S and taken out of by X; ~/ allowed"},
+		{"activate", "on: locku's block is in the file, and every row here is written into it the moment it changes; off: it is not. Enter turns it, after a confirm"},
+		{"config file path", "the file locku's block is written into; ~/ allowed"},
+		{"", "under the line: " + name + "'s own settings"},
 		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"},
 	}
 	if name == tools[toolTmux] {
 		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none"})
 	}
-	return append(out, helpEntry{"Install", "the button at the foot, j past the last row or G: Enter writes the block into conf, after a confirm; once it is in — the title says installed — every row above is written at once when it changes, and the button is Uninstall"})
+	return out
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {

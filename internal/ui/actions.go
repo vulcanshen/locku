@@ -43,10 +43,7 @@ func (m AppModel) actions() []action {
 			return []action{edit,
 				{key: "p", label: "Preview", hint: "the lock, showing this saver with its defaults", run: (*AppModel).previewThis},
 				m.newProfileAction()}
-		case sideTool:
-			edit.hint = "its file, idle time and Install, in [2]"
-			return []action{edit}
-		case sidePreference:
+		case sideTool, sidePreference:
 			return []action{edit}
 		}
 		del := action{key: "X", label: "Delete", hint: "this profile", run: (*AppModel).deleteProfile}
@@ -106,8 +103,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "idle seconds before it locks; 0 never", run: (*AppModel).editNumber})
 	case rowBindKey:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the key after prefix that locks; empty binds none", run: (*AppModel).editBindKey})
-	case rowInstall:
-		out = append(out, m.installAction())
+	case rowActivate:
+		out = append(out, m.activateAction())
 	}
 	if it.kind == sideTool {
 		return out
@@ -131,17 +128,18 @@ func (m AppModel) actions() []action {
 	return out
 }
 
-// installAction is Enter on a tool's last row, the button (user,
-// 2026-09-25: a row on the screen, in place of S and X, hotkeys nobody
-// saw; in the morning, in place of the `locku setup` command): Install —
-// locku's block into the file, and onto a running tmux server, after a
-// confirm — while the block is not in the file, Uninstall while it is.
-// It says why it cannot when the file is not set.
-func (m AppModel) installAction() action {
+// activateAction is Enter on a tool's activate row (user, 2026-09-25:
+// property and value like every row — on while locku's block is in the
+// file, off while it is not — in place of a button, of the S and X
+// hotkeys before it, and of the `locku setup` command before those):
+// on writes the block into the file, and onto a running tmux server,
+// after a confirm; off takes it out. It says why it cannot when the
+// file is not set.
+func (m AppModel) activateAction() action {
 	name, t := m.tool()
-	a := action{key: "enter", label: "[Enter] Install", hint: "write locku's block into the file", run: (*AppModel).installTool}
+	a := action{key: "enter", label: "[Enter] Activate", hint: "write locku's block into the file", run: (*AppModel).activateTool}
 	if setup.Installed(t.Conf) {
-		a.label, a.hint, a.run = "[Enter] Uninstall", "take locku's block out of the file", (*AppModel).uninstallTool
+		a.label, a.hint, a.run = "[Enter] Deactivate", "take locku's block out of the file", (*AppModel).deactivateTool
 	}
 	if name == tools[toolTmux] {
 		a.hint += ", and a running server"
@@ -149,7 +147,7 @@ func (m AppModel) installAction() action {
 		a.hint += ", and LOCKPRG in the shell rc"
 	}
 	if t.Conf == "" {
-		a.disabled, a.hint = true, "set conf first: the file"
+		a.disabled, a.hint = true, "set the config file path first"
 	}
 	return a
 }
@@ -297,25 +295,27 @@ func (m *AppModel) deleteProfile() tea.Cmd {
 
 // ---- the tools (ux.md §A.1): the block written, or taken out.
 
-// installTool is Enter on Install: a confirm, then the block in. From
-// then on the rows above are live (syncTool), and the confirm says so.
-func (m *AppModel) installTool() tea.Cmd {
+// activateTool is Enter on activate while off: a confirm, then the
+// block in. From then on the rows are live (syncTool), and the confirm
+// says so.
+func (m *AppModel) activateTool() tea.Cmd {
 	name, t := m.tool()
 	then := "a running server takes it at once"
 	if name != tools[toolTmux] {
 		then = "LOCKPRG goes into the shell rc too"
 	}
-	return m.confirm.ask(confirmPopup{title: "Install " + name + " integration", accept: "install",
+	return m.confirm.ask(confirmPopup{title: "Activate " + name + " integration", accept: "activate",
 		lines:  []string{"Write locku's block into " + t.Conf + "?", then + "; from then on a change here is written at once"},
-		action: confirmInstallTool, ref: m.sideAt().ref}, m.layer())
+		action: confirmActivate, ref: m.sideAt().ref}, m.layer())
 }
 
-// uninstallTool is Enter on Uninstall: a confirm, then the block out.
-func (m *AppModel) uninstallTool() tea.Cmd {
+// deactivateTool is Enter on activate while on: a confirm, then the
+// block out.
+func (m *AppModel) deactivateTool() tea.Cmd {
 	name, t := m.tool()
-	return m.confirm.ask(confirmPopup{title: "Uninstall " + name + " integration", accept: "uninstall",
+	return m.confirm.ask(confirmPopup{title: "Deactivate " + name + " integration", accept: "deactivate",
 		lines:  []string{"Take locku's block out of " + t.Conf + "?", "the file is rewritten at once"},
-		action: confirmRemoveTool, ref: m.sideAt().ref}, m.layer())
+		action: confirmDeactivate, ref: m.sideAt().ref}, m.layer())
 }
 
 // install writes the tool's block as its rows say — for tmux onto a
@@ -345,14 +345,14 @@ func (m *AppModel) reported(out bytes.Buffer, err error) tea.Cmd {
 	return m.toast.show(said(out), toastInfo)
 }
 
-// syncTool is the other half of the button (user, 2026-09-25: install
+// syncTool is the other half of activate (user, 2026-09-25: turn it on
 // once, then what is set is what is in): a tool's row having changed
 // while locku's block is in the file — the file at oldConf, the one
 // before this change — the block is written again as the rows now say,
-// and for tmux applied to the running server, with no Install to press
+// and for tmux applied to the running server, with no activate to turn
 // again; a conf that moved takes the block out of the old file first,
 // and one cleared leaves it out. With the block not in, config.yaml
-// alone changed, and Install stays the user's to press.
+// alone changed, and activate stays the user's to turn.
 func (m *AppModel) syncTool(oldConf string) tea.Cmd {
 	if !setup.Installed(oldConf) {
 		return nil
@@ -560,7 +560,7 @@ func (m *AppModel) editPath() tea.Cmd {
 	if offer == "" {
 		offer = usualConf[name]
 	}
-	return m.input.ask(inputPopup{title: "path", prompt: "conf — the file " + name + "'s block goes into; Backspace then Enter to unset",
+	return m.input.ask(inputPopup{title: "path", prompt: "config file path — the file " + name + "'s block goes into; Backspace then Enter to unset",
 		placeholder: offer, accept: "save", action: inputPath}, m.layer())
 }
 
@@ -775,12 +775,12 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 		// The cursor stays among the profiles: the next one, or the new last.
 		m.cur1 = profileItem(min(c.ref, len(m.cfg.Profiles)-1))
 		m.cur2 = 0
-	case confirmInstallTool, confirmRemoveTool:
+	case confirmActivate, confirmDeactivate:
 		// The block into, or out of, the tool's file: nothing of
 		// config.yaml changes.
 		var out bytes.Buffer
 		var err error
-		if c.action == confirmInstallTool {
+		if c.action == confirmActivate {
 			err = m.install(&out)
 		} else {
 			_, t := m.tool()
