@@ -220,6 +220,7 @@ func TestSaveRoundTrip(t *testing.T) {
 	cfg.Profiles = append(cfg.Profiles, Profile{Name: "big", Saver: "clock", Time: "HH MM SS", Date: "YYYY-MM-DD"})
 	cfg.Profile = "big"
 	cfg.Tmux.BindKey = "C-l"
+	cfg.Screen.Bind = "^L"
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
 	}
@@ -245,6 +246,15 @@ func TestSaveRoundTrip(t *testing.T) {
 	}
 	if b, _ := os.ReadFile(p); back.Tmux.BindKey != "C-l" || !strings.Contains(string(b), "    bind-key: C-l\n") {
 		t.Errorf("tmux's bind-key: %q in\n%s", back.Tmux.BindKey, b)
+	}
+	// screen's key is under screen's own name for binding one, and stays
+	// where it is when the tool's file or idle time is stored.
+	if b, _ := os.ReadFile(p); back.Screen.Bind != "^L" || !strings.Contains(string(b), "    bind: ^L\n") {
+		t.Errorf("screen's bind: %q in\n%s", back.Screen.Bind, b)
+	}
+	back.SetTool("screen", Tool{Conf: "~/.screenrc", Idle: 45})
+	if back.Screen.Bind != "^L" || back.Screen.Conf != "~/.screenrc" || back.Screen.Idle != 45 {
+		t.Errorf("SetTool touched the bind: %+v", back.Screen)
 	}
 	if left, _ := filepath.Glob(filepath.Join(filepath.Dir(p), ".config.yaml.*")); len(left) != 0 {
 		t.Errorf("temp files left: %v", left)

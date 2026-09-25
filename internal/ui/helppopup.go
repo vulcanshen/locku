@@ -65,7 +65,7 @@ var helpKeys = []helpEntry{
 	{"S", "save its colour draft to config.yaml"},
 	{"R", "reset the draft to the saved colours"},
 	{"", "[2] tmux, screen"},
-	{"Enter", "on activate: on writes locku's block into the file (tmux: and onto a running server), after a confirm — and from then on a row changed is written at once; off takes it out"},
+	{"Enter", "on activate: on writes locku's block into the file (and onto a running tmux server, or running screens; screen: LOCKPRG into the shell rc too), after a confirm — and from then on a row changed is written at once; off takes it out"},
 	{"", "Navigate"},
 	{"j · k", "next / previous row"},
 	{"u · d", "half a page"},
@@ -102,6 +102,12 @@ func helpTool(name string) []helpEntry {
 	out = append(out, helpEntry{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"})
 	if name == tools[toolTmux] {
 		out = append(out, helpEntry{"bind-key", "the key after prefix that runs the lock, as tmux spells it — l, C-l, F12; empty binds none"})
+	} else {
+		// screen has its own key for the lock, and no server: the lock
+		// is LOCKPRG in the shell's environment, so it lives in the
+		// shell rc, not the screenrc (measured 2026-09-24).
+		out = append(out, helpEntry{"bind", "the key after C-a that runs the lock, as screen's bind spells it — l, ^L; empty binds none, and C-a x — screen's own key for it — locks anyway"})
+		out = append(out, helpEntry{"LOCKPRG", "the lock itself, locku by its absolute path: not a row, and not in this file — screen reads it from the environment of the shell that started it, so activate puts it into the shell rc, and a new shell has it; a screen already running takes idle and the key at once, but its lock is the shell's it was attached from until it is detached and attached again from a new shell"})
 	}
 	return out
 }

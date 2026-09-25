@@ -3,6 +3,7 @@ package ui
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -386,7 +387,7 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if m.cfg.Tmux.LockAfterTime != 45 || saved(t).Tmux.LockAfterTime != 45 || m.cfg.Screen.Idle != 300 {
 		t.Errorf("tmux idle %d, screen idle %d", m.cfg.Tmux.LockAfterTime, m.cfg.Screen.Idle)
 	}
-	// tmux alone has a bind-key: one key as tmux spells it, empty for
+	// tmux's bind-key: one key as tmux spells it, empty for
 	// none; two words are refused (user, 2026-09-25).
 	m = m.press("j", "enter")
 	if m.rowAt().kind != rowBindKey || m.input.title != "key" || m.input.value != "" {
@@ -413,10 +414,92 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if m.cfg.Screen.Conf != "~/.screenrc" || saved(t).Screen.Conf != "~/.screenrc" {
 		t.Errorf("screen conf %q", m.cfg.Screen.Conf)
 	}
+	// screen's rows are the tmux side's under screen's names (user,
+	// 2026-09-25): idle, then bind — the key after C-a, as screen spells
+	// it — and no lock to choose, since a screen is a process of its own.
+	var kinds []rowKind
 	for _, r := range m.rows() {
-		if r.kind == rowBindKey || r.kind == rowLock {
-			t.Errorf("screen has no key to bind and no lock to choose: %+v", r)
+		if r.stop || r.kind == rowRule {
+			kinds = append(kinds, r.kind)
 		}
+	}
+	if want := []rowKind{rowActivate, rowConf, rowRule, rowIdle, rowBindKey}; !slices.Equal(kinds, want) {
+		t.Errorf("screen's rows: %v, want %v", kinds, want)
+	}
+	if v := m.View(); !strings.Contains(v, " bind ") || !strings.Contains(v, " idle ") || strings.Contains(v, "bind-key") || strings.Contains(v, " lock ") {
+		t.Errorf("screen's rows are activate, config file path, a rule, idle, bind:\n%s", v)
+	}
+	m = m.press("j", "j", "enter")
+	if m.rowAt().kind != rowBindKey || m.input.title != "key" || m.input.value != "" || !strings.Contains(m.input.prompt, "bind — the key after C-a") || !strings.Contains(m.input.prompt, "C-a x locks anyway") {
+		t.Fatalf("bind box %+v, row %+v", m.input, m.rowAt())
+	}
+	m = m.typed("^ L").press("enter")
+	if m.input.suffix != " · one key, e.g. l or ^L" || m.cfg.Screen.Bind != "" {
+		t.Fatalf("two words: suffix %q, key %q", m.input.suffix, m.cfg.Screen.Bind)
+	}
+	m = m.press("ctrl+u").typed("^L").press("enter")
+	if m.cfg.Screen.Bind != "^L" || saved(t).Screen.Bind != "^L" || m.cfg.Tmux.BindKey != "" || !strings.Contains(m.View(), "^L") {
+		t.Errorf("bind %q, tmux's %q:\n%s", m.cfg.Screen.Bind, m.cfg.Tmux.BindKey, m.View())
+	}
+	m = m.press("enter", "ctrl+u", "enter")
+	if m.cfg.Screen.Bind != "" || saved(t).Screen.Bind != "" || !strings.Contains(m.View(), "none") {
+		t.Errorf("emptied: %q:\n%s", m.cfg.Screen.Bind, m.View())
+	}
+}
+
+// screen's activate is the tmux side's: the block into the screenrc,
+// LOCKPRG into the shell rc, and once it is on a row changed — the idle
+// time, the key — is written at once; off takes both out (user,
+// 2026-09-25). No screen on PATH: the files only.
+func TestActivateScreenFromTheScreen(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("SHELL", "/bin/sh")            // the shell rc is ~/.profile
+	m := newTestApp(t).press("G", "k", "2") // screen, [2]: activate
+	rc := filepath.Join(home, ".screenrc")
+	profile := filepath.Join(home, ".profile")
+	m = m.press("j", "enter", "ctrl+u").typed(rc).press("enter")
+	if m.cfg.Screen.Conf != rc || m.rowAt().kind != rowConf {
+		t.Fatalf("conf %q:\n%s", m.cfg.Screen.Conf, m.View())
+	}
+	// Off: the key is config.yaml's alone.
+	m = m.press("j", "j", "enter").typed("l").press("enter") // bind l
+	if _, err := os.ReadFile(rc); err == nil || saved(t).Screen.Bind != "l" {
+		t.Fatalf("while off the file must not exist: %v", err)
+	}
+	m = m.press("g", "g", "enter")
+	if !m.confirm.isInteractive() || m.confirm.action != confirmActivate || !strings.Contains(m.View(), "LOCKPRG") {
+		t.Fatalf("activate must confirm, and say where LOCKPRG goes:\n%s", m.View())
+	}
+	m = m.press("enter")
+	b, err := os.ReadFile(rc)
+	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "idle 300 lockscreen") || !strings.Contains(string(b), "bind l lockscreen") {
+		t.Fatalf("after activate: %v\n%s", err, b)
+	}
+	if p, err := os.ReadFile(profile); err != nil || !strings.Contains(string(p), "export LOCKPRG=") || !strings.Contains(string(p), "# locku") {
+		t.Fatalf("the shell rc: %v\n%s", err, p)
+	}
+	if !strings.Contains(m.toast.msg, "wrote") || m.rowAt().value != "on" {
+		t.Errorf("toast %q, row %+v", m.toast.msg, m.rowAt())
+	}
+	// On: the idle time changed is in the file at once, and so is the
+	// key emptied.
+	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("45").press("enter")
+	if b, _ := os.ReadFile(rc); !strings.Contains(string(b), "idle 45 lockscreen") || !strings.Contains(m.toast.msg, "wrote") {
+		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, b)
+	}
+	m = m.expireToast().press("j", "enter", "ctrl+u", "enter")
+	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "bind") || !strings.Contains(string(b), "idle 45 lockscreen") {
+		t.Errorf("key emptied while on:\n%s", b)
+	}
+	// Off: both files lose the block.
+	m = m.expireToast().press("g", "g", "enter", "enter")
+	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "locku") || m.rowAt().value != "off" {
+		t.Errorf("after deactivate:\n%s\n%s", b, m.View())
+	}
+	if p, _ := os.ReadFile(profile); strings.Contains(string(p), "LOCKPRG") {
+		t.Errorf("the shell rc after deactivate:\n%s", p)
 	}
 }
 
@@ -576,8 +659,8 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
-	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate")) != 0 || strings.Contains(v, "bind-key") {
-		t.Errorf("on [2], screen: no key to bind:\n%s", v)
+	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate", "bind", "C-a x", "LOCKPRG", "shell rc")) != 0 || strings.Contains(v, "bind-key") || strings.Contains(v, "lock-server") {
+		t.Errorf("on [2], screen: its glossary only, its key under screen's name, and where LOCKPRG lives:\n%s", v)
 	}
 	// Narrow: the PIN's line does not fit beside a 26-column key and is
 	// not cut — its end goes on under itself.

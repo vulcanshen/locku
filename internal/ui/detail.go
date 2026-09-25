@@ -16,9 +16,9 @@ import (
 // it is, which profiles are of it, and then its DEFAULTS — the same
 // fields and colours a profile has, which a profile made of it from now
 // on starts as, and which [p] previews; changing them changes no profile
-// already made (user, 2026-09-24). A tool — tmux, screen — is its file
-// and its idle time — tmux's the key after prefix that locks, too —
-// under locku's own two rows: activate, on while locku's block is in
+// already made (user, 2026-09-24). A tool — tmux, screen — is its file,
+// its idle time and the key after its prefix that locks — tmux's lock,
+// too — under locku's own two rows: activate, on while locku's block is in
 // the file and off while it is not, and the file's path; a rule parts
 // the two from the tool's own keys (user, 2026-09-25: property and
 // value throughout — the button, and the S and X hotkeys before it,
@@ -60,7 +60,7 @@ const (
 	rowWrongPINCooldown
 	rowConf     // a tool's file
 	rowIdle     // a tool's idle time, under the tool's own name for it
-	rowBindKey  // tmux's key after prefix that locks, or none
+	rowBindKey  // a tool's key after its prefix that locks, or none
 	rowActivate // locku's block in the tool's file: on, or off
 	rowRule     // the line between locku's rows and the tool's own
 	rowLock     // tmux's lock: lock-server, or lock-session
@@ -101,6 +101,15 @@ var usualConf = map[string]string{"tmux": "~/.tmux.conf", "screen": "~/.screenrc
 // as tmux does).
 var toolIdle = map[string]string{"tmux": "lock-after-time", "screen": "idle"}
 
+// toolBind is each tool's own name for binding a key: the row's label,
+// and the file's key (user, 2026-09-25: screen the tmux side's way,
+// under screen's names). toolPrefix is what the key comes after, for
+// the hints.
+var (
+	toolBind   = map[string]string{"tmux": "bind-key", "screen": "bind"}
+	toolPrefix = map[string]string{"tmux": "prefix", "screen": "C-a"}
+)
+
 // draftKey names whose colours a draft holds: a profile's, by name, or
 // a saver's defaults, by kind. The two namespaces never meet — a profile
 // may well be called clock.
@@ -130,6 +139,24 @@ func (m AppModel) subject() (p config.Profile, key draftKey, ok bool) {
 func (m AppModel) tool() (name string, t config.Tool) {
 	name = tools[m.sideAt().ref]
 	return name, m.cfg.Tool(name)
+}
+
+// bindOf is the key the tool called name binds to the lock — tmux's
+// bind-key, screen's bind — which a Tool does not carry; setBind stores
+// one.
+func (m AppModel) bindOf(name string) string {
+	if name == tools[toolScreen] {
+		return m.cfg.Screen.Bind
+	}
+	return m.cfg.Tmux.BindKey
+}
+
+func (m *AppModel) setBind(name, key string) {
+	if name == tools[toolScreen] {
+		m.cfg.Screen.Bind = key
+		return
+	}
+	m.cfg.Tmux.BindKey = key
 }
 
 // draftOf is p's colours as the sliders have them: the draft under key
@@ -295,16 +322,15 @@ func (m AppModel) rows() []row {
 			out = append(out, row{kind: rowLock, label: "lock", value: m.cfg.Tmux.Lock, color: value, stop: true})
 		}
 		out = append(out, row{kind: rowIdle, label: toolIdle[name], value: offOr(t.Idle), color: value, stop: true})
-		// tmux alone binds a key: the one after prefix that locks every
-		// client, as tmux spells it; none is none (user, 2026-09-25).
-		if name == tools[toolTmux] {
-			bind := row{kind: rowBindKey, label: "bind-key", value: m.cfg.Tmux.BindKey, color: value, stop: true}
-			if bind.value == "" {
-				bind.value = "none"
-			}
-			out = append(out, bind)
+		// Each binds a key, under its own name for it: tmux's bind-key,
+		// the one after prefix, as tmux spells it; screen's bind, the one
+		// after C-a, as screen spells it, on top of its own C-a x; none
+		// is none (user, 2026-09-25).
+		bind := row{kind: rowBindKey, label: toolBind[name], value: m.bindOf(name), color: value, stop: true}
+		if bind.value == "" {
+			bind.value = "none"
 		}
-		return out
+		return append(out, bind)
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {

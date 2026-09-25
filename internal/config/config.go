@@ -86,14 +86,19 @@ func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 // written into, as the user typed it — "~/…" allowed, empty is not set —
 // and the seconds the tool waits idle before it locks by itself, under
 // the tool's own name for that setting (user, 2026-09-25): tmux's
-// lock-after-time, screen's idle; 0 is never. tmux alone has a bind-key:
-// the key after prefix that locks — l, C-l, F12 — as tmux spells it;
-// empty binds nothing (user, 2026-09-25) — and a lock: which of tmux's
-// lock commands `locku`, and the bind-key, run. lock-server locks every
-// client on the server; lock-session the clients of this session alone,
-// the other sessions left as they are (user, 2026-09-25; the study in
-// .local/studies/lock.md: those two and not lock-client, whose mirror
-// on the next terminal stays lit).
+// lock-after-time, screen's idle; 0 is never. Each has a key that locks,
+// under the tool's own name for binding one — tmux's bind-key, the key
+// after prefix as tmux spells it (l, C-l, F12); screen's bind, the key
+// after C-a as screen spells it (l, ^L), on top of screen's own C-a x,
+// which locks anyway — and empty binds nothing (user, 2026-09-25; the
+// same day for screen: the tmux side's shape). tmux alone has a lock:
+// which of tmux's lock commands `locku`, and the bind-key, run.
+// lock-server locks every client on the server; lock-session the clients
+// of this session alone, the other sessions left as they are (user,
+// 2026-09-25; the study in .local/studies/lock.md: those two and not
+// lock-client, whose mirror on the next terminal stays lit). screen has
+// no such choice: each screen is a process of its own, and LOCKPRG is
+// the shell's — there is no server to scope a lock to.
 type Tmux struct {
 	Conf          string `yaml:"conf"`
 	LockAfterTime int    `yaml:"lock-after-time"`
@@ -113,10 +118,13 @@ var TmuxLocks = []string{LockServer, LockSession}
 type Screen struct {
 	Conf string `yaml:"conf"`
 	Idle int    `yaml:"idle"`
+	Bind string `yaml:"bind"`
 }
 
 // Tool is either tool's integration as the screen and setup take it:
-// the file, and the idle seconds, whatever the tool calls them.
+// the file, and the idle seconds, whatever the tool calls them. The key
+// each binds is not here: it is the tool's own, under the tool's own
+// name, and stays where it is when a Tool is stored.
 type Tool struct {
 	Conf string
 	Idle int
@@ -131,7 +139,7 @@ func (c Config) Tool(name string) Tool {
 }
 
 // SetTool stores t as the tool called name; what a Tool does not carry
-// — tmux's bind-key — stays as it is.
+// — tmux's bind-key and lock, screen's bind — stays as it is.
 func (c *Config) SetTool(name string, t Tool) {
 	if name == "screen" {
 		c.Screen.Conf, c.Screen.Idle = t.Conf, t.Idle
@@ -546,6 +554,7 @@ func (cfg Config) sanitized() (Config, string) {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
 	}
 	cfg.Tmux.BindKey = strings.TrimSpace(cfg.Tmux.BindKey)
+	cfg.Screen.Bind = strings.TrimSpace(cfg.Screen.Bind)
 	if cfg.Tmux.Lock != LockSession {
 		cfg.Tmux.Lock = LockServer
 	}
