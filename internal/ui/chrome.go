@@ -107,15 +107,12 @@ func chainW(chips []chip) int {
 
 // panelFrame frames body — every line already innerW cells — with a title
 // chain flush after the top border's first corner, as sshu seats its
-// capsule, a tag — what kind of thing the panel shows — flush before
-// its other corner, on its own (user, 2026-09-25: the kind is not part
-// of the title), and, for the unfocused rounded frame, a hint in the
-// bottom border. Focused frames carry no hint: the hint is the config's
-// path, a resting fact, and it lives on [2] whichever side has the
-// keys. A chain too wide for the border sheds its state chip; a tag
-// with no room beside it is left out, and so is a chain wider than the
-// border.
-func panelFrame(innerW int, body []string, title []chip, tag, hint string, focused bool) string {
+// capsule. A chain too wide for the border sheds its state chip, and
+// one still wider is left out. Nothing else sits on the border: the
+// kind of thing [2] shows was a capsule in the other corner for an
+// hour, and config.yaml's path sat in the bottom border from the first
+// build, until the user asked what either was for (2026-09-25).
+func panelFrame(innerW int, body []string, title []chip, focused bool) string {
 	bc := borderDim
 	tl, tr, bl, br, h, v := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -123,7 +120,6 @@ func panelFrame(innerW int, body []string, title []chip, tag, hint string, focus
 		tl, tr, bl, br, h, v = "╔", "╗", "╚", "╝", "═", "║"
 	}
 	bs := lipgloss.NewStyle().Foreground(bc)
-	hs := lipgloss.NewStyle().Foreground(dimColor)
 
 	out := make([]string, 0, len(body)+2)
 	titleW, top := 0, ""
@@ -134,28 +130,12 @@ func panelFrame(innerW int, body []string, title []chip, tag, hint string, focus
 		titleW = chainW(title)
 		top = titleChain(title, bc, focused)
 	}
-	tagW, right := 0, ""
-	if tag != "" && titleW+dispW(tag)+2+1 <= innerW {
-		tagW = dispW(tag) + 2
-		right = titleChain([]chip{{text: tag, border: true}}, bc, focused)
-	}
-	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW-tagW)))+right+bs.Render(tr))
+	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW))+tr))
 	side := bs.Render(v)
 	for _, l := range body {
 		out = append(out, side+l+strings.Repeat(" ", max(0, innerW-dispW(l)))+side)
 	}
-	// The hint sits right of centre on the bottom border, four cells of
-	// line after it, when there is room for it and some line before it.
-	bottom := strings.Repeat(h, innerW)
-	if hint != "" {
-		hint = truncate(hint, innerW-8)
-		if hw := dispW(hint); hw > 0 && hw+8 <= innerW {
-			bottom = strings.Repeat(h, innerW-hw-6) + " " + hs.Render(hint) + " " + strings.Repeat(h, 4)
-			out = append(out, bs.Render(bl)+bs.Render(strings.Repeat(h, innerW-hw-6))+" "+hs.Render(hint)+" "+bs.Render(strings.Repeat(h, 4)+br))
-			return strings.Join(out, "\n")
-		}
-	}
-	out = append(out, bs.Render(bl+bottom+br))
+	out = append(out, bs.Render(bl+strings.Repeat(h, innerW)+br))
 	return strings.Join(out, "\n")
 }
 

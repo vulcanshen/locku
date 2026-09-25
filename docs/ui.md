@@ -18,7 +18,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ### 1.1 設定畫面 grid
 
 ```
-╔[1] locku═════════════╗╭[2] clock  unsaved────────────────────profile╮
+╔[1] locku═════════════╗╭[2] clock  unsaved─────────────────────────────╮
 ║ Profiles               ║│ Property          Value                          │
 ║ ● clock                ║│ name              clock                          │
 ║   clock2               ║│ saver             clock                          │
@@ -34,7 +34,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ║                        ║│ fg                ■ #f2b753                      │
 ║                        ║│   R               ──────────●─ 242               │
 ║                        ║│   G               ────────●─── 183               │
-╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
+╚════════════════════════╝╰──────────────────────────────────────────────────╯
  space menu   ? help   tab/1-2 panels   q quit                                  ← footer
 ```
 
@@ -50,8 +50,8 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 是側欄唯一的綠色；它只顯示，設為啟用在 `preference › profile`。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明
-（唯讀）；在 profile 上就是那個 profile 的欄位與顏色；在 `preference` 上是一般設定的列。title 跟著換成膠囊（§5）：左上 `[2] clock`，右上角另一顆獨立的種類 `saver` / `profile` / `settings` / `integration`（2026-09-25 修訂，使用者：第二階層拉到右上角，不跟 title 串接）；profile / saver 的顏色草稿未存時
-左邊接一顆黃色 `unsaved`。
+（唯讀）；在 profile 上就是那個 profile 的欄位與顏色；在 `preference` 上是一般設定的列。title 跟著換成膠囊（§5）：`[2] clock`、`[2] clock`、`[2] preference`（2026-09-25 修訂：種類——profile / saver / integration / settings——先串在標題後、再搬到右上角一顆獨立膠囊、最後拿掉，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時
+接一顆黃色 `unsaved`。
 
 `[2]` 在 saver 上：先三列唯讀說明，再一列 dim 的 `defaults` 標題，然後是**這種 saver 的預設值**——跟 profile 一模一樣的欄位列與
 色票 / slider 列（沒有 name），同樣的 options popup、顏色草稿、`S` / `R`、` · unsaved`（2026-09-24 定案）。改預設值只影響之後
@@ -104,7 +104,7 @@ show_status `user@host and the time, on the lock's last row`、pin_prompt_timeou
 closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
 cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
-`[2]` 在 Integration 的 tmux / screen 上（2026-09-25），標題 `[2] tmux`、右上角 `integration`（同日第四版：中午起狀態曾放在標題膠囊、再曾是底部按鈕；使用者定案回歸 property / value）：
+`[2]` 在 Integration 的 tmux / screen 上（2026-09-25），標題 `[2] tmux`（同日第四版：中午起狀態曾放在標題膠囊、再曾是底部按鈕；使用者定案回歸 property / value）：
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
@@ -269,9 +269,9 @@ Blue 不出現在那裡。
 
 | 件 | 設定畫面 | 鎖定畫布 |
 |---|---|---|
-| Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：那個點佔三格，而且 locku 是家族裡唯一還畫純文字標題的，sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 左上角 `[2] <名字>`（邊框色底、深色字），顏色草稿未存時接一顆 `unsaved`（focus 時 Yellow，沒 focus 整條 Surface2）；右上角另一顆獨立的種類 `profile` / `saver` / `integration` / `settings`，邊框色（同日第三版，使用者：第二階層拉到右上角、不跟 title 串接；前一版串在左邊、灰色；tmux 的 installed / uninstalled 狀態改成 `[2]` 的 `activate` 列，標題不再放）；膠囊字緊貼圓頭 cap、不留空白（同 sshu / filu；使用者：圓角後多了一個空白），接縫兩側各一格、底色不同是左邊那顆的實心斜切、相同是 canvas 色細斜線；寬度不夠先丟 `unsaved`，種類擠不下就不畫 | 無 |
+| Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：那個點佔三格，而且 locku 是家族裡唯一還畫純文字標題的，sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 左上角 `[2] <名字>`（邊框色底、深色字），顏色草稿未存時接一顆 `unsaved`（focus 時 Yellow，沒 focus 整條 Surface2）（種類 `profile` / `saver` / `integration` / `settings` 先串在後面、再搬到右上角一顆獨立膠囊、最後拿掉——同日第三、四版，使用者：分類資訊多餘；tmux 的 installed / uninstalled 狀態改成 `[2]` 的 `activate` 列，標題不再放）；膠囊字緊貼圓頭 cap、不留空白（同 sshu / filu；使用者：圓角後多了一個空白），接縫兩側各一格、底色不同是左邊那顆的實心斜切、相同是 canvas 色細斜線；寬度不夠先丟 `unsaved` | 無 |
 | Panel tab bar | 無 | 無 |
-| Border hint | `[2]` 下框右側：config 路徑 | 無 |
+| Border hint | 無（2026-09-25 拿掉 `[2]` 下框右側的 config 路徑：第一版就有、不是家族慣例，使用者問它為什麼在那） | 無 |
 | footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |
 
 **Nerd Font 是設計、必裝**，與家族相同：畫布像素就是 nf-fa-square。字型在使用者本機的終端機模擬器，

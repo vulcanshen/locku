@@ -346,8 +346,9 @@ var sideChips = []chip{{text: "[1] locku", border: true}}
 // the panel and what it shows, in the border's colour, and, while a
 // colour draft differs, unsaved — lit yellow while the panel has the
 // keys (chipFill). What kind of thing it shows — profile, saver,
-// integration, settings — is not chained here: it is detailKind, a tag
-// of its own in the border's other corner (user, 2026-09-25).
+// integration, settings — is nowhere: it was a link of this chain,
+// then a capsule of its own in the border's other corner, and the user
+// found it told them nothing the sidebar's cursor did not (2026-09-25).
 func (m AppModel) detailChips() []chip {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver, sideProfile:
@@ -368,28 +369,13 @@ func (m AppModel) detailChips() []chip {
 	return []chip{{text: "[2] preference", border: true}}
 }
 
-// detailKind is the kind of thing [2] shows: the tag in the border's
-// right corner.
-func (m AppModel) detailKind() string {
-	switch m.sideAt().kind {
-	case sideSaver:
-		return "saver"
-	case sideProfile:
-		return "profile"
-	case sideTool:
-		return "integration"
-	}
-	return "settings"
-}
-
 // detailTitle is the same, in words, for the Space menu's own box.
 func (m AppModel) detailTitle() string {
-	chips := m.detailChips()
-	title := chips[0].text + " · " + m.detailKind()
-	for _, c := range chips[1:] {
-		title += " · " + c.text
+	var parts []string
+	for _, c := range m.detailChips() {
+		parts = append(parts, c.text)
 	}
-	return title
+	return strings.Join(parts, " · ")
 }
 
 // detailBody draws panel [2]'s rows at innerW × innerH.
