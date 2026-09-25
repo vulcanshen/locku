@@ -56,7 +56,7 @@ func TestDump(t *testing.T) {
 	}
 	show("board 120x40 k=2 21:05 as text", ascii(paint(faceTall, one([]string{"21 05"}, 2), 120, 39)))
 	show("board 200x60 k=1 the whole font", ascii(paint(faceTall, one([]string{"0123456789:-", "ABCDEFGHIJKLM", "NOPQRSTUVWXYZ"}, 1), 200, 59)))
-	d := saver.NewDino(5, saver.RunnerTRex, saver.SceneGrass)
+	d := saver.NewDino(5, saver.RunnerBig, saver.SceneGrass)
 	d.Draw(76, 31)
 	for i := 0; i < 60; i++ {
 		d.Step()
@@ -66,12 +66,12 @@ func TestDump(t *testing.T) {
 		d.Step()
 	}
 	show("dino 152x32 k=1 after 68 frames", ascii(paintScene(d.Draw(76, 31), 1, 152, 31)))
-	two := saver.NewDino(5, saver.RunnerTwoTRex, saver.SceneDesert)
+	two := saver.NewDino(5, saver.RunnerBigSmall, saver.SceneDesert)
 	two.Draw(76, 31)
 	for i := 0; i < 90; i++ {
 		two.Step()
 	}
-	show("two-trex in the desert, 152x32 after 90 frames", ascii(paintScene(two.Draw(76, 31), 1, 152, 31)))
+	show("big-small in the desert, 152x32 after 90 frames", ascii(paintScene(two.Draw(76, 31), 1, 152, 31)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }

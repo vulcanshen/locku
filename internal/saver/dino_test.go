@@ -78,39 +78,50 @@ func TestDinoNeverHitsAnything(t *testing.T) {
 	}
 }
 
-// Two runners stand one behind the other — the big one behind, the small
-// one in front — and jump on their own: over a long run they are in the
-// air at different times.
+// Two runners stand one behind the other in the order the name reads
+// — small-big is the small one behind, the big one in front — and
+// jump on their own: over a long run they are in the air at different
+// times.
 func TestTwoRunnersJumpOnTheirOwn(t *testing.T) {
-	d := NewDino(9, RunnerTwoTRex, SceneDesert)
-	d.Draw(76, 31)
-	if len(d.air) != 2 || d.runnerX(1) != d.runnerX(0)+d.runnerW(0)+runnerGap || d.runnerW(0) <= d.runnerW(1) {
-		t.Fatalf("runners at %d (%d wide) and %d (%d wide)", d.runnerX(0), d.runnerW(0), d.runnerX(1), d.runnerW(1))
-	}
-	apart, together := 0, 0
-	for i := 0; i < 6000; i++ {
-		d.Step()
-		a, b := d.air[0] >= 0, d.air[1] >= 0
-		switch {
-		case a != b:
-			apart++
-		case a && b:
-			together++
+	for _, c := range []struct {
+		name   string
+		w0, w1 int
+	}{
+		{RunnerBigBig, 12, 12},
+		{RunnerSmallSmall, 8, 8},
+		{RunnerSmallBig, 8, 12},
+		{RunnerBigSmall, 12, 8},
+	} {
+		d := NewDino(9, c.name, SceneDesert)
+		d.Draw(76, 31)
+		if len(d.air) != 2 || d.runnerX(1) != d.runnerX(0)+d.runnerW(0)+runnerGap || d.runnerW(0) != c.w0 || d.runnerW(1) != c.w1 {
+			t.Fatalf("%s: runners at %d (%d wide) and %d (%d wide)", c.name, d.runnerX(0), d.runnerW(0), d.runnerX(1), d.runnerW(1))
 		}
-	}
-	if apart == 0 || together == 0 {
-		t.Errorf("in the air apart %d frames, together %d: they must jump each on their own, and cross", apart, together)
+		apart, together := 0, 0
+		for i := 0; i < 6000; i++ {
+			d.Step()
+			a, b := d.air[0] >= 0, d.air[1] >= 0
+			switch {
+			case a != b:
+				apart++
+			case a && b:
+				together++
+			}
+		}
+		if apart == 0 || together == 0 {
+			t.Errorf("%s: in the air apart %d frames, together %d: they must jump each on their own, and cross", c.name, apart, together)
+		}
 	}
 }
 
 // Nothing runs before the first draw, and a run is its seed.
 func TestDinoIsItsSeed(t *testing.T) {
-	d := NewDino(7, RunnerTRex, SceneGrass)
+	d := NewDino(7, RunnerBig, SceneGrass)
 	d.Step()
 	if d.t != 0 {
 		t.Error("stepped before it was drawn")
 	}
-	a, b := NewDino(7, RunnerTRex, SceneGrass), NewDino(7, RunnerTRex, SceneGrass)
+	a, b := NewDino(7, RunnerBig, SceneGrass), NewDino(7, RunnerBig, SceneGrass)
 	a.Draw(76, 31)
 	b.Draw(76, 31)
 	for i := 0; i < 300; i++ {
@@ -120,7 +131,7 @@ func TestDinoIsItsSeed(t *testing.T) {
 	if !reflect.DeepEqual(a.Draw(76, 31), b.Draw(76, 31)) {
 		t.Error("two runs from one seed differ")
 	}
-	if reflect.DeepEqual(a.Draw(76, 31), NewDino(8, RunnerTRex, SceneGrass).Draw(76, 31)) {
+	if reflect.DeepEqual(a.Draw(76, 31), NewDino(8, RunnerBig, SceneGrass).Draw(76, 31)) {
 		t.Error("a different seed is the same run")
 	}
 	// A resize keeps the run going, the clouds back in the sky.
@@ -135,11 +146,30 @@ func TestDinoIsItsSeed(t *testing.T) {
 	}
 }
 
-// The art the names pick, and the shapes: an unknown name is the first
-// choice; the pyramids are stepped, widest at the ground.
+// The art the names pick, and the shapes: a runner's figures are the
+// name's, back to front, twelve wide for a big T-Rex and eight for a
+// small one; an unknown name is the first choice; the pyramids are
+// stepped, widest at the ground.
 func TestArtByName(t *testing.T) {
-	if runnerOf("nonsense").count() != 1 || runnerOf(RunnerTwoTRex).count() != 2 {
-		t.Error("runnerOf")
+	for _, c := range []struct {
+		name   string
+		widths []int
+	}{
+		{RunnerBig, []int{12}},
+		{RunnerSmall, []int{8}},
+		{RunnerBigBig, []int{12, 12}},
+		{RunnerSmallSmall, []int{8, 8}},
+		{RunnerSmallBig, []int{8, 12}},
+		{RunnerBigSmall, []int{12, 8}},
+		{"nonsense", []int{12}},
+	} {
+		var got []int
+		for _, f := range runnerOf(c.name).figures {
+			got = append(got, f.air.w())
+		}
+		if !reflect.DeepEqual(got, c.widths) {
+			t.Errorf("%s: figures %v wide, want %v", c.name, got, c.widths)
+		}
 	}
 	if sceneOf("nonsense").tuftEvery != grassland.tuftEvery || sceneOf(SceneDesert).obstacles[2].h() != 5 {
 		t.Error("sceneOf")

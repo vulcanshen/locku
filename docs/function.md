@@ -153,7 +153,7 @@ saver ───────────▶ prompt ── Enter 且正確 ──�
 | type | 參數 | 內容 | tick |
 |---|---|---|---|
 | clock | `layout` row / column；`size` small / medium / large；`font` 3x7 / 3x5；`time` `HH MM` / `HH MM SS`；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`，日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
-| dino（2026-09-24） | `runner` 跑者：`trex`（暴龍）、`two-trex`（兩隻暴龍一前一後，前面小的 8 × 10、後面大的 12 × 14，各自跳各自的）；`scene` 場景：`grassland`（草原，障礙物是仙人掌）、`desert`（沙漠，障礙物是金字塔，沙地斑點較疏）；`bg` / `fg` 兩個顏色。沒有 size（使用者：dino 也沒有 size 的選項），畫布自己取塞得下的最大倍率 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機（草原：仙人掌 1 / 2 / 3 株、高仙人掌；沙漠：金字塔小 / 中 / 大、小加中），間距隨機 44 到 100 px；兩隻跑者各自看自己前面的障礙物、各自在自己的視窗裡隨機起跳，後面那隻的步伐差半步；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，前面沒東西時偶爾也無故跳一下；雲以三分之一速度飄。不記分、不畫時間，畫面上只有場景（使用者 2026-09-24：dino 上面不需要計算時間和分數）。場景像素：跑者 12 × 14、跳躍弧 16 幀最高 8 px、每幀走 2 px，最小場景 40 × 25 | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
+| dino（2026-09-24） | `runner` 跑者（2026-09-25 修訂，六選一）：`big`（一隻大暴龍 12 × 14）、`small`（一隻小暴龍 8 × 10）、`big-big` / `small-small` / `small-big` / `big-small`（兩隻一前一後，名字就是畫面由左到右的順序——左邊在後、右邊在前，各自跳各自的）；舊值 `trex` / `two-trex` 讀成 `big` / `big-small`，下次存檔寫新名；`scene` 場景：`grassland`（草原，障礙物是仙人掌）、`desert`（沙漠，障礙物是金字塔，沙地斑點較疏）；`bg` / `fg` 兩個顏色。沒有 size（使用者：dino 也沒有 size 的選項），畫布自己取塞得下的最大倍率 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機（草原：仙人掌 1 / 2 / 3 株、高仙人掌；沙漠：金字塔小 / 中 / 大、小加中），間距隨機 44 到 100 px；兩隻跑者各自看自己前面的障礙物、各自在自己的視窗裡隨機起跳，後面那隻的步伐差半步；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，前面沒東西時偶爾也無故跳一下；雲以三分之一速度飄。不記分、不畫時間，畫面上只有場景（使用者 2026-09-24：dino 上面不需要計算時間和分數）。場景像素：跑者 12 × 14、跳躍弧 16 幀最高 8 px、每幀走 2 px，最小場景 40 × 25 | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
 
 修訂（2026-09-24，第四輪）：`font` 新增，3x7 之外多一套 3x5（同樣直角、同樣 3 格寬，只有 5 列高），使用者要試；原本「第二套 3 × 5 字型」是在 5 × 7 時代否決的，那時它會是第二種畫法，現在字形已經是七段式，5 列只是把直線縮短，兩套並列讓使用者比，決定後留一套或都留。
 
@@ -180,7 +180,7 @@ saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 
 | saver | 預設值 |
 |---|---|
 | clock | layout row、size large、font 3x5、time `HH MM SS`、date `YYYY-MM-DD`、bg `#313244`、fg `#f2b753` |
-| dino | runner trex、scene grassland、bg / fg 同上 |
+| dino | runner big、scene grassland、bg / fg 同上 |
 
 `[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`）。
 
@@ -305,7 +305,7 @@ profiles:
     fg: "#f2b753"          # 亮格，預設 splash gold
   - name: dino
     saver: dino           # dino 沒有 layout / size / font / time / date：畫布自己取最大倍率
-    runner: trex          # dino 才有：跑者，trex / two-trex
+    runner: big           # dino 才有：跑者，big / small / big-big / small-small / small-big / big-small（舊值 trex / two-trex 自動轉）
     scene: grassland      # dino 才有：場景，grassland / desert
     bg: "#313244"
     fg: "#f2b753"
@@ -321,7 +321,7 @@ savers:                # 每種 saver 的預設值：之後新增的 profile 長
     fg: "#f2b753"
   dino:
     saver: dino
-    runner: trex
+    runner: big
     scene: grassland
     bg: "#313244"
     fg: "#f2b753"
@@ -420,9 +420,9 @@ export LOCKPRG=/usr/local/bin/locku   # 絕對路徑，不能帶參數
 23. （2026-09-24 修訂）側欄 profile 的 item operation：`[Enter] Edit`、`[p] Preview`（預覽那一個 profile）、`[D]uplicate`、`[r]ename`、`[X] Delete`，D / X 大寫對齊 sshu；saver 的是 `[Enter] Edit`（看說明）、`[n] New`。
 24. （2026-09-24 修訂）`[2]` 在 profile 上的 panel operation：`[P] Preview`（預覽正在編輯的這個 profile，帶草稿）、`[S] Save`、`[R] Reset`。全域 `P` 在 profile 的 `[2]` 上就是這個 profile，其他地方是啟用中的。
 25. （2026-09-24）`tmux_conf` / `screen_conf`（2026-09-25 起是 Integration › tmux / screen 的 `conf`）是 locku 唯二的自由輸入，用 webu 的 input 作法：提議（目前值，沒有就是慣例路徑）dim 顯示，Tab 接手、Backspace 拒絕、Enter 照打的存、沒碰提議不改；只收絕對路徑或 `~/` 開頭。
-26. （2026-09-24）第二種 saver `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死、不記分；參數 `runner`（trex、two-trex：兩隻一前一後、前小後大、各自跳）、`scene`（grassland 仙人掌、desert 金字塔）、bg / fg，沒有 size（畫布取塞得下的最大倍率）。每 70 ms 一幀整張換，不做 reveal。
+26. （2026-09-24）第二種 saver `dino`：Chrome 小恐龍遊戲當螢幕保護，無限循環、隨機障礙、隨機跳躍、不會死、不記分；參數 `runner`（trex、two-trex：兩隻一前一後、前小後大、各自跳）、`scene`（grassland 仙人掌、desert 金字塔）、bg / fg，沒有 size（畫布取塞得下的最大倍率）。每 70 ms 一幀整張換，不做 reveal。（2026-09-25 修訂）使用者要 runner 六選一：`big`、`small`（一隻大或小暴龍）、`big-big`、`small-small`、`small-big`、`big-small`（兩隻一前一後，名字就是畫面由左到右的順序——左邊在後、右邊在前；`big-small` 就是原本的 `two-trex`），預設 `big`；舊 config 的 `trex` / `two-trex` 讀進來就是 `big` / `big-small`，下次存檔只寫新名。
 27. （2026-09-24，使用者定案）側欄分三個區塊，順序 Profiles → Savers → Settings：**Profiles** 是 object（使用者設定好的、有名字的 saver 實例），new / duplicate / rename / delete 都在這裡；**Savers** 是 class（clock、dino），沒有名字、不能增刪，`[2]` 是說明加預設值，動作 `[n] New`、`[p] Preview`；**Settings › preference**。
-28. （2026-09-24，使用者定案）每種 saver 有一組預設值存在 config 的 `savers`，欄位同它的 profile；只影響之後新增的 profile，不動既有的；`[p]` 在 saver 上用預設值預覽。內建：clock 是 row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`，dino 是 trex / grassland，顏色同 splash。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
+28. （2026-09-24，使用者定案）每種 saver 有一組預設值存在 config 的 `savers`，欄位同它的 profile；只影響之後新增的 profile，不動既有的；`[p]` 在 saver 上用預設值預覽。內建：clock 是 row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`，dino 是 trex（2026-09-25 起 big）/ grassland，顏色同 splash。名字取 profile（iTerm / VS Code 的「一組有名字的設定」），不用 config（跟檔案和 preference 撞）。config key 對應改名：`profile` / `profiles` / 每個 profile 的 `saver`，舊 key 自動轉。profile 的 saver 建立後不改。開啟時 cursor 停在啟用中的 profile。
 32. （2026-09-25，使用者定案）側欄多第三個區塊 **Integration**（順序 Profiles → Savers → Integration → Settings），`tmux` 與 `screen` 各一項：原 preference 的 `tmux_conf` / `screen_conf` 搬來當各自的 `conf`，`idle_lock` 不再共用、各工具一份；`[2]` 就是 `conf` + 閒置鎖 + 唯讀的 `status`（installed / not installed；同日修訂：原本多一列 tool 名稱、status 叫 block，使用者看不懂）；`[S] Setup` / `[X] Remove` 取代 CLI `locku setup [-d]`，指令拿掉。preference 每列下面的說明列拿掉，說明搬到 `?` help：focus 在 preference 的 `[2]` 時 `?` **只有**這些說明、自動換行，沒有鍵；tmux / screen 的 `[2]` 同理只有它們的；`[1]` 與 profile / saver 的 `[2]` 上 `?` 是鍵（同日修訂兩次：先是說明段跟著 cursor 附在鍵後面，使用者說要「只有」說明、而且要 wrap）。config 的 `tmux_conf` / `screen_conf` / `idle_lock` 自動轉成 `tmux: {conf, lock-after-time}` / `screen: {conf, idle}`——閒置鎖用工具自己的設定名稱（同日第三次修訂，使用者：tmux 就用 tmux 的 `lock-after-time`；早上寫出的 `tmux.idle_lock` / `screen.idle_lock` 也自動轉）。每個 `[2]` 第一列是表頭 `Property` / `Value`（同日，使用者：所有 panel 2 都給標題列；再同日改成單數 Property）。tmux 的 `[2]` 再多一列 `bind-key`（同日，使用者：prefix shortcut，跳輸入框，有值就幫使用者加 tmux 熱鍵、空就拿掉）：列名與 config key `tmux.bind-key` 都用 tmux 自己的指令名；Enter 開 input 框，有值就多寫 `bind-key <鍵> lock-server` 並即時 bind，空字串就那行不寫、server 上 unbind；Uninstall 一併 unbind。
 33. （2026-09-25，使用者定案）整合的寫入全在 TUI，使用者不用再跑去 CLI：`[2]` 表頭下第一列 **`activate`（on / off）** 就是區塊在不在檔案裡，Enter → confirm → 執行（取代同日早上的 `[S]` / `[X]` 熱鍵——畫面上看不到、使用者無法直觀知道——與下午底部的 Install / Uninstall 按鈕——風格不對，回歸 property / value）；第二列 `config file path`（原 `conf`）；一條分隔線區隔 locku 的設定與工具自己的 key（閒置鎖、bind-key）。**開一次，之後隨設即得**——on 時任何一列改動直接重寫區塊並套到 server，路徑改了就搬區塊、清空就拿掉；off 只寫 config.yaml。兩個純方案都否決：純隨設即得（conf 打錯就生檔、Remove 只能等於清 conf、不能先填好再裝）、純按鈕（改了值檔案 stale）。`status` 列拿掉，狀態就是 `activate` 的值（下午曾放在標題膠囊尾巴，`installed` 綠 / `uninstalled` 灰）。標題改成家族的 **powerline 膠囊**（sshu `panelChip`、filu `singleChip`、webu `tabChain`；locku 是唯一還畫純文字標題的成員）：左上 `[2] <名字>` 邊框色，顏色草稿未存時接一顆 `unsaved`（focus 時黃、沒 focus 整條灰）；種類 `profile` / `saver` / `integration` / `settings` 先串在標題後（灰）、再搬到右上角一顆獨立膠囊、最後整個拿掉（同日第三、四版，使用者：第二階層拉到右上角、不跟 title 串接；再說很多餘，不需要分類資訊）；`[2]` 下框右側的 config 路徑同時拿掉（使用者問它為什麼在那；第一版就有、不是家族慣例、沒人需要）；膠囊字緊貼圓頭 cap、不留空白（使用者：圓角後多了一個空白），接縫兩側各一格；`[1] locku` 一顆。同日：**preview 不驗 PIN**，任意鍵就回設定畫面，PIN 是 `locku lock` 的事；狀態列仍照真的鎖顯示。
 

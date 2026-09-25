@@ -201,7 +201,7 @@ func TestDinoLockRunsFrameByFrame(t *testing.T) {
 	if m.game == nil {
 		t.Fatal("a dino saver must run the game")
 	}
-	m.game = saver.NewDino(7, saver.RunnerTRex, saver.SceneGrass)
+	m.game = saver.NewDino(7, saver.RunnerBig, saver.SceneGrass)
 	m, _ = m.step(tea.WindowSizeMsg{Width: 152, Height: 32})
 	if m.shown.w != 76 || m.shown.h != 31 || m.shown.count() == 0 {
 		t.Fatalf("board %dx%d, %d lit", m.shown.w, m.shown.h, m.shown.count())

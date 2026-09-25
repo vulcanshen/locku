@@ -45,7 +45,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 2 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "trex" {
+	if len(cfg.Savers) != 2 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -134,7 +134,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "trex" || cfg.Profiles[1].Saver != "clock" {
+	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "big" || cfg.Profiles[1].Saver != "clock" {
 		t.Errorf("%+v", cfg)
 	}
 	if cfg.PINPromptTimeout != 5 || cfg.WrongPINAttempts != 3 || cfg.WrongPINCooldown != 9 {
@@ -169,6 +169,27 @@ func TestAToolsIdleLockIsCarriedOver(t *testing.T) {
 	cfg, note := LoadFile(write(t, "tmux:\n  conf: ~/.tmux.conf\n  idle_lock: 45\nscreen:\n  idle_lock: 0\n"))
 	if note != "" || cfg.Tmux.Conf != "~/.tmux.conf" || cfg.Tmux.LockAfterTime != 45 || cfg.Screen.Idle != 0 {
 		t.Errorf("note %q, tmux %+v, screen %+v", note, cfg.Tmux, cfg.Screen)
+	}
+}
+
+// The runner names before 2026-09-25 — trex, two-trex — are read as
+// big and big-small, in a profile and in the dino's defaults alike,
+// and the next save writes only the new names.
+func TestOldRunnerNamesAreCarriedOver(t *testing.T) {
+	p := write(t, "profile: one\nprofiles:\n  - name: one\n    saver: dino\n    runner: trex\n  - name: two\n    saver: dino\n    runner: two-trex\nsavers:\n  dino:\n    runner: two-trex\n")
+	cfg, note := LoadFile(p)
+	if note != "" {
+		t.Errorf("note %q", note)
+	}
+	if cfg.Profiles[0].Runner != "big" || cfg.Profiles[1].Runner != "big-small" || cfg.Saver("dino").Runner != "big-small" {
+		t.Errorf("profiles %+v, dino defaults %+v", cfg.Profiles, cfg.Saver("dino"))
+	}
+	if err := SaveFile(p, cfg); err != nil {
+		t.Fatal(err)
+	}
+	body, _ := os.ReadFile(p)
+	if s := string(body); strings.Contains(s, "trex") || !strings.Contains(s, "runner: big\n") || !strings.Contains(s, "runner: big-small\n") {
+		t.Errorf("saved with the old names:\n%s", s)
 	}
 }
 

@@ -283,6 +283,15 @@ var renamed = map[string]string{
 	"lockout_seconds": "wrong_pin_attempt_cooldown",
 }
 
+// renamedRunner is every runner name that changed on 2026-09-25, when
+// the two became six named for their figures, and what it is now: a
+// profile — or the dino's defaults — with the old one is read as if it
+// had the new, and the next save writes only that.
+var renamedRunner = map[string]string{
+	"trex":     saver.RunnerBig,
+	"two-trex": saver.RunnerBigSmall,
+}
+
 // nested is every old top-level key that moved under a tool's mapping on
 // 2026-09-25 — tmux_conf into tmux: {conf: …} — and where; the one idle
 // time became each tool's own.
@@ -397,15 +406,18 @@ func dropKey(m *yaml.Node, key string) {
 
 // tidy brings a profile — or a saver's defaults — of the saver kind to
 // something the rest of locku can rely on: the kind's absent keys are
-// its built-in defaults, the other kind's keys are not its business and
-// go, and a colour that is not "#rrggbb" is quietly its default (ui.md
-// §1.1).
+// its built-in defaults, a runner under its old name is under the new,
+// the other kind's keys are not its business and go, and a colour that
+// is not "#rrggbb" is quietly its default (ui.md §1.1).
 func tidy(p Profile, kind string) Profile {
 	p.Saver = kind
 	d := NewProfile(p.Name, kind)
 	if kind == saver.KindDino {
 		if p.Runner == "" {
 			p.Runner = d.Runner
+		}
+		if r, ok := renamedRunner[p.Runner]; ok {
+			p.Runner = r
 		}
 		if p.Scene == "" {
 			p.Scene = d.Scene
