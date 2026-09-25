@@ -8,66 +8,99 @@
 
 **Language**: English · [繁體中文](README-zh_TW.md)
 
-A screensaver with a PIN lock for the terminal. The fifth member of the `u`-family (kbu / filu / sshu / webu / locku), built to [VTP](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md), the family's TUI design principle; the icon is the family's block-letter mark, [`docs/icon.svg`](docs/icon.svg).
+**A screensaver with a PIN lock, for the terminal.** locku takes the whole terminal: an LED dot-matrix board spelling the clock, Chrome's offline dinosaur running for ever, or a program of your own. Any key only opens the PIN prompt, and the terminal comes back once the PIN checks out. Wired into tmux as its `lock-command` and into screen as its `LOCKPRG`, or run by hand on a bare tty, so a key after the prefix, or a few idle minutes, locks the screen you walked away from. Without a PIN it is a plain screensaver: any key ends it.
 
-Run as tmux's `lock-command`, as screen's `LOCKPRG`, or straight on a bare tty: tmux / screen hand it the real tty,
-and it fills the whole screen as an LED dot-matrix board drawing the clock, runs the dinosaur, or runs a program of your own; any key only brings up the PIN prompt, and the tty is handed back once the PIN checks out.
-With no PIN set it is a plain screensaver: any key unlocks.
+> _When in doubt, hit_ **`Space`**.
 
-> The design was settled on 2026-09-24 and the first version built the same day; 2026-09-25 added Integration's `activate`, the dino and custom savers and `locku pin reset`, and the docs were rewritten to match the code the same day.
-> The unit tests (`make check`, with the race detector) and the three pty end-to-end suites (tmux / custom / screen) all pass. v0.1.0 was released on 2026-09-25: the GitHub Release carries the tarballs for four platforms and their checksums, and the brew formula is in vulcanshen/homebrew-tap.
+locku is the fifth member of the `u`-family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (browser) — and a lock-screen implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md). The design, every decision dated in place and the rejected approaches with it, is in [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md) and [`docs/ux.md`](docs/ux.md); the developer's notes — the decisions in short, what was rejected, the layout of the code, the tests, the release flow — in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
-**Platform**: macOS and Linux (WSL works). Windows is not supported: the lock stands on the tty, the pty, `su` and tmux / screen; a native port is another product (2026-09-25, the user's call).
+## What you see
 
-## Four commands
+Three kinds of saver, as many named profiles of each as you like, one of them active:
 
-| Command | Does |
-|---|---|
-| `locku` | The settings TUI: three savers (clock, dino, custom), each with as many named profiles as you like, every profile's settings and bg / fg colours (custom has only `command`, no colours); preference's PIN, the active profile, show_status, pin_prompt_timeout, wrong_pin_attempts / wrong_pin_attempt_cooldown; Integration's tmux / screen (below). Every change is written to the file at once, except the colours, which are a draft (`S` saves, `R` drops). `P` on `[2]` previews in place (any key comes back; no PIN asked) |
-| `locku lock` | Locks the current tty. tmux, screen and a bare tty all call this. `-S <socket>` / `-t <session>` are what the tmux integration writes into lock-command; you never type them |
-| `locku pin reset` | The way back from a forgotten PIN, below |
-| `locku version` | The version (`locku help` prints the usage) |
+- **clock** — the terminal as one LED board: every pixel a Nerd Font square, dark in the profile's `bg`, lit in its `fg`. The time is drawn in a right-angled 3 × 7 pixel font (or 3 × 5), the look of a seven-segment display, as `HH MM` or `HH MM SS`, twenty-four hours, no colon; the date under it in one of four forms, or off. The `column` layout stacks `HH` / `MM` / `SS` and makes the digits several times bigger, the date to their left. Three sizes; what does not fit sheds the year, the seconds, then the date, before the size steps down. Only the pixels that change are redrawn, as a shuffled reveal.
+- **dino** — Chrome's offline dinosaur game as a screensaver: the ground and the obstacles scroll by, cacti on the grassland or pyramids in the desert, and the T-Rex jumps them by itself, for ever, never dying; no score, no clock. One runner or two, big or small, drawn as large as the terminal allows.
+- **custom** — a program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
 
-When argv[0] is `SCREEN-LOCK` it counts as `locku lock`, because screen's LOCKPRG is an execl and takes no arguments.
+The terminal each clock size needs (columns × rows, `3x7` / `3x5`):
 
-## Forgot the PIN
-
-Run `locku pin reset` from any shell of your own: it asks `[y/N]`, then your **login password** (the account is the one boundary; a static binary has no PAM, so the password is checked with `su` on a pty), and only past both does it make a new eight-digit PIN, write its bcrypt over the config's `pin_hash` and show it once. The PIN is never emptied and no lock is left open; change it to one of your own on the settings screen afterwards. A lock already up re-reads `pin_hash` at every key, so the next key knows the new PIN and the old one stops working; a broken file keeps the hash the lock started with, and an emptied `pin_hash` counts as no PIN. Every reset, done or refused for a wrong password, is logged in `~/.locku/data/pin-resets.log` (`$LOCKU_DATA` moves it), without the PIN. It does not run without a terminal, nor when the config cannot be read. Anyone who can do this could kill the lock anyway: locku is not a security boundary, the account is.
+| Content | small | medium | large |
+|---|---|---|---|
+| `HH MM` on one line | 38 × 10 / 8 | 62 × 17 / 13 | 96 × 24 / 18 |
+| `HH MM SS` on one line | 58 × 10 / 8 | 94 × 17 / 13 | 148 × 24 / 18 |
+| `HH` / `MM` stacked | 18 × 18 / 14 | 30 × 32 / 24 | 44 × 47 / 35 |
+| `HH` / `MM` / `SS` stacked | 18 × 26 / 20 | 30 × 47 / 35 | 44 × 70 / 52 |
 
 ## Install
+
+> locku is **macOS / Linux only** (WSL works). There is no Windows build: the lock stands on the tty, the pty, `su` and tmux / screen.
+
+**Homebrew** (macOS / Linux):
+
+```bash
+brew install vulcanshen/tap/locku
+```
+
+**Install script** (the latest release binary into `~/.local/bin`, or `/usr/local/bin` as root):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
+```
+
+**From source**:
 
 ```bash
 git clone https://github.com/vulcanshen/locku.git
 cd locku
 make build      # → ./locku (CGO_ENABLED=0, static)
-./locku         # Integration › tmux / screen: fill in config file path, turn activate on to write the integration; set a PIN (optional: with none it is a plain screensaver)
-./locku lock    # lock right now
+make install    # → $GOBIN
 ```
 
-Or without the source:
+**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes.
+
+### Uninstall
 
 ```bash
-brew install vulcanshen/tap/locku
-# or
-curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/uninstall.sh | sh
 ```
 
-**A Nerd Font is required**: every pixel of the board is nf-fa-square.
+Removes the binary, then asks — never assumes — about the settings directory. Turn `activate` off on the settings screen first, and locku's blocks are gone from your tmux.conf, screenrc and shell rc; the uninstaller does not touch those files.
+
+## Quick start
+
+```bash
+locku            # the settings screen: set a PIN, pick a saver, wire up tmux / screen
+locku lock       # lock this terminal now
+locku pin reset  # a new PIN, after your login password, when the old one is forgotten
+locku version    # the version; locku help prints the usage
+```
+
+1. `locku`, then **Settings › preference**, `Enter` on the PIN row, type one. This step is optional: with no PIN locku is a screensaver, and any key ends it.
+2. **Integration › tmux** (or **screen**): fill in `config file path` (`~/.tmux.conf` is offered), turn `activate` on, confirm. locku's block is in the file, and on the running tmux server at once.
+3. In tmux, `prefix :` then `locku` locks every client on the server. An idle session locks by itself after `lock-after-time` seconds (300 by default). Fill in a `bind-key`, `l` say, and `prefix l` locks too.
+4. Any key brings up the PIN prompt; the right PIN gives the terminal back.
+
+`locku lock` on a bare tty — an ssh session, say — locks that terminal the same way. Its `-S` / `-t` flags are what the tmux integration writes into lock-command; you never type them. screen runs the lock as `SCREEN-LOCK` with no arguments at all, and locku answers to that name.
 
 ## The lock screen
 
-Any key opens the PIN prompt, and that key does not count as input; `Enter` submits, `Esc` goes back to the saver, `Backspace` deletes one digit.
-A wrong PIN turns the border red for a second and swallows every key; `wrong_pin_attempts` wrong in a row start a `wrong_pin_attempt_cooldown`-second countdown;
-`pin_prompt_timeout` seconds without a key close the prompt. Locking after idle is tmux's `lock-after-time` and screen's `idle` (one each, written as they are while activate is on and rewritten on a change; default 300, 0 off). The status row reads `user@host · locked since HH:MM`, and says `no PIN · any key unlocks` when there is none.
+- Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` deletes a digit.
+- A wrong PIN turns the border red for a second and swallows every key. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
+- The status row reads `user@host · locked since HH:MM` (`show_status: false` hides it), and says `no PIN · any key unlocks` when there is none.
+- Ctrl+C, Ctrl+Z and Ctrl+\ are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock comes back up. The process ends in three cases only: the right PIN, any key with no PIN set, the terminal going away.
+- No PIN set, or a config file that cannot be read, fails open: the saver shows, the status row says why, any key ends it.
 
-Ctrl+C, Ctrl+Z and Ctrl+\ are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock screen comes back up.
-The process ends in three cases only: the right PIN, any key in the no-PIN mode, the tty going away.
+**Not a security boundary.** locku keeps stray keys and passers-by off your screen; it does not keep out another session of your own account. What it cannot catch: ssh's `~.` (handled on the client side, the byte never crosses the wire), Linux VT switching (vlock's territory, needs root), `tmux attach -d` / `kill -9` from another SSH session, and the terminal emulator's own shortcuts.
 
-What it cannot catch (not a security boundary; `docs/function.md` §0.1, §2.3): ssh's `~.`, Linux VT switching, `tmux attach -d` / `kill -9` from another SSH session, the terminal emulator's own shortcuts.
+## Forgot the PIN
 
-## Your own program as the saver (custom)
+From any shell of your own:
 
-Pick custom for a profile and give it a `command` (run through `sh -c`, `cmatrix -b` say); locku does the lock, the PIN and the integration. The program runs on a pty locku opens, in a process group of its own, its output passed to the terminal as it comes, and the keys stay with locku; locku does not restart it or read its picture, and unlocking SIGKILLs the whole group. A key puts the PIN box straight over the moving picture: after every chunk the program writes, the box is painted again behind it, inside one synchronised update, and no frame is dropped; Esc or the timeout blanks the box's place and the picture goes on, and only a program that has sat still for half a second is asked to repaint. A program that ends (it should not) does not end the lock: locku's own board writes `EXIT <code>` as it is (`EXIT` in gold, the number green for 0 and peach for the rest; killed by a signal is 128 + its number; no command, or one that could not start, is a red `NONE`), and the status row says why in red. custom has no bg / fg: the picture is the program's. The command is not sanitised in any way: it is your own command on your own machine. The preview from the settings screen hands the whole terminal to the program; any key comes back.
+```bash
+locku pin reset
+```
+
+It asks `[y/N]`, then your **login password** — your account is the one boundary locku has — and makes a new eight-digit PIN, writes it over the old one and shows it once. A lock already up takes the new PIN at its next key. Change it to one of your own on the settings screen afterwards. Every reset, done or refused, is logged under `~/.locku/data`, without the PIN.
 
 ## The settings screen
 
@@ -89,94 +122,187 @@ Pick custom for a profile and give it a `command` (run through `sh -c`, `cmatrix
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
-**Profiles** are the savers you have set up and named (objects): new / duplicate / rename / delete live here, `●` marks the active one, and `a` makes the one under the cursor active (2026-09-25).
-**Savers** are the kinds (classes): clock, dino, custom, unnamed and fixed in number; their `[2]` is a description plus the **defaults**, which is how a profile made from that saver starts out afterwards,
-and changing them touches no existing profile; `n` on one makes a profile of it, `p` previews the defaults. The built-in defaults: clock is row / large / 3x5 / `HH MM SS` / `YYYY-MM-DD`, dino is big / grassland, custom's command is empty.
+Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a float; `Space` lists what can be done here; `?` is the whole key vocabulary, or, on preference's, tmux's or screen's `[2]`, what each row means.
 
-`Tab` / `1` / `2` switch panels, `Enter` goes into `[2]` or edits, `Esc` closes a float, `Space` lists what can be done here, `?` the global actions.
-A saver in `[1]`: `n` new profile, `p` preview the defaults; a profile in `[1]`: `p` preview this profile, `a` activate it, `D` duplicate, `r` rename, `X` delete; on a profile's or saver's `[2]`: `P` preview, `S` save the colour draft, `R` drop it (custom has only `P`);
-the PIN row of preference's `[2]`: with a PIN set, Enter checks the current one first, then offers `New PIN` or `Remove PIN` (Remove takes effect at once). Which profile is active is chosen at preference › profile, or with `a` on the profile's row in the sidebar; `●` marks it. `P` previews only on `[2]` (a profile's or saver's `[2]` shows that one, any other the active one; on `[1]` it does nothing, `p` is the row under the cursor), `q` quits.
-**Integration**'s tmux / screen `[2]` is `activate` (on / off), `config file path` (the file to write), a rule, then the tool's own keys: tmux's `lock` (`lock-server` for the whole server, or `lock-session` for this session only), the idle lock under the tool's own name, `lock-after-time` for tmux and `idle` for screen, tmux's `bind-key` (the key after the prefix that locks, in tmux's spelling, `l`, `C-l`, written as `bind-key <key> <lock>`) and screen's `bind` (the key after C-a that locks, in screen's spelling, `l`, `^L`, written as `bind <key> lockscreen`; `C-a x` locks anyway, built in), and an empty one binds nothing; screen has no `lock`, having no server to scope. `activate` is whether the block is in the file, written after a confirm on Enter; while it is on, changing any row rewrites the block at once, a running tmux server gets the whole block by `source-file` and screen's running sessions get it by `screen -X` at once; turning it off takes the block out. Only the `# >>> locku >>>` … `# <<< locku <<<` block is ever touched, every line of it ending in `# locku`, idempotently; with no path filled in the row cannot be pressed, and nothing is guessed. The first row of every `[2]` is the `Property` / `Value` header; the title is the family's powerline capsule: `[2]` the name (with `unsaved` after it while a draft is unsaved), `[1] locku`. `config file path` is one of the only two free-text inputs, in the manner webu proposed: the box shows the current value dimmed (or `~/.tmux.conf` / `~/.screenrc` when there is none), `Tab` takes it over for editing, `Backspace` refuses it, and Enter untouched changes nothing. What each setting means: `?` with the focus on preference's or tmux's / screen's `[2]` lists only that panel's settings (wrapped); anywhere else `?` is the keys.
+- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; dino's `runner`, `scene`; custom's `command`; and `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
+- **Savers** — the three kinds: clock, dino, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
+- **Integration** — tmux and screen, below.
+- **Settings › preference** — the PIN (set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
+
+`P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
+
+## tmux and screen
+
+Integration › tmux and Integration › screen each have `activate` (on / off), `config file path` (the file to write; `~/.tmux.conf` and `~/.screenrc` are offered) and, under a rule, the tool's own keys:
+
+| | tmux | screen |
+|---|---|---|
+| Idle seconds before the tool locks by itself (0 never) | `lock-after-time` | `idle` |
+| The key after the prefix that locks, in the tool's own spelling; empty binds nothing | `bind-key` (`l`, `C-l`) | `bind` (`l`, `^L`); `C-a x` locks anyway |
+| What locks | `lock`: `lock-server` (every client on the server) or `lock-session` (this session only) | — (a screen has no server to scope) |
+
+`activate` on writes locku's block into the file, after a confirm, and while it is on rewrites it the moment any row changes: a running tmux server takes the whole block at once, and running screens take `idle` and `bind` at once. Off takes the block out again, from the file and from what is running. Only the block between the markers is ever touched, every line of it ending in `# locku`; the rest of the file is yours. With no path filled in, `activate` cannot be pressed: nothing is guessed.
+
+What tmux gets:
+
+```
+# >>> locku >>>
+set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
+set -g lock-after-time 300                                                  # locku: 0 never
+set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
+set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client
+set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions
+bind-key l lock-server                                                      # locku: prefix l locks every client
+# <<< locku <<<
+```
+
+`prefix :` then `locku` locks, and so does `prefix l` when `bind-key` is `l`. The server stays locked for whoever comes: attaching to it, or switching sessions, while it is locked lands on the screensaver too, until a PIN unlocks it. With `lock` set to `lock-session` the same lines point at `lock-session`, one more hook gives every session its own lock-command, and the other sessions carry on.
+
+What screen gets:
+
+```
+# >>> locku >>>
+idle 300 lockscreen   # locku: 0 never
+bind l lockscreen     # locku: C-a l locks, as C-a x does
+# <<< locku <<<
+```
+
+and, because screen reads its lock program from the shell that started it and never from the screenrc, the shell rc (`~/.zshrc`, `~/.bashrc`, or fish's `config.fish`) gets:
+
+```
+# >>> locku >>>
+export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
+# <<< locku <<<
+```
+
+A new shell has it. A screen already running gets it once detached and attached again from a new shell; until then that session locks with screen's own built-in lock, which the settings screen says. The blocks are the same text whether locku writes them or you do.
+
+## Where your data lives
+
+| | What | Where |
+|---|---|---|
+| settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU_CONFIG` names it outright) |
+| data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU_DATA`) |
+
+No history, no cache, no session. `config.yaml` is written atomically, mode 0600, and can be edited by hand:
+
+```yaml
+auth: pin                 # the only check there is; pam is reserved
+pin_hash: "$2a$10$..."    # bcrypt; empty or missing = no PIN, any key unlocks
+profile: clock            # the active profile
+profiles:
+  - name: clock
+    saver: clock          # clock / dino / custom; fixed once made
+    layout: row           # row / column
+    size: medium          # small / medium / large: one pixel is 1 / 2 / 3 cells square
+    font: 3x7             # 3x7 / 3x5
+    time: "HH MM"         # HH MM / HH MM SS
+    date: off             # off / YYYY-MM-DD / YYYY-MMM-DD / MM-DD / MMM-DD
+    bg: "#313244"
+    fg: "#f2b753"
+  - name: dino
+    saver: dino
+    runner: big           # big / small / big-big / small-small / small-big / big-small
+    scene: grassland      # grassland / desert
+    bg: "#313244"
+    fg: "#f2b753"
+  - name: matrix
+    saver: custom
+    command: "cmatrix -b" # run through sh -c; no colours of its own
+savers:                   # each kind's defaults: what a new profile starts as
+  clock: { saver: clock, layout: row, size: large, font: 3x5, time: "HH MM SS", date: YYYY-MM-DD, bg: "#313244", fg: "#f2b753" }
+  dino: { saver: dino, runner: big, scene: grassland, bg: "#313244", fg: "#f2b753" }
+  custom: { saver: custom, command: "" }
+show_status: true               # the user@host · locked since row
+pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
+wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
+wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
+tmux:
+  conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
+  lock-after-time: 300
+  bind-key: ""
+  lock: lock-server             # lock-server / lock-session
+screen:
+  conf: "~/.screenrc"
+  idle: 300
+  bind: ""
+```
+
+## Key bindings
+
+### Everywhere
+
+| Key | |
+|---|---|
+| `Tab` · `1` · `2` | next panel / this panel |
+| `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
+| `Esc` | close the top float |
+| `Space` | what can I do here: the item, and the panel |
+| `?` | help: the keys; on preference's, tmux's or screen's `[2]`, what each row means |
+| `P` | on `[2]`: preview the lock; any key comes back |
+| `q` | quit; asks first when colours are unsaved |
+| `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
+
+### `[1]` sidebar
+
+| Key | On | |
+|---|---|---|
+| `n` | a saver | new profile of this kind, under a name |
+| `p` | a saver / a profile | preview the defaults / this profile |
+| `a` | a profile | activate: the lock shows this profile from now on |
+| `D` · `r` · `X` | a profile | duplicate · rename · delete (not the active one, not the last one) |
+
+### `[2]` detail
+
+| Key | On | |
+|---|---|---|
+| `Enter` | any row | rename, choose, toggle, pick a colour channel, set or change the PIN, edit a path or a key, turn `activate` |
+| `S` · `R` | a profile or a saver | save the colour draft · drop it |
+
+### The lock screen
+
+| Key | |
+|---|---|
+| any key | open the PIN prompt (the key is not input) |
+| `Enter` · `Esc` · `Backspace` | submit · back to the saver · delete a digit |
+
+## Status
+
+**v0.1.0** — the three savers, the PIN and `locku pin reset`, tmux and screen integration with `activate`. See [CHANGELOG.md](CHANGELOG.md).
+
+Not there, on purpose:
+- **Windows** — the lock stands on the tty, the pty, `su` and tmux / screen; a native port would be another product
+- **the system password** — the only check is locku's own PIN; `auth: pam` is reserved, nothing more
+- **locking the Linux virtual console** (Alt+F1 … F7) — vlock's territory
+- **a "forgot my PIN" entry on the lock screen** — the way back is `locku pin reset`, from a shell, with your login password
+
+## Built with
+
+Go, [Bubble Tea](https://github.com/charmbracelet/bubbletea) and [Lip Gloss](https://github.com/charmbracelet/lipgloss), [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay) for the floats, [creack/pty](https://github.com/creack/pty) for the custom saver's program and the login check, `golang.org/x/crypto/bcrypt` for the PIN, and `gopkg.in/yaml.v3` for the config. Colours are catppuccin-mocha.
 
 ## Docs
 
 | File | Answers | Read |
 |---|---|---|
-| [`docs/function.md`](docs/function.md) | Why the prefix cannot be caught inside a pane, the one contract for the three entry points, the signal table, the state machine, PIN checking, the no-PIN mode, `locku pin reset`, the three savers (with custom's pty and the box over it), the canvas renderer and its fallbacks, the CLI, the config, how Integration writes the files (with what was measured in tmux / screen), the technology and platform choices, the 41 decisions, the MVP acceptance | 1st |
-| [`docs/ui.md`](docs/ui.md) | The grid of the settings screen's two panels, the lock canvas's board and the `EXIT` board, how every field is drawn, the popup list, the PIN prompt's four states, the palette, the chrome, saving | 2nd |
-| [`docs/ux.md`](docs/ux.md) | Core-key semantics, what the Space menu holds, the global `?`, how each field is filled in, the PIN's three questions, the canvas prompt's event table, the hotkey layers and the clash check, the floats, the timeline | 3rd |
-| [`docs/icon.svg`](docs/icon.svg) | The icon: the family's block-letter mark on a black square, locku's version (2026-09-25) | — |
+| [`docs/function.md`](docs/function.md) | Why the lock stands outside tmux / screen, the one contract for the three entry points, the signal table, the state machine, the PIN and the no-PIN mode, the three savers, the canvas renderer, the CLI, the config, how Integration writes the files, the decision list, the acceptance | 1st |
+| [`docs/ui.md`](docs/ui.md) | The grid of the settings screen's two panels, the lock canvas, how every field is drawn, the popups, the PIN prompt's four states, the palette, saving | 2nd |
+| [`docs/ux.md`](docs/ux.md) | Core-key semantics, what the Space menu holds, the global `?`, how each field is filled in, the PIN's three questions, the hotkey layers, the floats, the timeline | 3rd |
+| [`docs/dev-remarks.md`](docs/dev-remarks.md) | The developer's notes: where things stand, the decisions in short, what was rejected, the layout of the code, the tests, the release flow, what is next | — |
+| [`docs/icon.svg`](docs/icon.svg) | The icon: the family's block-letter mark on a black square | — |
 
-All three docs are in Traditional Chinese, every decision dated in place, and every open-questions list is empty.
-
-## Decisions, in short
-
-- **The lock stands outside tmux / screen, not inside a pane.** A program inside a pane never sees the prefix; tmux's lock-command is run synchronously by the client process with `system()`, which reads no key meanwhile, and screen's LOCKPRG is the same. It is the one correct hook.
-- **tmux: the whole server locks by default (`lock` can make it this session only, 2026-09-25), no key is bound by default, and whoever comes in while it is locked is locked (2026-09-24).** `locku` typed at `prefix :` is `lock-server` (a command alias, clashing with none of your binds; for a key, fill one in at `bind-key`, 2026-09-25), and every client of every session becomes the screensaver together; tmux has no "locked" state of its own, so locku sets the global `@locked` as `locku lock` starts, and the `client-attached` / `client-session-changed` hooks `lock-client` on seeing it, whichever session is attached; the right PIN clears it, the tty going away does not. The idle lock is tmux's, timed per session: the screen that sits idle is the one that locks. lock-command is locku's absolute path, with `#{socket_path}` expanded by tmux into `locku lock -S`, so a non-default socket is right too. With `lock-session` the flag stands on the session and the hooks stay; the other sessions carry on; the lock learns its session from its own session's lock-command (`-t`), because looking it up from the tty while locked gets the wrong session (measured). A running server gets the whole block (`source-file`, 2026-09-25): the same text as the file, after undoing what the old block did and the new one does not, then each existing session's own lock-command is set.
-- **screen: the same idea as tmux, in screen's names (2026-09-25).** `idle N lockscreen` and `bind <key> lockscreen` go into screenrc, and to every running session by `screen -X` at once; LOCKPRG can only come through the shell's environment (measured 2026-09-24: `setenv` in `.screenrc` does nothing for the lock, which the attacher reads with `getenv`), so activate writes the shell rc as well; a new shell has it, and a session already running gets it once detached and re-attached with `screen -r` from a new shell; until then those sessions lock with screen's built-in `Key:` lock, which the toast and `?` both say. No `lock`: screen has no server, so there is no scope to choose.
-- **custom saver: your own program as the saver's animation (2026-09-25).** A profile holds one `command` (run through `sh -c`, `cmatrix -b` say); locku does the lock, the PIN and the integration. The program runs on a pty locku opens, in a process group of its own, its output passed straight to the terminal, the keys always with locku; locku does not restart it or read its picture, and unlocking SIGKILLs the whole group. The PIN box sits over the moving picture: painted again after every frame, wrapped in DECSC / DECRC, inside one synchronised update, no frame dropped; closing it blanks its place, and SIGWINCH goes only to a program idle for half a second or more (one that is drawing flashes and starts over when asked to repaint, measured with cmatrix). A program that ends (it should not) does not end the lock: locku's board writes `EXIT <code>` as it is (`EXIT` in gold, the number green for 0 and peach for the rest; killed by a signal is 128 + its number, no command is a red `NONE`), and the status row says why in red. custom has no bg / fg: the picture is the program's. The command is not sanitised.
-- **Forgot the PIN: `locku pin reset` (2026-09-25).** After `[y/N]` it asks the login password (checked with `su` on a pty), then makes a new PIN, writes it over the config and shows it once (elasticsearch's reset-password, not an emptied `pin_hash`), and logs it to `~/.locku/data/pin-resets.log` (without the PIN); a lock already up re-reads `pin_hash` at every key.
-- **Process alive = locked, ended = unlocked.** No error may end the process; only the right PIN, any key in the no-PIN mode, and the tty going away end it.
-- **Not a security boundary.** A second SSH session can kill it. It is a screensaver and a guard against stray keys; a missing or broken config always fails open.
-- **The only check is locku's own PIN**, bcrypt in the config; `auth: pam` is left as an extension point, shadow is not done. A wrong PIN is a fixed one-second debounce; a lockout after repeated wrong PINs is configurable, off by default.
-- **A saver is a class, a profile an object (settled 2026-09-24).** Three savers: clock, dino, and custom, your own program (2026-09-25); a profile is a named, set-up one, the file's `profile` points at it, and it is what the lock screen shows. A profile is made from a saver with `n`, and its saver does not change afterwards. dino is Chrome's offline dinosaur game as a screensaver: the ground and the cacti scroll left and the T-Rex jumps them by itself, for ever, random obstacles, random jumps, never dying, no score and no clock; its settings are only runner (big / small, one large or small T-Rex; big-big / small-small / small-big / big-small, two one behind the other, the name being their order on the screen left to right, each jumping on its own; settled 2026-09-25, the old trex / two-trex converted), scene (grassland with cacti, or desert with pyramids), bg / fg, and no size: the canvas takes the largest scale that fits; a frame every 70 ms. clock's layout row / column (column splits `HH` / `MM` / `SS` into lines, the digits several times larger), size small / medium / large (one font pixel is 1 / 2 / 3 cells square), font 3x7 / 3x5, time `HH MM` / `HH MM SS` (24-hour, no colon, the groups parted by a space), date off or one of four, and the two colours bg / fg; no free-text input anywhere; duplicate / rename / delete.
-- **The canvas is drawn one way only: a whole LED dot-matrix board.** Every cell is nf-fa-square plus a space, a dark cell in the saver's bg, a lit one in its fg. The glyphs look like a seven-segment display: all right angles, no diagonals, no slash through the zero, the digits 3 × 7, scaled by size; letter spacing, line spacing and the space inside the time are gap units of their own (1 cell at small / medium, 2 at large), not scaled with the pixels. The time and the date are two blocks of their own: the time is laid out first, the date takes what is left (below in row, to the left in column), each stepping its size down before dropping a unit (the time its seconds, the date its year); a date that does not fit is not drawn, and only a time that does not fit falls back to plain text. The first frame is not animated; after that only the pixels that changed get a splash-style shuffle. The character set is 39 glyphs.
-
-  The terminal each size needs (columns × rows, 3x7 / 3x5):
-
-  | Content | small | medium | large |
-  |---|---|---|---|
-  | `HH MM` on one line | 38 × 10 / 8 | 62 × 17 / 13 | 96 × 24 / 18 |
-  | `HH MM SS` on one line | 58 × 10 / 8 | 94 × 17 / 13 | 148 × 24 / 18 |
-  | `HH` / `MM` stacked | 18 × 18 / 14 | 30 × 32 / 24 | 44 × 47 / 35 |
-  | `HH` / `MM` / `SS` stacked | 18 × 26 / 20 | 30 × 47 / 35 | 44 × 70 / 52 |
-- **Colours belong to each saver**, three RGB sliders each for bg and fg, in webu's number-list manner, no typing; a slider is drawn in its own channel's colour (the R row in `#RR0000`); it changes a draft, `S` writes the file, `R` drops it, and `q` asks first when a draft is unsaved. custom has no colours.
-- **Platform: macOS / Linux (WSL works), no Windows (2026-09-25).** The lock stands on the tty, the pty, `su` and tmux / screen.
-- **Enter = into `[2]` / edit / submit, Esc only cancels, `X` deletes, `d` is half a page.** On the canvas any key only opens the prompt, and the first key is not input.
-
-## Rejected, do not bring back
-
-Catching the prefix inside a pane, attaching to the user's existing session, locking up when the config is missing, PAM / shadow in v1, a free-text saver, free strftime formats,
-a marquee, dropping the space between pixels, a preview box inside `[2]`, a base sheet, an Integration popup, a `--saver` command-line override,
-`locku init`, a print-only setup, a `locku setup` command, the later `S` / `X` hotkeys (invisible on the screen) and the Install / Uninstall buttons at the bottom (wrong style; became `activate` on / off as the first row of `[2]`), a description row under every preference row (moved into `?` help), `.screenrc setenv LOCKPRG` (measured: does not work), a global style setting (colours became each saver's own),
-Enter in the sidebar to activate (chosen at preference › profile instead, with the `a` key added later), 12-hour AM/PM, a colon in the time, glyphs with diagonals,
-tmux's default `bind L` (clashes with the user's own keys; a command alias instead, and `bind-key` for those who want one), a session-level tmux lock (switch session and you are past it; the whole server instead),
-promoting the idle lock to the whole server (a second screen would be locked by the other), one PIN unlocking every client (needs polling; each types its own),
-pure write-as-you-set integration (a typo in conf makes a file), pure buttons with no sync (a changed value leaves the file stale), a status row inside `[2]` (the status is the `activate` row), a plain ` · `-separated title (the capsule chain instead), a PIN check on preview too, installed / uninstalled in the title capsule and the kind chained after the title (the status is the `activate` row; the kind moved to a capsule of its own top right and then went too, the classification being noise), the config path on the right of `[2]`'s bottom edge (there from the first version, not a family convention), the lock looking its session up from the tty (list-clients is empty while locked, display-message -c returns the wrong session),
-a VT terminal emulator route for custom (one dependency more, fidelity and performance both to prove; passthrough instead), auto-restarting the custom program (its lifetime is not interfered with), a black screen with red text (the board instead), calling the ending COMPLETED / ERROR and then DONE / ERROR (the exit code written as it is), freezing the picture under the PIN box on locku's background (no animation under the box), shrinking the terminal a column and back when the box closes to force a repaint (with the picture not frozen there is nothing to repaint), SIGWINCH to a program that is drawing (cmatrix flashes and starts over), keeping a command list parallel to the block for tmux's live apply (the whole block by `source-file` instead), a forgot-my-PIN entry on the lock screen, recovery codes, an emptied `pin_hash` as the reset, a global `P` on `[1]` (`p` is the row under the cursor), native Windows.
-
-## Layout
-
-```
-locku/
-├── cmd/locku/          entry point: lock / pin reset / version / the settings TUI; argv[0] SCREEN-LOCK
-├── internal/
-│   ├── config/         config.yaml in and out: fail open, atomic writes, 0600, the bcrypt PIN, pin_hash re-read, NewPIN, the data directory
-│   ├── custom/         the custom saver: the program on a pty, its output through the screen writer, the PIN box over the picture, the keys kept for locku, the word for its ending (2026-09-25)
-│   ├── login/          the login-password check for `locku pin reset`: su on a pty (2026-09-25)
-│   ├── saver/          the content: clock's two times × five dates × row / column, the tick; dino's runners, scenes, obstacles and automatic jumps; custom's ending Word
-│   ├── setup/          the managed block: tmux.conf (a running server gets it whole by source-file), screenrc, the shell rc
-│   ├── tmux/           raising / clearing the @locked flag on tmux while locked
-│   ├── ui/             the renderer (font / canvas / reveal), the lock screen, the PIN prompt, the settings TUI and its floats
-│   └── version/        the version string
-├── e2e/                pty end-to-end: tmux_attach.py, custom_lock.py, screen_lock.py
-└── docs/               function.md, ui.md, ux.md, icon.svg
-```
+The docs are in Traditional Chinese, every decision dated in place.
 
 ## Development
 
-```bash
-make check                                       # fmt-check + vet + go test -race
-LOCKU_DUMP=1 go test ./internal/ui -run TestDump -v   # prints the screen at every size
-make lock                                        # build and lock this terminal
-make e2e                                         # end to end: a real tmux (e2e/tmux_attach.py, its own TMUX_TMPDIR), the custom saver (e2e/custom_lock.py), a real screen (e2e/screen_lock.py, its own SCREENDIR); your servers and sessions are not touched
+```
+make build     → ./locku
+make check     fmt-check + vet + go test -race, before a commit
+make e2e       end to end on a real tmux, a pty and a real screen (needs tmux, screen and python3); your own servers and sessions are not touched
+make lock      build and lock this terminal
 ```
 
-All TUI behaviour is verified by programmatic model tests (no tty needed); `make check` runs with the race detector (custom's pump and screen writer, login's su and the custom lock's prompt each have a goroutine). The tmux / custom / screen acceptance (`docs/function.md` §12)
-is done by python pty harnesses running the real binary: prefix+d, prefix+c and Ctrl+C swallowed while locked, the client back after the right PIN, an attach while locked locked too, a running server swapped whole when the screen switches to lock-session, custom's box over the animation and the program killed clean, screen's `C-a x` and the `bind` key reaching locku, `idle` locking by itself, a running session getting the settings at once, the process ending when the tty closes.
+What the tests cover, and how a release is cut: [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
-Releases are the family's: push a `v*` tag, GitHub Actions runs the tests on both platforms, goreleaser builds the archives and updates the Homebrew tap, and the release notes are the matching section of `CHANGELOG.md`.
+## License
 
-## Next steps
-
-1. An eight-hour CPU / memory watch (the last item of §12).
+[GPL-3.0](LICENSE)
