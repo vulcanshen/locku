@@ -18,8 +18,10 @@ import (
 // on starts as, and which [p] previews; changing them changes no profile
 // already made (user, 2026-09-24). A tool — tmux, screen — is its file
 // and its idle time — tmux's the key after prefix that locks, too —
-// then a status: whether locku's block is in the file; [S] Setup and
-// [X] Remove are its panel operations (user, 2026-09-25). Preference is the PIN, the active profile and the lock's
+// then a button: Install while locku's block is not in the file,
+// Uninstall while it is (user, 2026-09-25: a row on the screen, where S
+// and X were hotkeys nobody saw); whether it is in is the title's
+// business, a chip after the panel's name. Preference is the PIN, the active profile and the lock's
 // settings. What each setting means is in the ? help, on that panel.
 // Every key config.yaml has is a row here, except `profiles` and
 // `savers`, which ARE panel [1]; a tool's idle time under the tool's
@@ -57,7 +59,7 @@ const (
 	rowConf    // a tool's file
 	rowIdle    // a tool's idle time, under the tool's own name for it
 	rowBindKey // tmux's key after prefix that locks, or none
-	rowStatus  // whether locku's block is in the tool's file, read-only
+	rowInstall // the button: Install, or Uninstall once the block is in
 )
 
 // row is one line of panel [2].
@@ -252,13 +254,11 @@ func (m AppModel) rows() []row {
 		if t.Conf == "" {
 			conf.value, conf.color = "not set", yellowColor
 		}
-		// Whether the block is in the file — what [S] Setup and [X] Remove
-		// are about — read off the file each time. Two words, like the
-		// PIN's set / not set: the user found "tool tmux" and "block in
-		// the file" opaque (2026-09-25).
-		status := row{kind: rowStatus, label: "status", value: "not installed", color: yellowColor}
+		// The button, last: which of the two it is, is read off the file
+		// each time.
+		button := row{kind: rowInstall, value: "Install", stop: true}
 		if setup.Installed(t.Conf) {
-			status.value, status.color = "installed", liveColor
+			button.value = "Uninstall"
 		}
 		out := []row{
 			head,
@@ -274,7 +274,7 @@ func (m AppModel) rows() []row {
 			}
 			out = append(out, bind)
 		}
-		return append(out, status)
+		return append(out, button)
 	default:
 		pin := row{kind: rowPIN, label: "PIN", value: "not set", color: yellowColor, stop: true}
 		if m.cfg.HasPIN() {
@@ -332,25 +332,45 @@ func sliderBar(v int) string {
 	return strings.Repeat("─", at) + "●" + strings.Repeat("─", sliderW-1-at)
 }
 
-// detailTitle is panel [2]'s chip: a saver's name with ` · saver`, a
-// profile's name, a tool's with ` · integration`, or preference — with
-// ` · unsaved` while a colour draft differs (ui.md §B).
-func (m AppModel) detailTitle() string {
+// sideChips is panel [1]'s title: one chip, in the border's colour.
+var sideChips = []chip{{text: "[1] locku", border: true}}
+
+// detailChips is panel [2]'s title as a chain (ui.md §B, 2026-09-25):
+// the panel and what it shows, in the border's colour; then the kind
+// it is — profile, saver, integration, settings — unlit; then, when
+// there is one, its state in a colour of its own: a colour draft
+// unsaved in yellow, a tool's block installed in green, uninstalled in
+// peach. Read apart, the three say what, which kind, and how it stands.
+func (m AppModel) detailChips() []chip {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver, sideProfile:
 		p, key, _ := m.subject()
-		title := "[2] " + p.Name
+		out := []chip{{text: "[2] " + p.Name, border: true}, {text: "profile"}}
 		if it.kind == sideSaver {
-			title = "[2] " + saver.Kinds[it.ref] + " · saver"
+			out = []chip{{text: "[2] " + saver.Kinds[it.ref], border: true}, {text: "saver"}}
 		}
 		if m.dirtyOf(key, p) {
-			title += " · unsaved"
+			out = append(out, chip{text: "unsaved", fill: yellowColor})
 		}
-		return title
+		return out
 	case sideTool:
-		return "[2] " + tools[it.ref] + " · integration"
+		name, t := m.tool()
+		state := chip{text: "uninstalled", fill: peachColor}
+		if setup.Installed(t.Conf) {
+			state = chip{text: "installed", fill: liveColor}
+		}
+		return []chip{{text: "[2] " + name, border: true}, {text: "integration"}, state}
 	}
-	return "[2] preference"
+	return []chip{{text: "[2] preference", border: true}, {text: "settings"}}
+}
+
+// detailTitle is the same title in words, for the Space menu's own box.
+func (m AppModel) detailTitle() string {
+	var parts []string
+	for _, c := range m.detailChips() {
+		parts = append(parts, c.text)
+	}
+	return strings.Join(parts, " · ")
 }
 
 // detailBody draws panel [2]'s rows at innerW × innerH.
@@ -386,6 +406,13 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			// titles, so both panels are read the same way.
 			plain = padRight(label+r.value, innerW)
 			styled = head.Render(plain)
+		case rowInstall:
+			// The button: one chip in the key colour, in the value
+			// column, so it reads as a thing to press rather than a
+			// value to read; under the cursor it is the band like any row.
+			plain = padRight(label+r.value, innerW)
+			styled = padRight(label, lw) + titleChain([]chip{{text: r.value, fill: focusColor}}, focusColor) +
+				spaces(innerW-lw-chainW([]chip{{text: r.value}}))
 		case rowSwatch:
 			// The saved colour, and the draft after an arrow when it differs.
 			plain = padRight(label+"  "+r.value, innerW)

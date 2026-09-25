@@ -11,6 +11,7 @@ type confirmAction int
 const (
 	confirmNone          confirmAction = iota
 	confirmDeleteProfile               // remove the profile at ref
+	confirmInstallTool                 // write locku's block into the tool at ref's file
 	confirmRemoveTool                  // take locku's block out of the tool at ref's file
 	confirmQuit                        // leave with the colour draft unsaved
 )

@@ -31,6 +31,7 @@ func TestDump(t *testing.T) {
 	m := NewApp(cfg, "").size(100, 30)
 	show("settings 100x30, [1] on clock", m.View())
 	show("settings, [2] preference", m.press("G", "2").View())
+	show("settings, [2] tmux", m.press("G", "k", "k", "2", "G").View())
 	show("settings, space menu on clock2", m.press("j", " ").View())
 	show("settings, [2] clock with a colour draft", m.press("2", "G", "enter", "G", "enter").View())
 	show("settings, [2] clock menu with regions", m.press("2", " ").View())
