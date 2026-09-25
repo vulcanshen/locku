@@ -179,3 +179,22 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 		t.Errorf("the PIN must end the prompt program without Back: %v %v", pin.Back(), quits(cmd))
 	}
 }
+
+// The global P — anywhere but a profile's or a saver's [2] — previews
+// the active profile: a custom one hands the terminal to its program
+// too, and one with no command is the word, not a board of its (no)
+// colours (user, 2026-09-25: P on a custom profile showed a white grid).
+func TestGlobalPreviewOfACustomProfile(t *testing.T) {
+	m := newTestApp(t)
+	m.cfg.Profiles = append(m.cfg.Profiles, config.NewProfile("m", saver.KindCustom))
+	m.cfg.Profile = "m"
+	m = m.press("G", "P") // on preference, in [1]
+	if m.preview == nil || m.preview.word != saver.WordNone || !strings.Contains(m.View(), "no command") {
+		t.Fatalf("no command must preview as the word:\n%s", m.View())
+	}
+	m = m.press("x")
+	m.cfg.Profiles[len(m.cfg.Profiles)-1].Command = "cmatrix -b"
+	if m = m.press("P"); m.preview != nil {
+		t.Errorf("a command previews outside the screen, not as a board inside it")
+	}
+}

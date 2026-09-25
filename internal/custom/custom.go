@@ -166,10 +166,20 @@ func (p *Proxy) Resize(cols, rows int) {
 	pty.Setsize(p.ptmx, &pty.Winsize{Rows: uint16(max(1, rows)), Cols: uint16(max(1, cols))})
 }
 
-// Redraw asks the program to paint itself again — the signal a resize
-// sends, which every full-screen program answers with a full repaint —
-// after the PIN prompt has had the screen.
-func (p *Proxy) Redraw() { p.signal(syscall.SIGWINCH) }
+// Redraw asks the program to paint itself whole, after the PIN prompt
+// has had the screen: the pty is made a column narrower and then its
+// size again — two real resizes, each a SIGWINCH to the program. A
+// signal alone was not enough (measured 2026-09-25, cmatrix): a curses
+// program told the size has not changed repaints only what it thinks
+// changed, against a screen that no longer shows what it last drew —
+// the frames it drew while the prompt was up were dropped — and the
+// old frame shows through. A size that really changed makes it lay the
+// screen out again from nothing.
+func (p *Proxy) Redraw(cols, rows int) {
+	p.Resize(cols-1, rows)
+	time.Sleep(40 * time.Millisecond)
+	p.Resize(cols, rows)
+}
 
 // Kill ends the program, its whole process group, at once, and waits
 // for it to be reaped. It is the lock's end, or the program's preview's.

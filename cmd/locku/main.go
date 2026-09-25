@@ -203,7 +203,7 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 			}
 			t.Clear()
 			p.Forward(true)
-			p.Redraw()
+			p.Redraw(t.Size())
 			keys = t.Key()
 		}
 	}
