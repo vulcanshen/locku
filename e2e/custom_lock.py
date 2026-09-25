@@ -157,9 +157,8 @@ check("the PIN ends the lock", wait_exit(pid, 3))
 time.sleep(0.5)
 check("and the program with it", not running(MARK))
 
-# 4. A program that ends with a code is ERROR on the board, with why,
-# and the lock stays; one that ends with 0 is COMPLETED; none set is
-# ERROR too. The PIN ends each.
+# 4. A program that ends is EXIT and its code on the board, with why,
+# and the lock stays — 0 included; none set is NONE. The PIN ends each.
 for command, note in (("echo boom >&2; exit 3", b"custom saver: exit 3"), ("exit 0", b"custom saver exited 0"), ("", b"custom saver: no command")):
     config(command, pin_hash)
     pid, fd, out = spawn([LOCKU, "lock"])

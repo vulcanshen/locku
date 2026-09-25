@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // sink is a writer the pump can write to while the test reads it.
@@ -76,7 +78,7 @@ func TestOutputIsPassedOnAndHeldBack(t *testing.T) {
 	}
 	start := time.Now()
 	p.Kill()
-	if o := ended(t, p); o.Word != "ERROR" || !strings.Contains(o.Note, "killed") {
+	if o := ended(t, p); o.Word != saver.ExitWord(137) || !strings.Contains(o.Note, "killed") {
 		t.Errorf("killed: %+v", o)
 	}
 	if time.Since(start) > 2*time.Second {
@@ -84,14 +86,19 @@ func TestOutputIsPassedOnAndHeldBack(t *testing.T) {
 	}
 }
 
-// How a program ends is its word and its note: 0 is COMPLETED; a code,
-// a missing command with what the shell said, or a signal, ERROR.
+// How a program ends is its word and its note: EXIT and the code as a
+// shell would report it — a signal 128 and its number — and what the
+// shell said for a missing command.
 func TestOutcomes(t *testing.T) {
-	for _, c := range []struct{ cmd, word, note string }{
-		{"exit 0", "COMPLETED", "custom saver exited 0"},
-		{"echo boom >&2; exit 3", "ERROR", "custom saver: exit 3 · boom"},
-		{"no-such-program-locku", "ERROR", "custom saver: exit 127 · "},
-		{"kill -SEGV $$", "ERROR", "custom saver: killed: segmentation fault"},
+	for _, c := range []struct {
+		cmd  string
+		word saver.Word
+		note string
+	}{
+		{"exit 0", saver.ExitWord(0), "custom saver exited 0"},
+		{"echo boom >&2; exit 3", saver.ExitWord(3), "custom saver: exit 3 · boom"},
+		{"no-such-program-locku", saver.ExitWord(127), "custom saver: exit 127 · "},
+		{"kill -SEGV $$", saver.ExitWord(139), "custom saver: killed: segmentation fault"},
 	} {
 		p, err := Start(c.cmd, io.Discard, 80, 24)
 		if err != nil {
@@ -99,7 +106,7 @@ func TestOutcomes(t *testing.T) {
 		}
 		o := ended(t, p)
 		if o.Word != c.word || !strings.HasPrefix(o.Note, c.note) {
-			t.Errorf("%q: %+v, want %s %q", c.cmd, o, c.word, c.note)
+			t.Errorf("%q: %+v, want %q %q", c.cmd, o, c.word, c.note)
 		}
 		if strings.HasPrefix(c.cmd, "no-such") && !strings.Contains(o.Note, "not found") {
 			t.Errorf("%q: the shell's word is missing: %q", c.cmd, o.Note)
@@ -113,7 +120,7 @@ func TestNoCommand(t *testing.T) {
 	if _, err := Start("  ", io.Discard, 80, 24); err == nil {
 		t.Error("an empty command started")
 	}
-	if o := NoCommand(); o.Word != "ERROR" || o.Note != "custom saver: no command" {
+	if o := NoCommand(); o.Word != saver.WordNone || o.Note != "custom saver: no command" {
 		t.Errorf("%+v", o)
 	}
 }

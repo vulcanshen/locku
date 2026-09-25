@@ -50,7 +50,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 是側欄唯一的綠色；它只顯示，設為啟用在 `preference › profile`。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明
-（唯讀）；在 profile 上就是那個 profile 的欄位與顏色；在 `preference` 上是一般設定的列。title 跟著換成膠囊（§5）：`[2] clock`、`[2] clock`、`[2] preference`（2026-09-25 修訂：種類——profile / saver / integration / settings——先串在標題後、再搬到右上角一顆獨立膠囊、最後拿掉，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時
+（唯讀）；在 profile 上就是那個 profile 的欄位與顏色（custom 沒有顏色列，2026-09-25）；在 `preference` 上是一般設定的列。title 跟著換成膠囊（§5）：`[2] clock`、`[2] clock`、`[2] preference`（2026-09-25 修訂：種類——profile / saver / integration / settings——先串在標題後、再搬到右上角一顆獨立膠囊、最後拿掉，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時
 接一顆黃色 `unsaved`。
 
 `[2]` 在 saver 上：先三列唯讀說明，再一列 dim 的 `defaults` 標題，然後是**這種 saver 的預設值**——跟 profile 一模一樣的欄位列與

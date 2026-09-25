@@ -292,7 +292,7 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 		l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
 		var out []string
 		if len(l.blocks) > 0 {
-			out = boardRows(paint(faceTall, l, cols, rows), bg, fg, cols, false)
+			out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols, false)
 		} else {
 			out = plainRows(plain, bg, fg, cols, rows, true)
 		}

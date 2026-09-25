@@ -249,7 +249,10 @@ func (m AppModel) rows() []row {
 			{kind: rowAbout, label: "defaults", value: "for profiles made of it from now on", color: dimColor},
 		}
 		out = append(out, fieldRows(p)...)
-		return append(out, m.colourRows(key, p)...)
+		if p.Saver != saver.KindCustom { // no colours of its own (user, 2026-09-25)
+			out = append(out, m.colourRows(key, p)...)
+		}
+		return out
 	case sideProfile:
 		p, key, _ := m.subject()
 		// The saver is the profile's class: shown, not changed — a profile
@@ -261,7 +264,10 @@ func (m AppModel) rows() []row {
 			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
 		}
 		out = append(out, fieldRows(p)...)
-		return append(out, m.colourRows(key, p)...)
+		if p.Saver != saver.KindCustom { // no colours of its own (user, 2026-09-25)
+			out = append(out, m.colourRows(key, p)...)
+		}
+		return out
 	case sideTool:
 		name, t := m.tool()
 		// locku's own two rows first — whether the block is in the file,
