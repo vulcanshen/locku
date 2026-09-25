@@ -267,12 +267,15 @@ func stampLine(b *board, f face, line string, k, x, y int) {
 }
 
 // A game scene needs room to be played: the runner, a jump over the
-// tallest cactus, the ground, and a runway — in its own pixels. A game
-// has no size setting (user, 2026-09-24): it is drawn at the largest
-// scale, up to sceneMaxScale, that leaves the scene its room.
+// tallest cactus, the ground, and a runway — in its own pixels: the
+// rows are the T-Rex, fourteen, its jump, eleven, the ground, two, and
+// one of sky (2026-09-25: twenty-eight; twenty-five while the jump was
+// eight, before the large obstacles). A game has no size setting
+// (user, 2026-09-24): it is drawn at the largest scale, up to
+// sceneMaxScale, that leaves the scene its room.
 const (
 	sceneMinW     = 40
-	sceneMinH     = 25
+	sceneMinH     = 28
 	sceneMaxScale = 3
 )
 

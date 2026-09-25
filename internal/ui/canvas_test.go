@@ -248,7 +248,8 @@ func TestSceneFitsAndPaints(t *testing.T) {
 	for _, c := range []struct{ size, cols, rows, k, w, h int }{
 		{3, 152, 31, 1, 76, 31}, // the user's terminal: 31 rows hold one scale
 		{2, 200, 59, 2, 50, 29},
-		{3, 200, 59, 2, 50, 29}, // 59/3 = 19 rows is too few
+		{3, 200, 59, 2, 50, 29},  // 59/3 = 19 rows is too few
+		{2, 200, 54, 1, 100, 54}, // 54/2 = 27 rows would clip the jump: 28 are needed
 		{3, 300, 90, 3, 50, 30},
 		{1, 300, 90, 1, 150, 90},
 		{2, 40, 12, 1, 20, 12}, // too small at any scale: 1, and the game clips

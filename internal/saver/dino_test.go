@@ -2,6 +2,7 @@ package saver
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -38,7 +39,7 @@ func litIn(sc Scene, x0, y0, x1, y1 int) int {
 func TestDinoNeverHitsAnything(t *testing.T) {
 	for _, runner := range Runners {
 		for _, scene := range Scenes {
-			for _, sz := range [][2]int{{76, 31}, {40, 25}, {100, 59}} {
+			for _, sz := range [][2]int{{76, 31}, {40, 28}, {100, 59}} {
 				d := NewDino(42, runner, scene)
 				d.Draw(sz[0], sz[1])
 				jumps, seen := 0, 0
@@ -176,6 +177,42 @@ func TestArtByName(t *testing.T) {
 	}
 	if greatPyramid.w() != 9 || greatPyramid[0] != "....#...." || greatPyramid[4] != "#########" {
 		t.Errorf("great pyramid:\n%s", greatPyramid)
+	}
+}
+
+// Each scene's obstacles come in three sizes — small, medium and large
+// (user, 2026-09-25: there had been only small and medium) — each
+// tier taller than the one under it, the large one the tallest thing
+// in the scene; the jump tops it by the pixel the arc promises, and
+// nothing is wider than the thirteen the arc is timed for.
+func TestObstaclesComeInThreeTiers(t *testing.T) {
+	for _, c := range []struct {
+		name    string
+		scene   sceneArt
+		tiers   []sprite
+		heights []int
+	}{
+		{SceneGrass, grassland, []sprite{cactus, tallCactus, bigCactus}, []int{5, 7, 10}},
+		{SceneDesert, desert, []sprite{pyramid, greatPyramid, hugePyramid}, []int{3, 5, 7}},
+	} {
+		for i, tier := range c.tiers {
+			if !slices.ContainsFunc(c.scene.obstacles, func(s sprite) bool { return slices.Equal(s, tier) }) {
+				t.Errorf("%s: tier %d is not among the obstacles", c.name, i)
+			}
+			if tier.h() != c.heights[i] || (i > 0 && tier.h() <= c.tiers[i-1].h()) {
+				t.Errorf("%s: tier %d is %d high, want %d and more than the one under it", c.name, i, tier.h(), c.heights[i])
+			}
+		}
+		tallest, widest := 0, 0
+		for _, s := range c.scene.obstacles {
+			tallest, widest = max(tallest, s.h()), max(widest, s.w())
+		}
+		if tallest != c.tiers[2].h() || arcTop < tallest+1 || widest > 13 {
+			t.Errorf("%s: tallest %d, widest %d, the jump %d high", c.name, tallest, widest, arcTop)
+		}
+	}
+	if len(arc) != 16 || minGap != len(arc)*speed+trex.air.w() {
+		t.Errorf("a jump is %d frames, the least gap %d", len(arc), minGap)
 	}
 }
 

@@ -2,6 +2,7 @@ package saver
 
 import (
 	"math/rand/v2"
+	"slices"
 	"time"
 )
 
@@ -14,7 +15,9 @@ import (
 // its settings pick the art — the runner and the scene. Runners: a big
 // T-Rex, a small one, or two of either size one behind the other, each
 // jumping on its own (user, 2026-09-25: the six ways). Scenes:
-// grassland, with cacti; the desert, with pyramids.
+// grassland, with cacti; the desert, with pyramids — either's in three
+// sizes, small, medium and large (user, 2026-09-25: there had been
+// only small and medium).
 //
 // Everything here is in the scene's own pixels; the canvas scales them.
 
@@ -84,9 +87,14 @@ const (
 
 // arc is a jump: how far the runner is above the ground, frame by frame.
 // It is a slow, high jump — the widest obstacle is thirteen pixels and
-// the runner twelve, and at two pixels a frame the two need ten frames
-// or so above the tallest cactus.
-var arc = []int{2, 4, 6, 7, 8, 8, 8, 8, 8, 8, 8, 8, 7, 6, 4, 2}
+// the runner twelve, and at two pixels a frame the two need twelve
+// frames above the huge pyramid, ten or so above the big cactus, which
+// the top clears by a pixel (2026-09-25: eleven high, for the large
+// tier; it was eight, a pixel over the tall cactus).
+var arc = []int{3, 6, 8, 10, 11, 11, 11, 11, 11, 11, 11, 11, 10, 8, 6, 3}
+
+// arcTop is the jump's height: the sky starts above the runner at it.
+var arcTop = slices.Max(arc)
 
 // A sprite is rows of '#' lit and '.' dark, top to bottom, all one width.
 type sprite []string
@@ -207,6 +215,9 @@ var runnerArts = map[string]runnerArt{
 }
 
 var (
+	// The grassland's cacti, in three sizes (2026-09-25 — the user saw
+	// only small and medium): small, five high, one, two or three in a
+	// row; tall, seven; big, ten, its trunk two wide.
 	cactus = sprite{
 		".#.",
 		"#.#",
@@ -223,6 +234,18 @@ var (
 		"..#..",
 		"..#..",
 	}
+	bigCactus = sprite{
+		"..##..",
+		"#.##..",
+		"#.##..",
+		"#.##.#",
+		"#.##.#",
+		"####.#",
+		"..####",
+		"..##..",
+		"..##..",
+		"..##..",
+	}
 	cloudArt = sprite{
 		"..##..###.",
 		"##########",
@@ -233,12 +256,14 @@ var (
 			beside(1, cactus, cactus),
 			beside(1, cactus, cactus, cactus),
 			tallCactus,
+			bigCactus,
 		},
 		cloud:     cloudArt,
 		tuftEvery: 5,
 	}
 
-	// The desert's pyramids: stepped, three to five high.
+	// The desert's pyramids: stepped, three to five high — and seven, the
+	// large one (2026-09-25), as wide as anything gets at thirteen.
 	pyramid = sprite{
 		"..#..",
 		".###.",
@@ -257,11 +282,21 @@ var (
 		".#######.",
 		"#########",
 	}
+	hugePyramid = sprite{
+		"......#......",
+		".....###.....",
+		"....#####....",
+		"...#######...",
+		"..#########..",
+		".###########.",
+		"#############",
+	}
 	desert = sceneArt{
 		obstacles: []sprite{
 			pyramid,
 			bigPyramid,
 			greatPyramid,
+			hugePyramid,
 			beside(1, pyramid, bigPyramid),
 		},
 		cloud:     cloudArt,
@@ -434,7 +469,7 @@ func (d *Dino) clears(i int, o obstacle, delay int) bool {
 }
 
 func (d *Dino) newCloud(x int) cloud {
-	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.tallest()-arc[6]-d.scene.cloud.h()))}
+	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.tallest()-arcTop-d.scene.cloud.h()))}
 }
 
 // resize is a new scene size: the clouds find their sky again; the
