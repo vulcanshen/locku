@@ -104,17 +104,17 @@ show_status `user@host and the time, on the lock's last row`、pin_prompt_timeou
 closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
 cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
-`[2]` 在 Integration 的 tmux / screen 上（2026-09-25），標題是膠囊鏈 `[2] tmux` + `integration` + `installed`（Green）/ `uninstalled`（Peach）——區塊在不在 conf 裡，每次畫都讀一次（同日：狀態不是屬性，從列表搬進標題）：
+`[2]` 在 Integration 的 tmux / screen 上（2026-09-25），標題是膠囊鏈 `[2] tmux` + `integration` + `installed` / `uninstalled`——區塊在不在 conf 裡，每次畫都讀一次（同日：狀態不是屬性，從列表搬進標題）；`[2]` 沒 focus 時三顆一起是 Surface2，focus 時名字 Blue、`installed` Green、`uninstalled` 留 Surface2（同日修訂，使用者）：
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
 | conf | 路徑照存的樣子；未設 `not set`（Yellow），按鈕因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc` |
 | lock-after-time（screen 上是 idle） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱（2026-09-25，使用者），Install 原樣填進去、裝著時一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
 | bind-key（只有 tmux） | 鍵照 tmux 的寫法（`l`、`C-l`、`F12`）；空顯示 `none`：prefix 之後按它就鎖整台，Setup 寫成 `bind-key <鍵> lock-server`（2026-09-25，使用者：prefix shortcut） | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → ` · one key, e.g. l or C-l` 框留著 |
-| Install / Uninstall（最後一列，按鈕） | value 欄一顆 Blue 膠囊，字是 `Install` 或 `Uninstall`（區塊在不在 conf 裡）；`[2]` 裡唯一不是 property / value 的列；cursor 在上面就是一般的 cursor 帶 | Enter → confirm popup 才執行：Install 寫進 conf（tmux 有 server 在跑就即時套用；screen 連 shell rc）、Uninstall 拿掉；conf 沒填時 disabled 並說 `set conf first`（2026-09-25，取代 `[S]` / `[X]` 熱鍵：畫面上看不到） |
+| Install / Uninstall（按鈕：`[2]` 底部一條 Surface2 分隔線下方，置中） | 一顆膠囊，字是 `Install` 或 `Uninstall`（區塊在不在 conf 裡）；平常不點亮（Surface2 底），cursor 移到它才點亮（cursor 的 Subtext1 底、粗體）——使用者要看得出 focus 在按鈕上；仍是 cursor 停靠點：bind-key 再 `j`、或 `G` 直達；表格在分隔線上方捲動，分隔線與按鈕釘在底部（同日修訂，使用者：按鈕不是表格的列） | Enter → confirm popup 才執行：Install 寫進 conf（tmux 有 server 在跑就即時套用；screen 連 shell rc）、Uninstall 拿掉；conf 沒填時 disabled 並說 `set conf first`（2026-09-25，取代 `[S]` / `[X]` 熱鍵：畫面上看不到） |
 
 就是 property / value 兩欄，跟 profile 一樣（2026-09-25 修訂：原本第一列是 dim 的 `tool tmux`、最後一列叫 `block`、值是 `in the
-file`，使用者看不懂），最後一列是按鈕。**裝一次，之後隨設即得**（2026-09-25，使用者定案）：裝著時（標題 `installed`）上面任何一列改動就直接重寫區塊、
+file`，使用者看不懂），按鈕在底部分隔線下。**裝一次，之後隨設即得**（2026-09-25，使用者定案）：裝著時（標題 `installed`）上面任何一列改動就直接重寫區塊、
 tmux 即時套到 server，conf 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完 toast 一行結果；沒裝就只寫 config.yaml，Install 仍由使用者按。
 `?` help 的鍵清單說 Enter 在按鈕上做什麼；focus 在這個 `[2]` 時 `?` 只有 conf、lock-after-time / idle、bind-key（tmux）、Install 這幾列的說明。
 
@@ -268,7 +268,7 @@ Blue 不出現在那裡。
 
 | 件 | 設定畫面 | 鎖定畫布 |
 |---|---|---|
-| Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：那個點佔三格，而且 locku 是家族裡唯一還畫純文字標題的，sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 三顆——`[2] <名字>`（邊框色底、深色字）、種類 `profile` / `saver` / `integration` / `settings`（不點亮：canvas 底、dim 字）、狀態 `unsaved`（Yellow）/ `installed`（Green）/ `uninstalled`（Peach）；接縫 1 格，底色不同是左邊那顆的實心斜切、相同是細斜線；寬度不夠先丟種類、再丟狀態 | 無 |
+| Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：那個點佔三格，而且 locku 是家族裡唯一還畫純文字標題的，sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 三顆——`[2] <名字>`（邊框色底、深色字）、種類 `profile` / `saver` / `integration` / `settings`（Surface2）、狀態 `unsaved`（Yellow）/ `installed`（Green）——只在面板 focus 時點亮，`uninstalled` 與沒 focus 的面板整條都是 Surface2（同日修訂，使用者：三顆一起是 unfocus 顏色，focus 時 installed 才綠）；接縫 1 格，底色不同是左邊那顆的實心斜切、相同是 canvas 色細斜線；寬度不夠先丟種類、再丟狀態 | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | `[2]` 下框右側：config 路徑 | 無 |
 | footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |

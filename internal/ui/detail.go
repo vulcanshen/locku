@@ -18,10 +18,12 @@ import (
 // on starts as, and which [p] previews; changing them changes no profile
 // already made (user, 2026-09-24). A tool — tmux, screen — is its file
 // and its idle time — tmux's the key after prefix that locks, too —
-// then a button: Install while locku's block is not in the file,
-// Uninstall while it is (user, 2026-09-25: a row on the screen, where S
-// and X were hotkeys nobody saw); whether it is in is the title's
-// business, a chip after the panel's name. Preference is the PIN, the active profile and the lock's
+// then, under a rule at the foot of the panel, a button: Install while
+// locku's block is not in the file, Uninstall while it is (user,
+// 2026-09-25: a button on the screen, where S and X were hotkeys nobody
+// saw — and not a row of the table: apart, at the bottom, centred, lit
+// only while the cursor is on it); whether the block is in is the
+// title's business, a chip after the panel's name. Preference is the PIN, the active profile and the lock's
 // settings. What each setting means is in the ? help, on that panel.
 // Every key config.yaml has is a row here, except `profiles` and
 // `savers`, which ARE panel [1]; a tool's idle time under the tool's
@@ -59,7 +61,7 @@ const (
 	rowConf    // a tool's file
 	rowIdle    // a tool's idle time, under the tool's own name for it
 	rowBindKey // tmux's key after prefix that locks, or none
-	rowInstall // the button: Install, or Uninstall once the block is in
+	rowInstall // the button at the foot: Install, or Uninstall once the block is in
 )
 
 // row is one line of panel [2].
@@ -337,10 +339,11 @@ var sideChips = []chip{{text: "[1] locku", border: true}}
 
 // detailChips is panel [2]'s title as a chain (ui.md §B, 2026-09-25):
 // the panel and what it shows, in the border's colour; then the kind
-// it is — profile, saver, integration, settings — unlit; then, when
-// there is one, its state in a colour of its own: a colour draft
-// unsaved in yellow, a tool's block installed in green, uninstalled in
-// peach. Read apart, the three say what, which kind, and how it stands.
+// it is — profile, saver, integration, settings; then, when there is
+// one, its state: a colour draft unsaved lights yellow and a tool's
+// block installed green while the panel has the keys, uninstalled
+// keeps the grey (chipFill). Read apart, the three say what, which
+// kind, and how it stands.
 func (m AppModel) detailChips() []chip {
 	switch it := m.sideAt(); it.kind {
 	case sideSaver, sideProfile:
@@ -355,7 +358,7 @@ func (m AppModel) detailChips() []chip {
 		return out
 	case sideTool:
 		name, t := m.tool()
-		state := chip{text: "uninstalled", fill: peachColor}
+		state := chip{text: "uninstalled"}
 		if setup.Installed(t.Conf) {
 			state = chip{text: "installed", fill: liveColor}
 		}
@@ -397,7 +400,18 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 	lw := min(labelW, max(4, innerW-sliderW-5))
 	out := make([]string, 0, len(rows))
 	keep := 0
+	button, lit := "", false
 	for i, r := range rows {
+		if r.kind == rowInstall {
+			// Not a line of the table: the button sits under a rule at
+			// the foot (buttonFoot); the cursor on it keeps the last row
+			// in view.
+			button, lit = r.value, i == curRow && m.focus == panelDetail
+			if i == curRow {
+				keep = max(0, len(out)-1)
+			}
+			continue
+		}
 		label := padRight(" "+r.label, lw)
 		var plain, styled string
 		switch r.kind {
@@ -406,13 +420,6 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			// titles, so both panels are read the same way.
 			plain = padRight(label+r.value, innerW)
 			styled = head.Render(plain)
-		case rowInstall:
-			// The button: one chip in the key colour, in the value
-			// column, so it reads as a thing to press rather than a
-			// value to read; under the cursor it is the band like any row.
-			plain = padRight(label+r.value, innerW)
-			styled = padRight(label, lw) + titleChain([]chip{{text: r.value, fill: focusColor}}, focusColor) +
-				spaces(innerW-lw-chainW([]chip{{text: r.value}}))
 		case rowSwatch:
 			// The saved colour, and the draft after an arrow when it differs.
 			plain = padRight(label+"  "+r.value, innerW)
@@ -462,7 +469,35 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			keep = len(out) - 1
 		}
 	}
-	// The lines follow the cursor when they outgrow the panel.
-	top := scrollTo(0, min(len(out)-1, keep), innerH)
-	return fitLines(out[min(top, len(out)):], innerW, innerH)
+	// The lines follow the cursor when they outgrow the panel — above
+	// the foot, when the panel has one.
+	footH := 0
+	if button != "" {
+		footH = min(2, innerH)
+	}
+	top := scrollTo(0, min(len(out)-1, keep), innerH-footH)
+	body := fitLines(out[min(top, len(out)):], innerW, innerH-footH)
+	return append(body, fitLines(buttonFoot(button, lit, innerW, footH), innerW, footH)...)
+}
+
+// buttonFoot is the tool's button under a rule, the last lines of [2]
+// (user, 2026-09-25: a button is not a row of the table — it sits
+// apart, at the bottom, centred, and is not lit until the cursor is on
+// it, so the user can see the hand is there). h is the lines it may
+// take; with one, the button alone.
+func buttonFoot(text string, lit bool, innerW, h int) []string {
+	if h <= 0 {
+		return nil
+	}
+	f := borderDim
+	if lit {
+		f = handColor
+	}
+	w := chainW([]chip{{text: text}})
+	left := max(0, (innerW-w)/2)
+	line := clipANSI(spaces(left)+titleChain([]chip{{text: text, fill: f}}, f, true), innerW)
+	if h == 1 {
+		return []string{line}
+	}
+	return []string{lipgloss.NewStyle().Foreground(borderDim).Render(strings.Repeat("─", innerW)), line}
 }

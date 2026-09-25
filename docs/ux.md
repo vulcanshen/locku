@@ -37,7 +37,7 @@
 
 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
-profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的 Install / Uninstall 不是 panel operation，是 `[2]` 最後一列
+profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的 Install / Uninstall 不是 panel operation，是 `[2]` 底部分隔線下
 按鈕的 Enter（2026-09-25，取代同日早上的 `[S]` / `[X]` 熱鍵——畫面上看不到；更早是 CLI `locku setup`）。
 
 **`[1]` 側欄**
@@ -46,7 +46,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 |---|---|
 | saver（class：clock、dino） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，提議 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
 | profile | `[Enter] Edit`（焦點送到 `[2]`）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled 並說明） |
-| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：conf、閒置鎖、bind-key 與最後一列的 Install / Uninstall 按鈕）；同日拿掉 `[S] Setup` / `[X] Remove` 熱鍵 |
+| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：conf、閒置鎖、bind-key 與底部的 Install / Uninstall 按鈕）；同日拿掉 `[S] Setup` / `[X] Remove` 熱鍵 |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
 **`[2]` 明細**
@@ -66,7 +66,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | conf（tmux / screen 的 `[2]`） | `[Enter] Edit`（裝著時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
 | lock-after-time（screen：idle） | `[Enter] Edit`（裝著時直接重寫區塊、tmux 即時套用） | 無 |
 | bind-key（tmux） | `[Enter] Edit`（同上） | 無 |
-| Install / Uninstall（最後一列，按鈕） | `[Enter] Install`（confirm 後把區塊寫進 conf；tmux 有 server 在跑就即時套用；screen 連 shell rc）/ `[Enter] Uninstall`（confirm 後拿掉，tmux 連 server 上的一併拿掉）；conf 沒填時 disabled 並說 `set conf first`（2026-09-25） | 無 |
+| Install / Uninstall（`[2]` 底部分隔線下的按鈕，置中，cursor 到才點亮） | `[Enter] Install`（confirm 後把區塊寫進 conf；tmux 有 server 在跑就即時套用；screen 連 shell rc）/ `[Enter] Uninstall`（confirm 後拿掉，tmux 連 server 上的一併拿掉）；conf 沒填時 disabled 並說 `set conf first`（2026-09-25） | 無 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
@@ -114,7 +114,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Property / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點 |
+| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Property / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點；tmux / screen 的最後一個停靠點是底部的按鈕（2026-09-25） |
 | `j` / `k` | 上下一列、頭尾相接（2026-09-24 修訂：原本不繞，使用者要面板跟 menu 一樣 loop） | 同 |
 | `u` / `d` | 半頁，到頭就停不繞；清單比半頁短時等於跳到頭 / 尾 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |

@@ -30,51 +30,57 @@ type chip struct {
 
 // titleChain draws chips as ONE powerline strip, the way the family's
 // tab rows and webu's pagetab are drawn: round cap, segments run
-// together, a slanted seam between neighbours, round cap. A lit chip is
-// its fill with the canvas for ink; an unlit one the canvas with dim
-// ink. locku drew its titles as words parted by a middle dot until
+// together, a slanted seam between neighbours, round cap. Every chip is
+// a fill with the canvas for ink (chipFill): a panel without the keys
+// wears one fill all along, the unfocused border's, and with them the
+// first chip lights in the border's blue and a state chip in its own
+// colour. locku drew its titles as words parted by a middle dot until
 // 2026-09-25 — the one member still doing so — and the user asked for
 // the family's capsules: the dot cost three cells where a seam costs
 // one, and a chain lets each part wear its own colour, so what the
 // panel is, what kind it is and what state it is in are read apart.
-func titleChain(chips []chip, bc lipgloss.Color) string {
+func titleChain(chips []chip, bc lipgloss.Color, focused bool) string {
 	canvas := lipgloss.Color(baseHex)
-	fill := func(c chip) lipgloss.Color {
-		switch {
-		case c.border:
-			return bc
-		case c.fill != "":
-			return c.fill
-		}
-		return canvas
-	}
 	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().Foreground(fill(chips[0])).Render(capLeft))
+	b.WriteString(lipgloss.NewStyle().Foreground(chipFill(chips[0], bc, focused)).Render(capLeft))
 	for i, c := range chips {
-		f := fill(c)
+		f := chipFill(c, bc, focused)
 		if i > 0 {
-			div, fg, bg := divider(fill(chips[i-1]), f)
+			div, fg, bg := divider(chipFill(chips[i-1], bc, focused), f)
 			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
 		}
-		seg := " " + c.text + " "
-		if f == canvas {
-			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Background(canvas).Render(seg))
-			continue
-		}
-		b.WriteString(lipgloss.NewStyle().Foreground(canvas).Background(f).Bold(true).Render(seg))
+		b.WriteString(lipgloss.NewStyle().Foreground(canvas).Background(f).Bold(f != borderDim).Render(" " + c.text + " "))
 	}
-	b.WriteString(lipgloss.NewStyle().Foreground(fill(chips[len(chips)-1])).Render(capRight))
+	b.WriteString(lipgloss.NewStyle().Foreground(chipFill(chips[len(chips)-1], bc, focused)).Render(capRight))
 	return b.String()
+}
+
+// chipFill is the colour a chip wears in a frame whose border is bc:
+// the border's own for the first chip; for a chip with a colour of its
+// own — installed's green, unsaved's yellow — that colour while the
+// panel has the keys; everything else, and everything on a panel
+// without them, the unfocused border's grey (user, 2026-09-25: the
+// chips are one grey strip until the panel is focused, and then
+// installed lights while uninstalled keeps the grey — the state that
+// wants noticing is the one that lights).
+func chipFill(c chip, bc lipgloss.Color, focused bool) lipgloss.Color {
+	switch {
+	case c.border:
+		return bc
+	case focused && c.fill != "":
+		return c.fill
+	}
+	return borderDim
 }
 
 // divider is the seam between two chips: where the fills differ, the
 // left chip's own edge — a filled triangle in its colour over the
-// right's — and between two alike, a thin slash. The triangle belongs
-// to the chip on its LEFT (webu: get it backwards and the seam reads as
-// a notch cut out of the wrong chip).
+// right's — and between two alike, a thin slash in the canvas's ink.
+// The triangle belongs to the chip on its LEFT (webu: get it backwards
+// and the seam reads as a notch cut out of the wrong chip).
 func divider(prev, cur lipgloss.Color) (glyph string, fg, bg lipgloss.Color) {
 	if prev == cur {
-		return dividerSoft, borderDim, cur
+		return dividerSoft, lipgloss.Color(baseHex), cur
 	}
 	return dividerHard, prev, cur
 }
@@ -115,7 +121,7 @@ func panelFrame(innerW int, body []string, title []chip, hint string, focused bo
 	}
 	if len(title) > 0 && chainW(title)+2 <= innerW {
 		titleW = chainW(title) + 2
-		top = " " + titleChain(title, bc) + " "
+		top = " " + titleChain(title, bc, focused) + " "
 	}
 	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW))+tr))
 	side := bs.Render(v)
