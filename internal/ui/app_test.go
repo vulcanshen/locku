@@ -319,7 +319,7 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideTool || it.ref != toolTmux || m.rowAt().kind != rowActivate {
 		t.Fatalf("tmux, activate row: %+v %+v", it, m.rowAt())
 	}
-	if v := m.View(); !strings.Contains(v, capLeft+"[2] tmux"+capRight) || !strings.Contains(v, capLeft+"integration"+capRight+"╗") || !strings.Contains(v, "activate") || !strings.Contains(v, "off") || !strings.Contains(v, "config file path") || !strings.Contains(v, "not set") || !strings.Contains(v, "────") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || strings.Contains(v, "tool ") || strings.Contains(v, "status") || strings.Contains(v, "Install") || strings.Contains(v, "installed") {
+	if v := m.View(); !strings.Contains(v, capLeft+"[2] tmux"+capRight) || strings.Contains(v, "integration") || strings.Contains(v, "config.yaml") || !strings.Contains(v, "activate") || !strings.Contains(v, "off") || !strings.Contains(v, "config file path") || !strings.Contains(v, "not set") || !strings.Contains(v, "────") || !strings.Contains(v, "lock-after-time") || !strings.Contains(v, "bind-key") || !strings.Contains(v, "none") || strings.Contains(v, "tool ") || strings.Contains(v, "status") || strings.Contains(v, "Install") || strings.Contains(v, "installed") {
 		t.Errorf("tmux's rows are activate, config file path, a rule, lock-after-time, bind-key; the tag is integration:\n%s", v)
 	}
 	m = m.press("j", "enter")
@@ -496,20 +496,18 @@ func TestActivateFromTheScreen(t *testing.T) {
 }
 
 // The title's chips: one grey strip on a panel without the keys; with
-// them the border's colour on the name and the tag, and installed /
-// unsaved in theirs (user, 2026-09-25).
+// them the border's colour on the name, and unsaved in its own (user,
+// 2026-09-25).
 func TestChipFill(t *testing.T) {
-	name, tag := chip{text: "[2] clock", border: true}, chip{text: "profile", border: true}
-	hot, cold := chip{text: "unsaved", fill: yellowColor}, chip{text: "plain"}
-	for _, c := range []chip{name, tag, hot, cold} {
+	name, hot, cold := chip{text: "[2] clock", border: true}, chip{text: "unsaved", fill: yellowColor}, chip{text: "plain"}
+	for _, c := range []chip{name, hot, cold} {
 		if f := chipFill(c, borderDim, false); f != borderDim {
 			t.Errorf("unfocused, %q wears %v", c.text, f)
 		}
 	}
-	if chipFill(name, focusColor, true) != focusColor || chipFill(tag, focusColor, true) != focusColor ||
-		chipFill(hot, focusColor, true) != yellowColor || chipFill(cold, focusColor, true) != borderDim {
-		t.Errorf("focused: name %v, tag %v, unsaved %v, plain %v",
-			chipFill(name, focusColor, true), chipFill(tag, focusColor, true), chipFill(hot, focusColor, true), chipFill(cold, focusColor, true))
+	if chipFill(name, focusColor, true) != focusColor || chipFill(hot, focusColor, true) != yellowColor || chipFill(cold, focusColor, true) != borderDim {
+		t.Errorf("focused: name %v, unsaved %v, plain %v",
+			chipFill(name, focusColor, true), chipFill(hot, focusColor, true), chipFill(cold, focusColor, true))
 	}
 }
 
@@ -627,7 +625,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 		t.Fatalf("the first saver sits under the profiles, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, capLeft+"[2] clock"+capRight) || !strings.Contains(v, capLeft+"saver"+capRight) ||
+	if !strings.Contains(v, "Savers") || !strings.Contains(v, "Profiles") || !strings.Contains(v, capLeft+"[2] clock"+capRight) ||
 		!strings.Contains(v, "clock, clock2") || !strings.Contains(v, "defaults") || strings.Contains(v, "unsaved") {
 		t.Errorf("a saver's screen:\n%s", v)
 	}

@@ -46,7 +46,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ## 設定畫面
 
 ```
-╔[1] locku═════════════╗╭[2] clock  unsaved────────────────────profile╮
+╔[1] locku═════════════╗╭[2] clock  unsaved─────────────────────────────╮
 ║ Profiles               ║│ Property          Value                          │
 ║ ● clock                ║│ name              clock                          │
 ║   clock2               ║│ saver             clock                          │
@@ -59,7 +59,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 ║   screen               ║│   G               ──●───────── 50                │
 ║ Settings               ║│   B               ───●──────── 68                │
 ║   preference           ║│ fg                ■ #f2b753                      │
-╚════════════════════════╝╰──────────────── ~/.config/locku/config.yaml ─────╯
+╚════════════════════════╝╰──────────────────────────────────────────────────╯
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
@@ -70,7 +70,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 `Tab` / `1` / `2` 切面板、`Enter` 進 `[2]` 或編輯、`Esc` 關浮層、`Space` 列出當前能做的事、`?` 全域動作。
 `[1]` 的 saver：`n` new profile、`p` 預覽預設值；`[1]` 的 profile：`p` 預覽這個 profile、`D` duplicate、`r` rename、`X` delete；`[2]` profile / saver 上：`P` 預覽、`S` 存顏色草稿、`R` 丟掉；
 `[2]` preference 的 PIN 列：已設時 Enter 先驗目前的 PIN，再選 `New PIN` 或 `Remove PIN`（Remove 立即生效）。啟用哪個 profile 在 preference › profile 選，側欄的 `●` 只顯示。`P` 預覽（任意鍵回來，不驗 PIN）、`q` 離開。
-**Integration** 的 tmux / screen 的 `[2]` 是 `activate`（on / off）、`config file path`（要寫的設定檔）、一條分隔線、然後工具自己的 key：閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind。`activate` 就是區塊在不在檔案裡，Enter 後 confirm 才寫；開著時改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊：左上名字（草稿未存接 `unsaved`）、右上角獨立一顆種類，`[1] locku` 一顆。`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
+**Integration** 的 tmux / screen 的 `[2]` 是 `activate`（on / off）、`config file path`（要寫的設定檔）、一條分隔線、然後工具自己的 key：閒置鎖——用工具自己的設定名稱，tmux 是 `lock-after-time`、screen 是 `idle`——tmux 再多一個 `bind-key`：prefix 之後按哪個鍵就鎖整台，照 tmux 的寫法（`l`、`C-l`），空就不綁，Setup 寫成 `bind-key <鍵> lock-server`、有 server 就即時 bind。`activate` 就是區塊在不在檔案裡，Enter 後 confirm 才寫；開著時改任何一列就直接重寫區塊、tmux 即時套用。每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊：`[2]` 名字（草稿未存接 `unsaved`）、`[1] locku`。`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改。每個設定是什麼：focus 在 preference 或 tmux / screen 的 `[2]` 時按 `?`，help 只列那個面板的設定說明（自動換行），其他地方的 `?` 是鍵。
 
 ## 文件
 
@@ -112,7 +112,7 @@ pane 內攔截 prefix、attach 使用者現有 session、config 缺失時鎖死�
 側欄 Enter 設為啟用（改在 preference › saver 選）、12 時制 AM/PM、時間的冒號、有斜線的字形、
 tmux 預設的 `bind L`（跟使用者既有熱鍵撞，改 command alias；要綁的自己填 `bind-key`）、session 等級的 tmux 鎖（換個 session 就繞過，改整台）、
 閒置鎖升級成整台（雙螢幕會被另一邊鎖到）、一個 PIN 解全部 client（要輪詢，維持各自輸）、
-純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態就是 `activate` 列）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN、標題膠囊裡的 installed / uninstalled 狀態與串在標題後面的種類（種類獨立放右上角，狀態是 `activate` 列）。
+純隨設即得的整合寫入（conf 打錯就生檔）、純按鈕不同步（改了值檔案 stale）、`[2]` 裡的 status 列（狀態就是 `activate` 列）、` · ` 分隔的純文字標題（改膠囊鏈）、preview 也驗 PIN、標題膠囊裡的 installed / uninstalled 狀態與串在標題後面的種類（狀態是 `activate` 列；種類搬到右上角一顆獨立膠囊後也拿掉，分類資訊多餘）、`[2]` 下框右側的 config 路徑（第一版就有，不是家族慣例）。
 
 ## 目錄
 
