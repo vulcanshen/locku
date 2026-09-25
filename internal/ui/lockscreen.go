@@ -192,7 +192,10 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 // prompt says "wrong" or is locked out, keys are swallowed, Esc excepted
 // during a lockout.
 func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
-	if m.noPIN {
+	// A preview is a look at the saver, not the lock: any key hands back,
+	// PIN or no PIN — the PIN is `locku lock`'s business (user,
+	// 2026-09-25). The status row still reads as the lock's would.
+	if m.noPIN || m.preview {
 		return m.unlock()
 	}
 	if !m.prompt.anim.owns() {

@@ -27,6 +27,9 @@ var (
 	// yellow is "not set yet".
 	warnColor   = lipgloss.Color("#f38ba8") // red
 	yellowColor = lipgloss.Color("#f9e2af") // yellow
+	// a tool whose block is not in its file: the title's "uninstalled"
+	// chip (user, 2026-09-25: orange against installed's green).
+	peachColor = lipgloss.Color("#fab387") // peach
 	// the lit cells while the PIN prompt is up: the board steps back to be
 	// the prompt's backdrop (ui.md §2.3).
 	backdropColor = borderDim
@@ -49,4 +52,12 @@ var (
 	glyphInfo  = string(rune(0xf05a)) // nf-fa-info_circle      — toast
 	glyphInput = string(rune(0xf040)) // nf-fa-pencil           — input popup
 	glyphList  = string(rune(0xf0c9)) // the options list is a menu too
+
+	// A title chip's ends and seams, as webu's and sshu's (chrome.go):
+	// round caps, and between two chips of one chain a slanted seam —
+	// filled where the fills differ, a thin slash where they do not.
+	capLeft     = string(rune(0xe0b6)) // powerline round-left
+	capRight    = string(rune(0xe0b4)) // powerline round-right
+	dividerHard = string(rune(0xe0bc)) // ple-upper_left_triangle
+	dividerSoft = string(rune(0xe0bb)) // ple-forwardslash_separator
 )

@@ -50,7 +50,7 @@ var helpKeys = []helpEntry{
 	{"Space", "what can I do here: the item, and the panel"},
 	{"?", "this help — on [2] of preference, or of tmux / screen, what each row means"},
 	{"", "Global"},
-	{"P", "preview: the lock with the active profile — on a profile's [2], that profile — drafts included; unlock to come back"},
+	{"P", "preview: the lock with the active profile — on a profile's [2], that profile — drafts included; any key comes back"},
 	{"q", "quit — asks first when colours are unsaved"},
 	{"Ctrl+C", "force quit"},
 	{"", "[1] Savers — the kinds: clock, dino"},
@@ -64,9 +64,8 @@ var helpKeys = []helpEntry{
 	{"P", "preview the lock showing this profile"},
 	{"S", "save its colour draft to config.yaml"},
 	{"R", "reset the draft to the saved colours"},
-	{"", "[1] Integration — tmux, screen"},
-	{"S", "setup: locku's block into the tool's file (tmux: and onto a running server)"},
-	{"X", "remove: the block out again"},
+	{"", "[2] tmux, screen — the last row is the button"},
+	{"Enter", "Install: locku's block into the file (tmux: and onto a running server), after a confirm — and from then on a row changed is written at once; Uninstall: out again"},
 	{"", "Navigate"},
 	{"j · k", "next / previous row"},
 	{"u · d", "half a page"},
@@ -91,12 +90,12 @@ func helpTool(name string) []helpEntry {
 	out := []helpEntry{
 		{"", "[2] " + name + " — what each row is"},
 		{"conf", "the file locku's block is written into by S and taken out of by X; ~/ allowed"},
-		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never — S again after a change"},
+		{toolIdle[name], "idle seconds before " + name + " locks by itself; 0 never"},
 	}
 	if name == tools[toolTmux] {
-		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none — S again after a change"})
+		out = append(out, helpEntry{"bind-key", "the key after prefix that locks every client, as tmux spells it — l, C-l, F12; empty binds none"})
 	}
-	return append(out, helpEntry{"status", "whether the block is in the file now"})
+	return append(out, helpEntry{"Install", "the button: Enter writes the block into conf, after a confirm; once it is in — the title says installed — every row above is written at once when it changes, and the button is Uninstall"})
 }
 
 func (m *helpPopup) update(msg tea.KeyMsg) {

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -18,11 +19,84 @@ const sideW = 24
 // only the focused one is drawn (ui.md §1.3).
 const narrowW = 60
 
+// chip is one segment of a panel's title: its text, and its fill — the
+// border's colour when border is set, whatever fill says otherwise, and
+// unlit, the canvas with dim ink, when neither.
+type chip struct {
+	text   string
+	fill   lipgloss.Color
+	border bool
+}
+
+// titleChain draws chips as ONE powerline strip, the way the family's
+// tab rows and webu's pagetab are drawn: round cap, segments run
+// together, a slanted seam between neighbours, round cap. A lit chip is
+// its fill with the canvas for ink; an unlit one the canvas with dim
+// ink. locku drew its titles as words parted by a middle dot until
+// 2026-09-25 — the one member still doing so — and the user asked for
+// the family's capsules: the dot cost three cells where a seam costs
+// one, and a chain lets each part wear its own colour, so what the
+// panel is, what kind it is and what state it is in are read apart.
+func titleChain(chips []chip, bc lipgloss.Color) string {
+	canvas := lipgloss.Color(baseHex)
+	fill := func(c chip) lipgloss.Color {
+		switch {
+		case c.border:
+			return bc
+		case c.fill != "":
+			return c.fill
+		}
+		return canvas
+	}
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Foreground(fill(chips[0])).Render(capLeft))
+	for i, c := range chips {
+		f := fill(c)
+		if i > 0 {
+			div, fg, bg := divider(fill(chips[i-1]), f)
+			b.WriteString(lipgloss.NewStyle().Foreground(fg).Background(bg).Render(div))
+		}
+		seg := " " + c.text + " "
+		if f == canvas {
+			b.WriteString(lipgloss.NewStyle().Foreground(dimColor).Background(canvas).Render(seg))
+			continue
+		}
+		b.WriteString(lipgloss.NewStyle().Foreground(canvas).Background(f).Bold(true).Render(seg))
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(fill(chips[len(chips)-1])).Render(capRight))
+	return b.String()
+}
+
+// divider is the seam between two chips: where the fills differ, the
+// left chip's own edge — a filled triangle in its colour over the
+// right's — and between two alike, a thin slash. The triangle belongs
+// to the chip on its LEFT (webu: get it backwards and the seam reads as
+// a notch cut out of the wrong chip).
+func divider(prev, cur lipgloss.Color) (glyph string, fg, bg lipgloss.Color) {
+	if prev == cur {
+		return dividerSoft, borderDim, cur
+	}
+	return dividerHard, prev, cur
+}
+
+// chainW is the cells a chain takes: two caps, each chip's text with a
+// space either side, and a seam between neighbours.
+func chainW(chips []chip) int {
+	w := 2 + len(chips) - 1
+	for _, c := range chips {
+		w += dispW(c.text) + 2
+	}
+	return w
+}
+
 // panelFrame frames body — every line already innerW cells — with a title
-// in the top border and, for the unfocused rounded frame, a hint in the
-// bottom one. Focused frames carry no hint: the hint is the config's
-// path, a resting fact, and it lives on [2] whichever side has the keys.
-func panelFrame(innerW int, body []string, title, hint string, focused bool) string {
+// chain in the top border and, for the unfocused rounded frame, a hint
+// in the bottom one. Focused frames carry no hint: the hint is the
+// config's path, a resting fact, and it lives on [2] whichever side has
+// the keys. A chain too wide for the border sheds its second chip —
+// the kind before the state, which is the part that says something —
+// until it fits, or is left out whole.
+func panelFrame(innerW int, body []string, title []chip, hint string, focused bool) string {
 	bc := borderDim
 	tl, tr, bl, br, h, v := "╭", "╮", "╰", "╯", "─", "│"
 	if focused {
@@ -30,16 +104,18 @@ func panelFrame(innerW int, body []string, title, hint string, focused bool) str
 		tl, tr, bl, br, h, v = "╔", "╗", "╚", "╝", "═", "║"
 	}
 	bs := lipgloss.NewStyle().Foreground(bc)
-	ts := lipgloss.NewStyle().Foreground(bc).Bold(true)
 	hs := lipgloss.NewStyle().Foreground(dimColor)
 
 	out := make([]string, 0, len(body)+2)
-	// " title " inside the top border, or nothing when it cannot fit.
+	// " chain " inside the top border, or nothing when it cannot fit.
 	titleW := 0
 	top := ""
-	if title != "" && dispW(title)+2 <= innerW {
-		titleW = dispW(title) + 2
-		top = " " + ts.Render(title) + " "
+	for len(title) > 1 && chainW(title)+2 > innerW {
+		title = slices.Delete(slices.Clone(title), 1, 2)
+	}
+	if len(title) > 0 && chainW(title)+2 <= innerW {
+		titleW = chainW(title) + 2
+		top = " " + titleChain(title, bc) + " "
 	}
 	out = append(out, bs.Render(tl)+top+bs.Render(strings.Repeat(h, max(0, innerW-titleW))+tr))
 	side := bs.Render(v)
