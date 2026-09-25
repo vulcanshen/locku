@@ -61,7 +61,7 @@ test: ## 跑所有測試
 	go test ./...
 
 .PHONY: test-race
-test-race: ## 帶 race detector 跑測試（release 前跑一次）
+test-race: ## 帶 race detector 跑測試（check 也跑它）
 	go test -race ./...
 
 .PHONY: vet

@@ -141,7 +141,7 @@ func runBoard(model func() ui.LockModel) (code int, unlocked bool) {
 }
 
 // runCustom is the lock with the user's own program for a saver
-// (function.md §5.6; user, 2026-09-25): the terminal is locku's — raw,
+// (function.md §5.5; user, 2026-09-25): the terminal is locku's — raw,
 // on the alternate screen — and the program's, on a pty, is passed on to
 // it as it comes. A key holds the program's picture back and puts the
 // PIN prompt up on a clear screen, a lock program of its own; Esc or
@@ -190,7 +190,13 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 				t.Give()
 				return 0, false
 			}
-			if !cfg.HasPIN() {
+			// The PIN as the file has it now — as the board lock reads it
+			// at every key (function.md §4.5): none, and this key ends it.
+			noPIN := !cfg.HasPIN()
+			if h, ok := config.LoadPINHash(); ok {
+				noPIN = h == ""
+			}
+			if noPIN {
 				p.Kill()
 				t.Give()
 				return 0, true

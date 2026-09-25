@@ -1,6 +1,6 @@
-// Package setup is `locku setup`: it writes the lock into tmux's and
-// screen's configuration (function.md §6.2), and takes it out again
-// with -d. Only a managed block is ever touched — between two marker
+// Package setup writes the lock into tmux's and screen's configuration
+// and takes it out again — Integration › activate on the settings
+// screen (function.md §6.2). Only a managed block is ever touched — between two marker
 // lines, every line of it marked `# locku` so it reads as locku's when
 // met on its own — so running it again replaces the block and nothing
 // else, and a hand-written file keeps every other line.

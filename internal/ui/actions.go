@@ -287,7 +287,7 @@ func (m *AppModel) previewThis() tea.Cmd {
 
 // previewOf shows cfg's active profile p: the lock inside the settings
 // screen — or, for a custom saver, p's program on a terminal of its own,
-// the screen given up to it until a key (function.md §5.6); a program
+// the screen given up to it until a key (function.md §5.5); a program
 // that ends, or none set, is the word on the board, a preview as any
 // other.
 func (m *AppModel) previewOf(cfg config.Config, p config.Profile) tea.Cmd {
