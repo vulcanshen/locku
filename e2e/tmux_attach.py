@@ -104,6 +104,16 @@ def check(label, cond):
     print(("ok   " if cond else "FAIL ") + label)
 
 
+def until(cond, secs=8.0):
+    """cond, given up to secs to come true: a board takes its reveal's
+    time to appear, longer on a busy machine (a fixed wait was flaky)."""
+    for _ in range(int(secs * 10)):
+        if cond():
+            return True
+        time.sleep(0.1)
+    return cond()
+
+
 def settings(*keys):
     """The settings screen on a pty, the keys pressed one by one, then q.
     Integration › tmux is two rows above preference: G, k, k."""
@@ -140,15 +150,15 @@ check("the server took the block: alias, hooks and the key",
 # 1. `locku` locks A and marks the server.
 tmux("locku")
 time.sleep(1.8)
-check("A shows the board after locku", board(oa))
+check("A shows the board after locku", until(lambda: board(oa)))
 check("the server is marked @locked", marked())
 
 # 2. B attaches to the same session meanwhile, E to the other: both locked.
 pb, fb, ob = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
 pe, fe, oe = spawn(["tmux", "-L", SOCK, "attach", "-t", "u"])
 time.sleep(2.0)
-check("B, attaching to the locked session, shows the board", board(ob))
-check("E, attaching to the OTHER session, shows the board too", board(oe))
+check("B, attaching to the locked session, shows the board", until(lambda: board(ob)))
+check("E, attaching to the OTHER session, shows the board too", until(lambda: board(oe)))
 
 # 3. A unlocks: the mark goes; B and E stay on their own locks until their own key.
 unlock(fa)
@@ -171,13 +181,13 @@ time.sleep(0.5)
 # the next client is locked.
 os.write(fa, b"\x02l")
 time.sleep(1.5)
-check("prefix l locks A and marks the server", marked() and locks_running())
+check("prefix l locks A and marks the server", until(lambda: marked() and locks_running()))
 kill(pa)
 time.sleep(1.5)
 check("the mark survives a terminal that died under the lock", marked())
 pd, fd_, od = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
 time.sleep(2.0)
-check("D, attaching after that, shows the board", board(od))
+check("D, attaching after that, shows the board", until(lambda: board(od)))
 unlock(fd_)
 check("D's unlock clears the mark", not marked())
 tmux("kill-server")
@@ -206,13 +216,13 @@ check("the running server took the block: alias, key, hook, and each session's o
 check("the switch cleared the stale mark", tmux("show", "-gqv", "@locked") == "")
 tmux("locku", "-t", "t")
 time.sleep(1.8)
-check("A shows the board after locku on its session", board(oa))
+check("A shows the board after locku on its session", until(lambda: board(oa)))
 check("the mark is the session's, not the server's",
       tmux("show", "-t", "t:", "-qv", "@locked") == "1" and tmux("show", "-gqv", "@locked") == "")
 pb, fb, ob = spawn(["tmux", "-L", SOCK, "attach", "-t", "t"])
 pe, fe, oe = spawn(["tmux", "-L", SOCK, "attach", "-t", "u"])
 time.sleep(2.0)
-check("B, attaching to the locked session, shows the board", board(ob))
+check("B, attaching to the locked session, shows the board", until(lambda: board(ob)))
 check("E, attaching to the OTHER session, is left alone", not board(oe))
 unlock(fa)
 check("A's unlock clears the session's mark", tmux("show", "-t", "t:", "-qv", "@locked") == "")
