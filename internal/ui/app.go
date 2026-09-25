@@ -5,6 +5,7 @@ import (
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/custom"
 )
 
 // AppModel is the settings screen, the bare `locku` (ui.md §1.1): panel
@@ -114,6 +115,13 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.input.anim.tick(msg), m.confirm.anim.tick(msg), m.toast.anim.tick(msg))
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
+	case customPreviewEndMsg:
+		// The program's preview is over: a program that ended, or could
+		// not run, is the word on the board, a preview as any other.
+		if msg.outcome != nil {
+			return m, m.startPreviewWord(msg.cfg, *msg.outcome)
+		}
+		return m, nil
 	case inputThawMsg:
 		m.input.thaw(msg)
 		return m, nil
@@ -300,6 +308,15 @@ func (m *AppModel) openMenu() tea.Cmd {
 // that profile active — and comes back when it opens (ui.md §2.1).
 func (m *AppModel) startPreview(cfg config.Config) tea.Cmd {
 	lk := newLock(cfg, "", true)
+	lk, cmd := lk.step(tea.WindowSizeMsg{Width: m.width, Height: m.height})
+	m.preview = &lk
+	return cmd
+}
+
+// startPreviewWord is a preview of a custom saver's ending: the word on
+// the board, the note on the status row.
+func (m *AppModel) startPreviewWord(cfg config.Config, o custom.Outcome) tea.Cmd {
+	lk := newLock(cfg, "", true).withWord(o.Word, o.Note)
 	lk, cmd := lk.step(tea.WindowSizeMsg{Width: m.width, Height: m.height})
 	m.preview = &lk
 	return cmd

@@ -63,6 +63,9 @@ type Profile struct {
 	// leaves them out of the file.
 	Runner string `yaml:"runner,omitempty"`
 	Scene  string `yaml:"scene,omitempty"`
+	// The custom saver's own (2026-09-25): the program that draws, as
+	// sh -c runs it; empty is none, and the lock says so on its board.
+	Command string `yaml:"command,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -161,8 +164,13 @@ type Config struct {
 // with its first runner and scene. A file's own defaults for the kind
 // come first: see Config.NewProfile.
 func NewProfile(name, kind string) Profile {
-	if kind == saver.KindDino {
+	switch kind {
+	case saver.KindDino:
 		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+	case saver.KindCustom:
+		// No program until the user names one; the colours are the PIN
+		// prompt's, and the board's when the program ends.
+		return Profile{Name: name, Saver: kind, BG: DefaultBG, FG: DefaultFG}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -427,7 +435,12 @@ func dropKey(m *yaml.Node, key string) {
 func tidy(p Profile, kind string) Profile {
 	p.Saver = kind
 	d := NewProfile(p.Name, kind)
-	if kind == saver.KindDino {
+	p.Command = strings.TrimSpace(p.Command)
+	switch {
+	case kind == saver.KindCustom:
+		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Scene = "", "", "", "", "", "", ""
+	case kind == saver.KindDino:
+		p.Command = ""
 		if p.Runner == "" {
 			p.Runner = d.Runner
 		}
@@ -438,7 +451,8 @@ func tidy(p Profile, kind string) Profile {
 			p.Scene = d.Scene
 		}
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
-	} else {
+	default:
+		p.Command = ""
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}

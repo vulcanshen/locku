@@ -385,7 +385,7 @@ func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int, dimmed boo
 // statusRow is the last row (function.md §5.4, ui.md §1.2): who is locked
 // out of what, since when — and, whatever show says, whether there is a
 // PIN at all, and whether the file could be read. Exactly cols wide.
-func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN bool, problem string) string {
+func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN bool, problem, note string) string {
 	var b strings.Builder
 	plainW := 0
 	add := func(s string, c lipgloss.Color) {
@@ -403,6 +403,10 @@ func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN
 	}
 	if noPIN {
 		add("no PIN · any key unlocks", yellowColor)
+	}
+	// A custom saver's ending: why the board says what it says.
+	if note != "" {
+		add(note, warnColor)
 	}
 	return clipANSI(" "+b.String(), cols) + spaces(cols-1-plainW)
 }

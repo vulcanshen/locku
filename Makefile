@@ -80,8 +80,9 @@ fmt-check: ## gofmt -l（列出未格式化的檔；有輸出即失敗，CI 用�
 check: fmt-check vet test ## fmt-check + vet + test 一次跑（commit 前）
 
 .PHONY: e2e
-e2e: build ## 在真的 tmux 上跑端到端（e2e/tmux_attach.py）：鎖定、鎖定中 attach 也被鎖、解鎖清除、setup -d；需要 tmux 與 python3
+e2e: build ## 在真的 tmux 上跑端到端（e2e/tmux_attach.py：鎖定、鎖定中 attach 也被鎖、解鎖清除、lock-session、deactivate），再在 pty 上跑 custom saver（e2e/custom_lock.py）；需要 tmux 與 python3
 	python3 e2e/tmux_attach.py ./$(BINARY)
+	python3 e2e/custom_lock.py ./$(BINARY)
 
 ##@ 打包（package）
 

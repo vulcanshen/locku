@@ -48,6 +48,7 @@ const (
 	rowDate
 	rowRunner
 	rowScene
+	rowCommand // a custom saver's program
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -86,8 +87,9 @@ const labelW = 28
 
 // about is what [2] says of a saver.
 var about = map[string]string{
-	saver.KindClock: "the time and the date, on the LED board",
-	saver.KindDino:  "the offline dino run, jumping by itself, for ever",
+	saver.KindClock:  "the time and the date, on the LED board",
+	saver.KindDino:   "the offline dino run, jumping by itself, for ever",
+	saver.KindCustom: "your own program, on a terminal of its own, as the saver",
 }
 
 // usualConf is where a tool's file usually is: the offer in the conf
@@ -161,9 +163,18 @@ func (m AppModel) anyDirty() bool {
 }
 
 // fieldRows is a saver's own settings for p: the clock's shapes and
-// size, or the run's runner and scene.
+// size, the run's runner and scene, or the custom saver's command.
 func fieldRows(p config.Profile) []row {
 	value := valueColor
+	if p.Saver == saver.KindCustom {
+		// The program, as sh -c runs it; none yet is said in yellow, as
+		// the PIN's "not set" is (user, 2026-09-25).
+		cmd := row{kind: rowCommand, label: "command", value: p.Command, color: value, stop: true}
+		if p.Command == "" {
+			cmd.value, cmd.color = "not set", yellowColor
+		}
+		return []row{cmd}
+	}
 	if p.Saver == saver.KindDino {
 		// No size: the run is drawn as large as the terminal allows
 		// (user, 2026-09-24).

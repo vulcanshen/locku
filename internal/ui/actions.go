@@ -2,6 +2,9 @@ package ui
 
 import (
 	"bytes"
+	"errors"
+	"io"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -9,6 +12,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/custom"
 	"github.com/vulcanshen/locku/internal/saver"
 	"github.com/vulcanshen/locku/internal/setup"
 )
@@ -69,6 +73,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseRunner})
 	case rowScene:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "where it runs", run: (*AppModel).chooseScene})
+	case rowCommand:
+		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the program that draws, as sh -c runs it; empty for none", run: (*AppModel).editCommand})
 	case rowLayout:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "a row, or a column of parts", run: (*AppModel).chooseLayout})
 	case rowSize:
@@ -251,7 +257,8 @@ func (m *AppModel) previewThis() tea.Cmd {
 	cfg := m.previewCfg()
 	p, key, ok := m.subject()
 	if !ok {
-		return m.startPreview(cfg)
+		p, _ = cfg.Active()
+		return m.previewOf(cfg, p)
 	}
 	if m.sideAt().kind == sideSaver {
 		d := m.draftOf(key, p)
@@ -260,7 +267,55 @@ func (m *AppModel) previewThis() tea.Cmd {
 		cfg.Profiles = append(cfg.Profiles, p)
 	}
 	cfg.Profile = p.Name
-	return m.startPreview(cfg)
+	return m.previewOf(cfg, p)
+}
+
+// previewOf shows cfg's active profile p: the lock inside the settings
+// screen — or, for a custom saver, p's program on a terminal of its own,
+// the screen given up to it until a key (function.md §5.6); a program
+// that ends, or none set, is the word on the board, a preview as any
+// other.
+func (m *AppModel) previewOf(cfg config.Config, p config.Profile) tea.Cmd {
+	if p.Saver != saver.KindCustom {
+		return m.startPreview(cfg)
+	}
+	if strings.TrimSpace(p.Command) == "" {
+		return m.startPreviewWord(cfg, custom.NoCommand())
+	}
+	return tea.Exec(&customPreview{command: p.Command}, func(err error) tea.Msg {
+		var e ended
+		if errors.As(err, &e) {
+			return customPreviewEndMsg{cfg: cfg, outcome: &e.o}
+		}
+		return customPreviewEndMsg{cfg: cfg}
+	})
+}
+
+// customPreview is the program's preview as a command Bubble Tea hands
+// the terminal to: it runs until a key, or until the program ends, and
+// carries an ending back as its error.
+type customPreview struct{ command string }
+
+func (c *customPreview) SetStdin(io.Reader)  {}
+func (c *customPreview) SetStdout(io.Writer) {}
+func (c *customPreview) SetStderr(io.Writer) {}
+func (c *customPreview) Run() error {
+	if o := custom.Preview(c.command, os.Stdin, os.Stdout); o != nil {
+		return ended{*o}
+	}
+	return nil
+}
+
+// ended is a program's outcome, as the error a preview ends with.
+type ended struct{ o custom.Outcome }
+
+func (e ended) Error() string { return e.o.Note }
+
+// customPreviewEndMsg says the program's preview is over — with the
+// outcome of a program that ended, or nothing for a key.
+type customPreviewEndMsg struct {
+	cfg     config.Config
+	outcome *custom.Outcome
 }
 
 // newProfile is [n] on a saver: a name for the profile to make of it,
@@ -581,6 +636,14 @@ func (m *AppModel) editBindKey() tea.Cmd {
 		value: m.cfg.Tmux.BindKey, accept: "save", action: inputBindKey}, m.layer())
 }
 
+// editCommand is Enter on a custom saver's command: the line as it is,
+// to edit; empty is none.
+func (m *AppModel) editCommand() tea.Cmd {
+	p, _, _ := m.subject()
+	return m.input.ask(inputPopup{title: "command", prompt: "command — the program that draws, as sh -c runs it; empty for none",
+		value: p.Command, accept: "save", action: inputCommand}, m.layer())
+}
+
 // ---- the PIN (ux.md §2.2): one box at a time, one question each.
 
 func (m *AppModel) setPIN() tea.Cmd { return m.askPIN("new PIN", inputPINNew) }
@@ -728,6 +791,12 @@ func (m *AppModel) commitInput() tea.Cmd {
 		_, was := m.tool()
 		m.editTool(func(t *config.Tool) { t.Conf = v })
 		return tea.Batch(m.input.close(), m.save(before), m.syncTool(was.Conf))
+
+	case inputCommand:
+		v = strings.TrimSpace(v)
+		before := m.snapshot()
+		m.edit(func(p *config.Profile) { p.Command = v })
+		return tea.Batch(m.input.close(), m.save(before))
 
 	case inputBindKey:
 		// One key as tmux names it: a space would make it two words on

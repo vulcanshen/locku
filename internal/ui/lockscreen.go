@@ -25,6 +25,8 @@ type LockModel struct {
 	problem string
 	clock   saver.Clock
 	game    *saver.Dino  // the dino run, when that is the profile's saver; the clock is idle then
+	word    saver.Word   // a custom saver's ending on the board; the clock is idle then
+	note    string       // the custom saver's ending, in red on the status row
 	style   config.Style // the active profile's colours
 	noPIN   bool
 
@@ -52,6 +54,13 @@ type LockModel struct {
 	// gone: the terminal went away under the lock; the process ends, but
 	// nothing was unlocked — a tmux session stays marked locked.
 	gone bool
+	// promptOnly: the PIN prompt alone, for the custom saver (function.md
+	// §5.6) — up from the first frame, on a screen of the profile's
+	// colour, and when it closes the program is put back (back), not a
+	// board.
+	promptOnly bool
+	back       bool
+	initCmd    tea.Cmd
 
 	now func() time.Time
 }
@@ -73,6 +82,35 @@ type TTYGoneMsg struct{}
 
 // NewLock is the model for `locku lock`.
 func NewLock(cfg config.Config, problem string) LockModel { return newLock(cfg, problem, false) }
+
+// NewLockWord is the lock for a custom saver's program that has ended
+// (function.md §5.6): the word on the board, in the clock's face at the
+// largest size that fits, and the note in red on the status row.
+func NewLockWord(cfg config.Config, problem, word, note string) LockModel {
+	return newLock(cfg, problem, false).withWord(word, note)
+}
+
+// withWord puts word on the board in place of whatever the profile
+// draws, and note on the status row.
+func (m LockModel) withWord(word, note string) LockModel {
+	m.word, m.note, m.game = saver.Word(word), note, nil
+	m.scale, m.face = 3, faceOf("3x7")
+	return m
+}
+
+// NewLockPrompt is the PIN prompt alone, for the custom saver: up from
+// the first frame, over a screen of the profile's colour; Esc or the
+// timeout ends the program with Back set, the right PIN with it clear.
+func NewLockPrompt(cfg config.Config, problem string) LockModel {
+	m := newLock(cfg, problem, false)
+	m.promptOnly, m.game = true, nil
+	m.initCmd = m.openPrompt()
+	return m
+}
+
+// Back reports whether a prompt-only lock ended because the prompt
+// closed — the program is to be put back — rather than by the PIN.
+func (m LockModel) Back() bool { return m.back }
 
 func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	s, ok := cfg.Active()
@@ -113,7 +151,7 @@ func whoami() (string, string) {
 	return name, host
 }
 
-func (m LockModel) Init() tea.Cmd { return m.clockTick() }
+func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
 
 func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m.step(msg)
@@ -245,8 +283,13 @@ func (m *LockModel) openPrompt() tea.Cmd {
 	return tea.Batch(cmd, m.armTimeout())
 }
 
-// closePrompt takes it down; the board never stopped.
+// closePrompt takes it down; the board never stopped. Prompt-only, the
+// program is waiting for the screen: this lock ends, with Back.
 func (m *LockModel) closePrompt(timedOut bool) tea.Cmd {
+	if m.promptOnly {
+		m.back = true
+		return tea.Quit
+	}
 	m.promptGen++
 	return m.prompt.close(timedOut)
 }
@@ -297,7 +340,11 @@ func (m *LockModel) refit() board {
 		k, w, h := fitScene(sceneMaxScale, m.width, rows)
 		return paintScene(m.game.Draw(w, h), k, m.width, rows)
 	}
-	m.layout, m.plain = fit(m.face, m.clock, m.now(), m.width, rows, m.scale)
+	var s saver.Saver = m.clock
+	if m.word != "" {
+		s = m.word
+	}
+	m.layout, m.plain = fit(m.face, s, m.now(), m.width, rows, m.scale)
 	return paint(m.face, m.layout, m.width, rows)
 }
 
@@ -325,6 +372,9 @@ func (m LockModel) clockTick() tea.Cmd {
 	next := m.clock.Next(now)
 	if m.game != nil {
 		next = m.game.Next(now)
+	}
+	if m.word != "" {
+		next = m.word.Next(now)
 	}
 	return tea.Tick(next.Sub(now), func(time.Time) tea.Msg { return clockTickMsg{gen} })
 }
@@ -359,13 +409,18 @@ func (m LockModel) View() string {
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
-		if len(m.layout.blocks) > 0 || m.game != nil {
+		switch {
+		case m.promptOnly:
+			// The program's picture is held back; the prompt sits on the
+			// profile's ground alone.
+			out = plainRows(nil, bg, fg, m.width, rows, dimmed)
+		case len(m.layout.blocks) > 0 || m.game != nil:
 			out = boardRows(m.shown, bg, fg, m.width, dimmed)
-		} else {
+		default:
 			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)
 		}
 	}
-	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem))
+	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note))
 	view := strings.Join(out, "\n")
 	if m.prompt.anim.isActive() {
 		view = overlay.Composite(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
