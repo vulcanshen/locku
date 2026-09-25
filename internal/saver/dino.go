@@ -17,7 +17,8 @@ import (
 // jumping on its own (user, 2026-09-25: the six ways). Scenes:
 // grassland, with cacti; the desert, with pyramids — either's in three
 // sizes, small, medium and large (user, 2026-09-25: there had been
-// only small and medium).
+// only small and medium), and the jump is as high as the size asks
+// (user, the same day: it had been one height over everything).
 //
 // Everything here is in the scene's own pixels; the canvas scales them.
 
@@ -85,16 +86,41 @@ const (
 	runnerGap = 4   // between two runners, nose to tail
 )
 
-// arc is a jump: how far the runner is above the ground, frame by frame.
-// It is a slow, high jump — the widest obstacle is thirteen pixels and
-// the runner twelve, and at two pixels a frame the two need twelve
-// frames above the huge pyramid, ten or so above the big cactus, which
-// the top clears by a pixel (2026-09-25: eleven high, for the large
-// tier; it was eight, a pixel over the tall cactus).
-var arc = []int{3, 6, 8, 10, 11, 11, 11, 11, 11, 11, 11, 11, 10, 8, 6, 3}
+// tier is an obstacle's size — small, medium or large — and with it the
+// jump over it: the arc of the same tier. The jump goes by the tier and
+// not by the height, because the desert's pyramids are lower than the
+// cacti: by height alone the great pyramid would take the small jump
+// and the huge one the middling, and the user asked for the jump to go
+// with the obstacle's size.
+type tier int
 
-// arcTop is the jump's height: the sky starts above the runner at it.
-var arcTop = slices.Max(arc)
+const (
+	small tier = iota
+	medium
+	large
+)
+
+// arcs are the jumps, one a tier: how far the runner is above the ground,
+// frame by frame. Each is as high as its tier asks — a pixel over the
+// tallest obstacle of that tier in either scene: six over the small
+// cactus, eight over the tall one, eleven over the big one; the pyramids
+// are lower, and the jumps stand off them by more (user, 2026-09-25: the
+// height must go with the obstacle's size; there had been the one jump,
+// eleven high, over everything — eight, before the large tier). Every
+// jump is the same slow sixteen frames, because a small obstacle can be
+// as wide as a large one — three cacti in a row are eleven pixels, the
+// pair of pyramids thirteen, as wide as anything gets — and at two
+// pixels a frame the runner, twelve wide, needs twelve frames above the
+// widest: a lower jump is lower, not shorter.
+var arcs = [...][]int{
+	small:  {2, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 5, 4, 2},
+	medium: {3, 5, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 3},
+	large:  {3, 6, 8, 10, 11, 11, 11, 11, 11, 11, 11, 11, 10, 8, 6, 3},
+}
+
+// arcTop is the highest jump's height: the sky starts above the runner
+// at it.
+var arcTop = max(slices.Max(arcs[small]), slices.Max(arcs[medium]), slices.Max(arcs[large]))
 
 // A sprite is rows of '#' lit and '.' dark, top to bottom, all one width.
 type sprite []string
@@ -154,9 +180,16 @@ func (a runnerArt) tallest() int {
 // sceneArt is a scene: what stands in the way, what drifts by, and how
 // often the ground has a tuft.
 type sceneArt struct {
-	obstacles []sprite
+	obstacles []obstacleArt
 	cloud     sprite
 	tuftEvery uint32
+}
+
+// obstacleArt is one thing in the way: its sprite, and its tier — which
+// is the jump over it.
+type obstacleArt struct {
+	sprite
+	tier tier
 }
 
 // The T-Rex, facing the way it runs, twelve wide and fourteen tall.
@@ -251,12 +284,12 @@ var (
 		"##########",
 	}
 	grassland = sceneArt{
-		obstacles: []sprite{
-			cactus,
-			beside(1, cactus, cactus),
-			beside(1, cactus, cactus, cactus),
-			tallCactus,
-			bigCactus,
+		obstacles: []obstacleArt{
+			{cactus, small},
+			{beside(1, cactus, cactus), small},
+			{beside(1, cactus, cactus, cactus), small},
+			{tallCactus, medium},
+			{bigCactus, large},
 		},
 		cloud:     cloudArt,
 		tuftEvery: 5,
@@ -292,12 +325,12 @@ var (
 		"#############",
 	}
 	desert = sceneArt{
-		obstacles: []sprite{
-			pyramid,
-			bigPyramid,
-			greatPyramid,
-			hugePyramid,
-			beside(1, pyramid, bigPyramid),
+		obstacles: []obstacleArt{
+			{pyramid, small},
+			{bigPyramid, small},
+			{greatPyramid, medium},
+			{hugePyramid, large},
+			{beside(1, pyramid, bigPyramid), small},
 		},
 		cloud:     cloudArt,
 		tuftEvery: 11, // sand: fewer specks
@@ -325,10 +358,11 @@ type Dino struct {
 	rng    *rand.Rand
 	runner runnerArt
 	scene  sceneArt
-	w, h   int   // the scene as last drawn; nothing runs before the first draw
-	t      int   // frames run
-	dist   int   // pixels the world has moved: the ground's tufts scroll by it
-	air    []int // one a runner: -1 on the ground, else how far into the arc
+	w, h   int    // the scene as last drawn; nothing runs before the first draw
+	t      int    // frames run
+	dist   int    // pixels the world has moved: the ground's tufts scroll by it
+	air    []int  // one a runner: -1 on the ground, else how far into its arc
+	jump   []tier // one a runner: the tier of its jump — which arc it is on
 	obs    []obstacle
 	gap    int // pixels until the next obstacle
 	clouds []cloud
@@ -347,6 +381,7 @@ func NewDino(seed uint64, runner, scene string) *Dino {
 		gap:    firstGap,
 	}
 	d.air = make([]int, d.runner.count())
+	d.jump = make([]tier, d.runner.count())
 	for i := range d.air {
 		d.air[i] = -1
 	}
@@ -374,7 +409,7 @@ func (d *Dino) runnerW(i int) int { return d.runner.figures[i].air.w() }
 // lift is how far above the ground runner i is this frame.
 func (d *Dino) lift(i int) int {
 	if d.air[i] >= 0 {
-		return arc[d.air[i]]
+		return arcs[d.jump[i]][d.air[i]]
 	}
 	return 0
 }
@@ -415,23 +450,24 @@ func (d *Dino) Step() {
 // step is runner i's frame: on with the jump, or the decision to jump.
 func (d *Dino) step(i int) {
 	if d.air[i] >= 0 {
-		if d.air[i]++; d.air[i] >= len(arc) {
+		if d.air[i]++; d.air[i] >= len(arcs[d.jump[i]]) {
 			d.air[i] = -1
 		}
 		return
 	}
 	if o, ok := d.ahead(i); ok {
-		// Jump inside the window that clears it: at its last frame, or
-		// earlier by chance — each runner's own window, its own chance.
+		// Jump it with its tier's arc, inside the window that clears it:
+		// at its last frame, or earlier by chance — each runner's own
+		// window, its own chance.
 		if d.clears(i, o, 0) && (!d.clears(i, o, 1) || d.rng.IntN(6) == 0) {
-			d.air[i] = 0
+			d.air[i], d.jump[i] = 0, d.scene.obstacles[o.kind].tier
 		}
 		return
 	}
-	// Nothing coming, and nothing due before this jump would land: a jump
-	// for the fun of it.
-	if d.gap > len(arc)*speed+8 && d.rng.IntN(50) == 0 {
-		d.air[i] = 0
+	// Nothing coming, and nothing due before the longest jump would land:
+	// a jump for the fun of it, any height.
+	if d.gap > len(arcs[large])*speed+8 && d.rng.IntN(50) == 0 {
+		d.air[i], d.jump[i] = 0, tier(d.rng.IntN(len(arcs)))
 	}
 }
 
@@ -447,11 +483,12 @@ func (d *Dino) ahead(i int) (obstacle, bool) {
 	return best, found
 }
 
-// clears reports whether a jump runner i begins delay frames from now
-// takes it over o and lands it past — with the runner's whole box, which
-// is more careful than its shape.
+// clears reports whether a jump runner i begins delay frames from now,
+// on the arc of o's tier, takes it over o and lands it past — with the
+// runner's whole box, which is more careful than its shape.
 func (d *Dino) clears(i int, o obstacle, delay int) bool {
 	s := d.scene.obstacles[o.kind]
+	arc := arcs[s.tier]
 	dx, dw := d.runnerX(i), d.runnerW(i)
 	for t := 0; ; t++ {
 		ox := o.x - speed*t
@@ -514,7 +551,7 @@ func (d *Dino) Draw(w, h int) Scene {
 	}
 	for _, o := range d.obs {
 		s := d.scene.obstacles[o.kind]
-		sc.blit(s, o.x, gy-s.h())
+		sc.blit(s.sprite, o.x, gy-s.h())
 	}
 	for i, f := range d.runner.figures {
 		pose := f.air
