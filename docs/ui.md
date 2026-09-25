@@ -279,7 +279,7 @@ Blue 不出現在那裡。
 custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 框，沒有 locku 的任何 chrome（2026-09-25）。
 
 **Nerd Font 是設計、必裝**，與家族相同：畫布像素就是 nf-fa-square。字型在使用者本機的終端機模擬器，
-經 SSH 不受影響。`docs/icon.svg` 沿用 u-family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。
+經 SSH 不受影響。`docs/icon.svg` 沿用 u-family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
 
 ---
 

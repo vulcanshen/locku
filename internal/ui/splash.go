@@ -17,8 +17,10 @@ type splashHintMsg struct{}
 
 // splashModel renders the locku logo as a hidden easter egg, a sibling of
 // kbu's, filu's, sshu's and webu's splashes. The u-family mark is a navy U
-// wrapping a gold figure — here a padlock — and it reveals in that order:
-// the background sheet, the lock, then the U frame rising around it.
+// wrapping a gold figure — here the letters of LOCK, each wrapping the
+// next, as docs/icon.svg draws them — and it reveals in that order: the
+// background sheet, the letters from the outside in, then the U frame
+// rising around them.
 //
 // The family's key is V, and it is V here too, from either panel of the
 // settings screen. It is the one place the pixel style is drawn in three
@@ -43,8 +45,9 @@ func (m splashModel) isActive() bool { return m.active }
 
 // show activates the splash and returns the first animation tick. Reveal
 // stages, each held apart by a beat: (1) background — a dark sheet,
-// row-major top-to-bottom sweep; (2) the lock, scattered in; (3) the U
-// frame (navy), bottom-to-top so it rises from the base around the mark.
+// row-major top-to-bottom sweep; (2)–(5) L, O, C, K, each scattered in,
+// the outermost first; (6) the U frame (navy), bottom-to-top so it rises
+// from the base around the mark.
 // Then a hold reveals the name + version + tagline, and a final hold the
 // Esc hint.
 func (m *splashModel) show() tea.Cmd {
@@ -96,33 +99,37 @@ func (m *splashModel) show() tea.Cmd {
 		m.stageEnds = append(m.stageEnds, len(m.pixelOrder))
 		m.stageStep = append(m.stageStep, step)
 	}
-	addStage(bg, logoBg, cols) // one full row per tick
-	addStage(band('L', "shuffle"), logoGold, 3)
+	addStage(bg, logoBg, cols)         // one full row per tick
+	for _, b := range []byte("LOCK") { // the letters from the outside in
+		addStage(band(b, "shuffle"), logoGold, 3)
+	}
 	addStage(band('U', "rise"), logoNavy, 3) // the frame rises from the base
 
 	return tea.Tick(10*time.Millisecond, func(time.Time) tea.Msg { return splashTickMsg{} })
 }
 
-// locku logo — the u-family mark: D = background sheet, U = navy frame,
-// L = the gold padlock: a shackle over a body with a keyhole.
+// locku logo — docs/icon.svg cell for cell, one row of sheet above and
+// below (2026-09-26: the first version, drawn a day before the icon
+// existed, had a padlock here). D = background sheet, U = navy frame,
+// and L / O / C / K the gold letters, each one wrapping the next.
 var logoPixels = [21]string{
 	"DDDDDDDDDDDDDDDDDDDDDDDDD",
-	"DDUUUDDDDDDDDDDDDDDDUUUDD",
-	"DDDUUDDDDDDDDDDDDDDDUUDDD",
-	"DDDUUDDDDDLLLLLDDDDDUUDDD",
-	"DDDUUDDDDLDDDDDLDDDDUUDDD",
-	"DDDUUDDDDLDDDDDLDDDDUUDDD",
-	"DDDUUDDDDLDDDDDLDDDDUUDDD",
-	"DDDUUDDDDLDDDDDLDDDDUUDDD",
-	"DDDUUDDLLLLLLLLLLLDDUUDDD",
-	"DDDUUDDLLLLLLLLLLLDDUUDDD",
-	"DDDUUDDLLLLLLLLLLLDDUUDDD",
-	"DDDUUDDLLLLDDDLLLLDDUUDDD",
-	"DDDUUDDLLLLDDDLLLLDDUUDDD",
-	"DDDUUDDLLLLLDLLLLLDDUUDDD",
-	"DDDUUDDLLLLLDLLLLLDDUUDDD",
-	"DDDUUDDLLLLLLLLLLLDDUUDDD",
-	"DDDUUDDLLLLLLLLLLLDDUUDDD",
+	"DDUUUDLDOOOOOOOOOOODUUUDD",
+	"DDDUUDLDODDDDDDDDDODUUDDD",
+	"DDDUUDLDODCCCCCCCDODUUDDD",
+	"DDDUUDLDODCDDDDDCDODUUDDD",
+	"DDDUUDLDODCDKDKDCDODUUDDD",
+	"DDDUUDLDODCDKDKDDDODUUDDD",
+	"DDDUUDLDODCDKKDDDDODUUDDD",
+	"DDDUUDLDODCDKKDDDDODUUDDD",
+	"DDDUUDLDODCDKDKDDDODUUDDD",
+	"DDDUUDLDODCDKDKDCDODUUDDD",
+	"DDDUUDLDODCDDDDDCDODUUDDD",
+	"DDDUUDLDODCCCCCCCDODUUDDD",
+	"DDDUUDLDODDDDDDDDDODUUDDD",
+	"DDDUUDLDOOOOOOOOOOODUUDDD",
+	"DDDUUDLDDDDDDDDDDDDDUUDDD",
+	"DDDUUDLLLLLLLLLLLLLDUUDDD",
 	"DDDUUDDDDDDDDDDDDDDDUUDDD",
 	"DDUUUUUUUUUUUUUUUUUUUUUDD",
 	"DUUUUUUUUUUUUUUUUUUUUUUUD",
