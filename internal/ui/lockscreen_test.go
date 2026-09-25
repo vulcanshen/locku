@@ -18,6 +18,15 @@ import (
 // A lock at a fixed moment, sized 80×24, with pin set (or none when ""),
 // showing a plain medium clock — HH MM in the tall face, no date —
 // whatever the saver's defaults are today.
+// The status row's user@host is pinned for every test here: the row is
+// clipped to the terminal's width, and the machine's own name decided
+// whether the words a test looks for were still on it (GitHub's macOS
+// runner, 2026-09-25).
+func TestMain(m *testing.M) {
+	whoami = func() (string, string) { return "user", "host" }
+	os.Exit(m.Run())
+}
+
 func testLock(t *testing.T, pin string, tweak func(*config.Config)) LockModel {
 	t.Helper()
 	// No file: the lock keeps the hash it was made with (the file is
