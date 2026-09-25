@@ -12,7 +12,13 @@
 
 > _不確定的時候，就按_ **`Space`**。
 
-locku 是 `u`-family 第五個成員——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（filesystem）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（browser）——也是 [這份 TUI 設計原則](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 在鎖定畫面這個領域的實作。設計本身——每條決定標日期，被否決的做法也留著——在 [`docs/function.md`](docs/function.md)、[`docs/ui.md`](docs/ui.md)、[`docs/ux.md`](docs/ux.md)；開發者備忘錄——決定摘要、已否決的做法、程式碼目錄、測試、發版流程——在 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
+locku 是 `u`-family 第五個成員——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（filesystem）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（browser）——也是 [這份 TUI 設計原則](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 在鎖定畫面這個領域的實作。設計本身——每條決定標日期，被否決的做法也留著——在 [`docs/function.md`](docs/function.md)、[`docs/ui.md`](docs/ui.md)、[`docs/ux.md`](docs/ux.md)；開發者備忘錄——決定摘要、已否決的做法、程式碼目錄、從原始碼建置、測試、發版流程——在 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
+
+## Demo
+
+![demo](docs/demo.gif)
+
+`locku lock` 把終端機變成時鐘點陣板；按一個鍵叫出 PIN 框，PIN 錯了框變紅，對了終端機回來。接著是設定畫面：`[2]` 裡一個 profile 的設定、用 `p` 預覽 dino 與你自己的程式（cmatrix）、`Space` 列出這一列能做的事、Integration 底下的 tmux。
 
 ## 你會看到什麼
 
@@ -47,14 +53,7 @@ brew install vulcanshen/tap/locku
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
 ```
 
-**從原始碼**：
-
-```bash
-git clone https://github.com/vulcanshen/locku.git
-cd locku
-make build      # → ./locku（CGO_ENABLED=0 靜態）
-make install    # → $GOBIN
-```
+從原始碼建置見 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
 
 **Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。
 
@@ -266,9 +265,7 @@ screen:
 | 任何鍵 | 開 PIN 框（那個鍵不算輸入） |
 | `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 刪一字 |
 
-## 現況
-
-**v0.1.0**——三種 saver、PIN 與 `locku pin reset`、tmux 與 screen 整合（`activate`）。見 [CHANGELOG.md](CHANGELOG.md)。
+## 限制
 
 刻意不做的：
 - **Windows**——鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品
@@ -276,32 +273,11 @@ screen:
 - **鎖 Linux 的虛擬主控台**（Alt+F1 … F7）——vlock 的領域
 - **鎖定畫面上的「忘記 PIN」入口**——回來的路是 `locku pin reset`，在 shell 裡、用登入密碼
 
-## 用什麼做的
+## 相關連結
 
-Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、custom saver 的程式與登入密碼驗證用 [creack/pty](https://github.com/creack/pty)、PIN 用 `golang.org/x/crypto/bcrypt`、config 用 `gopkg.in/yaml.v3`。色系 catppuccin-mocha。
-
-## 文件
-
-| 檔案 | 回答什麼 | 順序 |
-|---|---|---|
-| [`docs/function.md`](docs/function.md) | 為什麼鎖站在 tmux / screen 之外、三種進入點同一契約、訊號表、狀態機、PIN 與無 PIN 模式、三種 saver、畫布渲染器、CLI、config、Integration 怎麼寫檔、決定清單、驗收 | 1 |
-| [`docs/ui.md`](docs/ui.md) | 設定畫面兩個面板的 grid、鎖定畫布、每個欄位怎麼呈現、popup、PIN prompt 四個狀態、色帶、存檔 | 2 |
-| [`docs/ux.md`](docs/ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、hotkey 分層、浮層、時間軸 | 3 |
-| [`docs/dev-remarks.md`](docs/dev-remarks.md) | 開發者備忘錄：現況、決定摘要、已否決的做法、程式碼目錄、測試、發版流程、下一步 | — |
-| [`docs/icon.svg`](docs/icon.svg) | 圖示：黑底方塊上家族的方塊字 mark | — |
-
-文件都是繁體中文，每條決定標日期。
-
-## 開發
-
-```
-make build     → ./locku
-make check     fmt-check + vet + go test -race，commit 前跑
-make e2e       端到端：真的 tmux、pty、真的 screen（需要 tmux、screen 與 python3）；不碰你自己的 server 與 session
-make lock      編譯並鎖住這個終端機
-```
-
-測試涵蓋什麼、怎麼發版：[`docs/dev-remarks.md`](docs/dev-remarks.md)。
+- [CHANGELOG.md](CHANGELOG.md)——每個版本改了什麼
+- [`docs/dev-remarks.md`](docs/dev-remarks.md)——開發者備忘錄：怎麼運作、為什麼、設計文件導讀、建置與測試
+- `u`-family 的其他成員：[kbu](https://github.com/vulcanshen/kbu)、[filu](https://github.com/vulcanshen/filu)、[sshu](https://github.com/vulcanshen/sshu)、[webu](https://github.com/vulcanshen/webu)
 
 ## 授權
 

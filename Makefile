@@ -44,6 +44,14 @@ release-check: ## goreleaser check：驗證 .goreleaser.yaml
 snapshot: ## goreleaser 本機 snapshot 打包（不發布、不推 tap）→ dist/
 	goreleaser release --snapshot --clean
 
+# vhs 0.12.0 在這台機器上有時兩秒就結束、不出檔也不報錯（webu 踩過）；遇到就指定 0.11.0：
+# make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs
+VHS ?= vhs
+
+.PHONY: gif
+gif: build ## 錄 docs/demo.gif（需 vhs、JetBrainsMono Nerd Font、cmatrix；tape 與展示用 config 在 .local/demos/，不碰你的 config）
+	$(VHS) .local/demos/demo.tape
+
 ##@ 執行（run）
 
 .PHONY: run

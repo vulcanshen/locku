@@ -2,7 +2,7 @@
 
 > 設計權威是 `docs/function.md`（功能邊界）、`docs/ui.md`（版面）、`docs/ux.md`（互動）與
 > VTP（`thoughts/tui-design`）。本文件是給接手開發的人看的備忘：現況、決定摘要、已否決的做法、
-> 程式碼目錄、測試、發版、下一步。2026-09-26 從 README 搬出來：README 只介紹工具，這些留在這裡。
+> 程式碼目錄、建置與測試、demo gif、設計文件導讀、發版、下一步。2026-09-26 從 README 搬出來：README 只介紹工具，這些留在這裡。
 > 決定的完整版與日期在三份設計文件，這裡是摘要。
 
 ---
@@ -58,26 +58,57 @@ locku/
 │   ├── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
 │   └── version/        版本字串（goreleaser 以 ldflags 注入，本機 build 是 dev）
 ├── e2e/                pty 端到端：tmux_attach.py、custom_lock.py、screen_lock.py
-└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg
+└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、demo.gif
 ```
 
-## §4 測試
+## §4 建置與測試
+
+從原始碼建置（Go 1.26+，`CGO_ENABLED=0` 靜態）：
+
+```bash
+git clone https://github.com/vulcanshen/locku.git
+cd locku
+make build      # → ./locku（-trimpath、strip）
+make install    # → $GOBIN；make uninstall 移除
+```
+
+`go install …@latest` 也能裝，但版本字串只由 goreleaser 的 ldflags 注入，這樣裝出來的 `locku version` 是 `dev`。`make` 列出所有 target。
 
 ```bash
 make check                                       # fmt-check + vet + go test -race
 LOCKU_DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的畫面
 make lock                                        # 編譯並鎖住這個終端機
 make e2e                                         # 端到端：真的 tmux（e2e/tmux_attach.py，自己的 TMUX_TMPDIR）、custom saver（e2e/custom_lock.py）、真的 screen（e2e/screen_lock.py，自己的 SCREENDIR）；不碰你的 server 與 session
+make gif                                         # 重錄 docs/demo.gif，見 §4.1
 ```
 
 TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix+d、prefix+c、Ctrl+C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
 
 任何看狀態列文字的 ui 測試都要固定 `whoami`（`lockscreen_test.go` 的 `TestMain`），原因見 §1 狀態列那條。
 
-## §5 發版
+`V` 的 splash 彩蛋就是 `docs/icon.svg`，一格對一格（2026-09-26）：第一版在 icon 出現前一天畫，裡面是一個自創的掛鎖，icon 進來後沒跟上。`splash_test.go` 的 `TestSplashIsTheIcon` 直接讀 icon.svg 比對 `logoPixels`，icon 改了 splash 沒跟就失敗。揭露順序：底色 → L、O、C、K 由外往內 → 深藍 U 由下往上。
+
+### §4.1 demo gif（2026-09-26）
+
+README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（clock / dino / 以 cmatrix 當 custom 的三個 profile，PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 複製到 `.local/demos/config`、以 `LOCKU_CONFIG` / `LOCKU_DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font、cmatrix。
+
+VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），用 0.11.0：`make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs`。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號。狀態列會照實錄進錄影機器的 `user@host`。
+
+## §5 設計文件導讀與用什麼做的
+
+| 檔案 | 回答什麼 | 順序 |
+|---|---|---|
+| [`function.md`](function.md) | 為什麼鎖站在 tmux / screen 之外、三種進入點同一契約、訊號表、狀態機、PIN 與無 PIN 模式、三種 saver、畫布渲染器、CLI、config、Integration 怎麼寫檔、決定清單、驗收 | 1 |
+| [`ui.md`](ui.md) | 設定畫面兩個面板的 grid、鎖定畫布、每個欄位怎麼呈現、popup、PIN prompt 四個狀態、色帶、存檔 | 2 |
+| [`ux.md`](ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、hotkey 分層、浮層、時間軸 | 3 |
+| [`icon.svg`](icon.svg) | 圖示：黑底方塊上家族的方塊字 mark，深藍 U 包住金色的 L、O、C、K；splash 照它畫 | — |
+
+Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、custom saver 的程式與登入密碼驗證用 [creack/pty](https://github.com/creack/pty)、`charmbracelet/x/term` 與 `charmbracelet/x/ansi`、`muesli/cancelreader`、PIN 用 `golang.org/x/crypto/bcrypt`、config 用 `gopkg.in/yaml.v3`。色系 catppuccin-mocha。
+
+## §6 發版
 
 發版走家族的流程：push 一個 `v*` tag，GitHub Actions（`.github/workflows/release.yml`）在 ubuntu 與 macOS 跑 `go test -race`，過了 goreleaser 打包四個平台的 tarball 與 checksums、更新 vulcanshen/homebrew-tap 的 `locku.rb`，release notes 是 `CHANGELOG.md` 對應的那一節。CHANGELOG 只記 binary 行為的變動；純文件、打包、CI 的改動不記。
 
-## §6 下一步
+## §7 下一步
 
 1. 8 小時 CPU / 記憶體觀察（`function.md` §12 最後一項，尚未做）。
