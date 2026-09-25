@@ -53,6 +53,6 @@ fi
 ask "$CONFIG_DIR" "locku settings (the PIN and the savers)"
 
 echo ""
-echo "locku uninstalled. The managed blocks 'locku setup' wrote — between"
-echo "'# >>> locku >>>' and '# <<< locku <<<' in ~/.tmux.conf, ~/.screenrc and"
-echo "your shell rc — are left for you to remove by hand."
+echo "locku uninstalled. The managed blocks Integration › activate wrote —"
+echo "between '# >>> locku >>>' and '# <<< locku <<<' in ~/.tmux.conf, ~/.screenrc"
+echo "and your shell rc — are left for you to remove by hand."
