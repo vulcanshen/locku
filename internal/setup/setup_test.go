@@ -70,9 +70,6 @@ func TestIdleTimeIsHandedOn(t *testing.T) {
 		if l := screenLines(sc)[0]; !strings.HasPrefix(l, c.screen) {
 			t.Errorf("idle %d, screen: %q", c.idle, l)
 		}
-		if s := tmuxSet(tm)[1]; s[2] != "lock-after-time" || s[3] != itoa(c.idle) {
-			t.Errorf("idle %d, live: %v", c.idle, s)
-		}
 		if s := screenSet(sc)[0]; strings.Join(s, " ") != c.screen {
 			t.Errorf("idle %d, screen live: %v", c.idle, s)
 		}
@@ -135,9 +132,6 @@ func TestEveryLineIsMarked(t *testing.T) {
 		strings.Contains(joined, `"locku lock`) {
 		t.Errorf("the lock command must be absolute and told the socket:\n%s", joined)
 	}
-	if !strings.HasPrefix(tmuxSet(server)[0][3], "/") || !strings.HasSuffix(tmuxSet(server)[0][3], " lock -S '#{socket_path}'") {
-		t.Errorf("live lock command: %q", tmuxSet(server)[0][3])
-	}
 	// The lock is the server's by default: lock-server, and no hook that
 	// tells a session its lock.
 	if strings.Contains(joined, "bind-key") || !strings.Contains(joined, `command-alias[90]" "locku=lock-server"`) ||
@@ -155,24 +149,38 @@ func TestEveryLineIsMarked(t *testing.T) {
 		strings.Contains(sj, "lock-server") {
 		t.Errorf("tmux block, lock-session:\n%s", sj)
 	}
-	// What is set on a live server is what is unset, one for one — then
-	// the session hook, and the mark a lock may have left.
-	set, unset := tmuxSet(server), tmuxUnset("")
-	if len(unset) != len(set)+2 || unset[len(unset)-2][2] != "session-created[90]" || unset[len(unset)-1][2] != "@locked" {
-		t.Errorf("%d set, %d unset: %v", len(set), len(unset), unset)
+	// The server takes the block itself, sourced, so there is no second
+	// list to keep in step; what is unset is everything the block sets
+	// — each option once — then the session hook, the key that was
+	// bound, and the mark a lock may have left.
+	unset := tmuxUnset("")
+	names := []string{}
+	for _, u := range unset {
+		names = append(names, u[len(u)-1])
 	}
-	for i := range set {
-		if set[i][2] != unset[i][2] {
-			t.Errorf("set %v, unset %v", set[i], unset[i])
+	if strings.Join(names, " ") != "lock-command lock-after-time command-alias[90] client-attached[90] client-session-changed[90] session-created[90] @locked" {
+		t.Errorf("unset: %v", names)
+	}
+	for _, l := range tmuxLines(session) {
+		if strings.HasPrefix(l, "bind-key") {
+			continue
+		}
+		f := strings.Fields(l)
+		opt := strings.Trim(f[2], `"`)
+		if f[0] == "set-hook" {
+			opt = strings.Trim(f[2], `"`)
+		}
+		found := false
+		for _, n := range names {
+			if n == opt {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("the block sets %q, which nothing unsets", opt)
 		}
 	}
-	set, unset = tmuxSet(session), tmuxUnset("C-l")
-	if hook := set[5]; strings.Join(hook[:3], " ") != "set-hook -g session-created[90]" || !strings.HasSuffix(hook[3], `-t '#{session_id}'"`) {
-		t.Errorf("live session hook: %v", hook)
-	}
-	if last := set[len(set)-1]; strings.Join(last, " ") != "bind-key C-l lock-session" {
-		t.Errorf("live bind: %v", last)
-	}
+	unset = tmuxUnset("C-l")
 	if u := unset[len(unset)-2]; strings.Join(u, " ") != "unbind-key C-l" || unset[len(unset)-1][2] != "@locked" {
 		t.Errorf("live unbind: %v", unset)
 	}
