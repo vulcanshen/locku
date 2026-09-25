@@ -92,7 +92,7 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make ch
 
 README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（clock / dino / 以 cmatrix 當 custom 的三個 profile，PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 複製到 `.local/demos/config`、以 `LOCKU_CONFIG` / `LOCKU_DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font、cmatrix。
 
-VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），用 0.11.0：`make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs`。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號。狀態列會照實錄進錄影機器的 `user@host`。
+VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），用 0.11.0：`make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs`。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
 
 ## §5 設計文件導讀與用什麼做的
 
