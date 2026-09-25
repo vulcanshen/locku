@@ -63,7 +63,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；dino：runner / scene；再 bg / fg 各一色票列加 R G B |
+| （預設值） | clock：layout / size / font / time / date；dino：runner / scene；custom：command；再 bg / fg 各一色票列加 R G B |
 
 `[2]` 在 profile 上：
 
@@ -78,6 +78,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
 | runner | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（dino：一隻大或小暴龍，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
 | scene | `grassland` / `desert`（dino：草原是仙人掌，沙漠是金字塔） | options popup（2026-09-24） |
+| command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；軌道底色反向，0 時全白、255 時全黑，暗的值才看得見；數字是 Mauve、沒有底色，跟其他列的值一樣（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 

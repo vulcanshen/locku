@@ -637,7 +637,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideProfile || it.ref != 0 || m.cfg.Profiles[0].Name != "clock" {
 		t.Fatalf("the cursor must start on the active profile, not %+v", it)
 	}
-	m = m.press("G", "k", "k", "k", "k") // under the profiles: the savers, the tools, then preference
+	m = m.press("G", "k", "k", "k", "k", "k") // under the profiles: the savers, the tools, then preference
 	if it := m.sideAt(); it.kind != sideSaver || it.ref != 0 {
 		t.Fatalf("the first saver sits under the profiles, not %+v", it)
 	}
@@ -688,7 +688,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 	}
 	// Enter goes to [2] as on every row; the menu there has New and the
 	// panel operations, and no Enter row on the description.
-	m = m.press("1", "G", "k", "k", "k", "k", "enter", " ")
+	m = m.press("1", "G", "k", "k", "k", "k", "k", "enter", " ")
 	if m.focus != panelDetail || hotkeyIndex(m.menu.menuKeys(), "n") < 0 || hotkeyIndex(m.menu.menuKeys(), "S") < 0 {
 		t.Errorf("a saver's [2] menu: %v", m.menu.menuKeys())
 	}
@@ -699,7 +699,7 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 // the saver's rows — a dino's size, runner and scene — lands under the
 // cursor, and previews as the run.
 func TestNewProfileOfASaver(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "n") // the dino saver, above the tools
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "n") // the dino saver, above the tools
 	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "dino" {
 		t.Fatalf("new box: %+v", m.input)
 	}
@@ -733,7 +733,7 @@ func TestNewProfileOfASaver(t *testing.T) {
 	m = m.press("x") // no PIN: any key hands back
 	// A second one of the same saver is offered the next free name, and
 	// the saver's [2] lists both.
-	m = m.press("1", "G", "k", "k", "k", "n")
+	m = m.press("1", "G", "k", "k", "k", "k", "n")
 	if m.input.value != "dino2" {
 		t.Errorf("offer %q", m.input.value)
 	}

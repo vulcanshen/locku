@@ -13,7 +13,7 @@
 
 | 指令 | 作用 |
 |---|---|
-| `locku` | 設定 TUI：兩種 saver（clock、dino）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `activate`（on / off）、`config file path`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`）、tmux 的 `bind-key`（prefix 之後鎖整台的鍵，空就不綁）；`activate` 開了就把整合設定寫進去，一改就直接寫，關了拿掉。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面（任意鍵回來，不驗 PIN） |
+| `locku` | 設定 TUI：三種 saver（clock、dino、custom）各生幾個有名字的 profile，每個 profile 的參數與 bg / fg 顏色，preference 的 PIN、啟用中的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts / wrong_pin_attempt_cooldown；Integration 的 tmux / screen 各自的 `activate`（on / off）、`config file path`（設定檔）與閒置幾秒自動鎖（用工具自己的名字：tmux `lock-after-time`、screen `idle`）、tmux 的 `bind-key`（prefix 之後鎖整台的鍵，空就不綁）；`activate` 開了就把整合設定寫進去，一改就直接寫，關了拿掉。除了顏色走草稿（`S` 存、`R` 丟），每次改動立即寫檔。`P` 就地預覽鎖定畫面（任意鍵回來，不驗 PIN） |
 | `locku lock` | 鎖住當前 tty。tmux、screen、裸 tty 都是叫這個 |
 | `locku version` | 版本 |
 
@@ -76,7 +76,7 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
-| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 34 條、MVP 驗收 | 1 |
+| [`docs/function.md`](docs/function.md) | 為什麼不能在 pane 內攔 prefix、三種進入點同一契約、訊號表、狀態機、PIN 驗證、無 PIN 模式、saver 實例、畫布渲染器與退階、CLI、config、Integration 的 Setup / Remove 怎麼寫檔（含 2026-09-24 的 screen 實測）、決定清單 35 條、MVP 驗收 | 1 |
 | [`docs/ui.md`](docs/ui.md) | 設定畫面兩個面板的 grid、鎖定畫布的點陣板、每個欄位怎麼呈現、popup 清單、PIN prompt 四個狀態、色帶、chrome、存檔 | 2 |
 | [`docs/ux.md`](docs/ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、畫布 prompt 事件表、hotkey 分層與撞字檢查、浮層、時間軸 | 3 |
 
@@ -86,10 +86,11 @@ Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略�
 
 - **鎖在 tmux / screen 之外，不在 pane 內。** pane 內的程式永遠看不到 prefix；tmux 的 lock-command 由 client 進程以 `system()` 同步執行、期間不讀任何鍵，screen 的 LOCKPRG 同理。這是唯一正確的 hook。
 - **tmux：預設整台 server 一起鎖（`lock` 可改成只鎖這個 session，2026-09-25），預設不綁熱鍵，鎖著的時候誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-server`（command alias，不跟你的 bind 撞；要熱鍵就在 `bind-key` 自己填一個，2026-09-25），所有 session 的所有 client 一起變保護程式；tmux 本身沒有「鎖著」的狀態，locku 在 `locku lock` 啟動時把全域 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client`——attach 哪個 session 都一樣，PIN 對了才清掉，tty 消失不清。閒置鎖是 tmux 每個 session 各自計時，哪個畫面閒置就鎖哪個畫面。lock-command 是 locku 的絕對路徑，由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。`lock-session` 時旗立在 session 上、hooks 不變，別的 session 照常用；lock 程式從自己 session 的 lock-command 得知 session（`-t`），因為鎖定中用 tty 反查會拿到錯的 session（實測）。
+- **custom saver：你自己的程式當保護程式的動畫（2026-09-25）。** profile 填一個 `command`（`sh -c` 跑，例如 `cmatrix -b`），locku 管鎖、PIN、整合。程式跑在 locku 開的 pty 上、自己一個 process group，輸出直通終端機，按鍵永遠在 locku 手上；locku 不重啟它、不讀它的畫面，解鎖就 SIGKILL 整個 group。按鍵時它的輸出先停住、PIN 框出現在乾淨的畫面上，Esc 或逾時就把畫面還給它並要它重畫。程式結束（它不該結束）鎖不退：locku 的點陣板顯示 `COMPLETED`（exit 0）或 `ERROR`（其他、找不到指令、被殺、沒填指令），狀態列紅字寫原因。指令不做任何 sanitize：是你自己機器上自己的指令。
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是 class、profile 是 object（2026-09-24 定案）。** 兩種 saver：clock 與 dino；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（big / small 一隻大或小暴龍，big-big / small-small / small-big / big-small 兩隻一前一後、名字就是畫面由左到右的順序、各自跳各自的；2026-09-25 定案，舊的 trex / two-trex 自動轉）、scene（grassland 仙人掌，或 desert 金字塔）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是 class、profile 是 object（2026-09-24 定案）。** 三種 saver：clock、dino，與 custom——你自己的程式（2026-09-25）；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（big / small 一隻大或小暴龍，big-big / small-small / small-big / big-small 兩隻一前一後、名字就是畫面由左到右的順序、各自跳各自的；2026-09-25 定案，舊的 trex / two-trex 自動轉）、scene（grassland 仙人掌，或 desert 金字塔）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格，暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。
 
   各 size 需要的終端機（欄 × 列，3x7 / 3x5）：
@@ -120,6 +121,7 @@ tmux 預設的 `bind L`（跟使用者既有熱鍵撞，改 command alias；要�
 locku/
 ├── cmd/locku/          進入點：lock / version / 設定 TUI；argv[0] SCREEN-LOCK
 ├── internal/
+│   ├── custom/         custom saver：程式在 pty 上、輸出直通、按鍵留給 locku、結束的字（2026-09-25）
 │   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN
 │   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；dino 的跑者、場景、障礙與自動跳躍
 │   ├── setup/          受管區塊寫入：tmux.conf、screenrc、shell rc

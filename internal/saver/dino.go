@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	Kinds   = []string{KindClock, KindDino}
+	Kinds   = []string{KindClock, KindDino, KindCustom}
 	Runners = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
 	Scenes  = []string{SceneGrass, SceneDesert}
 )

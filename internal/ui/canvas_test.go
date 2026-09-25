@@ -304,7 +304,7 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 				t.Errorf("cols %d row %d is %d wide", cols, i, w)
 			}
 		}
-		if s := statusRow(cols, true, "vulcan", "prod-db-01", at, true, ""); lipgloss.Width(s) != cols {
+		if s := statusRow(cols, true, "vulcan", "prod-db-01", at, true, "", ""); lipgloss.Width(s) != cols {
 			t.Errorf("cols %d status is %d wide", cols, lipgloss.Width(s))
 		}
 	}
@@ -319,15 +319,15 @@ func TestPlainTextCarriesTheLines(t *testing.T) {
 }
 
 func TestStatusRowSaysWhatMatters(t *testing.T) {
-	s := statusRow(80, true, "vulcan", "host", at, false, "")
+	s := statusRow(80, true, "vulcan", "host", at, false, "", "")
 	if !strings.Contains(s, "vulcan@host · locked since 21:05") {
 		t.Errorf("%q", s)
 	}
-	s = statusRow(80, false, "vulcan", "host", at, true, "")
+	s = statusRow(80, false, "vulcan", "host", at, true, "", "")
 	if strings.Contains(s, "vulcan") || !strings.Contains(s, "no PIN · any key unlocks") {
 		t.Errorf("status off must still say there is no PIN: %q", s)
 	}
-	s = statusRow(80, true, "v", "h", at, true, "config.yaml: yaml: line 1")
+	s = statusRow(80, true, "v", "h", at, true, "config.yaml: yaml: line 1", "")
 	if !strings.Contains(s, "config error: config.yaml") || !strings.Contains(s, "no PIN") {
 		t.Errorf("%q", s)
 	}

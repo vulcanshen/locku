@@ -57,6 +57,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
 | layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列只有 runner / scene；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
+| command（custom） | `[Enter] Edit`（2026-09-25） | 同上 |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
 | PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
@@ -133,6 +134,7 @@ preference 時只要 preference 的說明，只要）。每一項 key 一欄、�
 | 欄位 | 行為 |
 |---|---|
 | name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
+| command（custom；2026-09-25） | 一行 input popup，邊框 `command`，預填目前值；Enter 照打的存（前後空白去掉），空 = 未設；Esc 不動 |
 | layout / size / font / time / date / runner / scene / profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
@@ -208,7 +210,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
-**先 confirm 的動作**：Delete saver、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server；改成 property 列後仍 confirm）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
+**先 confirm 的動作**：Delete saver、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server；改成 property 列後仍 confirm）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
 **toast**：`PIN set`、`PIN mismatch`、`cannot delete: active` / `cannot delete: last one`、
 `nothing to save` / `nothing changed`、`write failed: <reason>`（值退回）。

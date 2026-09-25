@@ -56,7 +56,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 2 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" {
+	if len(cfg.Savers) != 3 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
