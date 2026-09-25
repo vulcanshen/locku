@@ -160,7 +160,7 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 		return board(custom.Failed(err))
 	}
 	cols, rows := t.Size()
-	p, err := custom.Start(command, os.Stdout, cols, rows)
+	p, err := custom.Start(command, t.Writer(), cols, rows)
 	if err != nil {
 		t.Give()
 		return board(custom.Failed(err))
@@ -172,7 +172,9 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 	for {
 		select {
 		case <-winch:
-			p.Resize(t.Size())
+			c, r := t.Size()
+			t.Resized(c, r)
+			p.Resize(c, r)
 		case o := <-p.Done():
 			// Ended on its own: the word on locku's board from here on.
 			t.Cancel()
@@ -193,8 +195,11 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 				t.Give()
 				return 0, true
 			}
-			// The picture stops where it is; the prompt goes over it.
-			p.Forward(false)
+			// The picture goes on; the prompt rides over it. When it
+			// closes its place is blanked, and a program that sits still
+			// is asked to paint itself; one that draws fills the place by
+			// itself, and is not asked — asked, a curses program starts
+			// its picture over.
 			unlocked, back := runPrompt(cfg, problem, t)
 			if !back {
 				p.Kill()
@@ -202,8 +207,9 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 				return 0, unlocked
 			}
 			t.Clear()
-			p.Forward(true)
-			p.Redraw(t.Size())
+			if p.Idle(500 * time.Millisecond) {
+				p.Redraw()
+			}
 			keys = t.Key()
 		}
 	}

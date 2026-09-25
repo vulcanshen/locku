@@ -618,7 +618,7 @@ func TestPreviewNeedsNoPIN(t *testing.T) {
 	if err := m.cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
 	}
-	m = m.press("P")
+	m = m.press("2", "P")
 	if m.preview == nil || strings.Contains(m.View(), "any key unlocks") {
 		t.Fatalf("P must preview, as the lock would look:\n%s", m.View())
 	}
@@ -1085,7 +1085,7 @@ func TestViewFitsTheTerminal(t *testing.T) {
 }
 
 func TestPreviewComesBack(t *testing.T) {
-	m := newTestApp(t).press("P")
+	m := newTestApp(t).press("2", "P") // on [2]: P does nothing on [1]
 	if m.preview == nil {
 		t.Fatal("P did not start the preview")
 	}

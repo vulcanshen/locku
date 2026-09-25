@@ -179,7 +179,11 @@ func (m AppModel) newProfileAction() action {
 // previewHere is the global P: on a profile's or a saver's [2], that
 // one; anywhere else, the active profile (user, 2026-09-24).
 func (m *AppModel) previewHere() tea.Cmd {
-	if _, _, ok := m.subject(); ok && m.focus == panelDetail {
+	if m.focus == panelSide {
+		// Nothing on [1] (user, 2026-09-25): p previews the row there.
+		return nil
+	}
+	if _, _, ok := m.subject(); ok {
 		return m.previewThis()
 	}
 	cfg := m.previewCfg()

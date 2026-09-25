@@ -50,7 +50,7 @@ var helpKeys = []helpEntry{
 	{"Space", "what can I do here: the item, and the panel"},
 	{"?", "this help — on [2] of preference, or of tmux / screen, what each row means"},
 	{"", "Global"},
-	{"P", "preview: the lock with the active profile — on a profile's [2], that profile — drafts included; any key comes back"},
+	{"P", "on [2]: preview the lock — a profile's or a saver's [2] shows that one, any other the active profile — drafts included; any key comes back. Nothing on [1], where p previews the row"},
 	{"q", "quit — asks first when colours are unsaved"},
 	{"Ctrl+C", "force quit"},
 	{"", "[1] Savers — the kinds: clock, dino"},
