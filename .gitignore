@@ -9,3 +9,6 @@
 go.work
 go.work.sum
 .claude/settings.local.json
+
+# agents' git worktrees (Claude Code)
+.claude/worktrees/

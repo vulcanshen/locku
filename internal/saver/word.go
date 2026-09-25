@@ -33,7 +33,8 @@ const WordNone Word = "NONE"
 func ExitWord(code int) Word { return Word("EXIT " + strconv.Itoa(code)) }
 
 // Fine reports whether w is the one ending a program means to have:
-// EXIT 0, green on the board; every other word is red.
+// EXIT 0, its code green on the board; another code is peach, and NONE
+// red.
 func (w Word) Fine() bool { return w == ExitWord(0) }
 
 func (w Word) Blocks(time.Time) []Block { return []Block{{Variants: [][]string{{string(w)}}}} }

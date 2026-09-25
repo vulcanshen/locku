@@ -27,6 +27,9 @@ var (
 	// yellow is "not set yet".
 	warnColor   = lipgloss.Color("#f38ba8") // red
 	yellowColor = lipgloss.Color("#f9e2af") // yellow
+	// a custom saver's program that ended with a code other than 0: the
+	// code on the board (user, 2026-09-25: red is NONE's, nothing ran).
+	peachColor = lipgloss.Color("#fab387") // peach
 	// the lit cells while the PIN prompt is up: the board steps back to be
 	// the prompt's backdrop (ui.md §2.3).
 	backdropColor = borderDim
