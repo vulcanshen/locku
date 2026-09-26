@@ -215,7 +215,9 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 ## §5 浮層行為
 
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
-`Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
+`Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤，也不再理會 `Esc`——toast 也一樣，關到一半再按 `Esc`，關的是下面那層（2026-09-26，tdp F3）。
+
+**從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 `?` menu 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）整串做完才清，中途 `Esc` 取消整串、回到 menu。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。層數最多三層：menu、它開出的框、框上的 `?` help。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 

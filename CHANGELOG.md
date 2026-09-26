@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- A box opened from the Space menu or the `?` menu — a confirm, a name or a number to type, a list to choose from — sits on the menu: `Esc` on it comes back to the menu, and finishing it closes both. The menu used to close the moment a row was chosen, so cancelling the box left you on the panel.
+
+### Fixed
+- `Esc` while a message at the bottom is fading out closes what is under it, instead of starting the fade again.
 
 ## [0.1.2] - 2026-09-26
 ### Changed

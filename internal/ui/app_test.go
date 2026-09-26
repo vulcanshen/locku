@@ -1175,6 +1175,8 @@ func (m AppModel) sends(k string) (AppModel, tea.Cmd) {
 		msg = tea.KeyMsg{Type: tea.KeyCtrlC}
 	case "enter":
 		msg = tea.KeyMsg{Type: tea.KeyEnter}
+	case "esc":
+		msg = tea.KeyMsg{Type: tea.KeyEsc}
 	}
 	mm, cmd := m.Update(msg)
 	return mm.(AppModel), cmd
@@ -1268,6 +1270,90 @@ func TestSplashTakesCtrlC(t *testing.T) {
 		if mm.splash.isActive() || mm.helpMenu.anim.owns() || mm.menu.anim.owns() {
 			t.Errorf("%q on the splash must only close it", k)
 		}
+	}
+}
+
+// A box opened from a menu sits on it: cancelled, the menu is back; done,
+// the whole stack goes (tdp F4, T1; 2026-09-26). A row that opens no box
+// — Edit, a preview — closes the menu as before.
+func TestBoxOverItsMenu(t *testing.T) {
+	m := newTestApp(t)
+	// A confirm: Delete on clock2.
+	c := m.press("j", " ", "X")
+	if !c.confirm.isInteractive() || !c.menu.anim.owns() {
+		t.Fatalf("confirm over the menu: confirm %v, menu %v", c.confirm.isInteractive(), c.menu.anim.owns())
+	}
+	if back := c.press("esc"); back.confirm.anim.owns() || !back.menu.isInteractive() {
+		t.Error("Esc on the confirm must come back to the menu")
+	}
+	if did := c.press("enter"); did.menu.anim.owns() || len(did.cfg.Profiles) != 1 {
+		t.Errorf("Enter on the confirm must delete and clear the stack: menu %v, %d profiles", did.menu.anim.owns(), len(did.cfg.Profiles))
+	}
+	// An options list: Choose on clock's layout.
+	o := m.press("2", "j", "j", " ", "enter")
+	if !o.options.isInteractive() || !o.menu.anim.owns() {
+		t.Fatal("options over the menu")
+	}
+	if back := o.press("esc"); !back.menu.isInteractive() {
+		t.Error("Esc on the options must come back to the menu")
+	}
+	if did := o.press("j", "enter"); did.menu.anim.owns() || did.options.anim.owns() {
+		t.Error("a value chosen must clear the stack")
+	}
+	// An input: Rename on clock2; a name taken keeps the box and the menu.
+	in := m.press("j", " ", "r")
+	if !in.input.isInteractive() || !in.menu.anim.owns() {
+		t.Fatal("input over the menu")
+	}
+	if back := in.press("esc"); !back.menu.isInteractive() {
+		t.Error("Esc on the input must come back to the menu")
+	}
+	if taken := in.press("ctrl+u").typed("clock").press("enter"); !taken.input.anim.owns() || !taken.menu.anim.owns() {
+		t.Error("a name taken keeps the box, and the menu under it")
+	}
+	if did := in.press("ctrl+u").typed("third").press("enter"); did.menu.anim.owns() || did.input.anim.owns() {
+		t.Error("a rename done must clear the stack")
+	}
+	// Rows that open no box close the menu, as before.
+	if e := m.press("j", " ", "enter"); e.menu.anim.owns() || e.focus != panelDetail {
+		t.Error("Edit from the menu must close it")
+	}
+	if pv := m.press("j", " ", "p"); pv.preview == nil || pv.menu.anim.owns() {
+		t.Error("a preview from the menu must close it")
+	}
+	// The ? menu's Quit with colours unsaved: its confirm sits on the ? menu
+	// and takes the keys; cancelled, the ? menu is back.
+	q := m.press("2", "G", "enter", "k", "enter", "1", "?", "enter")
+	if !q.asksToQuit() || !q.helpMenu.anim.owns() {
+		t.Fatalf("quit confirm over the ? menu: asks %v, ? menu %v", q.asksToQuit(), q.helpMenu.anim.owns())
+	}
+	if _, cmd := q.sends("enter"); cmd == nil || !quits(cmd) {
+		t.Error("Enter on that confirm must quit, not reach the ? menu")
+	}
+	if back := q.press("esc"); back.confirm.anim.owns() || !back.helpMenu.isInteractive() {
+		t.Error("Esc on that confirm must come back to the ? menu")
+	}
+	if h := q.press("?"); !h.help.anim.owns() || !h.helpMenu.anim.owns() {
+		t.Error("? on that confirm is its own help, not closing the ? menu under it")
+	}
+}
+
+// A toast already closing is past Esc: the next Esc closes what is under
+// it (tdp F3; 2026-09-26).
+func TestEscPassesAClosingToast(t *testing.T) {
+	m := newTestApp(t).press(" ")
+	m.toast.show("news", toastInfo)
+	m = m.settle()
+	if !m.toast.isActive() || !m.menu.isInteractive() {
+		t.Fatal("a toast over the menu")
+	}
+	m, _ = m.sends("esc") // the toast starts closing
+	if m.toast.anim.owns() || !m.menu.anim.owns() {
+		t.Fatal("the first Esc closes the toast only")
+	}
+	m, _ = m.sends("esc") // the toast still closing: this one is the menu's
+	if m.menu.anim.owns() {
+		t.Error("an Esc while the toast closes must close the menu under it")
 	}
 }
 

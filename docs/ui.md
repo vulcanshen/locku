@@ -196,7 +196,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ## §3 Popup
 
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
-下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多兩層。
+下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多三層：menu、它開出的框、框上的 `?` help（2026-09-26，tdp F4；之前兩層）。
 
 ### 3.1 設定畫面
 
@@ -260,7 +260,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | PIN wrong、lockout、`· invalid`、`· taken`、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
-| popup layer scale | 浮層邊框，最多兩層 | tdp D2 |
+| popup layer scale | 浮層邊框，最多三層 | tdp D2 |
 
 focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
 Blue 不出現在那裡。
