@@ -49,6 +49,8 @@ func (m AppModel) press(keys ...string) AppModel {
 			msg = tea.KeyMsg{Type: tea.KeyBackspace}
 		case "ctrl+u":
 			msg = tea.KeyMsg{Type: tea.KeyCtrlU}
+		case "ctrl+c":
+			msg = tea.KeyMsg{Type: tea.KeyCtrlC}
 		case " ":
 			msg = tea.KeyMsg{Type: tea.KeySpace}
 		default:
@@ -64,7 +66,7 @@ func (m AppModel) press(keys ...string) AppModel {
 // settle runs every popup animation to its end.
 func (m AppModel) settle() AppModel {
 	for i := 0; i < animFrames+1; i++ {
-		for _, t := range []string{"spacemenu", "options", "help", "input", "confirm", "toast"} {
+		for _, t := range []string{"spacemenu", "options", "helpmenu", "help", "input", "confirm", "toast"} {
 			mm, _ := m.Update(AnimTickMsg{Target: t})
 			m = mm.(AppModel)
 		}
@@ -191,8 +193,9 @@ func TestDuplicateLandsOnTheCopy(t *testing.T) {
 
 func TestDeleteRules(t *testing.T) {
 	m := newTestApp(t).press("X")
-	if m.confirm.isActive() || !strings.Contains(m.toast.msg, "active") {
-		t.Fatal("the active saver must not be deletable")
+	// Dimmed and silent (tdp M6): no confirm, and no toast saying why.
+	if m.confirm.isActive() || m.toast.isActive() {
+		t.Fatal("the active saver must not be deletable, and says nothing")
 	}
 	m = m.press("esc", "j", "X")
 	if !m.confirm.isInteractive() {
@@ -203,8 +206,8 @@ func TestDeleteRules(t *testing.T) {
 		t.Errorf("not deleted: %+v", m.cfg.Profiles)
 	}
 	m = m.press("X")
-	if !strings.Contains(m.toast.msg, "last") {
-		t.Error("the last saver must not be deletable")
+	if m.confirm.isActive() || m.toast.isActive() || len(m.cfg.Profiles) != 1 {
+		t.Error("the last saver must not be deletable, and says nothing")
 	}
 }
 
@@ -519,11 +522,13 @@ func TestActivateFromTheScreen(t *testing.T) {
 		t.Fatalf("the first stop is activate, off: %+v", m.rowAt())
 	}
 	m = m.press("enter")
-	if !strings.Contains(m.toast.msg, "config file path first") || m.confirm.isActive() {
+	// Dimmed without a file (tdp M6): Enter does nothing; the path row
+	// below says `not set`.
+	if m.toast.isActive() || m.confirm.isActive() {
 		t.Fatalf("activate without a file: %q", m.toast.msg)
 	}
 	conf := filepath.Join(t.TempDir(), "tmux.conf")
-	m = m.expireToast().press("j", "enter", "ctrl+u").typed(conf).press("enter")
+	m = m.press("j", "enter", "ctrl+u").typed(conf).press("enter")
 	if m.cfg.Tmux.Conf != conf || m.rowAt().kind != rowConf {
 		t.Fatalf("conf %q:\n%s", m.cfg.Tmux.Conf, m.View())
 	}
@@ -631,8 +636,10 @@ func TestPreviewNeedsNoPIN(t *testing.T) {
 // (user, 2026-09-25).
 // ? on [2] of preference is the preference glossary and nothing else —
 // what each row means, in place of the note that sat under each row —
-// on [2] of a tool that tool's; on [1], and on a profile's [2], the keys
-// (user, 2026-09-25). A description longer than its column wraps.
+// on [2] of a tool that tool's (user, 2026-09-25; kept in place of the ?
+// menu there, 2026-09-26); on [1], and on a profile's [2], the ? menu:
+// the global operations over the key reference (tdp M4). A description
+// longer than its column wraps.
 func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	has := func(v string, want ...string) []string {
 		var missing []string
@@ -644,19 +651,22 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 		return missing
 	}
 	m := newTestApp(t)
-	if v := m.press("?").View() + m.press("?", "G").View(); len(has(v, "Core keys", "Integration", "duplicate")) != 0 || strings.Contains(v, "what each row is") {
-		t.Errorf("on a profile: the keys, top and bottom:\n%s", v)
+	if v := m.press("?").View(); len(has(v, "global operation", "[q]uit", "key reference", "next panel", "half a page")) != 0 || strings.Contains(v, "what each row is") {
+		t.Errorf("on [1]: the ? menu:\n%s", v)
 	}
-	if v := m.press("G", "?").View(); !strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") { // [1] on preference
-		t.Errorf("on [1], preference: still the keys:\n%s", v)
+	if v := m.press("G", "?").View(); !strings.Contains(v, "key reference") || strings.Contains(v, "any key unlocks") { // [1] on preference
+		t.Errorf("on [1], preference: still the ? menu:\n%s", v)
 	}
-	if v := m.press("G", "2", "?").View(); len(has(v, "[2] preference", "any key unlocks", "wrong_pin_attempt_cooldown")) != 0 || strings.Contains(v, "Core keys") || strings.Contains(v, "idle_lock") {
+	if v := m.press("2", "?").View(); !strings.Contains(v, "key reference") || strings.Contains(v, "what each row is") {
+		t.Errorf("on a profile's [2]: the ? menu:\n%s", v)
+	}
+	if v := m.press("G", "2", "?").View(); len(has(v, "[2] preference", "any key unlocks", "wrong_pin_attempt_cooldown")) != 0 || strings.Contains(v, "key reference") || strings.Contains(v, "idle_lock") {
 		t.Errorf("on [2], preference: its glossary only:\n%s", v)
 	}
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "Core keys") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "key reference") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
 	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate", "bind", "C-a x", "LOCKPRG", "shell rc")) != 0 || strings.Contains(v, "bind-key") || strings.Contains(v, "lock-server") {
@@ -958,8 +968,8 @@ func TestColourDraftSaveReset(t *testing.T) {
 		t.Errorf("reset: draft %q", m.draftOf(key, m.cfg.Profiles[0]).BG)
 	}
 	m = m.press("R")
-	if !strings.Contains(m.toast.msg, "nothing changed") {
-		t.Error("R with nothing to reset must say so")
+	if m.toast.isActive() || m.dirtyOf(key, m.cfg.Profiles[0]) {
+		t.Error("R with nothing to reset is dimmed: it does nothing, and says nothing")
 	}
 	// Pick again, then Save writes it.
 	m = m.press("esc", "enter", "G", "enter", "S")
@@ -1031,20 +1041,41 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 						t.Errorf("row %q does not show its key %q", a.label, a.key)
 					}
 				}
-				hasPanel := false
-				for _, a := range acts {
-					hasPanel = hasPanel || a.panelOp
-				}
-				headers := 0
-				for _, it := range opened.menu.items {
-					if it.header {
-						headers++
+				for _, a := range m.globalActions() {
+					if hotkeyIndex(keys, a.key) < 0 {
+						t.Errorf("focus %d cur %d/%d: the global %q is not a row", focus, c1, c2, a.label)
 					}
 				}
-				if hasPanel && headers != 2 || !hasPanel && headers != 0 {
-					t.Errorf("focus %d cur %d/%d: %d headers with panel ops %v", focus, c1, c2, headers, hasPanel)
+				// Three regions at most — item, panel, global — an empty one
+				// left out, a rule between two, titles only when more than
+				// one is left (tdp M2). The global one is always there.
+				hasItem, hasPanel := false, false
+				for _, a := range acts {
+					hasItem = hasItem || !a.panelOp
+					hasPanel = hasPanel || a.panelOp
 				}
-				if opened.menu.items[opened.menu.cursor].header {
+				want := 1
+				for _, b := range []bool{hasItem, hasPanel} {
+					if b {
+						want++
+					}
+				}
+				headers, rules := 0, 0
+				for _, it := range opened.menu.items {
+					switch {
+					case it.header:
+						headers++
+					case it.rule:
+						rules++
+					}
+				}
+				if headers != want || rules != want-1 {
+					t.Errorf("focus %d cur %d/%d: %d headers, %d rules for %d regions", focus, c1, c2, headers, rules, want)
+				}
+				if last := opened.menu.items[len(opened.menu.items)-1]; last.key != "q" {
+					t.Errorf("focus %d cur %d/%d: the menu does not end in the global region: %+v", focus, c1, c2, last)
+				}
+				if !opened.menu.items[opened.menu.cursor].stop() {
 					t.Errorf("focus %d cur %d/%d: the cursor opened on a header", focus, c1, c2)
 				}
 			}
@@ -1136,31 +1167,144 @@ func TestMenuRunsTheRow(t *testing.T) {
 	}
 }
 
+// sends is one key straight through Update, for the command it returns.
+func (m AppModel) sends(k string) (AppModel, tea.Cmd) {
+	msg := tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(k)}
+	switch k {
+	case "ctrl+c":
+		msg = tea.KeyMsg{Type: tea.KeyCtrlC}
+	case "enter":
+		msg = tea.KeyMsg{Type: tea.KeyEnter}
+	}
+	mm, cmd := m.Update(msg)
+	return mm.(AppModel), cmd
+}
+
+// The core keys as tdp has them (2026-09-26): q and Ctrl-C leave from any
+// surface but a box being typed in (K1, K9); Space opens and closes the
+// Space menu and nothing else (K5).
 func TestQuitAndSpaceInsideFloats(t *testing.T) {
 	m := newTestApp(t).press(" ")
-	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}); cmd != nil {
-		if _, ok := cmd().(tea.QuitMsg); ok {
-			t.Error("q inside a float must not quit")
-		}
+	if _, cmd := m.sends("q"); cmd == nil || !quits(cmd) {
+		t.Error("q inside the Space menu must quit")
+	}
+	if _, cmd := m.sends("ctrl+c"); cmd == nil || !quits(cmd) {
+		t.Error("Ctrl-C inside the Space menu must quit")
 	}
 	m = m.press(" ")
 	if m.menu.anim.owns() {
 		t.Error("Space must close the menu it opened")
 	}
-	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")}); cmd == nil || !quits(cmd) {
+	if _, cmd := m.sends("q"); cmd == nil || !quits(cmd) {
 		t.Error("q on the panel must quit")
+	}
+	// A box being typed in: q is a character, Ctrl-C still leaves (K8).
+	in := m.press("r")
+	if !in.input.isInteractive() {
+		t.Fatal("no rename box")
+	}
+	if in, cmd := in.sends("q"); (cmd != nil && quits(cmd)) || !strings.HasSuffix(in.input.value, "q") {
+		t.Errorf("q in a box must be typed: %q", in.input.value)
+	}
+	if _, cmd := in.sends("ctrl+c"); cmd == nil || !quits(cmd) {
+		t.Error("Ctrl-C in a box must still leave")
+	}
+	// Space on a confirm, and on an options list, does nothing (K5).
+	c := m.press("j", "X")
+	if !c.confirm.isInteractive() {
+		t.Fatal("no confirm")
+	}
+	if c = c.press(" "); !c.confirm.isInteractive() {
+		t.Error("Space must not close a confirm")
+	}
+	o := m.press("2", "j", "j", "enter") // clock's [2]: layout
+	if !o.options.isInteractive() {
+		t.Fatal("no options list")
+	}
+	if o = o.press(" "); !o.options.isInteractive() {
+		t.Error("Space must not close an options list")
+	}
+}
+
+// Ctrl-C is q (tdp K9): with colours unsaved it asks first, and a second
+// Ctrl-C while it asks leaves at once; q while it asks asks nothing more.
+func TestCtrlCIsTheWayOutQIs(t *testing.T) {
+	m := newTestApp(t).press("2", "G", "enter", "k", "enter") // fg › B: a draft
+	if !m.anyDirty() {
+		t.Fatal("no draft")
+	}
+	m, cmd := m.sends("ctrl+c")
+	if cmd != nil && quits(cmd) {
+		t.Fatal("Ctrl-C with a draft must ask first")
+	}
+	m = m.settle()
+	if !m.asksToQuit() {
+		t.Fatal("no quit confirm")
+	}
+	if _, cmd := m.sends("q"); cmd != nil && quits(cmd) {
+		t.Error("q while it asks must not leave")
+	}
+	if _, cmd := m.sends("ctrl+c"); cmd == nil || !quits(cmd) {
+		t.Error("a second Ctrl-C must leave at once")
+	}
+}
+
+// The splash takes every key, Ctrl-C too: the first one only closes it
+// (tdp S3).
+func TestSplashTakesCtrlC(t *testing.T) {
+	m := newTestApp(t).press("V")
+	if !m.splash.isActive() {
+		t.Fatal("no splash")
+	}
+	m, cmd := m.sends("ctrl+c")
+	if cmd != nil && quits(cmd) {
+		t.Error("the first Ctrl-C on the splash must not leave")
+	}
+	if m.splash.isActive() {
+		t.Error("Ctrl-C must close the splash")
+	}
+	for _, k := range []string{"q", "?", " "} {
+		mm := newTestApp(t).press("V", k)
+		if mm.splash.isActive() || mm.helpMenu.anim.owns() || mm.menu.anim.owns() {
+			t.Errorf("%q on the splash must only close it", k)
+		}
+	}
+}
+
+// ? on a popup is that popup's help and nothing of the app's (tdp K6);
+// ? on a panel is the ? menu, whose rows run (tdp M4).
+func TestHelpIsThePopupsOwn(t *testing.T) {
+	m := newTestApp(t)
+	if v := m.press(" ", "?").View(); !strings.Contains(v, "Space menu") || strings.Contains(v, "key reference") {
+		t.Errorf("? on the Space menu: its own keys:\n%s", v)
+	}
+	if v := m.press("j", "X", "?").View(); !strings.Contains(v, "Confirm") || !strings.Contains(v, "cancel") || strings.Contains(v, "key reference") {
+		t.Errorf("? on a confirm: its own keys:\n%s", v)
+	}
+	if v := m.press("2", "j", "j", "enter", "?").View(); !strings.Contains(v, "Choose one") || strings.Contains(v, "key reference") {
+		t.Errorf("? on an options list: its own keys:\n%s", v)
+	}
+	h := m.press("?")
+	if !h.helpMenu.isInteractive() {
+		t.Fatal("no ? menu")
+	}
+	if h.press("?").helpMenu.anim.owns() {
+		t.Error("? again must close the ? menu")
+	}
+	if _, cmd := h.sends("enter"); cmd == nil || !quits(cmd) {
+		t.Error("Enter on the ? menu's Quit must quit")
 	}
 }
 
 // [a] on a profile in [1] makes it the one the lock shows, at once
 // (user, 2026-09-25): the dot moves, the file is written; on the
-// active one the key says so and changes nothing.
+// active one the row is dimmed and the key does nothing (tdp M6).
 func TestActivateFromTheSidebar(t *testing.T) {
 	m := newTestApp(t).press("a")
-	if m.cfg.Profile != "clock" || !strings.Contains(m.toast.msg, "already active") {
+	if m.cfg.Profile != "clock" || m.toast.isActive() {
 		t.Fatalf("a on the active profile: %q, toast %q", m.cfg.Profile, m.toast.msg)
 	}
-	m = m.expireToast().press("j", "a")
+	m = m.press("j", "a")
 	if m.cfg.Profile != "clock2" || saved(t).Profile != "clock2" || !strings.Contains(m.View(), "● clock2") {
 		t.Errorf("a on clock2: %q, saved %q:\n%s", m.cfg.Profile, saved(t).Profile, m.View())
 	}

@@ -32,7 +32,7 @@ const (
 // row inside is the field's name and the value being typed.
 //
 // While it is up every printable key is a character: Space is a space and
-// ? is a question mark (§4.5).
+// ? is a question mark (tdp K8).
 type inputPopup struct {
 	anim   popupAnimator
 	title  string // the type: "name", "number", "current PIN", …
@@ -94,7 +94,7 @@ func (m *inputPopup) thaw(msg inputThawMsg) {
 }
 
 // update edits the line; Enter and Esc are resolved by the caller, since
-// commit and cancel are each one role app-wide (§4.3).
+// commit and cancel are each one role app-wide (tdp K1).
 func (m *inputPopup) update(msg tea.KeyMsg) {
 	if !m.anim.isInteractive() || m.frozen {
 		return

@@ -8,7 +8,7 @@ import (
 
 // The settings screen's frame (ui.md §1.1, §5): two panels side by side
 // and one footer row. Focus is the border — double line in blue where the
-// keyboard is, a rounded thin line in Surface2 where it is not (kbu §8.4)
+// keyboard is, a rounded thin line in Surface2 where it is not (tdp D2)
 // — and nothing moves when it changes.
 
 // sideW is panel [1]'s width, borders included: fixed, like webu's.
@@ -140,7 +140,7 @@ func panelFrame(innerW int, body []string, title []chip, focused bool) string {
 }
 
 // keyLegend renders the footer's "key desc" pairs: the standing
-// disclosure of the two entry keys (§A.1 / §A.2). A user who never read a
+// disclosure of the two entry keys (tdp M1). A user who never read a
 // README learns Space and ? exist by reading this row. When the terminal
 // is too narrow, pairs are dropped from the RIGHT — the entry keys are
 // listed first precisely so they are the last thing to go.

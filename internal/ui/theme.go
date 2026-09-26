@@ -3,13 +3,13 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 // Anchors are catppuccin-mocha, like the rest of the family (ui.md §4):
-// assigned once, derived everywhere. One band, one meaning (VTP §B).
+// assigned once, derived everywhere. One band, one meaning (tdp P4).
 //
 // The board's two colours are NOT here: they are the user's data
 // (Settings › style, config.Style), read at draw time. Their defaults —
 // surface0 and the splash gold — are config's business.
 var (
-	// structural — panel chrome, and the KEY half of every legend (§4.4).
+	// structural — panel chrome, and the KEY half of every legend (tdp M5).
 	focusColor = lipgloss.Color("#89b4fa") // blue
 	borderDim  = lipgloss.Color("#585b70") // surface2: unfocused border
 	// the cursor row: "the current hand".
@@ -23,7 +23,7 @@ var (
 	valueColor = lipgloss.Color("#cba6f7") // mauve
 	// the user's footprint: the active saver's dot, PIN "set", a toggle "on".
 	liveColor = lipgloss.Color("#a6e3a1") // green
-	// overrides, outside the brightness hierarchy (§2.4): red is "wrong",
+	// overrides, outside the brightness hierarchy (tdp D2): red is "wrong",
 	// yellow is "not set yet".
 	warnColor   = lipgloss.Color("#f38ba8") // red
 	yellowColor = lipgloss.Color("#f9e2af") // yellow

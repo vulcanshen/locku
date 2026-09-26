@@ -119,7 +119,7 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
-Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a float; `Space` lists what can be done here; `?` is the whole key vocabulary, or, on preference's, tmux's or screen's `[2]`, what each row means.
+Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a popup; `Space` lists what can be done here, down to quitting; `?` lists the keys, what each row means on preference's, tmux's or screen's `[2]`, or, on a popup, that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.
 
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; dino's `runner`, `scene`; custom's `command`; and `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
 - **Savers** — the three kinds: clock, dino, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
@@ -182,11 +182,11 @@ A new shell has it. A screen already running gets it once detached and attached 
 |---|---|
 | `Tab` · `1` · `2` | next panel / this panel |
 | `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
-| `Esc` | close the top float |
-| `Space` | what can I do here: the item, and the panel |
-| `?` | help: the keys; on preference's, tmux's or screen's `[2]`, what each row means |
+| `Esc` | close the top popup |
+| `Space` | what can be done here: the row, the panel, and quitting |
+| `?` | the keys, and quit; on preference's, tmux's or screen's `[2]`, what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
-| `q` | quit; asks first when colours are unsaved |
+| `q` · `Ctrl-C` | quit; asks first when colours are unsaved, and a second `Ctrl-C` then leaves at once |
 | `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
 
 ### `[1]` sidebar

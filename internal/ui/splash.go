@@ -16,7 +16,7 @@ type splashIdentityMsg struct{} // fires the name + tagline together
 type splashHintMsg struct{}
 
 // splashModel renders the locku logo as a hidden easter egg, a sibling of
-// kbu's, filu's, sshu's and webu's splashes. The u-family mark is a navy U
+// kbu's, filu's, sshu's and webu's splashes (tdp S). The terminu family mark is a navy U
 // wrapping a gold figure — here the letters of LOCK, each wrapping the
 // next, as docs/icon.svg draws them — and it reveals in that order: the
 // background sheet, the letters from the outside in, then the U frame

@@ -119,7 +119,7 @@ locku pin reset
  space menu   ? help   tab/1-2 panels   q quit
 ```
 
-兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，Property / Value 兩欄的表。`Tab`、`1`、`2` 在兩邊移動；`Enter` 進 `[2]` 或編輯一列；`Esc` 關浮層；`Space` 列出當前能做的事；`?` 是全部的鍵，在 preference、tmux、screen 的 `[2]` 上則是每一列的說明。
+兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，Property / Value 兩欄的表。`Tab`、`1`、`2` 在兩邊移動；`Enter` 進 `[2]` 或編輯一列；`Esc` 關浮層；`Space` 列出當前能做的事，包括離開；`?` 列出按鍵，在 preference、tmux、screen 的 `[2]` 上是每一列的說明，在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。
 
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；dino 的 `runner`、`scene`；custom 的 `command`；以及 `bg` / `fg` 各三個 RGB slider，改的是草稿，`S` 才寫檔（`R` 丟掉；有未存草稿時 `q` 先問）。其他每一列一改就寫檔。
 - **Savers**——三種種類：clock、dino、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
@@ -183,10 +183,10 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `Tab` · `1` · `2` | 下一個面板 / 直達面板 |
 | `Enter` | `[1]` 上：這列的欄位進 `[2]`；`[2]` 上：編輯、選、切換、挑 |
 | `Esc` | 關最上層的浮層 |
-| `Space` | 這裡能做什麼：item 與 panel |
-| `?` | help：全部的鍵；preference、tmux、screen 的 `[2]` 上是每一列的說明 |
+| `Space` | 這裡能做什麼：這一列、這個面板，以及離開 |
+| `?` | 按鍵與離開；preference、tmux、screen 的 `[2]` 上是每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
-| `q` | 離開；有未存的顏色先問 |
+| `q` · `Ctrl-C` | 離開；有未存的顏色先問，這時再按一次 `Ctrl-C` 立刻離開 |
 | `j` / `k` · `u` / `d` · `gg` / `G` | 下 / 上 · 半頁 · 首 / 尾 |
 
 ### `[1]` 側欄

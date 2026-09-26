@@ -279,7 +279,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`（不帶 `-S` / `-t`）。原�
 - profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，dino 的 runner、scene，custom 的 command；clock 與 dino 再有 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。custom 沒有顏色，也就沒有草稿與 `S` / `R`。
 - preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，或側欄 profile 列按 `a`（2026-09-25，使用者：不必每次到 preference 切）。
 - Integration（2026-09-25，使用者定案）：側欄第三個區塊，`tmux` 與 `screen` 各一項，`[2]` 的列：
-  - **`activate`**（`on` / `off`）：區塊在不在 `config file path` 那個檔案裡，每次畫都讀檔。Enter → confirm → 執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 進去；screen 連 shell rc 一起寫、跑著的 session 即時 `screen -X`），off 拿掉（tmux server 上的、跑著的 screen session 上的一併拿掉）；路徑沒填時 disabled 並說 `set the config file path first`。
+  - **`activate`**（`on` / `off`）：區塊在不在 `config file path` 那個檔案裡，每次畫都讀檔。Enter → confirm → 執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 進去；screen 連 shell rc 一起寫、跑著的 session 即時 `screen -X`），off 拿掉（tmux server 上的、跑著的 screen session 上的一併拿掉）；路徑沒填時 disabled（2026-09-26 起只變暗，tdp M6）。
   - **`config file path`**：要寫的檔案，`~/` 可用，提議 `~/.tmux.conf` / `~/.screenrc`（webu 的提議作法，ux.md §2.1）。
   - 一條分隔線：上面是 locku 的設定，下面是寫進工具設定檔的 key。
   - tmux 的 **`lock`**：鎖的**範圍**，`lock-server`（預設，整台 server，鎖著時 attach 任何 session 都被鎖）或 `lock-session`（只鎖觸發的那個 session：它的 client 與之後 attach 它的人，別的 session 照常）。值用 tmux 的指令名，因為 alias 與 bind-key 最後跑的就是它；`?` 說明只講範圍、不講觸發方式（使用者：提到 bind-key 會誤導）。screen 沒有這列：每個 screen 是自己一個 process、LOCKPRG 跟著 shell，沒有範圍可選，不硬造。
@@ -310,7 +310,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 # <<< locku <<<
 ```
 
-- 路徑由使用者在 Integration 各項的 `config file path` 輸入：沒設時 `activate` 是 disabled 並說 `set the config file path first`，什麼都不寫（screen 連 shell rc 也不寫）；不猜路徑。相對路徑拒收，它會落在程式剛好執行的目錄。
+- 路徑由使用者在 Integration 各項的 `config file path` 輸入：沒設時 `activate` 是 disabled，什麼都不寫（screen 連 shell rc 也不寫）；不猜路徑。相對路徑拒收，它會落在程式剛好執行的目錄。
 - **tmux 有 server 在跑時，把整個區塊交給它**（2026-09-25，使用者定案，見決定 39）：區塊的那幾行寫進一個暫存檔、`tmux source-file` 它、刪掉——server 拿到的就是檔案拿到的同一份文字，不另外維護一份指令清單。順序：先 undo 舊區塊做過、新區塊不做的事（檔案裡原本綁的鍵跟這次不同就 `unbind-key` 舊的；`lock` 換檔就 `set -gu @locked` 並拿掉 `session-created` hook——換檔後殘留的全域旗會讓所有 session 看似被鎖），再 source 區塊，最後對每個既有 session 逐一設它自己的 lock-command（lock-session：`set -t <id> -F lock-command "… -t '#{session_id}'"`；lock-server：`set -u -t <id> lock-command`）、換檔時再清每個 session 的 `@locked`——區塊裡的 session-created hook 只管之後建立的 session。activate off 時反向一條對一條拿掉：`set -gu lock-command` / `lock-after-time`、`set -su command-alias[90]`、三個 `set-hook -gu`、綁過的鍵 `unbind-key`、每個 session 的 lock-command 與 `@locked`、再 `set -gu @locked`。綁過與否看的是檔案裡區塊的 `bind-key` 行，不另外記。unbind 之後那個鍵 tmux 內建的功能（例如 `l` 的 last-window）要 server 重啟才回來。沒有 tmux 或沒有 server 就跳過並說明。結果以 toast 一行回報（setup 印的幾行以 ` · ` 接起來）。
 - tmux 那五行的道理（2026-09-24，使用者定案，全部以 pty 實測 tmux 3.7c）：
   - **預設不綁熱鍵**。用戶既然在用 tmux 就有自己一套 bind，`bind L` 會撞。改用 command alias：`prefix :` 然後打 `locku`，就是 `lock-server`（整台的 client 全鎖）；shell 裡 `tmux locku` 也一樣。要熱鍵的自己在 Integration › tmux › `bind-key` 填一個（2026-09-25，使用者：prefix shortcut），寫成 `bind-key <鍵> <lock>`——鍵是使用者選的，撞不撞他自己知道。
