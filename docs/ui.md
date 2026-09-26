@@ -1,7 +1,7 @@
 # locku — UI
 
 > 本文件講**版面與 surface**：兩個畫面、popup、色帶、chrome、存檔。按鍵語意與流程在 `ux.md`，
-> 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/main/principle)（tdp）與家族的 popup 慣例（tdp D3）撰寫，
+> 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp v0.1.0）與家族的 popup 慣例（tdp D3）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
 ---
