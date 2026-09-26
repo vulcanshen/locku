@@ -73,12 +73,23 @@ func openPrompt(t *testing.T, m LockModel) LockModel {
 	return m
 }
 
+// quits: the command leaves, on its own or as one of a batch — a menu row
+// that quits closes the menu in the same batch.
 func quits(cmd tea.Cmd) bool {
 	if cmd == nil {
 		return false
 	}
-	_, ok := cmd().(tea.QuitMsg)
-	return ok
+	switch msg := cmd().(type) {
+	case tea.QuitMsg:
+		return true
+	case tea.BatchMsg:
+		for _, c := range msg {
+			if quits(c) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func TestNoPINAnyKeyEnds(t *testing.T) {

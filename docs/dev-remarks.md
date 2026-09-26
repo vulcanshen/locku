@@ -60,7 +60,6 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 - **平台**：macOS 與 Linux（WSL 可）。不支援 Windows：鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品（2026-09-25，使用者定案）。
 - **狀態列在窄終端被截**：hostname 很長加窄終端時，被截的是尾端的 `no PIN` / custom note（見「運作方式」的狀態列），是設計決定，未改。
 - **未做**：8 小時 CPU / 記憶體觀察（`function.md` §12 最後一項，尚未做）。
-- **尚未符合 tdp 的地方**：逐條列在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。
 
 ## 偏離 tdp
 
@@ -69,6 +68,15 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   路過的人按出鎖以外的東西。tdp 只作用在 PIN prompt 這個 popup（`ux.md` §A.0）。
 - **鎖定中 `Ctrl-C` 不離開（K9）。** 鎖的本質是「進程活著 = 鎖著」，`Ctrl-C` 能結束就等於
   沒有鎖；ISIG 關掉，`Ctrl-C` 只是一個普通鍵（`function.md` §2.1）。設定畫面不在此列。
+- **預覽跟鎖定畫布一樣，任何鍵就回來（K1、K5、K6、K9；2026-09-26）。** 設定畫面的 `P` / `p` 把整個
+  終端機換成鎖定畫布的樣子，`q`、`Space`、`?`、`Ctrl-C` 都只是「回來」。預覽顯示的就是鎖定畫布，
+  鎖定畫布上任何鍵只有一個意義（叫出 PIN 框），預覽上任何鍵也只有一個意義（回來）；若 `q` 在預覽上
+  是離開，使用者從預覽回不來而是整個 app 關掉。
+- **preference、tmux、screen 的 `[2]` 上，`?` 是每一列的說明，不是 `?` menu（M4；2026-09-26，使用者定案）。**
+  locku 只有兩個 panel，這三個 `[2]` 上使用者要的是「這一列設定是什麼意思」——`lock` 要講兩種範圍、
+  screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明，也不屬於 global operation 或 key reference。
+  在這裡放 `?` menu，等於把真正需要的資訊擠掉，換成換個 panel 就看得到的東西：離開在每個 Space menu 的
+  global 區與 `q`，按鍵在 `[1]` 與其他 `[2]` 的 `?` menu。其他 panel 的 `?` 照 M4。
 
 ## 設計文件導讀
 

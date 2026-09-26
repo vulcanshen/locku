@@ -107,7 +107,7 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
-| activate | `on`（Green）/ `off`（Mauve）：區塊在不在 config file path 裡，每次畫都讀一次 | Enter → confirm popup 才執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled 並說 `set the config file path first` |
+| activate | `on`（Green）/ `off`（Mauve）：區塊在不在 config file path 裡，每次畫都讀一次 | Enter → confirm popup 才執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled（2026-09-26 起只變暗，不另說原因，tdp M6） |
 | config file path | 路徑照存的樣子；未設 `not set`（Yellow），activate 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc`；on 的時候改路徑，區塊搬到新檔、清空就拿掉 |
 | ── 分隔線 | Surface2 一條線，不可停：上面是 locku 的設定，下面是寫進工具設定檔的 key | 無 |
 | lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | options popup，兩個值；on 時改了立刻重寫區塊、server 換旗 |
@@ -208,7 +208,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | message | Delete profile、Quit（有未存的顏色草稿時） |
-| toast | message | 寫檔失敗、PIN 不一致、不可刪（啟用中 / 最後一個）、nothing to save / nothing changed |
+| toast | message | 寫檔失敗、PIN 不一致（disabled 的列不跳 toast，2026-09-26，tdp M6） |
 
 new 與 duplicate 都是 `name` input popup：new 提議 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 提議原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。

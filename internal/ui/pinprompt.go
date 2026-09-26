@@ -23,7 +23,7 @@ import (
 //	PIN · try again in 27 s   red, counting down, every key but Esc swallowed
 //	PIN · closing             pin_prompt_timeout ran out: the ordinary closing animation
 //
-// Red is an override colour (VTP §2.4): it says "wrong", not "deeper".
+// Red is an override colour (tdp D2): it says "wrong", not "deeper".
 type promptState int
 
 const (

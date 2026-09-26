@@ -1,6 +1,16 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- `q` and `Ctrl-C` leave the settings screen the same way, from anywhere but a box being typed in: with colours unsaved they ask first, and a second `Ctrl-C` while that asks leaves at once. `Ctrl-C` used to leave at once, unsaved colours and all, and `q` did nothing while a menu or a popup was open.
+- `Space` opens and closes the Space menu and nothing else: it no longer cancels a confirm or closes an options list.
+- Every Space menu ends in a third region, `global operation`, with `Quit`; a rule parts one region from the next.
+- `?` on a panel is a menu: `Quit`, which runs from there, over a reference of the keys. On a popup it is that popup's own keys. On preference's, tmux's and screen's `[2]` it is still what each row means.
+- A row that cannot run right now is dimmed and keeps its own description; pressing it does nothing, where it used to say why in a toast.
+- `P`, the preview, is a row of the Space menu on preference's, tmux's and screen's `[2]` too.
+
+### Fixed
+- The first `Ctrl-C` on the splash only closes it, as any other key does, rather than leaving.
 
 ## [0.1.1] - 2026-09-26
 ### Changed

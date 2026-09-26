@@ -17,19 +17,32 @@ import (
 	"github.com/vulcanshen/locku/internal/setup"
 )
 
-// action is one thing the user can do to what the cursor is on, or to the
-// panel. The Space menu lists actions and the letter hotkeys dispatch
-// them, from ONE table, so a letter hotkey that is not a menu row cannot
-// exist (§4.2) — and a row that is disabled still answers, with why.
+// action is one thing the user can do to what the cursor is on, to the
+// panel, or to the whole app. The menus list actions and the letter
+// hotkeys dispatch them, from ONE table, so a letter hotkey that is not a
+// menu row cannot exist (tdp M3) — and a row that is disabled is dimmed,
+// keeps its hint and does nothing (tdp M6).
 type action struct {
 	key      string // "enter" for the core-key action, or one letter
 	label    string
 	hint     string
 	disabled bool
 	// panelOp: the action is about the panel, not the row — the menu's
-	// second region (VTP §A.1.1).
+	// second region (tdp M2).
 	panelOp bool
 	run     func(*AppModel) tea.Cmd
+}
+
+// row is the action as a menu row.
+func (a action) row() menuItem {
+	return menuItem{label: a.label, key: a.key, hint: a.hint, disabled: a.disabled}
+}
+
+// globalActions is every operation of the whole app, the same rows in the
+// same order in the ? menu, which runs them, and at the foot of every
+// Space menu (tdp M2, M4). Leaving is the one there is.
+func (m AppModel) globalActions() []action {
+	return []action{{key: "q", label: "Quit", hint: "leave locku; asks first when colours are unsaved", run: (*AppModel).quit}}
 }
 
 // actions is the table for the current focus and cursor (ux.md §A.1).
@@ -52,19 +65,16 @@ func (m AppModel) actions() []action {
 		}
 		del := action{key: "X", label: "Delete", hint: "this profile", run: (*AppModel).deleteProfile}
 		switch {
-		case len(m.cfg.Profiles) == 1:
-			del.disabled, del.hint = true, "cannot delete: last one"
-		case m.cfg.Profiles[it.ref].Name == m.cfg.Profile:
-			del.disabled, del.hint = true, "cannot delete: active"
+		case len(m.cfg.Profiles) == 1, m.cfg.Profiles[it.ref].Name == m.cfg.Profile:
+			// The last one, or the one the lock shows (tdp M6: dimmed, no why).
+			del.disabled = true
 		}
 		// [a]: the lock shows this one from now on (user, 2026-09-25) —
 		// the dot moves, the file is written — without the walk to
 		// preference › profile, which stays the other way to the same
 		// setting.
 		use := action{key: "a", label: "Activate", hint: "the lock shows this profile from now on", run: (*AppModel).activateProfile}
-		if m.cfg.Profiles[it.ref].Name == m.cfg.Profile {
-			use.disabled, use.hint = true, "already active"
-		}
+		use.disabled = m.cfg.Profiles[it.ref].Name == m.cfg.Profile
 		return []action{
 			edit,
 			use,
@@ -128,10 +138,13 @@ func (m AppModel) actions() []action {
 	case rowLock:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how much a lock covers: the whole server, or one session", run: (*AppModel).chooseLock})
 	}
-	if it.kind == sideTool {
-		return out
+	p, key, ok := m.subject()
+	if !ok {
+		// preference, a tool: P shows the lock as it is, the active profile
+		// (user, 2026-09-24) — and a hotkey is a row (tdp M3, 2026-09-26).
+		return append(out, action{key: "P", label: "Preview", hint: "the lock, showing the active profile", panelOp: true, run: (*AppModel).previewHere})
 	}
-	if p, key, ok := m.subject(); ok {
+	{
 		what := "this profile"
 		if it.kind == sideSaver {
 			what = "this saver with its defaults"
@@ -140,8 +153,7 @@ func (m AppModel) actions() []action {
 		save := action{key: "S", label: "Save", hint: "write the colour draft to config.yaml", panelOp: true, run: (*AppModel).saveColours}
 		reset := action{key: "R", label: "Reset", hint: "drop the draft: the saved colours again", panelOp: true, run: (*AppModel).resetColours}
 		if !m.dirtyOf(key, p) {
-			save.disabled, save.hint = true, "nothing to save"
-			reset.disabled, reset.hint = true, "nothing changed"
+			save.disabled, reset.disabled = true, true
 		}
 		preview := action{key: "P", label: "Preview", hint: "the lock, showing " + what + " and its draft", panelOp: true, run: (*AppModel).previewThis}
 		if p.Saver == saver.KindCustom {
@@ -159,8 +171,8 @@ func (m AppModel) actions() []action {
 // file, off while it is not — in place of a button, of the S and X
 // hotkeys before it, and of the `locku setup` command before those):
 // on writes the block into the file, and onto a running tmux server,
-// after a confirm; off takes it out. It says why it cannot when the
-// file is not set.
+// after a confirm; off takes it out. Dimmed while the file is not set
+// (tdp M6): the config file path row says `not set` in yellow.
 func (m AppModel) activateAction() action {
 	name, t := m.tool()
 	a := action{key: "enter", label: "[Enter] Activate", hint: "write locku's block into the file", run: (*AppModel).activateTool}
@@ -172,9 +184,7 @@ func (m AppModel) activateAction() action {
 	} else {
 		a.hint += ", LOCKPRG in the shell rc, and running screens"
 	}
-	if t.Conf == "" {
-		a.disabled, a.hint = true, "set the config file path first"
-	}
+	a.disabled = t.Conf == ""
 	return a
 }
 
@@ -200,14 +210,15 @@ func (m *AppModel) previewHere() tea.Cmd {
 	return m.previewOf(cfg, p)
 }
 
-// dispatch runs the action bound to key, or says why it cannot.
+// dispatch runs the action bound to key, here or global; a dimmed one
+// does nothing (tdp M6).
 func (m AppModel) dispatch(key string) (AppModel, tea.Cmd) {
-	for _, a := range m.actions() {
+	for _, a := range append(m.actions(), m.globalActions()...) {
 		if a.key != key {
 			continue
 		}
 		if a.disabled {
-			return m, m.toast.show(a.hint, toastError)
+			return m, nil
 		}
 		return m, a.run(&m)
 	}

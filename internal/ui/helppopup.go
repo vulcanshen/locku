@@ -5,15 +5,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// helpPopup is the §A.2 non-contextual entry point: every global action the
-// app has, reachable from any surface and on top of any float. Its
-// completeness is the promise — a user who never read a README finds the
-// whole vocabulary here.
-//
-// With one exception, the user's (2026-09-25): on [2] of preference, or of
-// a tool, ? is the glossary of THAT panel's settings and nothing else —
-// what each row means, wrapped, in place of the note that used to sit
-// under each row. The keys are a panel away, on [1].
+// helpPopup is ? where ? is not the ? menu: on a popup, that popup's own
+// help — the keys of that box and nothing of the app's (tdp K6); on [2] of
+// preference, or of a tool, the glossary of THAT panel's settings — what
+// each row means, wrapped, in place of the note that used to sit under
+// each row (user, 2026-09-25; kept there in place of the ? menu,
+// 2026-09-26 — a deviation, dev-remarks). On any other panel ? is the ?
+// menu (AppModel.openHelp).
 type helpPopup struct {
 	anim    popupAnimator
 	entries []helpEntry
@@ -23,12 +21,12 @@ type helpPopup struct {
 	screenH int
 }
 
-func newHelpPopup() helpPopup { return helpPopup{anim: newPopupAnimator("help"), entries: helpKeys} }
+func newHelpPopup() helpPopup { return helpPopup{anim: newPopupAnimator("help")} }
 
 func (m helpPopup) isActive() bool      { return m.anim.isActive() }
 func (m helpPopup) isInteractive() bool { return m.anim.isInteractive() }
 
-// open shows entries: the keys, or one panel's glossary (AppModel.helpEntries).
+// open shows entries: a popup's keys, or one panel's glossary.
 func (m *helpPopup) open(layer int, entries []helpEntry) tea.Cmd {
 	m.layer, m.top, m.entries = layer, 0, entries
 	return m.anim.open()
@@ -39,38 +37,48 @@ func (m *helpPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 // helpEntry is one line: a section header (key == "") or a key/description pair.
 type helpEntry struct{ key, desc string }
 
-// helpKeys is the whole vocabulary (ux.md §A.2 and the appendix). The
-// core keys come first because they are the five a user has to hold to
-// walk the app (§A.0.K).
-var helpKeys = []helpEntry{
-	{"", "Core keys"},
+// keyReference is the ? menu's second region (tdp M4): the core keys and
+// the walking keys, to read. Every other key is a row of a Space menu.
+var keyReference = []helpEntry{
 	{"Tab · 1-2", "next panel / this panel"},
 	{"Enter", "[1]: the row's fields, in [2]; [2]: edit, choose, toggle, pick"},
-	{"Esc", "close the top float"},
-	{"Space", "what can I do here: the item, and the panel"},
-	{"?", "this help — on [2] of preference, or of tmux / screen, what each row means"},
-	{"", "Global"},
-	{"P", "on [2]: preview the lock — a profile's or a saver's [2] shows that one, any other the active profile — drafts included; any key comes back. Nothing on [1], where p previews the row"},
-	{"q", "quit — asks first when colours are unsaved"},
-	{"Ctrl+C", "force quit"},
-	{"", "[1] Savers — the kinds: clock, dino"},
-	{"n", "new profile of this saver, under a name"},
-	{"", "[1] Profiles — the ones set up"},
-	{"p", "preview the lock showing this profile"},
-	{"a", "activate: the lock shows this profile from now on"},
-	{"D", "duplicate it under a new name"},
-	{"r", "rename it"},
-	{"X", "delete it (not the active one, not the last one)"},
-	{"", "[2] a profile, or a saver's defaults"},
-	{"P", "preview the lock showing this profile"},
-	{"S", "save its colour draft to config.yaml"},
-	{"R", "reset the draft to the saved colours"},
-	{"", "[2] tmux, screen"},
-	{"Enter", "on activate: on writes locku's block into the file (and onto a running tmux server, or running screens; screen: LOCKPRG into the shell rc too), after a confirm — and from then on a row changed is written at once; off takes it out"},
-	{"", "Navigate"},
+	{"Esc", "close the top popup"},
+	{"Space", "what can be done here"},
+	{"?", "this menu; on a popup, that popup's keys"},
+	{"q · Ctrl-C", "quit; asks first when colours are unsaved"},
 	{"j · k", "next / previous row"},
 	{"u · d", "half a page"},
 	{"gg · G", "first / last"},
+}
+
+// menuHelp is ? on the Space menu: that box's keys (tdp K6).
+var menuHelp = []helpEntry{
+	{"", "Space menu"},
+	{"j · k", "next / previous row"},
+	{"u · d", "half a page"},
+	{"gg · G", "first / last"},
+	{"Enter", "run the row; a dimmed one cannot run now"},
+	{"[x]", "the letter in a row's brackets runs it"},
+	{"Space · Esc", "close"},
+}
+
+// optionsHelp is ? on an options list.
+var optionsHelp = []helpEntry{
+	{"", "Choose one"},
+	{"j · k", "next / previous"},
+	{"u · d", "half a page"},
+	{"gg · G", "first / last"},
+	{"Enter", "take this one"},
+	{"Esc", "close, nothing changed"},
+}
+
+// confirmHelp is ? on a confirm: what Enter does there, and the way back.
+func confirmHelp(accept string) []helpEntry {
+	return []helpEntry{
+		{"", "Confirm"},
+		{"Enter", accept},
+		{"Esc", "cancel"},
+	}
 }
 
 // helpPreference is what each of preference's rows means; ? on a [2]

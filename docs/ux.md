@@ -35,7 +35,8 @@
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
-region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；menu 本身 `j`/`k` 走（環繞）、
+三個 region，順序固定：`item operation`、`panel operation`、`global operation`（2026-09-26，tdp M2）；沒東西的 region 連標題一起不出現，
+兩個 region 之間一條分隔線，只剩一個時不加標題。`global operation` 在每個 Space menu 的最後，跟 `?` menu 同一份清單、同一順序，目前只有 `[q]uit`。menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
 profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25）。
 
@@ -44,7 +45,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | cursor 在 | item operation |
 |---|---|
 | saver（class：clock、dino、custom） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，提議 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
-| profile | `[Enter] Edit`（焦點送到 `[2]`）、`[a] Activate`（鎖定畫面改用這個 profile：`●` 移過去、立刻寫檔；已啟用的 disabled 並說 `already active`；2026-09-25，使用者：不必每次到 preference 切）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled 並說明） |
+| profile | `[Enter] Edit`（焦點送到 `[2]`）、`[a] Activate`（鎖定畫面改用這個 profile：`●` 移過去、立刻寫檔；已啟用的 disabled；2026-09-25，使用者：不必每次到 preference 切）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，提議原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled） |
 | tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：activate、config file path，分隔線下工具自己的 key） |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
@@ -53,7 +54,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | cursor 在 | item operation | panel operation |
 |---|---|---|
 | saver 的說明列 | 唯讀，不可停 | saver 上：`[n] New`、`[P] Preview`（用預設值）、`[S] Save`、`[R] Reset`（預設值的顏色草稿） |
-| name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled 並說明） |
+| name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
 | layout / size / font / time / date / runner / scene | `[Enter] Choose`（dino 的列只有 runner / scene；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
 | command（custom） | `[Enter] Edit`（2026-09-25） | custom 上只有 `[P] Preview`（把終端機交給程式，任意鍵回來）：沒有顏色就沒有 Save / Reset |
@@ -63,7 +64,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | profile | `[Enter] Choose`（列出所有 profile） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown | `[Enter] Edit` | 無 |
-| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把區塊寫進 config file path；tmux 有 server 在跑就整塊套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`）/ `[Enter] Deactivate`（confirm 後拿掉，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled 並說 `set the config file path first`（2026-09-25） | 無 |
+| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把區塊寫進 config file path；tmux 有 server 在跑就整塊套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`）/ `[Enter] Deactivate`（confirm 後拿掉，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled（2026-09-25；2026-09-26 起不另說原因，config file path 那列本身是黃色的 `not set`） | preference、tmux、screen 的 `[2]` 上：`[P] Preview`（啟用中的 profile；2026-09-26 補進 menu，tdp M3） |
 | config file path | `[Enter] Edit`（on 時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
 | 分隔線 | 不可停 | 無 |
 | lock（tmux） | `[Enter] Choose`（lock-server / lock-session；on 時直接重寫區塊、tmux 換旗） | 無 |
@@ -72,7 +73,9 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
 
-**popup 內**：options / confirm / viewport / toast 沒有自己的 Space menu，Space 就是關掉。
+**popup 內**：options / confirm / viewport / toast 沒有自己的 Space menu；Space 只開關 Space menu，在其他 popup 上不作用（2026-09-26，tdp K5；之前會關掉 confirm 與 options，等於兼了 `Esc`）。
+
+**disabled 的列**（2026-09-26，tdp M6）：照樣出現、變暗，說明欄維持原本那句，不另寫原因；cursor 可以停，Enter 與熱鍵都不作用、不跳 toast。之前說明欄改寫成原因（`already active`、`cannot delete: last one`……），按了還用 toast 再說一次。
 
 ### §A.2 Non-contextual track — `?` help（tdp K6、M4）
 
@@ -80,14 +83,17 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 |---|---|
 | Preview（只在 `[2]`：profile / saver 的 `[2]` 是那一個、preference / tmux / screen 的 `[2]` 是啟用中的 profile，帶著顏色草稿，任意鍵回來；custom 把終端機交給程式；`[1]` 上不作用——那裡 `p` 預覽游標那列，2026-09-25） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
-| 離開 | `q`（浮層內不作用；有未存的顏色草稿時先 confirm）、`Ctrl+C` 硬退 |
+| 離開 | `q` 與 `Ctrl+C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl+C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl+C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl+C` 不問就走 |
 | splash 彩蛋 | `V`（不揭露） |
 
-全域字母在浮層開著、打字中兩種狀態下不作用。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
-按鍵（ISIG 已關，`function.md` §2.1）。
+全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl+C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
+按鍵（ISIG 已關，`function.md` §2.1；偏離 tdp，見 dev-remarks）。
 
-help 的內容看 focus 在哪：`[1]`，以及 profile / saver 的 `[2]`，是鍵（core、global、`[1]` / `[2]` 各區塊的 item / panel operation、
-navigate）；preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
+`?` 的內容看 focus 在哪（2026-09-26，tdp K6、M4）：
+
+- **popup 上**：只有這個 popup 的 help——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
+- **`[1]`，以及 profile / saver 的 `[2]`**：`?` menu，兩區——`global operation`（可以直接執行，j/k 選、Enter 或熱鍵執行；目前是 `[q]uit`）與 `key reference`（唯讀：core key 與導覽鍵）。其他熱鍵都是各 panel Space menu 裡的一列，不再列在 help 裡。再按 `?` 關掉。
+- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 global operation 與 key reference（2026-09-26，使用者定案；偏離 tdp M4，理由見 dev-remarks）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind、screen 的 LOCKPRG 住在哪的說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
@@ -209,12 +215,11 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 ## §5 浮層行為
 
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
-`Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
+`Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN mismatch`、`cannot delete: active` / `cannot delete: last one`、
-`nothing to save` / `nothing changed`、`write failed: <reason>`（值退回）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
+**toast**：`PIN set`、`PIN mismatch`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格降到 Surface2（`ui.md` §2.3）；`q` 在畫布與 prompt
 裡都只是字元。
@@ -256,10 +261,10 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 ## 附錄 — hotkey 全表
 
 ### Core key
-`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu · `?` help
+`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu · `?` `?` menu / popup 的 help / 字典 · `q`、`Ctrl+C` quit
 
 ### 全域
-`P` preview（只在 `[2]`） · `q` quit · `1` / `2` 直達面板
+`P` preview（只在 `[2]`） · `1` / `2` 直達面板
 
 ### `[1]` 側欄
 saver 上 `n` new profile · `p` preview the defaults · profile 上 `Enter` edit · `p` preview this profile · `D` duplicate · `r` rename · `X` delete
