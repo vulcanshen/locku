@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.2] - 2026-09-26
 ### Changed
 - `q` and `Ctrl-C` leave the settings screen the same way, from anywhere but a box being typed in: with colours unsaved they ask first, and a second `Ctrl-C` while that asks leaves at once. `Ctrl-C` used to leave at once, unsaved colours and all, and `q` did nothing while a menu or a popup was open.
 - `Space` opens and closes the Space menu and nothing else: it no longer cancels a confirm or closes an options list.
