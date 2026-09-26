@@ -12,8 +12,6 @@
 
 > _When in doubt, hit_ **`Space`**.
 
-locku is the fifth member of the `u`-family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (filesystem), [sshu](https://github.com/vulcanshen/sshu) (ssh), [webu](https://github.com/vulcanshen/webu) (browser) — and a lock-screen implementation of [this TUI Design Principle](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md). The design, every decision dated in place and the rejected approaches with it, is in [`docs/function.md`](docs/function.md), [`docs/ui.md`](docs/ui.md) and [`docs/ux.md`](docs/ux.md); the developer's notes — the decisions in short, what was rejected, the layout of the code, building from source, the tests, the release flow — in [`docs/dev-remarks.md`](docs/dev-remarks.md).
-
 ## Demo
 
 ![demo](docs/demo.gif)
@@ -176,6 +174,44 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 A new shell has it. A screen already running gets it once detached and attached again from a new shell; until then that session locks with screen's own built-in lock, which the settings screen says. The blocks are the same text whether locku writes them or you do.
 
+## Key bindings
+
+### Everywhere
+
+| Key | |
+|---|---|
+| `Tab` · `1` · `2` | next panel / this panel |
+| `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
+| `Esc` | close the top float |
+| `Space` | what can I do here: the item, and the panel |
+| `?` | help: the keys; on preference's, tmux's or screen's `[2]`, what each row means |
+| `P` | on `[2]`: preview the lock; any key comes back |
+| `q` | quit; asks first when colours are unsaved |
+| `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
+
+### `[1]` sidebar
+
+| Key | On | |
+|---|---|---|
+| `n` | a saver | new profile of this kind, under a name |
+| `p` | a saver / a profile | preview the defaults / this profile |
+| `a` | a profile | activate: the lock shows this profile from now on |
+| `D` · `r` · `X` | a profile | duplicate · rename · delete (not the active one, not the last one) |
+
+### `[2]` detail
+
+| Key | On | |
+|---|---|---|
+| `Enter` | any row | rename, choose, toggle, pick a colour channel, set or change the PIN, edit a path or a key, turn `activate` |
+| `S` · `R` | a profile or a saver | save the colour draft · drop it |
+
+### The lock screen
+
+| Key | |
+|---|---|
+| any key | open the PIN prompt (the key is not input) |
+| `Enter` · `Esc` · `Backspace` | submit · back to the saver · delete a digit |
+
 ## Where your data lives
 
 | | What | Where |
@@ -227,44 +263,6 @@ screen:
   bind: ""
 ```
 
-## Key bindings
-
-### Everywhere
-
-| Key | |
-|---|---|
-| `Tab` · `1` · `2` | next panel / this panel |
-| `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
-| `Esc` | close the top float |
-| `Space` | what can I do here: the item, and the panel |
-| `?` | help: the keys; on preference's, tmux's or screen's `[2]`, what each row means |
-| `P` | on `[2]`: preview the lock; any key comes back |
-| `q` | quit; asks first when colours are unsaved |
-| `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
-
-### `[1]` sidebar
-
-| Key | On | |
-|---|---|---|
-| `n` | a saver | new profile of this kind, under a name |
-| `p` | a saver / a profile | preview the defaults / this profile |
-| `a` | a profile | activate: the lock shows this profile from now on |
-| `D` · `r` · `X` | a profile | duplicate · rename · delete (not the active one, not the last one) |
-
-### `[2]` detail
-
-| Key | On | |
-|---|---|---|
-| `Enter` | any row | rename, choose, toggle, pick a colour channel, set or change the PIN, edit a path or a key, turn `activate` |
-| `S` · `R` | a profile or a saver | save the colour draft · drop it |
-
-### The lock screen
-
-| Key | |
-|---|---|
-| any key | open the PIN prompt (the key is not input) |
-| `Enter` · `Esc` · `Backspace` | submit · back to the saver · delete a digit |
-
 ## Limits
 
 Not there, on purpose:
@@ -277,7 +275,10 @@ Not there, on purpose:
 
 - [CHANGELOG.md](CHANGELOG.md) — what each release changed
 - [`docs/dev-remarks.md`](docs/dev-remarks.md) — the developer's notes: how it works, why, the design docs, building and testing
-- The rest of the `u`-family: [kbu](https://github.com/vulcanshen/kbu), [filu](https://github.com/vulcanshen/filu), [sshu](https://github.com/vulcanshen/sshu), [webu](https://github.com/vulcanshen/webu)
+
+## terminu family
+
+locku follows the [terminu design principle](https://github.com/vulcanshen/terminu): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [webu](https://github.com/vulcanshen/webu) (the web).
 
 ## License
 

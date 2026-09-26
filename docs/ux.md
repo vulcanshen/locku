@@ -1,12 +1,12 @@
 # locku — UX
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、每種輸入怎麼填、浮層行為、時間軸。
-> 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 VTP（`thoughts/tui-design`）撰寫，章節編號
-> 對齊 webu；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
+> 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/main/principle)（tdp）撰寫，
+> 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
 ---
 
-## §A. VTP in locku
+## §A. tdp in locku
 
 ### §A.0 揭露對照
 
@@ -19,9 +19,9 @@
 `[Enter] Edit`、`[Enter] Choose`。
 
 **鎖定畫布不在這張表裡。** 它只有一個動作「開 PIN prompt」，而且任何鍵都是它，沒有第二個動作可揭露，
-所以畫布上沒有 Space menu、沒有 `?`、沒有 footer。VTP 只作用在 PIN prompt 這個 popup。custom saver 也一樣：任何鍵開框，框疊在程式的畫面上（§2.3）。
+所以畫布上沒有 Space menu、沒有 `?`、沒有 footer。tdp 只作用在 PIN prompt 這個 popup。custom saver 也一樣：任何鍵開框，框疊在程式的畫面上（§2.3）。
 
-### §A.0.K core-key 語意
+### §A.0.K core-key 語意（tdp K 章）
 
 | Core-key | 設定畫面 | 鎖定畫布 |
 |---|---|---|
@@ -33,7 +33,7 @@
 
 無 PIN 模式（`function.md` §4.3）：畫布上任何鍵 = 結束進程，沒有 prompt。
 
-### §A.1 Contextual track — Space menu
+### §A.1 Contextual track — Space menu（tdp K5、M2）
 
 region 固定叫 `item operation` / `panel operation`；只有一個 region 就保持扁平；menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
@@ -74,7 +74,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 **popup 內**：options / confirm / viewport / toast 沒有自己的 Space menu，Space 就是關掉。
 
-### §A.2 Non-contextual track — `?` help
+### §A.2 Non-contextual track — `?` help（tdp K6、M4）
 
 | 全域動作 | 鍵 |
 |---|---|
@@ -92,7 +92,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 ---
 
-## §B. 元素專職化
+## §B. 元素專職化（tdp P4）
 
 | 元素 | 唯一語意 |
 |---|---|
@@ -208,7 +208,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 ## §5 浮層行為
 
-沿用 u-family Popup Convention：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
+沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 在非輸入浮層上 = 關掉它、正在關閉的浮層不握鍵盤。層數最多兩層（Space menu 上開 confirm）。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。

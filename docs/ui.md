@@ -1,7 +1,7 @@
 # locku — UI
 
 > 本文件講**版面與 surface**：兩個畫面、popup、色帶、chrome、存檔。按鍵語意與流程在 `ux.md`，
-> 功能邊界在 `function.md`。依 VTP（`thoughts/tui-design`）與 u-family Popup Convention 撰寫，
+> 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/main/principle)（tdp）與家族的 popup 慣例（tdp D3）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
 ---
@@ -12,8 +12,8 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 | 畫面 | 指令 | 性質 |
 |---|---|---|
-| 設定 | `locku` | 兩個面板的 u-family 版面，吃完整 VTP |
-| 鎖定 | `locku lock`、argv[0] = SCREEN-LOCK | 全螢幕畫布，零 chrome，VTP 只作用在它的 popup |
+| 設定 | `locku` | 兩個面板的 terminu family 版面，吃完整 tdp |
+| 鎖定 | `locku lock`、argv[0] = SCREEN-LOCK | 全螢幕畫布，零 chrome，tdp 只作用在它的 popup |
 
 ### 1.1 設定畫面 grid
 
@@ -195,7 +195,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 ## §3 Popup
 
-全部走 u-family Popup Convention：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
+全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
 下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多兩層。
 
 ### 3.1 設定畫面
@@ -240,7 +240,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 ╭ PIN · closing ────────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver
 ```
 
-錯誤與 lockout 的 Red 是 override 色（VTP §2.4），不參與層級。
+錯誤與 lockout 的 Red 是 override 色（tdp D2），不參與層級。
 
 ---
 
@@ -260,9 +260,9 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | PIN wrong、lockout、`· invalid`、`· taken`、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
-| popup layer scale | 浮層邊框，最多兩層 | VTP §2.5 |
+| popup layer scale | 浮層邊框，最多兩層 | tdp D2 |
 
-focus 二態同 kbu §8.4：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
+focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
 Blue 不出現在那裡。
 
 ---
@@ -279,7 +279,7 @@ Blue 不出現在那裡。
 custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 框，沒有 locku 的任何 chrome（2026-09-25）。
 
 **Nerd Font 是設計、必裝**，與家族相同：畫布像素就是 nf-fa-square。字型在使用者本機的終端機模擬器，
-經 SSH 不受影響。`docs/icon.svg` 沿用 u-family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
+經 SSH 不受影響。`docs/icon.svg` 沿用 terminu family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
 
 ---
 
