@@ -12,8 +12,6 @@
 
 > _不確定的時候，就按_ **`Space`**。
 
-locku 是 `u`-family 第五個成員——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（filesystem）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（browser）——也是 [這份 TUI 設計原則](https://github.com/vulcanshen/thoughts/blob/main/tui-design/README.md) 在鎖定畫面這個領域的實作。設計本身——每條決定標日期，被否決的做法也留著——在 [`docs/function.md`](docs/function.md)、[`docs/ui.md`](docs/ui.md)、[`docs/ux.md`](docs/ux.md)；開發者備忘錄——決定摘要、已否決的做法、程式碼目錄、從原始碼建置、測試、發版流程——在 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
-
 ## Demo
 
 ![demo](docs/demo.gif)
@@ -176,6 +174,44 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 新開的 shell 就有。已在跑的 screen session 要 detach 後從新 shell 重新 attach 才有；在那之前那個 session 鎖到的是 screen 內建的鎖，設定畫面會說明。區塊是同一份文字，locku 寫或你手寫都一樣。
 
+## 按鍵
+
+### 到處都通
+
+| 鍵 | |
+|---|---|
+| `Tab` · `1` · `2` | 下一個面板 / 直達面板 |
+| `Enter` | `[1]` 上：這列的欄位進 `[2]`；`[2]` 上：編輯、選、切換、挑 |
+| `Esc` | 關最上層的浮層 |
+| `Space` | 這裡能做什麼：item 與 panel |
+| `?` | help：全部的鍵；preference、tmux、screen 的 `[2]` 上是每一列的說明 |
+| `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
+| `q` | 離開；有未存的顏色先問 |
+| `j` / `k` · `u` / `d` · `gg` / `G` | 下 / 上 · 半頁 · 首 / 尾 |
+
+### `[1]` 側欄
+
+| 鍵 | 在 | |
+|---|---|---|
+| `n` | saver | 用這種 saver 生一個新 profile，取名 |
+| `p` | saver / profile | 預覽預設值 / 這個 profile |
+| `a` | profile | 設為啟用：鎖定畫面從此顯示這個 |
+| `D` · `r` · `X` | profile | duplicate · rename · delete（啟用中的與最後一個不能刪） |
+
+### `[2]` 明細
+
+| 鍵 | 在 | |
+|---|---|---|
+| `Enter` | 任何一列 | rename、選、切換、挑顏色通道、設或換 PIN、改路徑或鍵、開關 `activate` |
+| `S` · `R` | profile 或 saver | 存顏色草稿 · 丟掉 |
+
+### 鎖定畫面
+
+| 鍵 | |
+|---|---|
+| 任何鍵 | 開 PIN 框（那個鍵不算輸入） |
+| `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 刪一字 |
+
 ## 你的資料放在哪
 
 | | 什麼 | 哪裡 |
@@ -227,44 +263,6 @@ screen:
   bind: ""
 ```
 
-## 按鍵
-
-### 到處都通
-
-| 鍵 | |
-|---|---|
-| `Tab` · `1` · `2` | 下一個面板 / 直達面板 |
-| `Enter` | `[1]` 上：這列的欄位進 `[2]`；`[2]` 上：編輯、選、切換、挑 |
-| `Esc` | 關最上層的浮層 |
-| `Space` | 這裡能做什麼：item 與 panel |
-| `?` | help：全部的鍵；preference、tmux、screen 的 `[2]` 上是每一列的說明 |
-| `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
-| `q` | 離開；有未存的顏色先問 |
-| `j` / `k` · `u` / `d` · `gg` / `G` | 下 / 上 · 半頁 · 首 / 尾 |
-
-### `[1]` 側欄
-
-| 鍵 | 在 | |
-|---|---|---|
-| `n` | saver | 用這種 saver 生一個新 profile，取名 |
-| `p` | saver / profile | 預覽預設值 / 這個 profile |
-| `a` | profile | 設為啟用：鎖定畫面從此顯示這個 |
-| `D` · `r` · `X` | profile | duplicate · rename · delete（啟用中的與最後一個不能刪） |
-
-### `[2]` 明細
-
-| 鍵 | 在 | |
-|---|---|---|
-| `Enter` | 任何一列 | rename、選、切換、挑顏色通道、設或換 PIN、改路徑或鍵、開關 `activate` |
-| `S` · `R` | profile 或 saver | 存顏色草稿 · 丟掉 |
-
-### 鎖定畫面
-
-| 鍵 | |
-|---|---|
-| 任何鍵 | 開 PIN 框（那個鍵不算輸入） |
-| `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 刪一字 |
-
 ## 限制
 
 刻意不做的：
@@ -277,7 +275,10 @@ screen:
 
 - [CHANGELOG.md](CHANGELOG.md)——每個版本改了什麼
 - [`docs/dev-remarks.md`](docs/dev-remarks.md)——開發者備忘錄：怎麼運作、為什麼、設計文件導讀、建置與測試
-- `u`-family 的其他成員：[kbu](https://github.com/vulcanshen/kbu)、[filu](https://github.com/vulcanshen/filu)、[sshu](https://github.com/vulcanshen/sshu)、[webu](https://github.com/vulcanshen/webu)
+
+## terminu family
+
+locku 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）。
 
 ## 授權
 

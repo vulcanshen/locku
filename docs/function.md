@@ -9,7 +9,7 @@
 
 ### 0.1 是什麼、不是什麼
 
-- 是 u-family 第五個成員（kbu / filu / sshu / webu / locku），同一套 Go + Bubble Tea 技術棧與 VTP 操作原則。
+- 是 terminu family 第五個成員（kbu / filu / sshu / webu / locku），同一套 Go + Bubble Tea 技術棧與 terminu design principle（tdp）。
 - 是 tmux 的 lock-command、screen 的 LOCKPRG，也可以在裸 tty（teletype，這裡泛指任何終端機裝置）直接執行。
 - 不是安全邊界。同一使用者另開一條 SSH 就能 `tmux attach -d`、`kill -9`。定位是防路人、防誤觸、好看。
 - 不是 pane 內的攔截器。原因見 0.2。
@@ -158,7 +158,7 @@ custom saver（5.5）是同一張圖：saver 是程式自己的畫面，prompt �
 
 - **saver** 是種類——class：clock、dino、custom。它決定怎麼產生內容，輸出不帶任何樣式：clock 是幾行 ASCII 文字；dino 是一張自己像素座標的點陣圖（2026-09-24 加入第二種）；custom 不產內容，程式自己畫在 locku 給它的 pty 上，畫布只在它結束時接手（2026-09-25 加入第三種，5.5）。
 - **profile** 是具名實例——object：一種 saver 加上它的參數與顏色，有名字；config 裡 `profile` 指向的、鎖定畫面顯示的，都是 profile（2026-09-24 定案，使用者以 OOP 分：class 不用取名、object 才有名字，能新增的是 profile、新增時先選 saver）。
-- **畫布**把文字用 u-family splash 的像素風格畫出來、把點陣圖依 size 放大鋪滿，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置。custom 不經畫布。
+- **畫布**把文字用 terminu family splash 的像素風格畫出來、把點陣圖依 size 放大鋪滿，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置。custom 不經畫布。
 
 ### 5.2 saver 與 profile
 
