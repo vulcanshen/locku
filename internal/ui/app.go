@@ -168,7 +168,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 			return m, nil
 		}
 		if k == "enter" {
-			return m, m.commitInput()
+			return m, m.done(m.commitInput())
 		}
 		m.input.update(msg)
 		return m, nil
@@ -185,29 +185,20 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		m.help.update(msg)
 		return m, nil
 	}
-	// The ? menu: the global operations, run from here, over the key
-	// reference (tdp M4). ? again closes it (tdp K6).
-	if m.helpMenu.anim.owns() {
-		if k == "?" {
+	// ? closes the ? menu when that is the top; on anything else it is
+	// that surface's help (tdp K6).
+	if k == "?" {
+		if m.helpMenu.anim.owns() && !m.boxUp() {
 			return m, m.helpMenu.close()
 		}
-		var key string
-		m.helpMenu, key = m.helpMenu.update(msg)
-		if key == "" {
-			return m, nil
-		}
-		closeCmd := m.helpMenu.close()
-		m, cmd := m.dispatch(key)
-		return m, tea.Batch(closeCmd, cmd)
-	}
-	if k == "?" {
 		return m, m.openHelp()
 	}
-	// Space opens and closes the Space menu and nothing else: on a
+	// A box opened from a menu sits on it and takes the keys first (tdp
+	// F4). Space opens and closes the Space menu and nothing else: on a
 	// confirm or an options list it does nothing (tdp K5).
 	if m.confirm.anim.owns() {
 		if k == "enter" && m.confirm.isInteractive() {
-			return m, m.commitConfirm()
+			return m, m.done(m.commitConfirm())
 		}
 		return m, nil
 	}
@@ -215,9 +206,19 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		var key string
 		m.options, key = m.options.update(msg)
 		if key != "" {
-			return m, m.commitOptions(key)
+			return m, m.done(m.commitOptions(key))
 		}
 		return m, nil
+	}
+	// The ? menu: the global operations, run from here, over the key
+	// reference (tdp M4).
+	if m.helpMenu.anim.owns() {
+		var key string
+		m.helpMenu, key = m.helpMenu.update(msg)
+		if key == "" {
+			return m, nil
+		}
+		return m.runRow(true, key)
 	}
 	if m.menu.anim.owns() {
 		if k == " " {
@@ -228,11 +229,7 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		if key == "" {
 			return m, nil
 		}
-		// The menu is the slow path to the same table the letter is the
-		// fast path to; either way the row runs and the menu goes.
-		closeCmd := m.menu.close()
-		m, cmd := m.dispatch(key)
-		return m, tea.Batch(closeCmd, cmd)
+		return m.runRow(false, key)
 	}
 	// No float: the globals (ux.md §A.2).
 	switch k {
@@ -336,10 +333,11 @@ func (m *AppModel) startPreviewWord(cfg config.Config, o custom.Outcome) tea.Cmd
 }
 
 // closeTop is Esc: the topmost float goes, and only it. With nothing up it
-// does nothing — Esc never leaves the app (ux.md §A.0.K).
+// does nothing — Esc never leaves the app (ux.md §A.0.K). A float already
+// closing is past it, a toast too: the Esc goes to the one under it (tdp F3).
 func (m *AppModel) closeTop() tea.Cmd {
 	switch {
-	case m.toast.isActive():
+	case m.toast.anim.owns():
 		return m.toast.close()
 	case m.help.anim.owns():
 		return m.help.close()
@@ -454,6 +452,43 @@ func (m *AppModel) openHelp() tea.Cmd {
 	items = append(items, menuItem{rule: true}, menuItem{label: "key reference", header: true})
 	m.helpMenu.setItems(append(items, ref...), "help", m.layer())
 	return m.helpMenu.open()
+}
+
+// runRow runs a menu's row — the slow path to the same table the letter
+// is the fast path to. A row that opens the next box, a confirm, a name
+// or a list, leaves the menu under it, so cancelling the box comes back
+// to the menu (tdp F4); any other row is done, and the menu goes — a
+// preview among them, which replaces the whole screen (tdp T1).
+func (m AppModel) runRow(fromHelp bool, key string) (AppModel, tea.Cmd) {
+	m, cmd := m.dispatch(key)
+	if m.boxUp() {
+		return m, cmd
+	}
+	if fromHelp {
+		return m, tea.Batch(m.helpMenu.close(), cmd)
+	}
+	return m, tea.Batch(m.menu.close(), cmd)
+}
+
+// boxUp: a confirm, an input or an options list owns the keyboard.
+func (m AppModel) boxUp() bool {
+	return m.confirm.anim.owns() || m.input.anim.owns() || m.options.anim.owns()
+}
+
+// done follows a commit: one that opened no next box finished what a menu
+// began, so the menus under it go too (tdp T1, D3); one that opened the
+// next box of a chain — the PIN's next question — keeps them.
+func (m *AppModel) done(cmd tea.Cmd) tea.Cmd {
+	if m.boxUp() {
+		return cmd
+	}
+	cmds := []tea.Cmd{cmd}
+	for _, menu := range []*spaceMenu{&m.menu, &m.helpMenu} {
+		if menu.anim.owns() {
+			cmds = append(cmds, menu.close())
+		}
+	}
+	return tea.Batch(cmds...)
 }
 
 // asksToQuit: the way out is asking about unsaved colours right now.
