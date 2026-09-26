@@ -278,7 +278,7 @@ screen:
 
 ## terminu family
 
-locku 遵循 [terminu design principle](https://github.com/vulcanshen/terminu)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）。
+locku 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）。
 
 ## 授權
 

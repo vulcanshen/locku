@@ -1,7 +1,7 @@
 # locku — UX
 
 > 本文件講**互動語意**：core-key、Space menu 內容、hotkey 分層、每種輸入怎麼填、浮層行為、時間軸。
-> 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/main/principle)（tdp）撰寫，
+> 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp v0.1.0）撰寫，
 > 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
 ---

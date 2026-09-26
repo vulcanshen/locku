@@ -1,7 +1,7 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu/tree/main/principle)（tdp）；
+[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp v0.1.0）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
