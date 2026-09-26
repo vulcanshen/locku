@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.3] - 2026-09-26
 ### Changed
 - A box opened from the Space menu or the `?` menu — a confirm, a name or a number to type, a list to choose from — sits on the menu: `Esc` on it comes back to the menu, and finishing it closes both. The menu used to close the moment a row was chosen, so cancelling the box left you on the panel.
 
