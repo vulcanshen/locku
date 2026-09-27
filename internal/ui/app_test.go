@@ -66,7 +66,7 @@ func (m AppModel) press(keys ...string) AppModel {
 // settle runs every popup animation to its end.
 func (m AppModel) settle() AppModel {
 	for i := 0; i < animFrames+1; i++ {
-		for _, t := range []string{"spacemenu", "options", "helpmenu", "help", "input", "confirm", "toast"} {
+		for _, t := range []string{"spacemenu", "options", "globalmenu", "help", "input", "confirm", "quit", "quithelp", "toast"} {
 			mm, _ := m.Update(AnimTickMsg{Target: t})
 			m = mm.(AppModel)
 		}
@@ -636,10 +636,10 @@ func TestPreviewNeedsNoPIN(t *testing.T) {
 // (user, 2026-09-25).
 // ? on [2] of preference is the preference glossary and nothing else —
 // what each row means, in place of the note that sat under each row —
-// on [2] of a tool that tool's (user, 2026-09-25; kept in place of the ?
-// menu there, 2026-09-26); on [1], and on a profile's [2], the ? menu:
-// the global operations over the key reference (tdp M4). A description
-// longer than its column wraps.
+// on [2] of a tool that tool's (user, 2026-09-25; kept in place of the
+// key reference there, 2026-09-26 and 2026-09-27); on [1], and on a
+// profile's [2], the key reference: the panel's keys over the ones that
+// work everywhere (tdp K6, M4). A description longer than its column wraps.
 func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 	has := func(v string, want ...string) []string {
 		var missing []string
@@ -651,22 +651,22 @@ func TestHelpIsThePanelsGlossaryOnItsDetail(t *testing.T) {
 		return missing
 	}
 	m := newTestApp(t)
-	if v := m.press("?").View(); len(has(v, "global operation", "[q]uit", "key reference", "next panel", "half a page")) != 0 || strings.Contains(v, "what each row is") {
-		t.Errorf("on [1]: the ? menu:\n%s", v)
+	if v := m.press("?").View(); len(has(v, "[1] locku", "Duplicate", "Rename", "everywhere", "next panel", "half a page")) != 0 || strings.Contains(v, "what each row is") || strings.Contains(v, "Global operation") {
+		t.Errorf("on [1]: its keys, then the ones everywhere:\n%s", v)
 	}
-	if v := m.press("G", "?").View(); !strings.Contains(v, "key reference") || strings.Contains(v, "any key unlocks") { // [1] on preference
-		t.Errorf("on [1], preference: still the ? menu:\n%s", v)
+	if v := m.press("G", "?").View(); !strings.Contains(v, "everywhere") || strings.Contains(v, "any key unlocks") { // [1] on preference
+		t.Errorf("on [1], preference: still [1]'s keys:\n%s", v)
 	}
-	if v := m.press("2", "?").View(); !strings.Contains(v, "key reference") || strings.Contains(v, "what each row is") {
-		t.Errorf("on a profile's [2]: the ? menu:\n%s", v)
+	if v := m.press("2", "?").View(); len(has(v, "[2] clock", "Save", "Reset", "everywhere")) != 0 || strings.Contains(v, "what each row is") {
+		t.Errorf("on a profile's [2]: its keys:\n%s", v)
 	}
-	if v := m.press("G", "2", "?").View(); len(has(v, "[2] preference", "any key unlocks", "wrong_pin_attempt_cooldown")) != 0 || strings.Contains(v, "key reference") || strings.Contains(v, "idle_lock") {
+	if v := m.press("G", "2", "?").View(); len(has(v, "[2] preference", "any key unlocks", "wrong_pin_attempt_cooldown")) != 0 || strings.Contains(v, "everywhere") || strings.Contains(v, "idle_lock") {
 		t.Errorf("on [2], preference: its glossary only:\n%s", v)
 	}
 	if pv := m.press("G", "2").View(); strings.Contains(pv, "any key unlocks") {
 		t.Errorf("preference's [2] must not carry the notes:\n%s", pv)
 	}
-	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "key reference") || strings.Contains(v, "any key unlocks") {
+	if v := m.press("G", "k", "k", "2", "?").View(); len(has(v, "[2] tmux", "activate", "config file path", "lock-server", "lock-after-time", "bind-key")) != 0 || strings.Contains(v, "idle_lock") || strings.Contains(v, "everywhere") || strings.Contains(v, "any key unlocks") {
 		t.Errorf("on [2], tmux: its glossary only:\n%s", v)
 	}
 	if v := m.press("G", "k", "2", "?").View(); len(has(v, "[2] screen", "idle", "activate", "bind", "C-a x", "LOCKPRG", "shell rc")) != 0 || strings.Contains(v, "bind-key") || strings.Contains(v, "lock-server") {
@@ -992,7 +992,7 @@ func TestQuitAsksWhenColoursUnsaved(t *testing.T) {
 		t.Fatal("not dirty")
 	}
 	m = m.press("q")
-	if !m.confirm.isInteractive() || m.confirm.action != confirmQuit {
+	if !m.quitAsk.isInteractive() {
 		t.Fatal("q with a dirty draft must ask")
 	}
 	if _, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter}); !quits(cmd) {
@@ -1041,14 +1041,23 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 						t.Errorf("row %q does not show its key %q", a.label, a.key)
 					}
 				}
-				for _, a := range m.globalActions() {
-					if hotkeyIndex(keys, a.key) < 0 {
-						t.Errorf("focus %d cur %d/%d: the global %q is not a row", focus, c1, c2, a.label)
+				// The global region is one row, Global operation, and the
+				// globals are the rows of the popup it opens (tdp M2, M4).
+				if hotkeyIndex(keys, globalRow) < 0 {
+					t.Errorf("focus %d cur %d/%d: no Global operation row", focus, c1, c2)
+				}
+				if g := opened.openedGlobal(); g != nil {
+					for _, a := range m.globalActions() {
+						if hotkeyIndex(g.menuKeys(), a.key) < 0 {
+							t.Errorf("focus %d cur %d/%d: the global %q is not a row of the global operation popup", focus, c1, c2, a.label)
+						}
 					}
+				} else {
+					t.Errorf("focus %d cur %d/%d: Global operation opened nothing", focus, c1, c2)
 				}
 				// Three regions at most — item, panel, global — an empty one
-				// left out, a rule between two, titles only when more than
-				// one is left (tdp M2). The global one is always there.
+				// left out, a rule between two, each under its title (tdp
+				// M2). The global one is always there.
 				hasItem, hasPanel := false, false
 				for _, a := range acts {
 					hasItem = hasItem || !a.panelOp
@@ -1072,7 +1081,7 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 				if headers != want || rules != want-1 {
 					t.Errorf("focus %d cur %d/%d: %d headers, %d rules for %d regions", focus, c1, c2, headers, rules, want)
 				}
-				if last := opened.menu.items[len(opened.menu.items)-1]; last.key != "q" {
+				if last := opened.menu.items[len(opened.menu.items)-1]; last.key != globalRow || len(last.label) == 0 {
 					t.Errorf("focus %d cur %d/%d: the menu does not end in the global region: %+v", focus, c1, c2, last)
 				}
 				if !opened.menu.items[opened.menu.cursor].stop() {
@@ -1228,6 +1237,16 @@ func TestQuitAndSpaceInsideFloats(t *testing.T) {
 	}
 }
 
+// openedGlobal runs the open Space menu's last row, Global operation, and
+// is the popup it opened — nil when it opened none.
+func (m AppModel) openedGlobal() *spaceMenu {
+	g := m.press("G", "enter")
+	if !g.globalMenu.isInteractive() {
+		return nil
+	}
+	return &g.globalMenu
+}
+
 // Ctrl-C is q (tdp K9): with colours unsaved it asks first, and a second
 // Ctrl-C while it asks leaves at once; q while it asks asks nothing more.
 func TestCtrlCIsTheWayOutQIs(t *testing.T) {
@@ -1267,7 +1286,7 @@ func TestSplashTakesCtrlC(t *testing.T) {
 	}
 	for _, k := range []string{"q", "?", " "} {
 		mm := newTestApp(t).press("V", k)
-		if mm.splash.isActive() || mm.helpMenu.anim.owns() || mm.menu.anim.owns() {
+		if mm.splash.isActive() || mm.help.anim.owns() || mm.menu.anim.owns() {
 			t.Errorf("%q on the splash must only close it", k)
 		}
 	}
@@ -1321,20 +1340,101 @@ func TestBoxOverItsMenu(t *testing.T) {
 	if pv := m.press("j", " ", "p"); pv.preview == nil || pv.menu.anim.owns() {
 		t.Error("a preview from the menu must close it")
 	}
-	// The ? menu's Quit with colours unsaved: its confirm sits on the ? menu
-	// and takes the keys; cancelled, the ? menu is back.
-	q := m.press("2", "G", "enter", "k", "enter", "1", "?", "enter")
-	if !q.asksToQuit() || !q.helpMenu.anim.owns() {
-		t.Fatalf("quit confirm over the ? menu: asks %v, ? menu %v", q.asksToQuit(), q.helpMenu.anim.owns())
+	// Quit from the global operation popup with colours unsaved: its
+	// confirm sits on the popup and takes the keys; cancelled, the popup is
+	// back, and the Space menu under it.
+	q := m.press("2", "G", "enter", "k", "enter", "1", " ", "G", "enter", "enter")
+	if !q.asksToQuit() || !q.globalMenu.anim.owns() || !q.menu.anim.owns() {
+		t.Fatalf("quit confirm over the global operation popup: asks %v, popup %v, menu %v", q.asksToQuit(), q.globalMenu.anim.owns(), q.menu.anim.owns())
 	}
 	if _, cmd := q.sends("enter"); cmd == nil || !quits(cmd) {
-		t.Error("Enter on that confirm must quit, not reach the ? menu")
+		t.Error("Enter on that confirm must quit, not reach the popup")
 	}
-	if back := q.press("esc"); back.confirm.anim.owns() || !back.helpMenu.isInteractive() {
-		t.Error("Esc on that confirm must come back to the ? menu")
+	if back := q.press("esc"); back.quitAsk.anim.owns() || !back.globalMenu.isInteractive() || !back.menu.anim.owns() {
+		t.Error("Esc on that confirm must come back to the global operation popup")
 	}
-	if h := q.press("?"); !h.help.anim.owns() || !h.helpMenu.anim.owns() {
-		t.Error("? on that confirm is its own help, not closing the ? menu under it")
+	if h := q.press("?"); !h.quitHelp.anim.owns() || !h.globalMenu.anim.owns() {
+		t.Error("? on that confirm is its own help, not closing the popup under it")
+	}
+}
+
+// Space's global region is one row, Global operation; its Enter opens the
+// global operation popup on the Space menu, where the globals run (tdp M2,
+// M4; user, 2026-09-27: Space, Global operation, Quit).
+func TestGlobalOperationPopup(t *testing.T) {
+	m := newTestApp(t).press(" ")
+	if v := m.View(); !strings.Contains(v, "Global operation") || strings.Contains(v, "[q]uit") {
+		t.Fatalf("the Space menu's global region is the one row:\n%s", v)
+	}
+	g := m.press("G", "enter")
+	if !g.globalMenu.isInteractive() || !g.menu.anim.owns() {
+		t.Fatal("Global operation must open its popup over the Space menu")
+	}
+	if v := g.View(); !strings.Contains(v, "[q]uit") {
+		t.Errorf("the popup lists Quit:\n%s", v)
+	}
+	if back := g.press("esc"); back.globalMenu.anim.owns() || !back.menu.isInteractive() {
+		t.Error("Esc must come back to the Space menu")
+	}
+	if sp := g.press(" "); !sp.globalMenu.isInteractive() || !sp.menu.anim.owns() {
+		t.Error("Space on the popup must do nothing: the Space menu is not on top")
+	}
+	if h := g.press("?"); !h.help.anim.owns() || !strings.Contains(h.View(), "back to the Space menu") {
+		t.Error("? on the popup is its own keys")
+	}
+	if done, cmd := g.sends("enter"); cmd == nil || !quits(cmd) || done.globalMenu.anim.owns() || done.menu.anim.owns() {
+		t.Error("Enter on Quit must quit, the stack cleared with it (tdp T1)")
+	}
+	if _, cmd := g.sends("q"); cmd == nil || !quits(cmd) {
+		t.Error("q on the popup must quit")
+	}
+	// No key presses as the row: g, G and the rest are the menu's own.
+	if hotkeyIndex(m.menu.menuKeys(), "g") >= 0 || strings.Contains(m.View(), "[G]lobal") {
+		t.Error("the Global operation row has no hotkey")
+	}
+}
+
+// The quit confirm is a popup of its own over everything (tdp K9, D3): a q
+// or a Ctrl-C on another question leaves that question where it was, a
+// box being typed in does not take the confirm's Enter, and a help under
+// it does not cover it.
+func TestQuitConfirmIsOnTop(t *testing.T) {
+	draft := newTestApp(t).press("2", "G", "enter", "k", "enter", "1") // fg › B: a draft
+	if !draft.anyDirty() {
+		t.Fatal("no draft")
+	}
+	// On the Delete confirm of clock2.
+	d := draft.press("j", "X", "q")
+	if !d.asksToQuit() || !d.confirm.anim.owns() {
+		t.Fatalf("q on a confirm: quit asks %v, Delete kept %v", d.asksToQuit(), d.confirm.anim.owns())
+	}
+	if back := d.press("esc"); back.asksToQuit() || !back.confirm.isInteractive() || back.confirm.action != confirmDeleteProfile {
+		t.Error("Esc on the quit confirm must leave the Delete confirm as it was")
+	}
+	// In the rename box: Ctrl-C, then Enter leaves; the name is not taken.
+	r := draft.press("j", "r", "ctrl+c")
+	if !r.asksToQuit() || !r.input.anim.owns() {
+		t.Fatal("Ctrl-C in a box must ask, the box kept")
+	}
+	if _, cmd := r.sends("enter"); cmd == nil || !quits(cmd) {
+		t.Error("Enter must be the quit confirm's, not the box's")
+	}
+	if typed := r.press("x"); typed.input.value != r.input.value {
+		t.Error("a key while the quit confirm asks must not reach the box")
+	}
+	// On a help: the quit confirm is drawn over it and takes Enter.
+	h := draft.press(" ", "?", "q")
+	if !h.asksToQuit() || !h.help.anim.owns() {
+		t.Fatal("q on a help must ask, the help kept")
+	}
+	if v := h.View(); !strings.Contains(v, "Quit without saving") {
+		t.Errorf("the quit confirm must be drawn over the help:\n%s", v)
+	}
+	if _, cmd := h.sends("enter"); cmd == nil || !quits(cmd) {
+		t.Error("Enter must be the quit confirm's")
+	}
+	if back := h.press("esc"); back.asksToQuit() || !back.help.isInteractive() {
+		t.Error("Esc must come back to the help")
 	}
 }
 
@@ -1358,27 +1458,30 @@ func TestEscPassesAClosingToast(t *testing.T) {
 }
 
 // ? on a popup is that popup's help and nothing of the app's (tdp K6);
-// ? on a panel is the ? menu, whose rows run (tdp M4).
+// ? on a panel is its key reference, to read: nothing on it runs (tdp M4).
 func TestHelpIsThePopupsOwn(t *testing.T) {
 	m := newTestApp(t)
-	if v := m.press(" ", "?").View(); !strings.Contains(v, "Space menu") || strings.Contains(v, "key reference") {
+	if v := m.press(" ", "?").View(); !strings.Contains(v, "Space menu") || strings.Contains(v, "everywhere") {
 		t.Errorf("? on the Space menu: its own keys:\n%s", v)
 	}
-	if v := m.press("j", "X", "?").View(); !strings.Contains(v, "Confirm") || !strings.Contains(v, "cancel") || strings.Contains(v, "key reference") {
+	if v := m.press("j", "X", "?").View(); !strings.Contains(v, "Confirm") || !strings.Contains(v, "cancel") || strings.Contains(v, "everywhere") {
 		t.Errorf("? on a confirm: its own keys:\n%s", v)
 	}
-	if v := m.press("2", "j", "j", "enter", "?").View(); !strings.Contains(v, "Choose one") || strings.Contains(v, "key reference") {
+	if v := m.press("2", "j", "j", "enter", "?").View(); !strings.Contains(v, "Choose one") || strings.Contains(v, "everywhere") {
 		t.Errorf("? on an options list: its own keys:\n%s", v)
 	}
-	h := m.press("?")
-	if !h.helpMenu.isInteractive() {
-		t.Fatal("no ? menu")
+	h := m.press("j", "?") // clock2: Delete, Rename, Activate…
+	if !h.help.isInteractive() {
+		t.Fatal("no key reference")
 	}
-	if h.press("?").helpMenu.anim.owns() {
-		t.Error("? again must close the ? menu")
+	if h.press("?").help.anim.owns() {
+		t.Error("? again must close it")
 	}
-	if _, cmd := h.sends("enter"); cmd == nil || !quits(cmd) {
-		t.Error("Enter on the ? menu's Quit must quit")
+	for _, k := range []string{"enter", "X", "r", "a", "D", "p", "n"} {
+		mm, cmd := h.sends(k)
+		if cmd != nil || mm.cfg.Profile != h.cfg.Profile || len(mm.cfg.Profiles) != len(h.cfg.Profiles) || mm.confirm.anim.owns() || mm.input.anim.owns() || mm.focus != h.focus || mm.preview != nil {
+			t.Errorf("%q on the key reference must run nothing", k)
+		}
 	}
 }
 

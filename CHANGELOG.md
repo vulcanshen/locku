@@ -1,6 +1,14 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- `?` lists the keys, to read: on `[1]` and on a profile's or a saver's `[2]`, that panel's keys — every row of its Space menu — then the ones that work everywhere. Nothing on it runs; it used to be a menu with `Quit` on it.
+- A Space menu's last region is one row, `Global operation`, and its `Enter` opens the global operation popup, where `Quit` is. `Esc` there comes back to the Space menu. `Quit` used to sit in every Space menu.
+
+### Fixed
+- With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
+- `Ctrl-C` in a box being typed in asks about quitting over the box, and `Enter` then quits; it used to submit the box under it.
+- `q` on a help draws the question about quitting over the help, where it used to be hidden under it.
 
 ## [0.1.3] - 2026-09-26
 ### Changed

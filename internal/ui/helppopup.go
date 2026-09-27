@@ -5,13 +5,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// helpPopup is ? where ? is not the ? menu: on a popup, that popup's own
-// help — the keys of that box and nothing of the app's (tdp K6); on [2] of
-// preference, or of a tool, the glossary of THAT panel's settings — what
-// each row means, wrapped, in place of the note that used to sit under
-// each row (user, 2026-09-25; kept there in place of the ? menu,
-// 2026-09-26 — a deviation, dev-remarks). On any other panel ? is the ?
-// menu (AppModel.openHelp).
+// helpPopup is ?, the key reference of whatever is in front, to read and
+// scroll, not to run (tdp K6, M4): on a popup that popup's own keys and
+// nothing of the app's; on a panel its keys over the core keys
+// (AppModel.panelKeys); on [2] of preference, or of a tool, the glossary of
+// THAT panel's settings instead — what each row means, wrapped, in place of
+// the note that used to sit under each row (user, 2026-09-25; kept there in
+// place of the key reference, 2026-09-26 and 2026-09-27 — a deviation,
+// dev-remarks).
 type helpPopup struct {
 	anim    popupAnimator
 	entries []helpEntry
@@ -37,14 +38,15 @@ func (m *helpPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 // helpEntry is one line: a section header (key == "") or a key/description pair.
 type helpEntry struct{ key, desc string }
 
-// keyReference is the ? menu's second region (tdp M4): the core keys and
-// the walking keys, to read. Every other key is a row of a Space menu.
+// keyReference is the foot of a panel's key reference (tdp M4): the core
+// keys and the walking keys, which work on every panel. The panel's own
+// keys come first, off its actions.
 var keyReference = []helpEntry{
 	{"Tab · 1-2", "next panel / this panel"},
 	{"Enter", "[1]: the row's fields, in [2]; [2]: edit, choose, toggle, pick"},
 	{"Esc", "close the top popup"},
 	{"Space", "what can be done here"},
-	{"?", "this menu; on a popup, that popup's keys"},
+	{"?", "the keys here; on a popup, that popup's keys"},
 	{"q · Ctrl-C", "quit; asks first when colours are unsaved"},
 	{"j · k", "next / previous row"},
 	{"u · d", "half a page"},
@@ -60,6 +62,15 @@ var menuHelp = []helpEntry{
 	{"Enter", "run the row; a dimmed one cannot run now"},
 	{"[x]", "the letter in a row's brackets runs it"},
 	{"Space · Esc", "close"},
+}
+
+// globalMenuHelp is ? on the global operation popup: that box's keys.
+var globalMenuHelp = []helpEntry{
+	{"", "Global operation"},
+	{"j · k", "next / previous row"},
+	{"Enter", "run the row"},
+	{"[x]", "the letter in a row's brackets runs it"},
+	{"Esc", "back to the Space menu"},
 }
 
 // optionsHelp is ? on an options list.
@@ -134,14 +145,25 @@ func (m *helpPopup) update(msg tea.KeyMsg) {
 func (m helpPopup) visible(n int) int { return max(1, min(n, m.screenH-6)) }
 
 // layout is the key column's width, the box's inner width, and every
-// line: a description longer than its column wraps under itself, with
+// line. The box is as wide as its longest description, up to the screen
+// (tdp D4); a description longer than its column wraps under itself, with
 // the key on its first line only (user, 2026-09-25: the glossary must
 // wrap, not be cut).
 func (m helpPopup) layout() (keyW, innerW int, lines []string) {
+	// Never narrower than the bottom border's hint.
+	want := dispW(hintLegend([][2]string{{"j/k", "scroll"}, {"Esc", "close"}})) + 1
 	for _, e := range m.entries {
 		keyW = max(keyW, dispW(e.key))
 	}
-	innerW = popupInnerW(m.screenW, keyW+64)
+	for _, e := range m.entries {
+		if e.key == "" {
+			want = max(want, dispW(e.desc)+2)
+		} else {
+			want = max(want, keyW+4+dispW(e.desc)+1) // a column clear of the border
+
+		}
+	}
+	innerW = popupInnerW(m.screenW, want)
 	descW := max(1, innerW-keyW-4)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)

@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	tea "github.com/charmbracelet/bubbletea"
 	overlay "github.com/rmhubbert/bubbletea-overlay"
 
@@ -29,12 +31,19 @@ type AppModel struct {
 
 	menu    spaceMenu
 	options spaceMenu
-	// helpMenu is the ? menu on a panel (tdp M4): the global operations,
-	// run from it, over the key reference.
-	helpMenu spaceMenu
-	help     helpPopup
-	input    inputPopup
-	confirm  confirmPopup
+	// globalMenu is the global operation popup (tdp M4): every operation of
+	// the whole app, opened from the one Global operation row at the foot
+	// of a Space menu, and sitting on it.
+	globalMenu spaceMenu
+	help       helpPopup
+	input      inputPopup
+	confirm    confirmPopup
+	// quitAsk is the way out asking about unsaved colours: a popup of its
+	// own, over the whole stack, so a q or a Ctrl-C pressed on another
+	// question never takes that question's place (tdp K9, D3). quitHelp is
+	// its ? — the one float over it.
+	quitAsk  confirmPopup
+	quitHelp helpPopup
 	toast    toastModel
 	splash   splashModel
 
@@ -62,19 +71,21 @@ const (
 // profile — what one most often came to change. problem is Load's note.
 func NewApp(cfg config.Config, problem string) AppModel {
 	return AppModel{
-		cfg:      cfg,
-		problem:  problem,
-		drafts:   map[draftKey]config.Style{},
-		focus:    panelSide,
-		cur1:     profileItem(max(0, cfg.Index(cfg.Profile))),
-		menu:     newSpaceMenu(),
-		options:  newOptionsMenu(),
-		helpMenu: newHelpMenu(),
-		help:     newHelpPopup(),
-		input:    newInputPopup(),
-		confirm:  newConfirmPopup(),
-		toast:    newToast(),
-		splash:   newSplashModel(),
+		cfg:        cfg,
+		problem:    problem,
+		drafts:     map[draftKey]config.Style{},
+		focus:      panelSide,
+		cur1:       profileItem(max(0, cfg.Index(cfg.Profile))),
+		menu:       newSpaceMenu(),
+		options:    newOptionsMenu(),
+		globalMenu: newGlobalMenu(),
+		help:       newHelpPopup(),
+		input:      newInputPopup(),
+		confirm:    newConfirmPopup(),
+		quitAsk:    confirmPopup{anim: newPopupAnimator("quit")},
+		quitHelp:   helpPopup{anim: newPopupAnimator("quithelp")},
+		toast:      newToast(),
+		splash:     newSplashModel(),
 	}
 }
 
@@ -92,7 +103,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		for _, p := range []interface{ setSize(int, int) }{&m.menu, &m.options, &m.helpMenu, &m.help, &m.input, &m.confirm, &m.toast} {
+		for _, p := range []interface{ setSize(int, int) }{&m.menu, &m.options, &m.globalMenu, &m.help, &m.input, &m.confirm, &m.quitAsk, &m.quitHelp, &m.toast} {
 			p.setSize(msg.Width, msg.Height)
 		}
 		if m.preview != nil {
@@ -115,8 +126,9 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case AnimTickMsg:
 		return m, tea.Batch(
-			m.menu.anim.tick(msg), m.options.anim.tick(msg), m.helpMenu.anim.tick(msg), m.help.anim.tick(msg),
-			m.input.anim.tick(msg), m.confirm.anim.tick(msg), m.toast.anim.tick(msg))
+			m.menu.anim.tick(msg), m.options.anim.tick(msg), m.globalMenu.anim.tick(msg), m.help.anim.tick(msg),
+			m.input.anim.tick(msg), m.confirm.anim.tick(msg), m.quitAsk.anim.tick(msg), m.quitHelp.anim.tick(msg),
+			m.toast.anim.tick(msg))
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
 	case customPreviewEndMsg:
@@ -140,8 +152,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 // key routes one keystroke: the splash, then Ctrl-C, then Esc (one place,
-// tdp K4), then a box being typed in, then q, then whichever float owns
-// the keyboard, then the globals, then the panel.
+// tdp K4), then the quit confirm, then a box being typed in, then q, then
+// whichever float owns the keyboard, then the globals, then the panel.
 func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	k := msg.String()
 	// The splash takes every key, Ctrl-C and q among them: any key only
@@ -161,6 +173,23 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 	}
 	if k == "esc" {
 		return m, m.closeTop()
+	}
+	// The quit confirm is over everything but its own help, and whatever
+	// it sits on waits, the question being answered there too (tdp D3):
+	// Enter leaves, ? is its keys, q asks nothing more.
+	if m.quitAsk.anim.owns() {
+		switch {
+		case m.quitHelp.anim.owns():
+			if k == "?" {
+				return m, m.quitHelp.close()
+			}
+			m.quitHelp.update(msg)
+		case k == "enter" && m.quitAsk.isInteractive():
+			return m, tea.Quit
+		case k == "?":
+			return m, m.quitHelp.open(m.layer(), confirmHelp(m.quitAsk.accept))
+		}
+		return m, nil
 	}
 	// Typing: every printable key is a character (tdp K8).
 	if m.input.anim.owns() {
@@ -185,12 +214,8 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		m.help.update(msg)
 		return m, nil
 	}
-	// ? closes the ? menu when that is the top; on anything else it is
-	// that surface's help (tdp K6).
+	// ? is the key reference of whatever is in front, to read (tdp K6).
 	if k == "?" {
-		if m.helpMenu.anim.owns() && !m.boxUp() {
-			return m, m.helpMenu.close()
-		}
 		return m, m.openHelp()
 	}
 	// A box opened from a menu sits on it and takes the keys first (tdp
@@ -210,15 +235,16 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		}
 		return m, nil
 	}
-	// The ? menu: the global operations, run from here, over the key
-	// reference (tdp M4).
-	if m.helpMenu.anim.owns() {
+	// The global operation popup sits on the Space menu it was opened
+	// from; Space there does nothing, the Space menu not being on top
+	// (tdp K5, M4).
+	if m.globalMenu.anim.owns() {
 		var key string
-		m.helpMenu, key = m.helpMenu.update(msg)
+		m.globalMenu, key = m.globalMenu.update(msg)
 		if key == "" {
 			return m, nil
 		}
-		return m.runRow(true, key)
+		return m.runRow(key)
 	}
 	if m.menu.anim.owns() {
 		if k == " " {
@@ -226,10 +252,13 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		}
 		var key string
 		m.menu, key = m.menu.update(msg)
-		if key == "" {
+		switch key {
+		case "":
 			return m, nil
+		case globalRow:
+			return m, m.openGlobal()
 		}
-		return m.runRow(false, key)
+		return m.runRow(key)
 	}
 	// No float: the globals (ux.md §A.2).
 	switch k {
@@ -289,8 +318,10 @@ func (m AppModel) move(k string) AppModel {
 
 // openMenu is Space: everything that can be done here, in three regions —
 // item operation, panel operation, global operation — a region with
-// nothing in it left out, a rule between two, and no titles when only one
-// is left (tdp M2).
+// nothing in it left out, a rule and a title each (tdp M2). The global
+// region is one row, Global operation, whose Enter opens the global
+// operation popup — one row though leaving is the only global there is
+// (user, 2026-09-27: Space, Global operation, Quit).
 func (m *AppModel) openMenu() tea.Cmd {
 	var item, panel []menuItem
 	for _, a := range m.actions() {
@@ -300,10 +331,7 @@ func (m *AppModel) openMenu() tea.Cmd {
 			item = append(item, a.row())
 		}
 	}
-	var global []menuItem
-	for _, a := range m.globalActions() {
-		global = append(global, a.row())
-	}
+	global := []menuItem{{label: "Global operation", key: globalRow, hint: "what is about the whole app"}}
 	items := regions([]string{"item operation", "panel operation", "global operation"}, item, panel, global)
 	title := "[1] locku"
 	if m.focus == panelDetail {
@@ -311,6 +339,21 @@ func (m *AppModel) openMenu() tea.Cmd {
 	}
 	m.menu.setItems(items, title, m.layer())
 	return m.menu.open()
+}
+
+// globalRow is what the Global operation row commits: no key can be
+// pressed as it, so the row has no hotkey (user, 2026-09-27).
+const globalRow = "global operation"
+
+// openGlobal is the global operation popup, over the Space menu (tdp M4):
+// globalActions, run from here.
+func (m *AppModel) openGlobal() tea.Cmd {
+	var rows []menuItem
+	for _, a := range m.globalActions() {
+		rows = append(rows, a.row())
+	}
+	m.globalMenu.setItems(rows, "Global operation", m.layer())
+	return m.globalMenu.open()
 }
 
 // startPreview: the whole screen becomes the lock on cfg — the file's
@@ -339,6 +382,10 @@ func (m *AppModel) closeTop() tea.Cmd {
 	switch {
 	case m.toast.anim.owns():
 		return m.toast.close()
+	case m.quitHelp.anim.owns():
+		return m.quitHelp.close()
+	case m.quitAsk.anim.owns():
+		return m.quitAsk.close()
 	case m.help.anim.owns():
 		return m.help.close()
 	case m.confirm.anim.owns():
@@ -349,10 +396,10 @@ func (m *AppModel) closeTop() tea.Cmd {
 		return m.input.close()
 	case m.options.anim.owns():
 		return m.options.close()
+	case m.globalMenu.anim.owns():
+		return m.globalMenu.close()
 	case m.menu.anim.owns():
 		return m.menu.close()
-	case m.helpMenu.anim.owns():
-		return m.helpMenu.close()
 	}
 	return nil
 }
@@ -360,7 +407,8 @@ func (m *AppModel) closeTop() tea.Cmd {
 // popupDepth counts the floats up, for the layer colour of the next.
 func (m AppModel) popupDepth() int {
 	n := 0
-	for _, up := range []bool{m.menu.anim.owns(), m.options.anim.owns(), m.helpMenu.anim.owns(), m.help.anim.owns(), m.input.anim.owns(), m.confirm.anim.owns()} {
+	for _, up := range []bool{m.menu.anim.owns(), m.options.anim.owns(), m.globalMenu.anim.owns(), m.help.anim.owns(),
+		m.input.anim.owns(), m.confirm.anim.owns(), m.quitAsk.anim.owns(), m.quitHelp.anim.owns()} {
 		if up {
 			n++
 		}
@@ -401,11 +449,13 @@ func (m AppModel) View() string {
 		view func() string
 	}{
 		{m.menu.isActive(), m.menu.view},
+		{m.globalMenu.isActive(), m.globalMenu.view},
 		{m.options.isActive(), m.options.view},
-		{m.helpMenu.isActive(), m.helpMenu.view},
 		{m.input.isActive(), m.input.view},
 		{m.confirm.isActive(), m.confirm.view},
 		{m.help.isActive(), m.help.view},
+		{m.quitAsk.isActive(), m.quitAsk.view},
+		{m.quitHelp.isActive(), m.quitHelp.view},
 	} {
 		if f.up {
 			out = overlay.Composite(f.view(), out, overlay.Center, overlay.Center, 0, 0)
@@ -417,17 +467,21 @@ func (m AppModel) View() string {
 	return out
 }
 
-// openHelp is ?. On a popup it is that popup's own help: the keys of that
-// box, nothing of the app's (tdp K6). On [2] of preference or a tool it is
-// the glossary alone, what each row means (user, 2026-09-25: "only the
-// preference items"; kept in place of the ? menu there, 2026-09-26 — a
-// deviation, dev-remarks). On any other panel it is the ? menu (tdp M4).
+// openHelp is ?: the key reference of whatever is in front, to read, not
+// to run (tdp K6, M4). On a popup it is that popup's keys, nothing of the
+// app's. On [2] of preference or a tool it is the glossary instead, what
+// each row means (user, 2026-09-25: "only the preference items"; kept in
+// place of the key reference there, 2026-09-26 and 2026-09-27 — a
+// deviation, dev-remarks). On any other panel it is that panel's keys over
+// the core keys.
 func (m *AppModel) openHelp() tea.Cmd {
 	switch {
 	case m.confirm.anim.owns():
 		return m.help.open(m.layer(), confirmHelp(m.confirm.accept))
 	case m.options.anim.owns():
 		return m.help.open(m.layer(), optionsHelp)
+	case m.globalMenu.anim.owns():
+		return m.help.open(m.layer(), globalMenuHelp)
 	case m.menu.anim.owns():
 		return m.help.open(m.layer(), menuHelp)
 	}
@@ -439,40 +493,54 @@ func (m *AppModel) openHelp() tea.Cmd {
 			return m.help.open(m.layer(), helpTool(tools[it.ref]))
 		}
 	}
-	var global []menuItem
-	for _, a := range m.globalActions() {
-		global = append(global, a.row())
+	return m.help.open(m.layer(), m.panelKeys())
+}
+
+// panelKeys is a panel's key reference (tdp M4): its keys, read off the
+// same table its Space menu is built from, so the two cannot disagree —
+// then the keys that work everywhere.
+func (m AppModel) panelKeys() []helpEntry {
+	title := "[1] locku"
+	if m.focus == panelDetail {
+		title = m.detailTitle()
 	}
-	var ref []menuItem
+	out := []helpEntry{{"", title}}
+	enter := false
+	for _, a := range m.actions() {
+		k, what := a.key, a.label
+		if k == "enter" {
+			k, what, enter = "Enter", strings.TrimPrefix(what, "[Enter] "), true
+		}
+		if a.hint != "" {
+			what += " — " + a.hint
+		}
+		out = append(out, helpEntry{k, what})
+	}
+	out = append(out, helpEntry{"", "everywhere"})
 	for _, e := range keyReference {
-		ref = append(ref, menuItem{label: e.key, hint: e.desc, ref: true})
+		// Enter is said for this panel already, what it does on this row.
+		if e.key == "Enter" && enter {
+			continue
+		}
+		out = append(out, e)
 	}
-	// Both regions are always there, so both keep their titles.
-	items := append([]menuItem{{label: "global operation", header: true}}, global...)
-	items = append(items, menuItem{rule: true}, menuItem{label: "key reference", header: true})
-	m.helpMenu.setItems(append(items, ref...), "help", m.layer())
-	return m.helpMenu.open()
+	return out
 }
 
 // runRow runs a menu's row — the slow path to the same table the letter
 // is the fast path to. A row that opens the next box, a confirm, a name
-// or a list, leaves the menu under it, so cancelling the box comes back
-// to the menu (tdp F4); any other row is done, and the menu goes — a
-// preview among them, which replaces the whole screen (tdp T1).
-func (m AppModel) runRow(fromHelp bool, key string) (AppModel, tea.Cmd) {
+// or a list, leaves the menus under it, so cancelling the box comes back
+// to them (tdp F4); any other row is done, and they go — a preview among
+// them, which replaces the whole screen (tdp T1).
+func (m AppModel) runRow(key string) (AppModel, tea.Cmd) {
 	m, cmd := m.dispatch(key)
-	if m.boxUp() {
-		return m, cmd
-	}
-	if fromHelp {
-		return m, tea.Batch(m.helpMenu.close(), cmd)
-	}
-	return m, tea.Batch(m.menu.close(), cmd)
+	return m, m.done(cmd)
 }
 
-// boxUp: a confirm, an input or an options list owns the keyboard.
+// boxUp: a confirm, an input, an options list or the quit confirm owns
+// the keyboard.
 func (m AppModel) boxUp() bool {
-	return m.confirm.anim.owns() || m.input.anim.owns() || m.options.anim.owns()
+	return m.confirm.anim.owns() || m.input.anim.owns() || m.options.anim.owns() || m.quitAsk.anim.owns()
 }
 
 // done follows a commit: one that opened no next box finished what a menu
@@ -483,7 +551,7 @@ func (m *AppModel) done(cmd tea.Cmd) tea.Cmd {
 		return cmd
 	}
 	cmds := []tea.Cmd{cmd}
-	for _, menu := range []*spaceMenu{&m.menu, &m.helpMenu} {
+	for _, menu := range []*spaceMenu{&m.menu, &m.globalMenu} {
 		if menu.anim.owns() {
 			cmds = append(cmds, menu.close())
 		}
@@ -492,21 +560,19 @@ func (m *AppModel) done(cmd tea.Cmd) tea.Cmd {
 }
 
 // asksToQuit: the way out is asking about unsaved colours right now.
-func (m AppModel) asksToQuit() bool {
-	return m.confirm.anim.owns() && m.confirm.action == confirmQuit
-}
+func (m AppModel) asksToQuit() bool { return m.quitAsk.anim.owns() }
 
 // quit is q, Ctrl-C and the global Quit row alike (tdp K9): with a colour
-// draft unsaved it asks first, otherwise it leaves. Asked already, it asks
-// nothing more: a second Ctrl-C is the way out at once.
+// draft unsaved it asks first, in a confirm of its own over everything
+// (tdp D3), otherwise it leaves. Asked already, it asks nothing more: a
+// second Ctrl-C is the way out at once.
 func (m *AppModel) quit() tea.Cmd {
 	if m.asksToQuit() {
 		return nil
 	}
 	if m.anyDirty() {
-		return m.confirm.ask(confirmPopup{title: "Unsaved colours", accept: "quit anyway",
-			lines:  []string{"Quit without saving the colours?", "S on the profile saves them, R drops them"},
-			action: confirmQuit}, m.layer())
+		return m.quitAsk.ask(confirmPopup{title: "Unsaved colours", accept: "quit anyway",
+			lines: []string{"Quit without saving the colours?", "S on the profile saves them, R drops them"}}, m.layer())
 	}
 	return tea.Quit
 }
