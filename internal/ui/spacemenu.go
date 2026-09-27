@@ -17,13 +17,10 @@ type menuItem struct {
 	key   string // dispatched on commit; "enter" for the core-key action
 	hint  string
 	// header is a region's label — "item operation", "panel operation",
-	// "global operation", "key reference" — dim and not a stop (tdp M2).
+	// "global operation" — dim and not a stop (tdp M2).
 	header bool
 	// rule is the line between two regions (tdp M2): not a stop.
 	rule bool
-	// ref is a row of the ? menu's key reference (tdp M4): a key and what
-	// it does, to read, not to run — not a stop.
-	ref bool
 	// disabled: the action belongs here but cannot run right now. A row
 	// that vanishes teaches that the action does not exist on this panel;
 	// a dimmed row keeps the map honest. It keeps its own hint and does
@@ -32,10 +29,11 @@ type menuItem struct {
 }
 
 // stop is a row the cursor can rest on: an action, run or dimmed.
-func (it menuItem) stop() bool { return !it.header && !it.rule && !it.ref }
+func (it menuItem) stop() bool { return !it.header && !it.rule }
 
-// regions lays out a menu's regions in order (tdp M2): an empty one left
-// out, a rule between two, and the titles only when more than one is left.
+// regions lays out a Space menu's regions in order (tdp M2): an empty one
+// left out, a rule between two, and every one under its title — the global
+// one is always there, so there are always two.
 func regions(titles []string, groups ...[]menuItem) []menuItem {
 	var kept []int
 	for i, g := range groups {
@@ -48,9 +46,7 @@ func regions(titles []string, groups ...[]menuItem) []menuItem {
 		if n > 0 {
 			out = append(out, menuItem{rule: true})
 		}
-		if len(kept) > 1 {
-			out = append(out, menuItem{label: titles[i], header: true})
-		}
+		out = append(out, menuItem{label: titles[i], header: true})
 		out = append(out, groups[i]...)
 	}
 	return out
@@ -59,7 +55,8 @@ func regions(titles []string, groups ...[]menuItem) []menuItem {
 // spaceMenu is the Space menu (tdp K5, M2): "what can I do, here, now". A
 // second instance is the options list — a saver's time shape, a colour
 // channel's 256 numbers — because that is a menu too, only its rows are
-// values rather than actions; a third is the ? menu (tdp M4).
+// values rather than actions; a third is the global operation popup (tdp
+// M4).
 type spaceMenu struct {
 	anim   popupAnimator
 	glyph  string
@@ -86,8 +83,8 @@ func newOptionsMenu() spaceMenu {
 	return spaceMenu{anim: newPopupAnimator("options"), glyph: glyphList}
 }
 
-func newHelpMenu() spaceMenu {
-	return spaceMenu{anim: newPopupAnimator("helpmenu"), glyph: glyphHelp}
+func newGlobalMenu() spaceMenu {
+	return spaceMenu{anim: newPopupAnimator("globalmenu"), glyph: glyphMenu}
 }
 
 func (m *spaceMenu) setItems(items []menuItem, title string, layer int) {
@@ -246,10 +243,6 @@ func (m spaceMenu) view() string {
 		case it.header:
 			headW = max(headW, dispW(it.label)+2)
 			continue
-		case it.ref:
-			labelW = max(labelW, dispW(it.label))
-			hintW = max(hintW, dispW(it.hint))
-			continue
 		}
 		labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
 		hintW = max(hintW, dispW(it.hint))
@@ -274,11 +267,6 @@ func (m spaceMenu) view() string {
 			continue
 		case it.header:
 			rows = append(rows, dim.Render(padRight(" "+it.label, innerW)))
-			continue
-		case it.ref:
-			// A key and what it does, to read: the key in the text colour,
-			// never under the cursor.
-			rows = append(rows, txt.Render(padRight(" "+it.label, innerW-hintW-1))+dim.Render(padLeft(it.hint, hintW)+" "))
 			continue
 		}
 		label := padRight(" "+bracketHotkey(it.label, it.key), innerW-hintW-1)

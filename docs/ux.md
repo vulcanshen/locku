@@ -12,10 +12,10 @@
 
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
-| **Contextual** | `Space` | footer 常駐 `space menu` | 當前 focus 的 contextual 動作 100% 在 Space menu 內 |
-| **Non-contextual** | `?` | footer 常駐 `? help` | 全域動作 100% 在 help 內 |
+| **能做** | `Space` | footer 常駐 `space menu` | 當前 focus 的動作 100% 在 Space menu 內；全域動作 100% 在它最後一列 `Global operation` 開出的 global operation popup 內（2026-09-27，tdp M2、M4） |
+| **能讀** | `?` | footer 常駐 `? help` | 這裡能按的鍵 100% 在 key reference 內；唯讀，不能執行（2026-09-27，tdp K6） |
 
-**規則：一個操作沒進 Space menu 或 help 就等於不存在。** core key 沒有字母可以括，鍵寫進 label：
+**規則：一個操作沒進 Space menu（含 global operation popup）就等於不存在；`?` 是對照，不是入口。** core key 沒有字母可以括，鍵寫進 label：
 `[Enter] Edit`、`[Enter] Choose`。
 
 **鎖定畫布不在這張表裡。** 它只有一個動作「開 PIN prompt」，而且任何鍵都是它，沒有第二個動作可揭露，
@@ -28,15 +28,15 @@
 | `Tab` | `[1]` ↔ `[2]`；`1` / `2` 直達 | 任何鍵 = 開 PIN prompt |
 | `Enter` | `[1]` 任何列：焦點送到 `[2]`（修訂 2026-09-24，saver 也一樣，設為啟用改在 preference）；`[2]` 欄位：開該欄的 popup 或原地翻轉（§2） | saver 上：開 prompt；prompt 內：送出 |
 | `Esc` | 關最上層浮層；沒浮層時 no-op，不離開 app | prompt 內：回 saver；saver 上：跟任何鍵一樣開 prompt |
-| `Space` | **滑鼠右鍵 context menu**；再按關閉；在 menu / viewport / message 浮層上 = 關掉它；input 打字中是空白字元 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
-| `?` | help；再按關閉；可疊在任何浮層上 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
+| `Space` | **滑鼠右鍵 context menu**；再按關閉；其他浮層上不作用（2026-09-26，tdp K5）；input 打字中是空白字元 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
+| `?` | key reference，唯讀（2026-09-27，tdp K6）；再按關閉；可疊在任何浮層上 | saver 上：開 prompt；prompt 內：PIN 的一個字元 |
 
 無 PIN 模式（`function.md` §4.3）：畫布上任何鍵 = 結束進程，沒有 prompt。
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
 三個 region，順序固定：`item operation`、`panel operation`、`global operation`（2026-09-26，tdp M2）；沒東西的 region 連標題一起不出現，
-兩個 region 之間一條分隔線，只剩一個時不加標題。`global operation` 在每個 Space menu 的最後，跟 `?` menu 同一份清單、同一順序，目前只有 `[q]uit`。menu 本身 `j`/`k` 走（環繞）、
+兩個 region 之間一條分隔線，每個 region 都有標題（2026-09-27，tdp M2：global 永遠在，至少兩區）。`global operation` 在每個 Space menu 的最後，**固定一列** `Global operation`（沒有熱鍵）：Enter 開出 global operation popup，疊在 Space menu 上，列出全部全域動作，目前只有 `[q]uit`；`Esc` 回到 Space menu，`Space` 在它上面不作用（2026-09-27，tdp M4；使用者：locku 也走 `Space` → `Global operation` → `[q]uit`）。之前 `[q]uit` 直接列在每個 Space menu 的 global 區。menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
 profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25）。
 
@@ -77,23 +77,23 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 **disabled 的列**（2026-09-26，tdp M6）：照樣出現、變暗，說明欄維持原本那句，不另寫原因；cursor 可以停，Enter 與熱鍵都不作用、不跳 toast。之前說明欄改寫成原因（`already active`、`cannot delete: last one`……），按了還用 toast 再說一次。
 
-### §A.2 Non-contextual track — `?` help（tdp K6、M4）
+### §A.2 全域動作與 `?` key reference（tdp K6、K9、M4）
 
 | 全域動作 | 鍵 |
 |---|---|
 | Preview（只在 `[2]`：profile / saver 的 `[2]` 是那一個、preference / tmux / screen 的 `[2]` 是啟用中的 profile，帶著顏色草稿，任意鍵回來；custom 把終端機交給程式；`[1]` 上不作用——那裡 `p` 預覽游標那列，2026-09-25） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
-| 離開 | `q` 與 `Ctrl+C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl+C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl+C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl+C` 不問就走 |
+| 離開 | `q` 與 `Ctrl+C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl+C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl+C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl+C` 不問就走。menu 的路：`Space` → `Global operation` → `[q]uit`（2026-09-27） |
 | splash 彩蛋 | `V`（不揭露） |
 
 全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl+C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
 按鍵（ISIG 已關，`function.md` §2.1；偏離 tdp，見 dev-remarks）。
 
-`?` 的內容看 focus 在哪（2026-09-26，tdp K6、M4）：
+`?` 打開最前端那個 surface 的 key reference：唯讀、可以捲動，沒有游標、不能執行（2026-09-27，tdp K6、M4；之前 panel 上是可執行的 `?` menu）。內容看 focus 在哪：
 
-- **popup 上**：只有這個 popup 的 help——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
-- **`[1]`，以及 profile / saver 的 `[2]`**：`?` menu，兩區——`global operation`（可以直接執行，j/k 選、Enter 或熱鍵執行；目前是 `[q]uit`）與 `key reference`（唯讀：core key 與導覽鍵）。其他熱鍵都是各 panel Space menu 裡的一列，不再列在 help 裡。再按 `?` 關掉。
-- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 global operation 與 key reference（2026-09-26，使用者定案；偏離 tdp M4，理由見 dev-remarks）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
+- **popup 上**：只有這個 popup 的鍵——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；global operation popup 是 `j/k`、Enter、方括號裡的字母、`Esc` 回到 Space menu；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
+- **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；dimmed 的也列，它只是現在不能執行）；再是 `everywhere`：core key 與導覽鍵。框寬依最長的說明，上限是螢幕（tdp D4）。再按 `?` 關掉。
+- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；偏離 tdp K6、M4，理由見 dev-remarks）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind、screen 的 LOCKPRG 住在哪的說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 
 ---
@@ -217,7 +217,11 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤，也不再理會 `Esc`——toast 也一樣，關到一半再按 `Esc`，關的是下面那層（2026-09-26，tdp F3）。
 
-**從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 `?` menu 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）整串做完才清，中途 `Esc` 取消整串、回到 menu。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。層數最多三層：menu、它開出的框、框上的 `?` help。
+**從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）整串做完才清，中途 `Esc` 取消整串、回到 menu。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
+
+**離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、D3）：有未存顏色時 `q`、`Ctrl+C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl+C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
+
+層數最多五層：Space menu、它開出的框（或 global operation popup）、框上的 `?`、離開的 confirm、它的 `?`（2026-09-27；之前三層）。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
@@ -263,7 +267,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 ## 附錄 — hotkey 全表
 
 ### Core key
-`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu · `?` `?` menu / popup 的 help / 字典 · `q`、`Ctrl+C` quit
+`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu（最後一列 `Global operation`） · `?` key reference（唯讀）/ popup 的鍵 / 字典 · `q`、`Ctrl+C` quit
 
 ### 全域
 `P` preview（只在 `[2]`） · `1` / `2` 直達面板

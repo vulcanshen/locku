@@ -38,9 +38,9 @@ func (a action) row() menuItem {
 	return menuItem{label: a.label, key: a.key, hint: a.hint, disabled: a.disabled}
 }
 
-// globalActions is every operation of the whole app, the same rows in the
-// same order in the ? menu, which runs them, and at the foot of every
-// Space menu (tdp M2, M4). Leaving is the one there is.
+// globalActions is every operation of the whole app: the rows of the
+// global operation popup, its one source (tdp M4) — a Space menu carries
+// only the one row that opens it (tdp M2). Leaving is the one there is.
 func (m AppModel) globalActions() []action {
 	return []action{{key: "q", label: "Quit", hint: "leave locku; asks first when colours are unsaved", run: (*AppModel).quit}}
 }
@@ -918,8 +918,6 @@ func (m *AppModel) commitConfirm() tea.Cmd {
 			err = m.uninstall(&out, t.Conf)
 		}
 		return tea.Batch(m.confirm.close(), m.menu.close(), m.reported(out, err))
-	case confirmQuit:
-		return tea.Quit
 	}
 	return tea.Batch(m.confirm.close(), m.menu.close(), m.save(before))
 }
