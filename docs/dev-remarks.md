@@ -1,7 +1,7 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.0/principle)（tdp v0.1.0）；
+[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.4/principle)（tdp v0.1.4）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -72,11 +72,13 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   終端機換成鎖定畫布的樣子，`q`、`Space`、`?`、`Ctrl-C` 都只是「回來」。預覽顯示的就是鎖定畫布，
   鎖定畫布上任何鍵只有一個意義（叫出 PIN 框），預覽上任何鍵也只有一個意義（回來）；若 `q` 在預覽上
   是離開，使用者從預覽回不來而是整個 app 關掉。
-- **preference、tmux、screen 的 `[2]` 上，`?` 是每一列的說明，不是 `?` menu（M4；2026-09-26，使用者定案）。**
+- **preference、tmux、screen 的 `[2]` 上，`?` 是每一列的說明，不是 key reference（K6、M4；2026-09-26，使用者定案；
+  2026-09-27 對照 tdp v0.1.4 改寫）。** tdp v0.1.2 起 `?` 只讀：panel 上是 key reference（這個 panel 能按的鍵與
+  core key）。這三個 `[2]` 上，字典取代 key reference——一樣唯讀、可以捲動，只是內容換成每一列設定的意思。
   locku 只有兩個 panel，這三個 `[2]` 上使用者要的是「這一列設定是什麼意思」——`lock` 要講兩種範圍、
-  screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明，也不屬於 global operation 或 key reference。
-  在這裡放 `?` menu，等於把真正需要的資訊擠掉，換成換個 panel 就看得到的東西：離開在每個 Space menu 的
-  global 區與 `q`，按鍵在 `[1]` 與其他 `[2]` 的 `?` menu。其他 panel 的 `?` 照 M4。
+  screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明。在這裡放 key reference，等於把真正需要的資訊擠掉，
+  換成換個 panel 就看得到的東西：這三個 `[2]` 的動作（各列的 `Enter`、`[P] Preview`）都在 Space menu 裡，離開在
+  Space menu 的 `Global operation` 與 `q`，core key 在 `[1]` 與其他 `[2]` 的 `?`。其他 panel 的 `?` 照 K6、M4。
 
 ## 設計文件導讀
 
