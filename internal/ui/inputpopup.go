@@ -129,7 +129,7 @@ func (m inputPopup) view() string {
 		// A PIN box IS the lock's PIN prompt (pinprompt.go): the same
 		// width, the same air, the same spaced dots from the middle — one
 		// look for a PIN wherever it is typed (user, 2026-09-24).
-		innerW := popupInnerW(m.screenW, pinPromptW-2)
+		innerW := popupInnerW(m.screenW)
 		hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
 		if m.frozen {
 			hint = ""
@@ -138,7 +138,7 @@ func (m inputPopup) view() string {
 			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW)}), innerW)
 	}
 
-	innerW := popupInnerW(m.screenW, max(40, dispW(m.value)+8, dispW(m.placeholder)+8, dispW(m.prompt)+3))
+	innerW := popupInnerW(m.screenW)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)

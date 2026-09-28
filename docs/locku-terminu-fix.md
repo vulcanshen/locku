@@ -59,26 +59,6 @@ help → quitAsk → quitHelp）用 `overlay.Composite` 一層一層疊上去，
 
 ---
 
-## 1. popup 寬度不是 `min(terminal 寬 − 2, 120)` —— F7、D4
-
-- **現況**：每個 popup 依內容算寬，再由 `popup.go` `popupInnerW(screenW, want)`（202 行）夾在 `screenW − 6`（外框 ≤ 畫面寬 − 4）；
-  見上表。一般 input 的寬度含 `dispW(m.value)+8`（`inputpopup.go` 141 行），**打字時框會變寬**，`Backspace` 拒絕提議時又可能變窄。
-  PIN input 與 PIN prompt 固定 48（`pinprompt.go` 36 行 `pinPromptW`）。help 的寬依最長的說明（`helppopup.go` `layout()`，註解寫 tdp D4）。
-- **規則**：F7：寬度 `min(terminal 寬 − 2, 120)`，左右各留一欄，水平置中。toast 寬度照同一條。D4：key reference 不再依最長的說明，
-  說明太長在框裡換行或截尾。
-- **怎麼改**：
-  - `popupInnerW` 改成只看畫面寬：`min(screenW − 2, 120) − 2`（內寬），拿掉 `want` 參數；每個 `view()` 不再算內容寬。
-    畫面比 L1 還窄時（`TestViewFitsTheTerminal` 量到 40 欄）照同一條算，不要再有 `max(10, …)` 以外的特例。
-  - 一般 input：值比框長時照舊 `truncateHead`（尾端在畫面上）；`value`、`placeholder` 不再影響寬度。
-  - PIN input 與 PIN prompt：`pinPromptW` 拿掉，改用同一個寬度；`pinRow` 本來就從框的中央往兩側長，寬度變了照樣置中。
-    這推翻 `ui.md` §3.1 / §3.2「48 欄」的決定（2026-09-24）——見待確認 1。custom saver 的 `paintBox` 依框的實際寬度置中、
-    `rect` 記最大的範圍，框變寬不用改 `custom.go`。
-  - help：`layout()` 的 `want` 計算拿掉，說明欄寬 = 內寬 − key 欄；折行照舊。註解裡的「tdp D4」改成 F7。
-  - toast：同一個寬度，訊息靠左、其餘留白。
-  - 測試：每個 popup 在 80、100、200 欄各開一次，量框的第一列寬度 = 78、98、120；一般 input 打 30 個字前後寬度不變。
-    mutation：寬度改回依內容、拿掉 120 上限、`− 2` 改回 `− 6`，各自要紅。
-  - 文件：`ui.md` §3.1 PIN input 列、§3.2 PIN prompt 列與框圖的「48 欄」、`ux.md` §A.2 的 `?` 那段「框寬依最長的說明，上限是螢幕（tdp D4）」。
-
 ## 2. input popup 沒有預留錯誤列，錯誤寫在標題尾綴 —— F7、K3
 
 - **現況**：

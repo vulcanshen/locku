@@ -145,26 +145,17 @@ func (m *helpPopup) update(msg tea.KeyMsg) {
 func (m helpPopup) visible(n int) int { return max(1, min(n, m.screenH-6)) }
 
 // layout is the key column's width, the box's inner width, and every
-// line. The box is as wide as its longest description, up to the screen
-// (tdp D4); a description longer than its column wraps under itself, with
-// the key on its first line only (user, 2026-09-25: the glossary must
-// wrap, not be cut).
+// line. The box is as wide as every popup (tdp F7; as wide as its longest
+// description until 2026-09-28, the old D4); a description longer than
+// its column wraps under itself, with the key on its first line only
+// (user, 2026-09-25: the glossary must wrap, not be cut), a column clear
+// of the border.
 func (m helpPopup) layout() (keyW, innerW int, lines []string) {
-	// Never narrower than the bottom border's hint.
-	want := dispW(hintLegend([][2]string{{"j/k", "scroll"}, {"Esc", "close"}})) + 1
 	for _, e := range m.entries {
 		keyW = max(keyW, dispW(e.key))
 	}
-	for _, e := range m.entries {
-		if e.key == "" {
-			want = max(want, dispW(e.desc)+2)
-		} else {
-			want = max(want, keyW+4+dispW(e.desc)+1) // a column clear of the border
-
-		}
-	}
-	innerW = popupInnerW(m.screenW, want)
-	descW := max(1, innerW-keyW-4)
+	innerW = popupInnerW(m.screenW)
+	descW := max(1, innerW-keyW-5)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	key := lipgloss.NewStyle().Foreground(handColor)

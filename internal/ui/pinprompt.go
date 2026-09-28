@@ -13,9 +13,12 @@ import (
 )
 
 // pinPrompt is the lock screen's one popup (ui.md §3.2): a masked line,
-// 48 columns, centred, a row of air above and below, the dots growing
-// out from the middle of the box (user, 2026-09-24: bigger, and the
-// input starting from the centre). It has four looks and they differ
+// as wide as every popup (tdp F7; 48 columns until 2026-09-28), centred,
+// a row of air above and below, the dots growing out from the middle of
+// the box (user, 2026-09-24: bigger, and the input starting from the
+// centre). A 64-character PIN is 129 columns of dots, wider than a popup
+// gets: the dots it has no room for go from the front (user, 2026-09-28:
+// the widest PIN against 120 settles the width). It has four looks and they differ
 // only in the border and its title — the row inside never moves:
 //
 //	PIN                       idle: the layer colour, enter unlock · esc back
@@ -32,10 +35,7 @@ const (
 	promptLockout
 )
 
-const (
-	pinPromptW = 48 // the whole box, borders included (32 until 2026-09-24)
-	wrongHold  = time.Second
-)
+const wrongHold = time.Second
 
 type pinPrompt struct {
 	anim  popupAnimator
@@ -84,8 +84,7 @@ func (p pinPrompt) remaining(now time.Time) int {
 }
 
 func (p pinPrompt) view(now time.Time) string {
-	// 48 columns, or what a smaller terminal can hold.
-	innerW := popupInnerW(p.screenW, pinPromptW-2)
+	innerW := popupInnerW(p.screenW)
 	bc := popupLayerColor(1)
 	title := " " + glyphLock + " PIN "
 	hint := ""
