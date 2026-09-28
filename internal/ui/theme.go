@@ -30,9 +30,11 @@ var (
 	// a custom saver's program that ended with a code other than 0: the
 	// code on the board (user, 2026-09-25: red is NONE's, nothing ran).
 	peachColor = lipgloss.Color("#fab387") // peach
-	// the lit cells while the PIN prompt is up: the board steps back to be
-	// the prompt's backdrop (ui.md §2.3).
-	backdropColor = borderDim
+	// the lit cells, and the status row, while the PIN prompt is up: the
+	// lock steps back to be the prompt's backdrop (ui.md §2.3, tdp F8) —
+	// in the settings screen's dim, one dim for everything under a popup
+	// (user, 2026-09-28; surface2 until then).
+	backdropColor = dimColor
 )
 
 const baseHex = "#1e1e2e" // canvas; also dark text on a bright chip

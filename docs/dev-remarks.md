@@ -111,6 +111,10 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明。在這裡放 key reference，等於把真正需要的資訊擠掉，
   換成換個 panel 就看得到的東西：這三個 `[2]` 的動作（各列的 `Enter`、`[P] Preview`）都在 Space menu 裡，離開在
   Space menu 的 `Global operation` 與 `q`，core key 在 `[1]` 與其他 `[2]` 的 `?`。其他 panel 的 `?` 照 K6、M4。
+- **custom saver 的 PIN prompt 底下不變暗（F8；2026-09-28，使用者定案）。** F8 要最上層以外的一切都 dim，但這時底下是使用者自己的程式的畫面：
+  程式的輸出直接送到終端機，locku 只在上面畫框（`internal/custom` 的 screen writer），手上沒有那張畫面的副本。要 dim 就得在 locku 裡放
+  一個終端機模擬器重畫程式的畫面——2026-09-25 否決過（多一個依賴、忠實度與效能都要驗）；使用者也定過「框之外什麼都不畫」。
+  一般 saver 的畫布照 F8 變暗（亮格與狀態列改 Overlay0）。
 
 ## 設計文件導讀
 

@@ -229,7 +229,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 **toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
 
-**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格降到 Surface2（`ui.md` §2.3）；`q` 在畫布與 prompt
+**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格與狀態列降到 Overlay0（`ui.md` §2.3；2026-09-28，tdp F8，之前亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。
 
 ---

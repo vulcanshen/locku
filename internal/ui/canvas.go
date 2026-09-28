@@ -355,7 +355,7 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // runs of pixels in one colour are rendered together, so a row costs a few
 // escape sequences rather than one per cell. An odd terminal leaves its
 // rightmost column blank (function.md §5.3). While dimmed — the PIN prompt
-// is up — the lit pixels step back to Surface2 and become its backdrop.
+// is up — the lit pixels step back to backdropColor and become its backdrop.
 func boardRows(b board, bg, fg, accent lipgloss.Color, cols int, dimmed bool) []string {
 	if dimmed {
 		fg, accent = backdropColor, backdropColor

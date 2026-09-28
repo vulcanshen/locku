@@ -189,7 +189,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ### 2.3 鎖定畫布
 
 單一職責：畫內容與狀態列。所有按鍵（含 Ctrl 組合，`function.md` §2.1）只做一件事：開 PIN popup；
-無 PIN 模式則結束進程。PIN popup 開著時亮格改畫 Surface2、暗格不變，當 backdrop；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
+無 PIN 模式則結束進程。PIN popup 開著時亮格改畫 Overlay0、暗格不變，最底下的狀態列整列也改畫 Overlay0（`config error` 的紅也是），當 backdrop（2026-09-28，tdp F8；使用者：跟設定畫面同一個暗色，之前是 Surface2、狀態列不變）；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格（偏離 tdp F8，2026-09-28，見 dev-remarks）；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
 
 ---
 
@@ -266,12 +266,12 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 | 色帶 | 意思 | 值 |
 |---|---|---|
 | Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24） | `#89b4fa` |
-| Surface2 | unfocused 面板邊框；PIN prompt 開啟時亮格的 backdrop 色 | `#585b70` |
+| Surface2 | unfocused 面板邊框（PIN prompt 的 backdrop 2026-09-28 起改 Overlay0） | `#585b70` |
 | Green | 使用者足跡：啟用中的 profile `●`、PIN `set`、toggle `on`、activate `on`；custom 板子上 `EXIT 0` 的 0（2026-09-25） | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
 | saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
 | saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
-| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列；有浮層開著時，最上層以外的一切：面板、footer、底下浮層的框內（2026-09-28，tdp F8） | `#6c7086` |
+| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列；有浮層開著時，最上層以外的一切：面板、footer、底下浮層的框內，鎖定畫布的亮格與狀態列（2026-09-28，tdp F8） | `#6c7086` |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）與那時的邊框、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
