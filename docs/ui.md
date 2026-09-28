@@ -271,11 +271,11 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
 | saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
 | saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
-| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列 | `#6c7086` |
+| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列；有浮層開著時，最上層以外的一切：面板、footer、底下浮層的框內（2026-09-28，tdp F8） | `#6c7086` |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）與那時的邊框、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
-| popup layer scale | 浮層邊框，四階，第四層起同色 | tdp D2 |
+| popup layer scale | 浮層邊框，四階，第四層起同色；不是最上層時畫成自己層色的暗版，往 base 混一半（2026-09-28，tdp v0.1.9 F8） | tdp D2 |
 
 focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
 Blue 不出現在那裡。
