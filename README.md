@@ -55,6 +55,8 @@ Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
 **A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes.
 
+**A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
+
 ### Uninstall
 
 ```bash

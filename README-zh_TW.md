@@ -55,6 +55,8 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 **Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。
 
+**需要 truecolor 終端機**：點陣板用 profile 自己的顏色畫，浮層底下的畫面會淡化，全部用 24 位元色。顏色數比較少的終端機上，顏色會失真。
+
 ### 移除
 
 ```bash
