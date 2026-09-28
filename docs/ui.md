@@ -195,6 +195,8 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 ## §3 Popup
 
+每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
+
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
 下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多五層：Space menu、它開出的框或 global operation popup、框上的 `?`、離開的 confirm、它的 `?`（2026-09-27，tdp F4、D3；2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
 
@@ -206,7 +208,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
 | `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
 | input | input | **邊框寫型別**（`name`、`number`、`path`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
-| PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
+| PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
 | toast | toast | 寫檔失敗、PIN 不一致（disabled 的列不跳 toast，2026-09-26，tdp M6） |
@@ -220,7 +222,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，遮罩，寬固定 48 欄置中，框內上下各留一列；`●` 之間空一格，從框的橫向中央開始、向兩側長；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
+| PIN prompt | input，遮罩，跟每個 popup 一樣寬（tdp F7，2026-09-28；之前固定 48 欄）、置中，框內上下各留一列；`●` 之間空一格，從框的橫向中央開始、向兩側長；PIN 最多 64 字，整列 129 欄，比 120 的上限寬，放不下的從前面截掉、游標那端留在畫面上（2026-09-28，使用者：用最長的 PIN 對 120 來判斷）；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案） | custom 鎖定中唯一的 popup |
 
 四個狀態，全部只改**邊框**與 title，框內一行不變：

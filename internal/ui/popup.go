@@ -197,10 +197,15 @@ func capRows(rows []string, screenH int) []string {
 	return rows
 }
 
-// popupInnerW picks a popup's inner width: what it asked for, capped so the box
-// always leaves a margin inside the terminal.
-func popupInnerW(screenW, want int) int {
-	return max(10, min(want, screenW-6))
+// popupMaxW is the widest a popup gets, borders included (tdp F7).
+const popupMaxW = 120
+
+// popupInnerW is every popup's inner width (tdp F7, 2026-09-28): the box
+// is the terminal's width less a column either side, up to popupMaxW,
+// whatever it holds. It used to be as wide as its content asked, so a box
+// grew as its value was typed; a PIN box was 48.
+func popupInnerW(screenW int) int {
+	return max(10, min(screenW-2, popupMaxW)-2)
 }
 
 // hintLegend builds a popup's bottom-border hint: key bright, description dim.

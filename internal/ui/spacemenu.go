@@ -236,13 +236,9 @@ func (m spaceMenu) update(msg tea.KeyMsg) (spaceMenu, string) {
 }
 
 func (m spaceMenu) view() string {
-	labelW, hintW, headW := 0, 0, 0
+	labelW, hintW := 0, 0
 	for _, it := range m.items {
-		switch {
-		case it.rule:
-			continue
-		case it.header:
-			headW = max(headW, dispW(it.label)+2)
+		if it.rule || it.header {
 			continue
 		}
 		labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
@@ -252,7 +248,7 @@ func (m spaceMenu) view() string {
 	if len(m.items) == 0 {
 		legend = hintLegend([][2]string{{"Esc", "close"}})
 	}
-	innerW := popupInnerW(m.screenW, max(dispW(m.title)+6, labelW+hintW+4, headW, dispW(legend)+1))
+	innerW := popupInnerW(m.screenW)
 	hintW = max(0, min(hintW, innerW-labelW-3))
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)

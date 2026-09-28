@@ -92,7 +92,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 `?` 打開最前端那個 surface 的 key reference：唯讀、可以捲動，沒有游標、不能執行（2026-09-27，tdp K6、M4；之前 panel 上是可執行的 `?` menu）。內容看 focus 在哪：
 
 - **popup 上**：只有這個 popup 的鍵——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；global operation popup 是 `j/k`、Enter、方括號裡的字母、`Esc` 回到 Space menu；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
-- **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；dimmed 的也列，它只是現在不能執行）；再是 `everywhere`：core key 與導覽鍵。框寬依最長的說明，上限是螢幕（tdp D4）。再按 `?` 關掉。
+- **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；dimmed 的也列，它只是現在不能執行）；再是 `everywhere`：core key 與導覽鍵。框跟每個 popup 一樣寬（tdp F7，2026-09-28；之前依最長的說明，舊 D4），說明太長就在框裡折行。再按 `?` 關掉。
 - **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；偏離 tdp K6、M4，理由見 dev-remarks）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind、screen 的 LOCKPRG 住在哪的說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；鍵的清單也一樣換行。
 

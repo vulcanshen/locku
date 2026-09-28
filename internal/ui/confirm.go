@@ -46,11 +46,7 @@ func (m *confirmPopup) ask(c confirmPopup, layer int) tea.Cmd {
 }
 
 func (m confirmPopup) view() string {
-	w := dispW(m.title) + 6
-	for _, l := range m.lines {
-		w = max(w, dispW(l)+4)
-	}
-	innerW := popupInnerW(m.screenW, w)
+	innerW := popupInnerW(m.screenW)
 	txt := lipgloss.NewStyle().Foreground(textColor)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
 	rows := make([]string, 0, len(m.lines))
