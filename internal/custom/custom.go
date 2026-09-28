@@ -33,6 +33,7 @@ import (
 	"github.com/muesli/cancelreader"
 
 	"github.com/vulcanshen/locku/internal/saver"
+	"github.com/vulcanshen/locku/internal/termreply"
 )
 
 // Outcome is how the program ended: the word for the board, and the
@@ -440,6 +441,7 @@ type Terminal struct {
 	out   *os.File
 	state *term.State
 	keys  cancelreader.CancelReader
+	reply termreply.Filter
 	scr   *screen
 }
 
@@ -482,9 +484,11 @@ func (t *Terminal) Size() (cols, rows int) {
 	return cols, rows
 }
 
-// Key starts one read of the terminal and delivers its end: nil for a
-// key — whatever it was; a key is not input, it is the question — an
-// error for a terminal that has gone, or for a read called off (Cancel).
+// Key starts reading the terminal and delivers the end: nil for a key —
+// whatever it was; a key is not input, it is the question — an error for
+// a terminal that has gone, or for a read called off (Cancel). The
+// terminal's answers to what it was asked are not keys, and are read
+// past (termreply; 2026-09-28).
 func (t *Terminal) Key() <-chan error {
 	ch := make(chan error, 1)
 	cr, err := cancelreader.NewReader(t.tty)
@@ -496,8 +500,13 @@ func (t *Terminal) Key() <-chan error {
 	go func() {
 		defer cr.Close()
 		var b [64]byte
-		_, err := cr.Read(b[:])
-		ch <- err
+		for {
+			n, err := cr.Read(b[:])
+			if err != nil || len(t.reply.Keys(b[:n])) > 0 {
+				ch <- err
+				return
+			}
+		}
 	}()
 	return ch
 }

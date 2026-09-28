@@ -164,9 +164,18 @@ func report(w io.Writer, path string, changed bool, verb string) {
 // and the hooks sit at a high index in their arrays, so the user's own
 // entries — at 0 — are untouched, and Remove can take exactly these out
 // again.
+//
+// hookCmd names the client it locks: #{hook_client}, the one that
+// attached or switched, and the mark read in the same expansion. A bare
+// lock-client locks whatever tmux takes for the current client when it
+// runs, and two clients attaching at once took each other's: the one
+// into the locked session came in unlocked, and in lock-session one on
+// another session was locked (measured 2026-09-28, tmux 3.7c: 6 of 230).
+// A -t is not expanded as a format, so run -C expands the whole command
+// first; with no mark it runs nothing, and says nothing.
 const (
 	tmuxIndex = "90"
-	hookCmd   = `if -F "#{@locked}" lock-client`
+	hookCmd   = `run -C "#{?#{@locked},lock-client -t #{hook_client},}"`
 )
 
 // lockCmd is the lock command tmux runs: this binary by its absolute
@@ -212,8 +221,8 @@ func tmuxLines(t config.Tmux) []string {
 		`set -gF lock-command "` + lockCmd() + `"  # locku`,
 		noted(`set -g lock-after-time `+itoa(t.LockAfterTime), "# locku: 0 never"),
 		noted(`set -s "command-alias[`+tmuxIndex+`]" "locku=`+t.Lock+`"`, "# locku: prefix : locku locks "+who(t.Lock)),
-		noted(`set-hook -g "client-attached[`+tmuxIndex+`]" "if -F \"#{@locked}\" lock-client"`, "# locku: attaching while locked locks the client"),
-		noted(`set-hook -g "client-session-changed[`+tmuxIndex+`]" "if -F \"#{@locked}\" lock-client"`, "# locku: so does switching sessions"),
+		noted(`set-hook -g "client-attached[`+tmuxIndex+`]" "`+strings.ReplaceAll(hookCmd, `"`, `\"`)+`"`, "# locku: attaching while locked locks the client"),
+		noted(`set-hook -g "client-session-changed[`+tmuxIndex+`]" "`+strings.ReplaceAll(hookCmd, `"`, `\"`)+`"`, "# locku: so does switching sessions"),
 	}
 	if t.Lock == config.LockSession {
 		lines = append(lines, noted(`set-hook -g "session-created[`+tmuxIndex+`]" "`+strings.ReplaceAll(sessionHook(), `"`, `\"`)+`"`, "# locku: a session's lock knows its session"))

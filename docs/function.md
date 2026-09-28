@@ -66,6 +66,8 @@ tmux `lock-session` 對每個 attach 中的 client 各跑一份 locku，彼此�
 - raw mode：關 ICANON、ECHO、ISIG。ISIG 關掉後 Ctrl+C、Ctrl+Z、Ctrl+\ 變成普通 byte 進到程式，不再產生 SIGINT、SIGTSTP、SIGQUIT。
 - alternate screen：避免捲動緩衝區露出鎖定前的內容。
 - 不開 mouse tracking：滑鼠留給終端機本身做文字選取，無害。
+- **終端機的回答不是按鍵**（2026-09-28）：終端機回答別人問它的事（背景色、游標位置、它是什麼）走的是跟按鍵同一條輸入，鎖定畫面又把任何鍵都當成按鍵——回答一進來就開 PIN 框，沒設 PIN 就直接解鎖。tmux 在 client attach 的那一刻會問終端機背景色、DA1、DA2、XTVERSION，而 hook 把 attach 進已鎖 tmux 的 client 鎖起來是緊接在後（§6.2），回答就落到 locku 手上（實測 3.7c：鎖 17 ms 就沒了，每次）。所以兩條讀按鍵的路（畫布與 PIN prompt 經 Bubble Tea、custom 的 `Key`）都先過`internal/termreply`：OSC（`ESC ]` 加數字，到 BEL 或 `ESC \`）、DCS（`ESC P` 加數字、`>` 或 `!`，到 `ESC \`）、CSI 帶 `?` `>` `=`、或結尾是 `R` `n` `t` `c`、或 `$y`，整段丟掉；跨兩次讀取的也丟得乾淨。其他都是按鍵。單獨一個 `Esc` 在一次讀取的結尾就當場算數，不等下一個 byte；`ESC ]`、`ESC P` 在結尾則等下一次讀取（Alt-] / Alt-P 沒人在鎖上按，回答漏進來卻會解鎖）。Shift-F3 在部分終端機是 `ESC [ 1 ; 2 R`，跟游標回報同形，一起丟掉，按別的鍵就好。
+- **鎖從空的輸入開始**（2026-09-28）：`locku lock` 一開始就 tcflush 終端機的輸入（`termreply.DropPending`），鎖出現之前按的鍵、還沒被讀走的，不算。另一個理由是只過濾不夠：Bubble Tea 在 `main` 之前（套件 init）就問終端機背景色，代它讀回答的 termenv 把 `ESC \` 當成到 `ESC` 為止；tmux 的回答先到時，兩句回答各被讀成一句、最後剩下一個 `\`，形狀不像回答，過濾器當它是按鍵（實測：鎖讀到 `\` 加游標回報就解鎖了）。清掉之後，之後才到的回答交給過濾器。
 
 ### 2.2 訊號表
 
@@ -299,7 +301,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 
 | 目標 | 檔案 | 區塊內容 |
 |---|---|---|
-| tmux | Integration › tmux 的 `config file path`（使用者輸入，`~/` 可用，不存在就建；沒設 activate 就 disabled、說先填，不猜） | `set -gF lock-command "<locku 的絕對路徑> lock -S '#{socket_path}'"`、`set -g lock-after-time <lock-after-time>`、`set -s "command-alias[90]" "locku=<lock>"`、`set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"`、`set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client"`；`lock` 是 lock-session 時再一行 `set-hook -g "session-created[90]" "set -F lock-command \"<絕對路徑> lock -S '#{socket_path}' -t '#{session_id}'\""`；`bind-key` 有填就再一行 `bind-key <鍵> <lock>`；每一行尾巴都有 `# locku` 註解 |
+| tmux | Integration › tmux 的 `config file path`（使用者輸入，`~/` 可用，不存在就建；沒設 activate 就 disabled、說先填，不猜） | `set -gF lock-command "<locku 的絕對路徑> lock -S '#{socket_path}'"`、`set -g lock-after-time <lock-after-time>`、`set -s "command-alias[90]" "locku=<lock>"`、`set-hook -g "client-attached[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\""`、`set-hook -g "client-session-changed[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\""`；`lock` 是 lock-session 時再一行 `set-hook -g "session-created[90]" "set -F lock-command \"<絕對路徑> lock -S '#{socket_path}' -t '#{session_id}'\""`；`bind-key` 有填就再一行 `bind-key <鍵> <lock>`；每一行尾巴都有 `# locku` 註解 |
 | screen | Integration › screen 的 `config file path`（同上），加上 shell rc：`$SHELL` 是 zsh 寫 `~/.zshrc`、bash 寫 `~/.bashrc`、fish 寫 `~/.config/fish/config.fish`、其他寫 `~/.profile` | screenrc：`idle <idle> lockscreen`；`bind` 有填就再一行 `bind <鍵> lockscreen`；shell rc：`export LOCKPRG=<絕對路徑>`（fish 是 `set -gx LOCKPRG <絕對路徑>`）；每一行尾巴都有 `# locku` 註解 |
 
 區塊標記：
@@ -317,7 +319,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
   - **每行尾巴 `# locku`**，加上受管區塊的頭尾標記，手動要移也認得出來；alias 與 hook 放在陣列的 90 號，不碰使用者自己的 0 號。
   - **lock-command 寫絕對路徑**：tmux client 是用它自己的 shell 環境跑 `sh -c`，`locku` 不一定在那個 PATH 上——找不到就是「畫面閃一下」（使用者 2026-09-24 實際踩到）。寫的是 `Binary()`：PATH 上的 locku（brew 的 symlink）優先，否則就是執行設定畫面的這個檔，跟 screen 的 LOCKPRG 同一套。所以從 repo 跑 `./locku` 開 activate，寫的就是 repo 那個 binary。
   - **lock-command 帶 socket**：lock-command 在 client 進程裡以 `system()` 跑，環境裡沒有 `TMUX`，被鎖的 client 也不在 `list-clients` 裡；`set -gF` 在讀檔時把 `#{socket_path}` 展開進去，`locku lock -S <socket>` 才知道要跟哪個 server 講話（`-L` 開的 server 也對）。標記是全域的，locku 不必反查自己在哪個 session。
-  - **`@locked` 由 locku 設與清，全域**：解鎖沒有 hook（3.7c 的 MSG_UNLOCK 只清 flag），所以 `locku lock` 啟動時 `set -g @locked 1`、正常解鎖結束前 `set -gu @locked`，tty 消失不清；沒帶 `-S` 就什麼都不做。兩個 hook 看到 `@locked` 就 `lock-client`（attach 任何 session 與 switch-client 都驗過會觸發）。activate off 順手 `set -gu @locked`。
+  - **`@locked` 由 locku 設與清，全域**：解鎖沒有 hook（3.7c 的 MSG_UNLOCK 只清 flag），所以 `locku lock` 啟動時 `set -g @locked 1`、正常解鎖結束前 `set -gu @locked`，tty 消失不清；沒帶 `-S` 就什麼都不做。兩個 hook 看到 `@locked` 就 `lock-client`（attach 任何 session 與 switch-client 都驗過會觸發）。鎖的是**觸發 hook 的那個 client**，`-t #{hook_client}` 指名（2026-09-28）：不指名的 `lock-client` 鎖的是 tmux 執行當下認定的「目前 client」，兩個 client 同時 attach 時會拿到對方——進已鎖 session 的那個沒被鎖，lock-session 時別的 session 的反而被鎖（實測 3.7c：230 次錯 6 次；指名後 220 次錯 0 次）。`-t` 不吃格式，所以整句包在 `run -C` 裡先展開；`@locked` 也在同一次展開裡讀，沒有標記時 `run -C` 拿到空字串，什麼都不做、也不出訊息（實測）。`run -C` 比裸的 `lock-client` 晚一步：client 已經把它 attach 時的問題送給終端機，回答會落到鎖上——鎖不把它們當按鍵（§2.1）。activate off 順手 `set -gu @locked`。
   - **`lock-session`（2026-09-25，使用者定案；研究 `.local/studies/lock.md` §5）**：alias 與 bind-key 指向 `lock-session`，旗立在 session 上（`set -t <session_id> @locked 1`、解鎖 `set -u -t <session_id> @locked`），hooks 一模一樣——`#{@locked}` 先查 client 當下 session 的 option、沒有才 fallback 全域（實測），所以旗立在哪就是 scope。lock 程式怎麼知道自己是哪個 session：研究 §7 的「用 tty 反查 `display-message -p -c <tty>`」實測**不行**——鎖定中的 client 不在 `list-clients` 裡，`-c` 找不到就 fallback 到最近的 session，回錯的；改成每個 session 自己的 `lock-command`（它是 session option）由 `session-created` hook 在 session 建立時 `set -F` 烘入 `-t '#{session_id}'`，activate 時對既有 session 逐一設；`$0` 一定要加單引號，否則跑 lock-command 的 `sh -c` 會把它吃成自己的名字（實測收到 `-t sh`）。session 模式的定位是「各工作區獨立的視覺遮蔽」，不是安全隔離：`capture-pane -t 別的session` 不經 client、hook 不觸發（研究 §6）。研究 §7 的「解鎖一次全亮」輪詢不做，維持各自輸（9/24 已否決）。
   - lock 程式對 tmux 的呼叫（立旗、清旗）都有 2 秒 timeout、失敗一律靜默：不可能讓鎖起不來或掉下來。裸 tty、screen、沒帶 `-S` 時什麼都不做。
 - screen 的 LOCKPRG 只能走 shell 環境（實測 2026-09-24，macOS screen 4.00.03，以探針程式經 pty 驗證）。原本想走 `.screenrc` 的 `setenv LOCKPRG` 一個檔搞定，實測不通：按 `C-a x` 出現的是 screen 內建的 `Key:` 鎖，探針沒被呼叫。原因是 `lockscreen` 由 attacher（接著終端機的前端進程）呼叫 `getenv`，而 `.screenrc` 只有後端讀、`setenv` 改的是後端與視窗內 shell 的環境；attacher 的環境在 `screen` 或 `screen -r` 執行那一刻就固定了。環境變數路線則完全符合設計：LOCKPRG 被 execl、`argv[0]` 是 `SCREEN-LOCK`、stdin 是 tty。所以 activate 寫 shell rc 的受管區塊，並提示：新開 shell 才有這個變數；已在跑的 session 不必重啟，detach 後從新 shell `screen -r` 即可，因為 attacher 是新進程。
@@ -408,8 +410,8 @@ tmux，寫進 Integration › tmux › config file path（慣例 `~/.tmux.conf`�
 set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: 0 never
 set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
-set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client
-set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions
+set-hook -g "client-attached[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: attaching while locked locks the client
+set-hook -g "client-session-changed[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: so does switching sessions
 bind-key l lock-server                                                      # locku: prefix l locks every client
 # <<< locku <<<
 ```

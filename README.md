@@ -147,8 +147,8 @@ What tmux gets:
 set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: 0 never
 set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
-set-hook -g "client-attached[90]" "if -F \"#{@locked}\" lock-client"        # locku: attaching while locked locks the client
-set-hook -g "client-session-changed[90]" "if -F \"#{@locked}\" lock-client" # locku: so does switching sessions
+set-hook -g "client-attached[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: attaching while locked locks the client
+set-hook -g "client-session-changed[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: so does switching sessions
 bind-key l lock-server                                                      # locku: prefix l locks every client
 # <<< locku <<<
 ```
