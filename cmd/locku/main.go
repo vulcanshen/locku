@@ -18,6 +18,7 @@ import (
 	"github.com/vulcanshen/locku/internal/custom"
 	"github.com/vulcanshen/locku/internal/login"
 	"github.com/vulcanshen/locku/internal/saver"
+	"github.com/vulcanshen/locku/internal/termreply"
 	"github.com/vulcanshen/locku/internal/tmux"
 	"github.com/vulcanshen/locku/internal/ui"
 	"github.com/vulcanshen/locku/internal/version"
@@ -94,6 +95,10 @@ func runLock(socket, session string) int {
 	// meanwhile is locked too (function.md §6.2); a terminal that goes
 	// away leaves the mark, and the next client in meets the lock.
 	tmux.SetLocked(socket, session, true)
+	// What is already waiting on the terminal came before the lock:
+	// keys, or pieces of its answers that a key-reader would take for a
+	// key (termreply.DropPending). The lock starts from nothing.
+	termreply.DropPending(os.Stdin)
 	var code int
 	var unlocked bool
 	if p, ok := cfg.Active(); ok && p.Saver == saver.KindCustom {

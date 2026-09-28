@@ -139,6 +139,18 @@ func TestEveryLineIsMarked(t *testing.T) {
 		!strings.Contains(joined, `#{@locked}`) || strings.Contains(joined, "lock-session") || strings.Contains(joined, "session-created") {
 		t.Errorf("tmux block:\n%s", joined)
 	}
+	// Both hooks lock the client that set them off, by name: a bare
+	// lock-client took the other client when two attached at once
+	// (measured 2026-09-28).
+	want := `"run -C \"#{?#{@locked},lock-client -t #{hook_client},}\""`
+	for _, h := range []string{"client-attached[90]", "client-session-changed[90]"} {
+		if !strings.Contains(joined, `set-hook -g "`+h+`" `+want) {
+			t.Errorf("the %s hook must lock #{hook_client}:\n%s", h, joined)
+		}
+	}
+	if strings.Contains(joined, `" lock-client`) || strings.Contains(joined, "lock-client\"") {
+		t.Errorf("a bare lock-client is left:\n%s", joined)
+	}
 	// lock-session: the alias and the key run it, and a session-created
 	// hook gives each session its own lock-command with its id in it,
 	// quoted from the shell (user, 2026-09-25; measured: a locked client

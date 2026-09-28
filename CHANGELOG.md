@@ -9,6 +9,8 @@
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
 - `Ctrl-C` in a box being typed in asks about quitting over the box, and `Enter` then quits; it used to submit the box under it.
 - `q` on a help draws the question about quitting over the help, where it used to be hidden under it.
+- tmux: two terminals attaching at the same moment while tmux is locked are each locked as they should be. The lock used to land on the wrong one now and then: the terminal attaching to the locked session came in unlocked, and with `lock-session` one on another session was locked instead. Turn `activate` off and on again in Integration › tmux to rewrite the block with the fix.
+- The lock no longer takes the terminal's answers — to what tmux or locku asks it as the lock starts, its colours, where the cursor is, what terminal it is — for a key. One landing on the lock used to open the PIN prompt by itself, or, with no PIN, unlock. A key pressed before the lock is up does not count on it either.
 
 ## [0.1.3] - 2026-09-26
 ### Changed
