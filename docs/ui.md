@@ -203,12 +203,13 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | Popup | 類型 | 用途 |
 |---|---|---|
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
-| `?` help | viewport | 全域動作表 |
+| global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
+| `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
 | input | input | **邊框寫型別**（`name`、`number`、`path`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：48 欄、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
-| confirm | message | Delete profile、Quit（有未存的顏色草稿時） |
-| toast | message | 寫檔失敗、PIN 不一致（disabled 的列不跳 toast，2026-09-26，tdp M6） |
+| confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
+| toast | toast | 寫檔失敗、PIN 不一致（disabled 的列不跳 toast，2026-09-26，tdp M6） |
 
 new 與 duplicate 都是 `name` input popup：new 提議 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 提議原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。

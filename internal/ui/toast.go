@@ -21,7 +21,7 @@ const (
 // timer from a toast the user already replaced would close its successor.
 type toastExpireMsg struct{ gen int }
 
-// toastModel is transient feedback — the message class with an auto-dismiss.
+// toastModel is transient feedback — the toast class (tdp F1), dismissed by time.
 // Esc still kills it immediately: no float may make the user wait out a timer
 // (tdp F3). It is non-blocking: every other key goes through to the panel.
 type toastModel struct {

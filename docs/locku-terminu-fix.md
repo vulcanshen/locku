@@ -134,14 +134,6 @@ help → quitAsk → quitHelp）用 `overlay.Composite` 一層一層疊上去，
   - 文件：`ui.md` §2.3「PIN popup 開著時亮格改畫 Surface2、暗格不變」補上狀態列；`ux.md` §5 最後一段「鎖定畫布」同樣補上。
   - custom saver 的 PIN prompt 底下是程式的畫面，見待確認 3。
 
-## 5. 程式註解與設計文件還用舊的 popup 分類名 —— F1
-
-- **現況**：`confirm.go` 264 行註解「confirmPopup is the message class (tdp F1)」、`toast.go` 337 行「the message class with an auto-dismiss」；
-  `ui.md` §3.1 表的「類型」欄：`?` help 是 `viewport`、confirm 與 toast 是 `message`。
-- **規則**：F1：六類 menu / confirm / input / note / toast / terminal。
-- **怎麼改**：註解改成 confirm、toast 類；`ui.md` §3.1 表：help → note、confirm → confirm、toast → toast，並補上漏列的 global operation popup
-  （menu）。`function.md` 決定 33 是帶日期的歷史，不改。只是用語，沒有行為變動，不用測試。
-
 ---
 
 ## tdp v0.1.9 定案（2026-09-28，回答本檔與其他 app 共同的待確認）
