@@ -292,9 +292,9 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 		l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
 		var out []string
 		if len(l.blocks) > 0 {
-			out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols, false)
+			out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols)
 		} else {
-			out = plainRows(plain, bg, fg, cols, rows, true)
+			out = plainRows(plain, bg, fg, cols, rows)
 		}
 		if len(out) != rows {
 			t.Fatalf("cols %d: %d rows, want %d", cols, len(out), rows)
@@ -311,7 +311,7 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 }
 
 func TestPlainTextCarriesTheLines(t *testing.T) {
-	out := plainRows([]string{"21 05", "09-24"}, lipgloss.Color("#000000"), lipgloss.Color("#ffffff"), 40, 11, false)
+	out := plainRows([]string{"21 05", "09-24"}, lipgloss.Color("#000000"), lipgloss.Color("#ffffff"), 40, 11)
 	joined := strings.Join(out, "\n")
 	if !strings.Contains(joined, "21 05") || !strings.Contains(joined, "09-24") {
 		t.Errorf("text missing:\n%s", joined)

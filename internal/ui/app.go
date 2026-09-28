@@ -483,7 +483,8 @@ func (m AppModel) View() string {
 	}
 	// The top is the last that owns the keyboard, as for the keys and Esc
 	// (tdp D3): a popup closing is below it already. Everything else is
-	// dimmed while there is one; a toast is none (tdp F8).
+	// faded while there is one, every colour kept (dimANSI, tdp F8, D2); a
+	// toast is none.
 	top := -1
 	for i, f := range floats {
 		if f.anim.owns() {
@@ -491,7 +492,7 @@ func (m AppModel) View() string {
 		}
 	}
 	if top >= 0 {
-		out = dimBase(out)
+		out = dimANSI(out)
 	}
 	for i, f := range floats {
 		if !f.anim.isActive() {
@@ -499,7 +500,7 @@ func (m AppModel) View() string {
 		}
 		v := f.view()
 		if top >= 0 && i != top {
-			v = dimPopup(v, f.layer)
+			v = dimANSI(v)
 		}
 		out = overlay.Composite(v, out, overlay.Center, overlay.Center, 0, 0)
 	}

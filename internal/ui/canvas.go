@@ -354,12 +354,9 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // boardRows draws the board, one string per row, each exactly cols wide:
 // runs of pixels in one colour are rendered together, so a row costs a few
 // escape sequences rather than one per cell. An odd terminal leaves its
-// rightmost column blank (function.md §5.3). While dimmed — the PIN prompt
-// is up — the lit pixels step back to backdropColor and become its backdrop.
-func boardRows(b board, bg, fg, accent lipgloss.Color, cols int, dimmed bool) []string {
-	if dimmed {
-		fg, accent = backdropColor, backdropColor
-	}
+// rightmost column blank (function.md §5.3). Under the PIN prompt the
+// lock fades whole, as drawn (LockModel.View).
+func boardRows(b board, bg, fg, accent lipgloss.Color, cols int) []string {
 	off := lipgloss.NewStyle().Foreground(bg)
 	on := lipgloss.NewStyle().Foreground(fg)
 	acc := lipgloss.NewStyle().Foreground(accent)
@@ -392,10 +389,7 @@ func boardRows(b board, bg, fg, accent lipgloss.Color, cols int, dimmed bool) []
 
 // plainRows is the fallback when no scale fits: the board is laid all dark
 // and the lines are set over it as ordinary text in the fg colour, centred.
-func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int, dimmed bool) []string {
-	if dimmed {
-		fg = backdropColor
-	}
+func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int) []string {
 	off := lipgloss.NewStyle().Foreground(bg)
 	txt := lipgloss.NewStyle().Foreground(fg).Bold(true)
 	w := cols / 2

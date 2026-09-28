@@ -108,7 +108,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | 值 Yellow | 還沒設：`not set`；畫布 `no PIN` |
 | Red | 錯：input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）、`config error` |
 | 值 Mauve | 可以改的值 |
-| dim | 唯讀（type、色票）、menu 裡 disabled 的列、menu 的 region header；有浮層開著時，最上層以外的一切（2026-09-28，tdp F8） |
+| dim | 唯讀（type、色票）、menu 裡 disabled 的列、menu 的 region header；有浮層開著時，最上層以外的一切照原色淡化（2026-09-28，tdp F8、D2） |
 | 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態：`[2]` 的 ` · unsaved`、PIN prompt 的 ` · closing`；input 的錯誤不在這裡，在框內的錯誤列（2026-09-28，tdp F7、K3） |
 | 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
 | R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`） |
@@ -217,7 +217,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤，也不再理會 `Esc`——toast 也一樣，關到一半再按 `Esc`，關的是下面那層（2026-09-26，tdp F3）。
 
-**最上層以外全部變暗**（2026-09-28，tdp F8、v0.1.9）：有浮層開著時，只有最上面那層是亮的——它就是接鍵、`Esc` 關的那層（用同一個 `owns()` 判斷，tdp D3）。底下的面板、footer、`unsaved` 之類的警示色，都改用 Overlay0 畫；底下的浮層框內也是 Overlay0，邊框是它自己層色的暗版（往 base 混一半），暗了但看得出第幾層。最上層開始關的那一刻，底下那層就亮回來（跟鍵盤交回去同一刻）；關閉中的框以暗色畫完動畫。toast 不算一層：不會讓底下變暗，自己也永遠照原色。
+**最上層以外全部變暗**（2026-09-28，tdp F8、v0.1.9）：有浮層開著時，只有最上面那層是亮的——它就是接鍵、`Esc` 關的那層（用同一個 `owns()` 判斷，tdp D3）。底下的面板、footer、底下的浮層，每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、D2，v0.1.11–v0.1.12）：膠囊、cursor bar、色票、`unsaved` 的黃都還在，只是變暗；浮層的邊框是它自己層色淡化後的樣子，看得出第幾層。（同日稍早的第一版是去掉顏色、全部改用 Overlay0 重畫，邊框往 base 混一半；膠囊、cursor bar、色票因此不見，tdp v0.1.11 起明文禁止。）最上層開始關的那一刻，底下那層就亮回來（跟鍵盤交回去同一刻）；關閉中的框以暗色畫完動畫。toast 不算一層：不會讓底下變暗，自己也永遠照原色。
 
 **從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）每一步是自己的框、一層疊一層，整串做完才清；中途 `Esc` 退一步，退完第一步回到 menu（2026-09-28，tdp v0.1.9 F1；之前中途 `Esc` 取消整串）。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
 
@@ -229,7 +229,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 **toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
 
-**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格與狀態列降到 Overlay0（`ui.md` §2.3；2026-09-28，tdp F8，之前亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
+**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、D2；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。
 
 ---

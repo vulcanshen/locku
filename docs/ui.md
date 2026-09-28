@@ -189,7 +189,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ### 2.3 鎖定畫布
 
 單一職責：畫內容與狀態列。所有按鍵（含 Ctrl 組合，`function.md` §2.1）只做一件事：開 PIN popup；
-無 PIN 模式則結束進程。PIN popup 開著時亮格改畫 Overlay0、暗格不變，最底下的狀態列整列也改畫 Overlay0（`config error` 的紅也是），當 backdrop（2026-09-28，tdp F8；使用者：跟設定畫面同一個暗色，之前是 Surface2、狀態列不變）；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格（偏離 tdp F8，2026-09-28，見 dev-remarks）；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
+無 PIN 模式則結束進程。PIN popup 開著時整個畫布連最底下的狀態列一起淡化，當 backdrop：每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、D2，v0.1.11–v0.1.12）——亮格、accent、暗格、`config error` 的紅各自淡化，不收成同一個灰；很暗的暗格（例：`#000000`）比 base 暗，維持原色（2026-09-28，使用者：跟設定畫面同一個做法；同日稍早是亮格與狀態列改 Overlay0、暗格不變，更早是亮格 Surface2、狀態列不變）；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格（偏離 tdp F8，2026-09-28，見 dev-remarks）；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
 
 ---
 
@@ -266,16 +266,17 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 | 色帶 | 意思 | 值 |
 |---|---|---|
 | Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24） | `#89b4fa` |
-| Surface2 | unfocused 面板邊框（PIN prompt 的 backdrop 2026-09-28 起改 Overlay0） | `#585b70` |
+| Surface2 | unfocused 面板邊框（2026-09-28 以前也是 PIN prompt 的 backdrop；現在畫布照原色淡化） | `#585b70` |
 | Green | 使用者足跡：啟用中的 profile `●`、PIN `set`、toggle `on`、activate `on`；custom 板子上 `EXIT 0` 的 0（2026-09-25） | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
 | saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
 | saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
-| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列；有浮層開著時，最上層以外的一切：面板、footer、底下浮層的框內，鎖定畫布的亮格與狀態列（2026-09-28，tdp F8） | `#6c7086` |
+| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列 | `#6c7086` |
+| 淡化（dim） | 有浮層開著時，最上層以外的一切——面板、footer、底下的浮層、鎖定畫布與狀態列——每個顏色（前景與背景）各自 `c × 0.45 + base × 0.55`，比原色亮就維持原色；沒有顏色的字給淡化後的 Text（2026-09-28，tdp F8、D2；`internal/ui/dim.go`，照 filu 的參考實作） | tdp D2 |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）與那時的邊框、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
-| popup layer scale | 浮層邊框，四階，第四層起同色；不是最上層時畫成自己層色的暗版，往 base 混一半（2026-09-28，tdp v0.1.9 F8） | tdp D2 |
+| popup layer scale | 浮層邊框，四階，第四層起同色；不是最上層時是自己層色淡化後的樣子（2026-09-28，tdp F8、D2） | tdp D2 |
 
 focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
 Blue 不出現在那裡。

@@ -1,13 +1,11 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/x/ansi"
 )
 
 // popupLayerColor is the border colour for a popup at a given nesting depth
@@ -186,53 +184,6 @@ func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, inner
 	b.WriteString(bs.Render("╰─") + hint +
 		bs.Render(strings.Repeat("─", max(0, innerW-1-dispW(hint)))+"╯"))
 	return b.String()
-}
-
-// ---------------------------------------------------------------- dimming
-
-// With a popup up, everything below the topmost is dimmed — the screen and
-// the popups under it, warning colours too — so the one taking the keys
-// is the one that stands out (tdp F8, 2026-09-28). A dimmed popup keeps
-// its layer, in a dimmed version of its own colour (tdp v0.1.9), so the
-// stack still reads. Both work on what was drawn, stripped and drawn
-// again: nothing below the top needs to know it is dimmed.
-
-// dimBase draws s, the screen under the popups, in the dim colour.
-func dimBase(s string) string {
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	lines := strings.Split(s, "\n")
-	for i, l := range lines {
-		lines[i] = dim.Render(ansi.Strip(l))
-	}
-	return strings.Join(lines, "\n")
-}
-
-// dimPopup draws box, a popup drawn by drawPopupBox at layer, dimmed: its
-// frame in its layer colour dimmed, what is inside it in the dim colour.
-func dimPopup(box string, layer int) string {
-	bs := lipgloss.NewStyle().Foreground(dimOf(popupLayerColor(layer)))
-	dim := lipgloss.NewStyle().Foreground(dimColor)
-	lines := strings.Split(box, "\n")
-	for i, l := range lines {
-		r := []rune(ansi.Strip(l))
-		switch {
-		case i == 0 || i == len(lines)-1 || len(r) < 2:
-			lines[i] = bs.Render(string(r))
-		default:
-			lines[i] = bs.Render(string(r[:1])) + dim.Render(string(r[1:len(r)-1])) + bs.Render(string(r[len(r)-1:]))
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
-// dimOf is c halfway to the canvas: darker, and still itself.
-func dimOf(c lipgloss.Color) lipgloss.Color {
-	var r, g, b, br, bg, bb int
-	if _, err := fmt.Sscanf(string(c), "#%02x%02x%02x", &r, &g, &b); err != nil {
-		return dimColor
-	}
-	fmt.Sscanf(baseHex, "#%02x%02x%02x", &br, &bg, &bb)
-	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", (r+br)/2, (g+bg)/2, (b+bb)/2))
 }
 
 // capRows limits a popup to what the terminal can hold. A float taller than the
