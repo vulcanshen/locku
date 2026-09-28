@@ -35,8 +35,8 @@
 
 ### §A.1 Contextual track — Space menu（tdp K5、M2）
 
-三個 region，順序固定：`item operation`、`panel operation`、`global operation`（2026-09-26，tdp M2）；沒東西的 region 連標題一起不出現，
-兩個 region 之間一條分隔線，每個 region 都有標題（2026-09-27，tdp M2：global 永遠在，至少兩區）。`global operation` 在每個 Space menu 的最後，**固定一列** `Global operation`（沒有熱鍵）：Enter 開出 global operation popup，疊在 Space menu 上，列出全部全域動作，目前只有 `[q]uit`；`Esc` 回到 Space menu，`Space` 在它上面不作用（2026-09-27，tdp M4；使用者：locku 也走 `Space` → `Global operation` → `[q]uit`）。之前 `[q]uit` 直接列在每個 Space menu 的 global 區。menu 本身 `j`/`k` 走（環繞）、
+三個 region，順序固定：`item operation`、`panel operation`、global（2026-09-26，tdp M2）；沒東西的 region 連標題一起不出現，
+兩個 region 之間一條分隔線。item 與 panel 兩區一律有標題，只剩其中一區也有（2026-09-27，tdp M2）；global 那一列**不加標題**，只用分隔線跟上面隔開——`global operation` 標題底下只有一列 `Global operation`，是同一句話講兩次（2026-09-28，tdp v0.1.7 M2；之前三區都有標題）。global 在每個 Space menu 的最後，**固定一列** `Global operation`（沒有熱鍵）：Enter 開出 global operation popup，疊在 Space menu 上，列出全部全域動作，目前只有 `[q]uit`；`Esc` 回到 Space menu，`Space` 在它上面不作用（2026-09-27，tdp M4；使用者：locku 也走 `Space` → `Global operation` → `[q]uit`）。之前 `[q]uit` 直接列在每個 Space menu 的 global 區。menu 本身 `j`/`k` 走（環繞）、
 `u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
 profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25）。
 

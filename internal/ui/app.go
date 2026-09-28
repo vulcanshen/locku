@@ -316,12 +316,13 @@ func (m AppModel) move(k string) AppModel {
 	return m
 }
 
-// openMenu is Space: everything that can be done here, in three regions —
-// item operation, panel operation, global operation — a region with
-// nothing in it left out, a rule and a title each (tdp M2). The global
-// region is one row, Global operation, whose Enter opens the global
-// operation popup — one row though leaving is the only global there is
-// (user, 2026-09-27: Space, Global operation, Quit).
+// openMenu is Space: everything that can be done here — item operation,
+// panel operation, a region with nothing in it left out, each under its
+// title (tdp M2) — and last, under a rule, one row, Global operation,
+// whose Enter opens the global operation popup — one row though leaving is
+// the only global there is (user, 2026-09-27: Space, Global operation,
+// Quit). That row has no title over it: "global operation" over "Global
+// operation" says one thing twice (tdp v0.1.7 M2, 2026-09-28).
 func (m *AppModel) openMenu() tea.Cmd {
 	var item, panel []menuItem
 	for _, a := range m.actions() {
@@ -331,8 +332,11 @@ func (m *AppModel) openMenu() tea.Cmd {
 			item = append(item, a.row())
 		}
 	}
-	global := []menuItem{{label: "Global operation", key: globalRow, hint: "what is about the whole app"}}
-	items := regions([]string{"item operation", "panel operation", "global operation"}, item, panel, global)
+	items := regions([]string{"item operation", "panel operation"}, item, panel)
+	if len(items) > 0 {
+		items = append(items, menuItem{rule: true})
+	}
+	items = append(items, menuItem{label: "Global operation", key: globalRow, hint: "what is about the whole app"})
 	title := "[1] locku"
 	if m.focus == panelDetail {
 		title = m.detailTitle()

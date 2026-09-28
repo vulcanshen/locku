@@ -16,8 +16,8 @@ type menuItem struct {
 	label string
 	key   string // dispatched on commit; "enter" for the core-key action
 	hint  string
-	// header is a region's label — "item operation", "panel operation",
-	// "global operation" — dim and not a stop (tdp M2).
+	// header is a region's label — "item operation", "panel operation" —
+	// dim and not a stop (tdp M2). The global row has none.
 	header bool
 	// rule is the line between two regions (tdp M2): not a stop.
 	rule bool
@@ -31,9 +31,10 @@ type menuItem struct {
 // stop is a row the cursor can rest on: an action, run or dimmed.
 func (it menuItem) stop() bool { return !it.header && !it.rule }
 
-// regions lays out a Space menu's regions in order (tdp M2): an empty one
-// left out, a rule between two, and every one under its title — the global
-// one is always there, so there are always two.
+// regions lays out a Space menu's item and panel regions in order (tdp
+// M2): an empty one left out, a rule between two, and every one under its
+// title, even when it is the only one left — the global row follows, so the
+// menu never holds just one kind of thing.
 func regions(titles []string, groups ...[]menuItem) []menuItem {
 	var kept []int
 	for i, g := range groups {
