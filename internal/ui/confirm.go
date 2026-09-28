@@ -15,7 +15,7 @@ const (
 	confirmDeactivate                  // take locku's block out of the tool at ref's file
 )
 
-// confirmPopup is the message class (tdp F1): a short question with one yes
+// confirmPopup is the confirm class (tdp F1): a short question with one yes
 // and one no. It is NOT a menu — a menu is "pick one of N", and blurring
 // the two would make Enter mean different things on different floats.
 type confirmPopup struct {
