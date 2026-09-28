@@ -151,12 +151,12 @@ func TestRenameFollowsTheActiveNameAndTheDraft(t *testing.T) {
 		t.Fatalf("rename box: %+v", m.input)
 	}
 	m = m.press("ctrl+u").typed("clock2").press("enter")
-	if m.input.suffix != " · taken" || !m.input.anim.owns() {
-		t.Fatalf("a taken name must be refused in the box: %q", m.input.suffix)
+	if m.input.err != "name is taken" || !m.input.anim.owns() {
+		t.Fatalf("a taken name must be refused in the box: %q", m.input.err)
 	}
 	m = m.press("ctrl+u").press("enter")
-	if m.input.suffix != " · empty" {
-		t.Fatalf("an empty name must be refused: %q", m.input.suffix)
+	if m.input.err != "name is empty" {
+		t.Fatalf("an empty name must be refused: %q", m.input.err)
 	}
 	m = m.typed("main").press("enter")
 	if m.cfg.Profiles[0].Name != "main" || m.cfg.Profile != "main" {
@@ -182,8 +182,8 @@ func TestDuplicateLandsOnTheCopy(t *testing.T) {
 		t.Fatalf("offer %q", m.input.value)
 	}
 	m = m.press("enter")
-	if m.input.suffix != " · taken" {
-		t.Fatalf("clock2 exists: %q", m.input.suffix)
+	if m.input.err != "name is taken" {
+		t.Fatalf("clock2 exists: %q", m.input.err)
 	}
 	m = m.press("ctrl+u").typed("third").press("enter")
 	if len(m.cfg.Profiles) != 3 || m.cfg.Profiles[2].Name != "third" || m.cfg.Profiles[2].Time != "HH MM SS" || m.cur1 != profileItem(2) {
@@ -296,8 +296,8 @@ func TestDetailChoosesAndToggles(t *testing.T) {
 		t.Fatalf("box %+v", m.input)
 	}
 	m = m.press("ctrl+u").typed("abc").press("enter")
-	if m.input.suffix != " · invalid" {
-		t.Fatalf("suffix %q", m.input.suffix)
+	if m.input.err != "a whole number, 0 or more" {
+		t.Fatalf("error %q", m.input.err)
 	}
 	m = m.press("ctrl+u").typed("12").press("enter")
 	if m.cfg.PINPromptTimeout != 12 || saved(t).PINPromptTimeout != 12 {
@@ -354,8 +354,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Fatalf("offer %q", m.input.placeholder)
 	}
 	m = m.typed("tmux.conf").press("enter")
-	if m.input.suffix != " · absolute or ~/ path" {
-		t.Fatalf("suffix %q", m.input.suffix)
+	if m.input.err != "an absolute or ~/ path" {
+		t.Fatalf("error %q", m.input.err)
 	}
 	m = m.press("ctrl+u").typed("/etc/tmux.conf").press("enter")
 	if m.cfg.Tmux.Conf != "/etc/tmux.conf" || saved(t).Tmux.Conf != "/etc/tmux.conf" {
@@ -397,8 +397,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Fatalf("bind-key box %+v, row %+v", m.input, m.rowAt())
 	}
 	m = m.typed("C l").press("enter")
-	if m.input.suffix != " · one key, e.g. l or C-l" || m.cfg.Tmux.BindKey != "" {
-		t.Fatalf("two words: suffix %q, key %q", m.input.suffix, m.cfg.Tmux.BindKey)
+	if m.input.err != "one key, e.g. l or C-l" || m.cfg.Tmux.BindKey != "" {
+		t.Fatalf("two words: error %q, key %q", m.input.err, m.cfg.Tmux.BindKey)
 	}
 	m = m.press("ctrl+u").typed("C-l").press("enter")
 	if m.cfg.Tmux.BindKey != "C-l" || saved(t).Tmux.BindKey != "C-l" || !strings.Contains(m.View(), "C-l") {
@@ -437,8 +437,8 @@ func TestToolsHaveTheirFileAndIdleTime(t *testing.T) {
 		t.Fatalf("bind box %+v, row %+v", m.input, m.rowAt())
 	}
 	m = m.typed("^ L").press("enter")
-	if m.input.suffix != " · one key, e.g. l or ^L" || m.cfg.Screen.Bind != "" {
-		t.Fatalf("two words: suffix %q, key %q", m.input.suffix, m.cfg.Screen.Bind)
+	if m.input.err != "one key, e.g. l or ^L" || m.cfg.Screen.Bind != "" {
+		t.Fatalf("two words: error %q, key %q", m.input.err, m.cfg.Screen.Bind)
 	}
 	m = m.press("ctrl+u").typed("^L").press("enter")
 	if m.cfg.Screen.Bind != "^L" || saved(t).Screen.Bind != "^L" || m.cfg.Tmux.BindKey != "" || !strings.Contains(m.View(), "^L") {
@@ -797,8 +797,8 @@ func TestNewProfileOfASaver(t *testing.T) {
 		t.Fatalf("new box: %+v", m.input)
 	}
 	m = m.press("ctrl+u").typed("clock").press("enter")
-	if m.input.suffix != " · taken" {
-		t.Fatalf("a taken name must be refused: %q", m.input.suffix)
+	if m.input.err != "name is taken" {
+		t.Fatalf("a taken name must be refused: %q", m.input.err)
 	}
 	m = m.press("ctrl+u").typed("dino").press("enter")
 	p := m.cfg.Profiles[2]
@@ -875,8 +875,8 @@ func TestPINSetChangeClear(t *testing.T) {
 		t.Fatalf("box %+v", m.input)
 	}
 	m = m.typed("123").press("enter")
-	if !strings.Contains(m.input.suffix, "4-64") {
-		t.Fatalf("a short PIN must be refused: %q", m.input.suffix)
+	if !strings.Contains(m.input.err, "4-64") {
+		t.Fatalf("a short PIN must be refused: %q", m.input.err)
 	}
 	m = m.press("ctrl+u").typed("1234").press("enter")
 	if m.input.title != "confirm PIN" {
@@ -896,7 +896,7 @@ func TestPINSetChangeClear(t *testing.T) {
 		t.Fatalf("change must ask the current PIN, got %q", m.input.title)
 	}
 	m = m.typed("0000").press("enter")
-	if m.input.suffix != " · wrong" || !m.input.frozen {
+	if m.input.err != "wrong PIN" || !m.input.frozen {
 		t.Fatalf("wrong current: %+v", m.input)
 	}
 	m = m.typed("1")

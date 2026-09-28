@@ -18,13 +18,16 @@ import (
 // the box (user, 2026-09-24: bigger, and the input starting from the
 // centre). A 64-character PIN is 129 columns of dots, wider than a popup
 // gets: the dots it has no room for go from the front (user, 2026-09-28:
-// the widest PIN against 120 settles the width). It has four looks and they differ
-// only in the border and its title — the row inside never moves:
+// the widest PIN against 120 settles the width). Under the dots is its
+// error row, blank until an Enter is refused (tdp F7, K3; 2026-09-28 — the
+// error used to be in the title). It has four looks, and the box never
+// changes size:
 //
-//	PIN                       idle: the layer colour, enter unlock · esc back
-//	PIN · wrong               red for a second, the row cleared, every key swallowed
-//	PIN · try again in 27 s   red, counting down, every key but Esc swallowed
-//	PIN · closing             pin_prompt_timeout ran out: the ordinary closing animation
+//	idle        the layer colour, enter unlock · esc back
+//	wrong PIN   red for a second, the dots cleared, every key swallowed
+//	try again   red, `try again in 27 s` counting down, every key but Esc swallowed
+//	closing     `PIN · closing` in the title: pin_prompt_timeout ran out, the
+//	            ordinary closing animation
 //
 // Red is an override colour (tdp D2): it says "wrong", not "deeper".
 type promptState int
@@ -87,23 +90,20 @@ func (p pinPrompt) view(now time.Time) string {
 	innerW := popupInnerW(p.screenW)
 	bc := popupLayerColor(1)
 	title := " " + glyphLock + " PIN "
-	hint := ""
-	row := ""
+	hint, row, err := "", spaces(innerW), ""
 	switch {
 	case p.anim.phase == animClosing && p.timedOut:
 		title += "· closing "
 	case p.state == promptWrong:
-		bc = warnColor
-		title += "· wrong "
+		bc, err = warnColor, "wrong PIN"
 	case p.state == promptLockout:
-		bc = warnColor
-		title += "· try again in " + itoa(p.remaining(now)) + " s "
+		bc, err = warnColor, "try again in "+itoa(p.remaining(now))+" s"
 		hint = hintLegend([][2]string{{"Esc", "back"}})
 	default:
 		hint = hintLegend([][2]string{{"Enter", "unlock"}, {"Esc", "back"}})
 		row = pinRow(len(p.value), innerW)
 	}
-	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row}), innerW)
+	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row, errorRow(err, innerW, true)}), innerW)
 }
 
 // pinRow is the masked line every PIN box shares — the lock's prompt and

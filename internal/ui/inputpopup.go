@@ -27,16 +27,17 @@ const (
 )
 
 // inputPopup is one line of text (ui.md §3.1). The BORDER says what kind of
-// box this is — `name`, `number`, `new PIN` — and a suffix says how the
-// box feels about what is in it: ` · taken`, ` · invalid`, ` · wrong`. The
-// row inside is the field's name and the value being typed.
+// box this is — `name`, `number`, `new PIN`. Inside are the field's name
+// and the value being typed, and under them, in a box whose Enter can be
+// refused, a row kept for why: `name is taken`, `wrong PIN` (tdp F7, K3,
+// 2026-09-28; it used to be a suffix on the border, ` · taken`).
 //
 // While it is up every printable key is a character: Space is a space and
 // ? is a question mark (tdp K8).
 type inputPopup struct {
 	anim   popupAnimator
 	title  string // the type: "name", "number", "current PIN", …
-	suffix string // " · taken", " · invalid", …; cleared by the next key
+	err    string // why the last Enter was refused; cleared by the next key
 	prompt string // the field
 	value  string
 	action inputAction
@@ -79,9 +80,9 @@ func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
 }
 
 // freeze puts the box on hold for a second with the given verdict in its
-// border, the value cleared, every key swallowed (ux.md §2.2).
-func (m *inputPopup) freeze(suffix string) tea.Cmd {
-	m.suffix, m.value, m.frozen = suffix, "", true
+// error row, the value cleared, every key swallowed (ux.md §2.2).
+func (m *inputPopup) freeze(err string) tea.Cmd {
+	m.err, m.value, m.frozen = err, "", true
 	m.frozenGen++
 	gen := m.frozenGen
 	return tea.Tick(inputFreeze, func(time.Time) tea.Msg { return inputThawMsg{gen} })
@@ -89,7 +90,7 @@ func (m *inputPopup) freeze(suffix string) tea.Cmd {
 
 func (m *inputPopup) thaw(msg inputThawMsg) {
 	if msg.gen == m.frozenGen {
-		m.frozen, m.suffix = false, ""
+		m.frozen, m.err = false, ""
 	}
 }
 
@@ -99,7 +100,7 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 	if !m.anim.isInteractive() || m.frozen {
 		return
 	}
-	m.suffix = ""
+	m.err = ""
 	switch msg.Type {
 	case tea.KeyTab:
 		if m.value == "" && m.placeholder != "" {
@@ -120,9 +121,28 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 	}
 }
 
+// canFail: an Enter here can be refused, so the box keeps a row for why
+// from the moment it opens (tdp F7). A command is taken as it is typed.
+func (m inputPopup) canFail() bool { return m.action != inputCommand && m.action != inputNone }
+
+// errorRow is an input's row for why its Enter was refused (tdp F7, K3):
+// blank until then, red with the reason after. A PIN box's is centred
+// under its dots, the same in all three and on the lock (ui.md §3.2).
+func errorRow(err string, innerW int, centre bool) string {
+	if err == "" {
+		return spaces(innerW)
+	}
+	err = truncate(err, innerW-2)
+	lead := 1
+	if centre {
+		lead = (innerW - dispW(err)) / 2
+	}
+	return lipgloss.NewStyle().Foreground(warnColor).Render(padRight(spaces(lead)+err, innerW))
+}
+
 func (m inputPopup) view() string {
 	bc := popupLayerColor(m.layer)
-	if m.suffix != "" {
+	if m.err != "" {
 		bc = warnColor
 	}
 	if m.masked {
@@ -134,8 +154,8 @@ func (m inputPopup) view() string {
 		if m.frozen {
 			hint = ""
 		}
-		return drawPopupBox(bc, " "+glyphLock+" "+m.title+m.suffix+" ", hint,
-			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW)}), innerW)
+		return drawPopupBox(bc, " "+glyphLock+" "+m.title+" ", hint,
+			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW), errorRow(m.err, innerW, true)}), innerW)
 	}
 
 	innerW := popupInnerW(m.screenW)
@@ -156,6 +176,9 @@ func (m inputPopup) view() string {
 		spaces(innerW),
 		line,
 	}
+	if m.canFail() {
+		rows = append(rows, errorRow(m.err, innerW, false))
+	}
 	pairs := [][2]string{{"Enter", m.accept}}
 	if offered {
 		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Bksp", "clear"})
@@ -164,6 +187,6 @@ func (m inputPopup) view() string {
 	if m.frozen {
 		hint = ""
 	}
-	return drawPopupBox(bc, " "+glyphInput+" "+m.title+m.suffix+" ", hint,
+	return drawPopupBox(bc, " "+glyphInput+" "+m.title+" ", hint,
 		animRows(m.anim, rows), innerW)
 }

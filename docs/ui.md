@@ -207,7 +207,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
 | `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
-| input | input | **邊框寫型別**（`name`、`number`、`path`、`number · invalid`、`name · taken`），框內一行是欄位名，目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
+| input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變；`command` 送出不會被拒，不留（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
@@ -225,23 +225,34 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 | PIN prompt | input，遮罩，跟每個 popup 一樣寬（tdp F7，2026-09-28；之前固定 48 欄）、置中，框內上下各留一列；`●` 之間空一格，從框的橫向中央開始、向兩側長；PIN 最多 64 字，整列 129 欄，比 120 的上限寬，放不下的從前面截掉、游標那端留在畫面上（2026-09-28，使用者：用最長的 PIN 對 120 來判斷）；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案） | custom 鎖定中唯一的 popup |
 
-四個狀態，全部只改**邊框**與 title，框內一行不變：
+點點底下是一列**錯誤列**，打開時就在、平常空白（2026-09-28，tdp F7、K3；之前錯誤寫在 title）。四個狀態，框的大小都不變：
 
 ```
 ╭ PIN ──────────────────────────╮     idle：layer 色
-│ ●●●●                          │
+│                               │
+│            ● ● ● ●            │
+│                               │     錯誤列，空白
+│                               │
 ╰──── enter unlock · esc back ──╯
 
-╭ PIN · wrong ──────────────────╮     wrong：Red，1 秒，框內清空，吞輸入
+╭ PIN ──────────────────────────╮     wrong：Red，1 秒，點點清空，吞輸入
+│                               │
+│                               │
+│           wrong PIN           │
 │                               │
 ╰───────────────────────────────╯
 
-╭ PIN · try again in 27 s ──────╮     lockout：Red，倒數，吞輸入，Esc 仍可回 saver
+╭ PIN ──────────────────────────╮     lockout：Red，倒數，吞輸入，Esc 仍可回 saver
+│                               │
+│                               │
+│       try again in 27 s       │
 │                               │
 ╰───────────────────────────────╯
 
-╭ PIN · closing ────────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver
+╭ PIN · closing ────────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver；不是錯誤，留在 title
 ```
+
+設定畫面的三個 PIN 框（`current PIN`、`new PIN`、`confirm PIN`）同一個畫法，錯誤列也一樣置中。
 
 錯誤與 lockout 的 Red 是 override 色（tdp D2），不參與層級。
 
@@ -262,7 +273,7 @@ PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options 
 | Overlay0 | 狀態列、hint、唯讀的 type 列與色票列 | `#6c7086` |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
-| Red（error） | PIN wrong、lockout、`· invalid`、`· taken`、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
+| Red（error） | input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）與那時的邊框、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
 | popup layer scale | 浮層邊框，四階，第四層起同色 | tdp D2 |
 
 focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
