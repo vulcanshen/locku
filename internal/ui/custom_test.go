@@ -161,8 +161,8 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 		t.Errorf("Esc ends the prompt without painting again: %d paints, back %v", len(painted)-n, pm.(LockModel).Back())
 	}
 	// The ground is the profile's colour alone, no clock on it: the top
-	// row is a bare, dimmed ground row.
-	ground := plainRows(nil, lipgloss.Color(config.DefaultBG), lipgloss.Color(config.DefaultFG), 100, 29, true)[0]
+	// row is a bare ground row, faded under the prompt (tdp F8).
+	ground := dimANSI(plainRows(nil, lipgloss.Color(config.DefaultBG), lipgloss.Color(config.DefaultFG), 100, 29)[0])
 	if v := p.View(); !strings.HasPrefix(v, ground) {
 		t.Errorf("a prompt-only lock draws no board:\n%s", v)
 	}

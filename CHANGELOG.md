@@ -7,7 +7,7 @@
 - Every popup is as wide as the terminal less a column on either side, up to 120 columns, whatever it holds: a box no longer grows as you type in it, and the PIN boxes, on the lock and in the settings, are as wide as the rest instead of 48.
 - A box whose Enter can be refused keeps a row for why from the moment it opens, and the reason is written there — `name is taken`, `wrong PIN`, `try again in 27 s` — instead of on its border.
 - Changing the PIN, each step is a box of its own over the one before: `Esc` goes back one step instead of cancelling the lot, and a confirmation that does not match says so in its own box instead of in a message that sent you back to the new PIN.
-- With a popup open, everything under the topmost is dimmed, the popups under it included. Under the lock's PIN prompt the status row dims too, and the board steps back in the same grey as the settings screen.
+- With a popup open, everything under the topmost fades, the popups under it included: every colour, foreground and background, goes darker as itself, so the capsules, the cursor bars, the swatches and the yellow `unsaved` are still there. Under the lock's PIN prompt the whole board fades the same way, the status row too. The colours are 24-bit: a truecolor terminal is needed.
 
 ### Fixed
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.

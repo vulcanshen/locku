@@ -462,21 +462,22 @@ func (m LockModel) View() string {
 		case m.promptOnly:
 			// The program's picture is held back; the prompt sits on the
 			// profile's ground alone.
-			out = plainRows(nil, bg, fg, m.width, rows, dimmed)
+			out = plainRows(nil, bg, fg, m.width, rows)
 		case len(m.layout.blocks) > 0 || m.game != nil:
-			out = boardRows(m.shown, bg, fg, m.accent, m.width, dimmed)
+			out = boardRows(m.shown, bg, fg, m.accent, m.width)
 		default:
-			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)
+			out = plainRows(m.plain, bg, fg, m.width, rows)
 		}
 	}
-	status := statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note)
-	if dimmed {
-		// Under the prompt, all of it — the red of a config error too
-		// (tdp F8, 2026-09-28).
-		status = dimBase(status)
-	}
-	out = append(out, status)
+	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note))
 	view := strings.Join(out, "\n")
+	if dimmed {
+		// Under the prompt the lock fades whole, each colour its own way:
+		// the lit pixels, the accent, the ground, a config error's red
+		// (tdp F8, D2, 2026-09-28; the lit pixels were Overlay0, the
+		// status row stripped).
+		view = dimANSI(view)
+	}
 	if m.prompt.anim.isActive() {
 		view = overlay.Composite(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
 	}
