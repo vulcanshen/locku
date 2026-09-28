@@ -1055,15 +1055,15 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 				} else {
 					t.Errorf("focus %d cur %d/%d: Global operation opened nothing", focus, c1, c2)
 				}
-				// Three regions at most — item, panel, global — an empty one
-				// left out, a rule between two, each under its title (tdp
-				// M2). The global one is always there.
+				// The item and panel regions, an empty one left out, each
+				// under its title; then, under a rule, the global row with
+				// no title over it (tdp M2; v0.1.7, 2026-09-28).
 				hasItem, hasPanel := false, false
 				for _, a := range acts {
 					hasItem = hasItem || !a.panelOp
 					hasPanel = hasPanel || a.panelOp
 				}
-				want := 1
+				want := 0
 				for _, b := range []bool{hasItem, hasPanel} {
 					if b {
 						want++
@@ -1078,11 +1078,18 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 						rules++
 					}
 				}
-				if headers != want || rules != want-1 {
-					t.Errorf("focus %d cur %d/%d: %d headers, %d rules for %d regions", focus, c1, c2, headers, rules, want)
+				if headers != want || rules != want {
+					t.Errorf("focus %d cur %d/%d: %d headers, %d rules for %d titled regions", focus, c1, c2, headers, rules, want)
 				}
-				if last := opened.menu.items[len(opened.menu.items)-1]; last.key != globalRow || len(last.label) == 0 {
-					t.Errorf("focus %d cur %d/%d: the menu does not end in the global region: %+v", focus, c1, c2, last)
+				n := len(opened.menu.items)
+				if last := opened.menu.items[n-1]; last.key != globalRow || len(last.label) == 0 {
+					t.Errorf("focus %d cur %d/%d: the menu does not end in the global row: %+v", focus, c1, c2, last)
+				}
+				if want > 0 && !opened.menu.items[n-2].rule {
+					t.Errorf("focus %d cur %d/%d: the global row sits under %+v, not a rule", focus, c1, c2, opened.menu.items[n-2])
+				}
+				if strings.Contains(opened.View(), "global operation") {
+					t.Errorf("focus %d cur %d/%d: a global operation title is drawn over Global operation", focus, c1, c2)
 				}
 				if !opened.menu.items[opened.menu.cursor].stop() {
 					t.Errorf("focus %d cur %d/%d: the cursor opened on a header", focus, c1, c2)
