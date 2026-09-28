@@ -464,24 +464,44 @@ func (m AppModel) View() string {
 	footer := keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.width)
 	out := panels + "\n" + footer
 
-	for _, f := range []struct {
-		up   bool
-		view func() string
+	// Bottom to top: the order Esc and the keys take them in, reversed.
+	floats := []struct {
+		anim  popupAnimator
+		layer int
+		view  func() string
 	}{
-		{m.menu.isActive(), m.menu.view},
-		{m.globalMenu.isActive(), m.globalMenu.view},
-		{m.pinCurrent.isActive(), m.pinCurrent.view},
-		{m.options.isActive(), m.options.view},
-		{m.input.isActive(), m.input.view},
-		{m.pinConfirm.isActive(), m.pinConfirm.view},
-		{m.confirm.isActive(), m.confirm.view},
-		{m.help.isActive(), m.help.view},
-		{m.quitAsk.isActive(), m.quitAsk.view},
-		{m.quitHelp.isActive(), m.quitHelp.view},
-	} {
-		if f.up {
-			out = overlay.Composite(f.view(), out, overlay.Center, overlay.Center, 0, 0)
+		{m.menu.anim, m.menu.layer, m.menu.view},
+		{m.globalMenu.anim, m.globalMenu.layer, m.globalMenu.view},
+		{m.pinCurrent.anim, m.pinCurrent.layer, m.pinCurrent.view},
+		{m.options.anim, m.options.layer, m.options.view},
+		{m.input.anim, m.input.layer, m.input.view},
+		{m.pinConfirm.anim, m.pinConfirm.layer, m.pinConfirm.view},
+		{m.confirm.anim, m.confirm.layer, m.confirm.view},
+		{m.help.anim, m.help.layer, m.help.view},
+		{m.quitAsk.anim, m.quitAsk.layer, m.quitAsk.view},
+		{m.quitHelp.anim, m.quitHelp.layer, m.quitHelp.view},
+	}
+	// The top is the last that owns the keyboard, as for the keys and Esc
+	// (tdp D3): a popup closing is below it already. Everything else is
+	// dimmed while there is one; a toast is none (tdp F8).
+	top := -1
+	for i, f := range floats {
+		if f.anim.owns() {
+			top = i
 		}
+	}
+	if top >= 0 {
+		out = dimBase(out)
+	}
+	for i, f := range floats {
+		if !f.anim.isActive() {
+			continue
+		}
+		v := f.view()
+		if top >= 0 && i != top {
+			v = dimPopup(v, f.layer)
+		}
+		out = overlay.Composite(v, out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
 		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)

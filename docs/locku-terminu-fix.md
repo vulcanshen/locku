@@ -59,25 +59,6 @@ help → quitAsk → quitHelp）用 `overlay.Composite` 一層一層疊上去，
 
 ---
 
-## 3. 設定畫面：popup 開著時底下不 dim —— F8
-
-- **現況**：`app.go` `View()`（454–470 行）照固定順序把每個 `isActive()` 的 popup 用 `overlay.Composite` 疊上去，面板、footer、
-  底下的 popup 全部照原色；草稿未存的 Yellow `unsaved` 膠囊等顏色也照原色。
-- **規則**：F8：有 popup 開著時，最上層以外的一切——底下的 popup 與整個 base 畫面——都用 dim 色畫，警示色也 dim；toast 不觸發 dim；
-  popup 邊框依層數的顏色照舊保留。
-- **怎麼改**：
-  - 在 `View()` 先決定「最上層」：照繪製順序，最後一個 `owns()` 的 popup（toast 不算，跟 `popupDepth()` 不數 toast 一致）。
-    沒有這一層就照舊不 dim。
-  - base（面板 + footer）整塊交給一個 dim 繪製器：每一列去掉樣式、以 `dimColor` 重畫，寬度不變（`TestViewFitsTheTerminal` 照樣要過）。
-  - 最上層以下的 popup 用同一個繪製器畫框內的列；邊框依 `popupLayerColor(layer)` 照舊（見待確認 4）。做法是 `drawPopupBox` 多一個
-    `dimmed` 參數，或每個 popup 的 `view()` 收一個 `dimmed`，不要在 `View()` 裡對整個框字串做 strip（會連邊框一起洗掉）。
-  - 正在關閉的 popup：它已經不 `owns()`，底下那層在它開始關的那一刻就亮；關閉中的框本身以 dim 畫完動畫。跟按鍵已經交給底下那層一致。
-  - toast 永遠用自己的顏色疊在最上面，不 dim，也不讓底下 dim。
-  - 測試：menu 開著時 base 的某段文字（例：`[1] locku`）不含原色、含 `dimColor`；menu 上再開 confirm 時 menu 的列變 dim、confirm 不 dim；
-    `Esc` 關 confirm 後 menu 回到亮的；只有 toast 時 base 不 dim。mutation：拿掉 base 的 dim、拿掉下層 popup 的 dim、最上層改用 `isActive()`、
-    toast 也算一層，各自要紅。
-  - 文件：`ux.md` §5 浮層行為加一段 dim；`ui.md` §3 開頭與 §4 色帶（dim 的用途多一條「popup 底下的一切」）。
-
 ## 4. 鎖定畫布：PIN prompt 底下的狀態列不 dim —— F8
 
 - **現況**：PIN prompt 開著時，`lockscreen.go` `View()` 把 `dimmed` 傳給 `boardRows` / `plainRows`（`canvas.go`），亮格與 accent 改畫
