@@ -198,7 +198,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
 
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
-下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多五層：Space menu、它開出的框或 global operation popup、框上的 `?`、離開的 confirm、它的 `?`（2026-09-27，tdp F4、D3；2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
+下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
 
 ### 3.1 設定畫面
 
@@ -211,11 +211,12 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
-| toast | toast | 寫檔失敗、PIN 不一致（disabled 的列不跳 toast，2026-09-26，tdp M6） |
+| toast | toast | 寫檔失敗、`PIN set`、`PIN removed`（disabled 的列不跳 toast，2026-09-26，tdp M6；PIN 不一致 2026-09-28 起寫在 `confirm PIN` 的錯誤列，不再跳 toast） |
 
 new 與 duplicate 都是 `name` input popup：new 提議 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 提議原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
-PIN 設定與更改是**同一種 popup 連續開**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`），
+PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`）：
+每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
 一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
 
 ### 3.2 鎖定畫布

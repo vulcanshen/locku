@@ -153,10 +153,10 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 | 動作 | 順序 | 失敗 |
 |---|---|---|
-| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：toast `PIN mismatch`，回到空的 `new PIN`；長度不在 4 到 64：錯誤列 `4-64 chars` 框留著 |
+| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：`confirm PIN` 的錯誤列 `not the new PIN`、清空、框留著，要重打新的就 `Esc` 回 `new PIN`（2026-09-28，tdp K3；之前跳 toast `PIN mismatch` 回到空的 `new PIN`）；長度不在 4 到 64：錯誤列 `4-64 chars` 框留著 |
 | Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：錯誤列 `wrong PIN` 1 秒、清空、留在 current PIN |
 
-每一步一個 popup、一次只問一件事；任一步 Esc 取消整串、什麼都不寫。遮罩顯示 `●`，不顯示長度以外的資訊；`●` 之間空一格、從框中央向兩側長，跟鎖定畫布的 prompt 同一個畫法（2026-09-24）。
+每一步一個 popup、疊在上一步上面，一次只問一件事；`Esc` 回到上一步，第一步再 `Esc` 就整串不做、什麼都不寫（2026-09-28，tdp v0.1.9 F1、F4；之前任一步 Esc 取消整串）。遮罩顯示 `●`，不顯示長度以外的資訊；`●` 之間空一格、從框中央向兩側長，跟鎖定畫布的 prompt 同一個畫法（2026-09-24）。
 
 ### §2.3 鎖定畫布的 PIN prompt
 
@@ -217,15 +217,15 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤，也不再理會 `Esc`——toast 也一樣，關到一半再按 `Esc`，關的是下面那層（2026-09-26，tdp F3）。
 
-**從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）整串做完才清，中途 `Esc` 取消整串、回到 menu。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
+**從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）每一步是自己的框、一層疊一層，整串做完才清；中途 `Esc` 退一步，退完第一步回到 menu（2026-09-28，tdp v0.1.9 F1；之前中途 `Esc` 取消整串）。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
 
 **離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、D3）：有未存顏色時 `q`、`Ctrl+C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl+C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
 
-層數最多五層：Space menu、它開出的框（或 global operation popup）、框上的 `?`、離開的 confirm、它的 `?`（2026-09-27；之前三層）。
+層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28；2026-09-27 起五層，之前三層）。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN mismatch`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
+**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是亮格降到 Surface2（`ui.md` §2.3）；`q` 在畫布與 prompt
 裡都只是字元。

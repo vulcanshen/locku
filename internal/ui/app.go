@@ -37,6 +37,14 @@ type AppModel struct {
 	globalMenu spaceMenu
 	help       helpPopup
 	input      inputPopup
+	// pinCurrent and pinConfirm are the PIN chain's first and last boxes,
+	// each its own popup (tdp v0.1.9 F1): current PIN, under the choice
+	// of New or Remove, and confirm PIN, over the new PIN in input. Esc
+	// takes one step back (F4, K4), and the chain closes whole only when
+	// it is done (user, 2026-09-28; it used to be one box whose content
+	// changed, and any Esc cancelled the lot).
+	pinCurrent inputPopup
+	pinConfirm inputPopup
 	confirm    confirmPopup
 	// quitAsk is the way out asking about unsaved colours: a popup of its
 	// own, over the whole stack, so a q or a Ctrl-C pressed on another
@@ -81,6 +89,8 @@ func NewApp(cfg config.Config, problem string) AppModel {
 		globalMenu: newGlobalMenu(),
 		help:       newHelpPopup(),
 		input:      newInputPopup(),
+		pinCurrent: inputPopup{anim: newPopupAnimator("pincurrent")},
+		pinConfirm: inputPopup{anim: newPopupAnimator("pinconfirm")},
 		confirm:    newConfirmPopup(),
 		quitAsk:    confirmPopup{anim: newPopupAnimator("quit")},
 		quitHelp:   helpPopup{anim: newPopupAnimator("quithelp")},
@@ -103,7 +113,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		for _, p := range []interface{ setSize(int, int) }{&m.menu, &m.options, &m.globalMenu, &m.help, &m.input, &m.confirm, &m.quitAsk, &m.quitHelp, &m.toast} {
+		for _, p := range []interface{ setSize(int, int) }{&m.menu, &m.options, &m.globalMenu, &m.help, &m.input, &m.pinCurrent, &m.pinConfirm, &m.confirm, &m.quitAsk, &m.quitHelp, &m.toast} {
 			p.setSize(msg.Width, msg.Height)
 		}
 		if m.preview != nil {
@@ -127,7 +137,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AnimTickMsg:
 		return m, tea.Batch(
 			m.menu.anim.tick(msg), m.options.anim.tick(msg), m.globalMenu.anim.tick(msg), m.help.anim.tick(msg),
-			m.input.anim.tick(msg), m.confirm.anim.tick(msg), m.quitAsk.anim.tick(msg), m.quitHelp.anim.tick(msg),
+			m.input.anim.tick(msg), m.pinCurrent.anim.tick(msg), m.pinConfirm.anim.tick(msg),
+			m.confirm.anim.tick(msg), m.quitAsk.anim.tick(msg), m.quitHelp.anim.tick(msg),
 			m.toast.anim.tick(msg))
 	case toastExpireMsg:
 		return m, m.toast.expire(msg)
@@ -140,6 +151,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case inputThawMsg:
 		m.input.thaw(msg)
+		m.pinCurrent.thaw(msg)
+		m.pinConfirm.thaw(msg)
 		return m, nil
 	case splashTickMsg, splashIdentityMsg, splashHintMsg:
 		var cmd tea.Cmd
@@ -192,14 +205,14 @@ func (m AppModel) key(msg tea.KeyMsg) (AppModel, tea.Cmd) {
 		return m, nil
 	}
 	// Typing: every printable key is a character (tdp K8).
-	if m.input.anim.owns() {
-		if !m.input.isInteractive() || m.input.frozen {
+	if box := m.typingIn(); box != nil {
+		if !box.isInteractive() || box.frozen {
 			return m, nil
 		}
 		if k == "enter" {
-			return m, m.done(m.commitInput())
+			return m, m.done(m.commitInput(box))
 		}
-		m.input.update(msg)
+		box.update(msg)
 		return m, nil
 	}
 	// q leaves from any surface but a box being typed in (tdp K1, K9).
@@ -394,12 +407,14 @@ func (m *AppModel) closeTop() tea.Cmd {
 		return m.help.close()
 	case m.confirm.anim.owns():
 		return m.confirm.close()
+	case m.pinConfirm.anim.owns():
+		return m.pinConfirm.close()
 	case m.input.anim.owns():
-		// Any step of a PIN chain cancels the whole chain (ux.md §2.2).
-		m.pinNew = ""
 		return m.input.close()
 	case m.options.anim.owns():
 		return m.options.close()
+	case m.pinCurrent.anim.owns():
+		return m.pinCurrent.close()
 	case m.globalMenu.anim.owns():
 		return m.globalMenu.close()
 	case m.menu.anim.owns():
@@ -412,7 +427,8 @@ func (m *AppModel) closeTop() tea.Cmd {
 func (m AppModel) popupDepth() int {
 	n := 0
 	for _, up := range []bool{m.menu.anim.owns(), m.options.anim.owns(), m.globalMenu.anim.owns(), m.help.anim.owns(),
-		m.input.anim.owns(), m.confirm.anim.owns(), m.quitAsk.anim.owns(), m.quitHelp.anim.owns()} {
+		m.input.anim.owns(), m.pinCurrent.anim.owns(), m.pinConfirm.anim.owns(), m.confirm.anim.owns(),
+		m.quitAsk.anim.owns(), m.quitHelp.anim.owns()} {
 		if up {
 			n++
 		}
@@ -454,8 +470,10 @@ func (m AppModel) View() string {
 	}{
 		{m.menu.isActive(), m.menu.view},
 		{m.globalMenu.isActive(), m.globalMenu.view},
+		{m.pinCurrent.isActive(), m.pinCurrent.view},
 		{m.options.isActive(), m.options.view},
 		{m.input.isActive(), m.input.view},
+		{m.pinConfirm.isActive(), m.pinConfirm.view},
 		{m.confirm.isActive(), m.confirm.view},
 		{m.help.isActive(), m.help.view},
 		{m.quitAsk.isActive(), m.quitAsk.view},
@@ -541,10 +559,26 @@ func (m AppModel) runRow(key string) (AppModel, tea.Cmd) {
 	return m, m.done(cmd)
 }
 
-// boxUp: a confirm, an input, an options list or the quit confirm owns
-// the keyboard.
+// boxUp: a confirm, an input, a PIN step, an options list or the quit
+// confirm owns the keyboard.
 func (m AppModel) boxUp() bool {
-	return m.confirm.anim.owns() || m.input.anim.owns() || m.options.anim.owns() || m.quitAsk.anim.owns()
+	return m.confirm.anim.owns() || m.input.anim.owns() || m.pinCurrent.anim.owns() || m.pinConfirm.anim.owns() ||
+		m.options.anim.owns() || m.quitAsk.anim.owns()
+}
+
+// typingIn is the box being typed in, if one is on top: confirm PIN over
+// the new PIN, then any input, then current PIN — unless the choice of
+// New or Remove is over it, which takes the keys (tdp F4).
+func (m *AppModel) typingIn() *inputPopup {
+	switch {
+	case m.pinConfirm.anim.owns():
+		return &m.pinConfirm
+	case m.input.anim.owns():
+		return &m.input
+	case m.pinCurrent.anim.owns() && !m.options.anim.owns():
+		return &m.pinCurrent
+	}
+	return nil
 }
 
 // done follows a commit: one that opened no next box finished what a menu
