@@ -469,7 +469,13 @@ func (m LockModel) View() string {
 			out = plainRows(m.plain, bg, fg, m.width, rows, dimmed)
 		}
 	}
-	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note))
+	status := statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note)
+	if dimmed {
+		// Under the prompt, all of it — the red of a config error too
+		// (tdp F8, 2026-09-28).
+		status = dimBase(status)
+	}
+	out = append(out, status)
 	view := strings.Join(out, "\n")
 	if m.prompt.anim.isActive() {
 		view = overlay.Composite(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
