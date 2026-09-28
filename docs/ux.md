@@ -106,10 +106,10 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | `[1]` Green `●` | 啟用中的 saver（只顯示，不設） |
 | 值 Green | 使用者設了：PIN `set`、`on` |
 | 值 Yellow | 還沒設：`not set`；畫布 `no PIN` |
-| Red | 錯：PIN wrong、lockout、`· invalid`、`· taken`、`config error` |
+| Red | 錯：input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）、`config error` |
 | 值 Mauve | 可以改的值 |
 | dim | 唯讀（type、色票）、menu 裡 disabled 的列、menu 的 region header |
-| 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態（invalid / taken / wrong / try again in N s；`[2]` 的 ` · unsaved`） |
+| 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態：`[2]` 的 ` · unsaved`、PIN prompt 的 ` · closing`；input 的錯誤不在這裡，在框內的錯誤列（2026-09-28，tdp F7、K3） |
 | 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
 | R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`） |
 
@@ -137,13 +137,13 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 | 欄位 | 行為 |
 |---|---|
-| name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 邊框 ` · empty` 框留著、重複 → ` · taken` 框留著、否則寫檔；Esc 不動 |
+| name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 錯誤列 `name is empty` 框留著、重複 → `name is taken` 框留著、否則寫檔；Esc 不動 |
 | command（custom；2026-09-25） | 一行 input popup，邊框 `command`，預填目前值；Enter 照打的存（前後空白去掉），空 = 未設；Esc 不動 |
 | layout / size / font / time / date / runner / scene / profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
-| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → ` · invalid` 框留著 |
-| bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → ` · one key, e.g. l or C-l`（screen：` · one key, e.g. l or ^L`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |
-| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → ` · absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear`；on 時改路徑，區塊搬到新檔（2026-09-25） |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → 錯誤列 `a whole number, 0 or more` 框留著 |
+| bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |
+| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → 錯誤列 `an absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear`；on 時改路徑，區塊搬到新檔（2026-09-25） |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 
@@ -153,8 +153,8 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 | 動作 | 順序 | 失敗 |
 |---|---|---|
-| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：toast `PIN mismatch`，回到空的 `new PIN`；長度不在 4 到 64：邊框 ` · 4-64 chars` 框留著 |
-| Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：邊框 ` · wrong` 1 秒、清空、留在 current PIN |
+| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：toast `PIN mismatch`，回到空的 `new PIN`；長度不在 4 到 64：錯誤列 `4-64 chars` 框留著 |
+| Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：錯誤列 `wrong PIN` 1 秒、清空、留在 current PIN |
 
 每一步一個 popup、一次只問一件事；任一步 Esc 取消整串、什麼都不寫。遮罩顯示 `●`，不顯示長度以外的資訊；`●` 之間空一格、從框中央向兩側長，跟鎖定畫布的 prompt 同一個畫法（2026-09-24）。
 
@@ -165,9 +165,9 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | saver 上任何鍵 | 開 prompt；那個鍵**不算**輸入 |
 | 可列印字元 | 追加，最多 64；`●` 遮罩 |
 | Backspace | 刪一字 |
-| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 邊框 ` · wrong` Red 1 秒、吞掉所有輸入、清空 |
+| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空 |
 | Esc | 回 saver、輸入丟掉 |
-| 連錯 `wrong_pin_attempts` 次（0 = 關） | 邊框 ` · try again in N s` Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
+| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中；custom：新尺寸也轉給程式的 pty |
 | custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停 |

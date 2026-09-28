@@ -59,29 +59,6 @@ help → quitAsk → quitHelp）用 `overlay.Composite` 一層一層疊上去，
 
 ---
 
-## 2. input popup 沒有預留錯誤列，錯誤寫在標題尾綴 —— F7、K3
-
-- **現況**：
-  - 一般 input（`inputpopup.go` `view()`）：框內三列（欄名、空白、值），錯誤是 `suffix` 接在上框標題後面（` · empty`、` · taken`、
-    ` · invalid`、` · absolute or ~/ path`、` · one key, e.g. l or C-l`、` · <err>`；`actions.go` 735、739、798、835、855、857、873、886 行），
-    邊框轉紅。
-  - PIN input：框內一列點點；目前 PIN 錯是 `freeze(" · wrong")`（`actions.go` 867 行）：標題尾綴、清空、吞鍵 1 秒、下框 hint 拿掉。
-    `confirm PIN` 跟 `new PIN` 不一致時跳 **toast** `PIN mismatch`，再重開 `new PIN`（`actions.go` 882 行）。
-  - 鎖定畫布的 PIN prompt（`pinprompt.go` `view()`）：`· wrong`、`· try again in N s` 寫在標題，那時框內一列清成空白。
-- **規則**：F7：input popup 打開時高度就含一列錯誤列，沒有錯誤時空白；送出失敗時錯誤寫在這一列，框的高度不變。
-  K3：不合格就不送出，把錯誤（哪個欄位、為什麼）寫在那一列。
-- **怎麼改**：
-  - 一般 input：`rows` 多一列錯誤列（放在值那一列下面），`suffix` 改成錯誤列的內容（Red），上框標題只寫型別。錯誤寫成一句話
-    （`name taken`、`not a number`、`absolute or ~/ path` …），單一欄位的框「哪個欄位」就是框本身。何時清掉照舊（下一個鍵）。
-  - PIN input：同一列錯誤列；`freeze` 的 `wrong` 寫進錯誤列。`PIN mismatch` 不再跳 toast，寫進重開的 `new PIN` 框的錯誤列
-    （這是 `confirm PIN` 送出失敗，K3 要求寫在 input 裡）；ux.md §5 的 toast 清單拿掉 `PIN mismatch`。
-  - 鎖定畫布的 PIN prompt：同一列錯誤列放 `wrong` 與 `try again in N s`，點點那一列在錯誤時照舊清空；`· closing` 不是錯誤，留在標題。
-    邊框轉紅是 D2 的警示色，可以留著。三種 PIN 框共用 `pinRow` 之外，錯誤列也共用同一個畫法（`ui.md` 說三個 PIN 框長得一樣）。
-  - 測試：每種 input 有錯與沒錯時 `View()` 裡框的列數相同；錯誤文字在框內、不在上框。改寫 `app_test.go` 154、185、800、899 行量
-    `suffix` 的斷言；`lockscreen_test.go` 156 行量 `try again in 30 s` 的照樣過，另加「在框內那一列」。mutation：錯誤寫回標題、錯誤列只在有錯時才加。
-  - 文件：`ui.md` §3.1 input 列（`number · invalid`、`name · taken` 寫在邊框）、§3.2 四個狀態的框圖、`ux.md` §2.1 的輸入表
-    （name、config file path 等「邊框 ` · …` 框留著」）、§2.2 Change PIN 列、§2.3 PIN prompt 表的 Enter 與連錯兩列、`ui.md` §4 色帶的 Red 用途。
-
 ## 3. 設定畫面：popup 開著時底下不 dim —— F8
 
 - **現況**：`app.go` `View()`（454–470 行）照固定順序把每個 `isActive()` 的 popup 用 `overlay.Composite` 疊上去，面板、footer、

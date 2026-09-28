@@ -728,15 +728,16 @@ func (m *AppModel) askPINAction() tea.Cmd {
 // ---- the input box's answer
 
 // takeName is a name typed for a profile — new, copied or renamed — or
-// why it will not do: the box says ` · empty` or ` · taken` and stays.
+// why it will not do: the box says `name is empty` or `name is taken`
+// in its error row and stays (tdp K3).
 func (m *AppModel) takeName(v string, self int) (string, bool) {
 	name := strings.TrimSpace(v)
 	if name == "" {
-		m.input.suffix = " · empty"
+		m.input.err = "name is empty"
 		return "", false
 	}
 	if i := m.cfg.Index(name); i >= 0 && i != self {
-		m.input.suffix = " · taken"
+		m.input.err = "name is taken"
 		return "", false
 	}
 	return name, true
@@ -795,7 +796,7 @@ func (m *AppModel) commitInput() tea.Cmd {
 		if v != "" {
 			var err error
 			if n, err = strconv.Atoi(v); err != nil || n < 0 {
-				m.input.suffix = " · invalid"
+				m.input.err = "a whole number, 0 or more"
 				return nil
 			}
 		}
@@ -832,7 +833,7 @@ func (m *AppModel) commitInput() tea.Cmd {
 		}
 		v = strings.TrimSpace(v)
 		if _, ok := config.AbsPath(v); v != "" && !ok {
-			m.input.suffix = " · absolute or ~/ path"
+			m.input.err = "an absolute or ~/ path"
 			return nil
 		}
 		before := m.snapshot()
@@ -852,9 +853,9 @@ func (m *AppModel) commitInput() tea.Cmd {
 		v = strings.TrimSpace(v)
 		name, t := m.tool()
 		if strings.ContainsAny(v, " \t#") {
-			m.input.suffix = " · one key, e.g. l or C-l"
+			m.input.err = "one key, e.g. l or C-l"
 			if name == tools[toolScreen] {
-				m.input.suffix = " · one key, e.g. l or ^L"
+				m.input.err = "one key, e.g. l or ^L"
 			}
 			return nil
 		}
@@ -864,13 +865,13 @@ func (m *AppModel) commitInput() tea.Cmd {
 
 	case inputPINCurrent:
 		if !m.cfg.CheckPIN(v) {
-			return m.input.freeze(" · wrong")
+			return m.input.freeze("wrong PIN")
 		}
 		return tea.Batch(m.input.close(), m.askPINAction())
 
 	case inputPINNew:
 		if err := config.CheckPINLength(v); err != nil {
-			m.input.suffix = " · " + err.Error()
+			m.input.err = err.Error()
 			return nil
 		}
 		m.pinNew = v
@@ -883,7 +884,7 @@ func (m *AppModel) commitInput() tea.Cmd {
 		}
 		before := m.snapshot()
 		if err := m.cfg.SetPIN(v); err != nil {
-			m.input.suffix = " · " + err.Error()
+			m.input.err = err.Error()
 			return nil
 		}
 		m.pinNew = ""
