@@ -580,9 +580,9 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		// confirm; New goes on to the new PIN and its confirmation.
 		if v == pinRemove {
 			m.cfg.ClearPIN()
-			return tea.Batch(m.options.close(), m.save(before), m.toast.show("PIN removed", toastInfo))
+			return tea.Batch(m.endPIN(), m.save(before), m.toast.show("PIN removed", toastInfo))
 		}
-		return tea.Batch(m.options.close(), m.askPIN("new PIN", inputPINNew))
+		return m.askPIN(&m.input, "new PIN", inputPINNew)
 	case rowChannel:
 		n, err := strconv.Atoi(v)
 		if err != nil {
@@ -694,15 +694,35 @@ func (m *AppModel) editCommand() tea.Cmd {
 
 // ---- the PIN (ux.md §2.2): one box at a time, one question each.
 
-func (m *AppModel) setPIN() tea.Cmd { return m.askPIN("new PIN", inputPINNew) }
+func (m *AppModel) setPIN() tea.Cmd { return m.askPIN(&m.input, "new PIN", inputPINNew) }
 
 // changePIN is Enter on a PIN that is set: the current one first, then
 // the choice — a new PIN, or none (user, 2026-09-24: a PIN must be
 // removable, and Remove takes effect on Enter, with no confirm).
-func (m *AppModel) changePIN() tea.Cmd { return m.askPIN("current PIN", inputPINCurrent) }
+func (m *AppModel) changePIN() tea.Cmd {
+	return m.askPIN(&m.pinCurrent, "current PIN", inputPINCurrent)
+}
 
-func (m *AppModel) askPIN(title string, action inputAction) tea.Cmd {
-	return m.input.ask(inputPopup{title: title, prompt: "PIN", masked: true, accept: "next", action: action}, m.layer())
+// askPIN opens one step of the PIN chain in its own box, over the step
+// before (tdp v0.1.9 F1).
+func (m *AppModel) askPIN(box *inputPopup, title string, action inputAction) tea.Cmd {
+	return box.ask(inputPopup{title: title, prompt: "PIN", masked: true, accept: "next", action: action}, m.layer())
+}
+
+// endPIN closes the whole chain, done: every step still up, and the new
+// PIN it held.
+func (m *AppModel) endPIN() tea.Cmd {
+	m.pinNew = ""
+	var cmds []tea.Cmd
+	for _, box := range []*inputPopup{&m.pinConfirm, &m.input, &m.pinCurrent} {
+		if box.anim.owns() {
+			cmds = append(cmds, box.close())
+		}
+	}
+	if m.options.anim.owns() {
+		cmds = append(cmds, m.options.close())
+	}
+	return tea.Batch(cmds...)
 }
 
 // The two things to do once the current PIN is given.
@@ -743,9 +763,10 @@ func (m *AppModel) takeName(v string, self int) (string, bool) {
 	return name, true
 }
 
-func (m *AppModel) commitInput() tea.Cmd {
-	v := m.input.value
-	switch m.input.action {
+// commitInput is Enter in box: m.input, or a step of the PIN chain.
+func (m *AppModel) commitInput(box *inputPopup) tea.Cmd {
+	v := box.value
+	switch box.action {
 	case inputNew:
 		name, ok := m.takeName(v, -1)
 		if !ok {
@@ -865,9 +886,9 @@ func (m *AppModel) commitInput() tea.Cmd {
 
 	case inputPINCurrent:
 		if !m.cfg.CheckPIN(v) {
-			return m.input.freeze("wrong PIN")
+			return box.freeze("wrong PIN")
 		}
-		return tea.Batch(m.input.close(), m.askPINAction())
+		return m.askPINAction()
 
 	case inputPINNew:
 		if err := config.CheckPINLength(v); err != nil {
@@ -875,20 +896,21 @@ func (m *AppModel) commitInput() tea.Cmd {
 			return nil
 		}
 		m.pinNew = v
-		return m.askPIN("confirm PIN", inputPINConfirm)
+		return m.askPIN(&m.pinConfirm, "confirm PIN", inputPINConfirm)
 
 	case inputPINConfirm:
+		// Refused here, in this box (tdp K3): a new PIN to type again is
+		// one Esc back.
 		if v != m.pinNew {
-			m.pinNew = ""
-			return tea.Batch(m.toast.show("PIN mismatch", toastError), m.askPIN("new PIN", inputPINNew))
+			box.err, box.value = "not the new PIN", ""
+			return nil
 		}
 		before := m.snapshot()
 		if err := m.cfg.SetPIN(v); err != nil {
-			m.input.err = err.Error()
+			box.err = err.Error()
 			return nil
 		}
-		m.pinNew = ""
-		return tea.Batch(m.input.close(), m.save(before), m.toast.show("PIN set", toastInfo))
+		return tea.Batch(m.endPIN(), m.save(before), m.toast.show("PIN set", toastInfo))
 	}
 	return m.input.close()
 }

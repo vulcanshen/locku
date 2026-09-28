@@ -56,8 +56,12 @@ type inputPopup struct {
 	screenH   int
 }
 
-// inputThawMsg ends the frozen second.
-type inputThawMsg struct{ gen int }
+// inputThawMsg ends the frozen second of the box whose animator is target:
+// three boxes can be up at once (the PIN chain), each counting its own.
+type inputThawMsg struct {
+	target string
+	gen    int
+}
 
 const inputFreeze = time.Second
 
@@ -84,12 +88,12 @@ func (m *inputPopup) ask(p inputPopup, layer int) tea.Cmd {
 func (m *inputPopup) freeze(err string) tea.Cmd {
 	m.err, m.value, m.frozen = err, "", true
 	m.frozenGen++
-	gen := m.frozenGen
-	return tea.Tick(inputFreeze, func(time.Time) tea.Msg { return inputThawMsg{gen} })
+	target, gen := m.anim.target, m.frozenGen
+	return tea.Tick(inputFreeze, func(time.Time) tea.Msg { return inputThawMsg{target, gen} })
 }
 
 func (m *inputPopup) thaw(msg inputThawMsg) {
-	if msg.gen == m.frozenGen {
+	if msg.target == m.anim.target && msg.gen == m.frozenGen {
 		m.frozen, m.err = false, ""
 	}
 }

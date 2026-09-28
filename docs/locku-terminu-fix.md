@@ -108,25 +108,6 @@ v0.1.9 只補了 v0.1.8 popup 規則的細節。本檔的條目與「待確認�
 
 - **本檔**：待確認第 4 題（邊框）照上面定案。PIN 框 48 欄、鎖定畫布的 dim 色、custom saver 底下無法 dim 三題仍待 user 在 locku 決定。
 
-## 6. 改 PIN 的每一步不是自己的 popup —— F1（v0.1.9 多步驟）、F4
-
-（locku session 對照 v0.1.9 時補的，2026-09-28。）
-
-- **現況**：`current PIN` 送出後 `m.input.close()` 再開 options（New / Remove），兩步沒有疊起來；`new PIN` 送出後
-  `askPIN("confirm PIN", …)` 用同一個 `input` 換內容（`actions.go` 877 行），不是新的一層。`Esc` 取消整串、回到 menu（`ux.md` §5）。
-  不一致時跳 toast `PIN mismatch`，再重開 `new PIN`。
-- **規則**：v0.1.9 F1：多步驟流程的每一步是自己的 popup，疊起來（F4 保留 source），不在同一個框裡換內容；每一步有自己打開時定好的高度。
-  F4 / K4：`Esc` 只關最上層，回到上一步。K3：送出失敗，錯誤寫在那個 input 的錯誤列，框留著。
-- **怎麼改**：
-  - 同一時間可以有好幾個 input 開著：`current PIN` → options（New / Remove）→ `new PIN` → `confirm PIN` 一層疊一層，底下的留著。
-    Set PIN（還沒有 PIN）是 `new PIN` → `confirm PIN` 兩層。整串完成（PIN set / removed）才整疊清掉，連同底下的 menu（F4、T1）。
-  - `Esc` 一次退一步：在 `confirm PIN` 按 `Esc` 回到 `new PIN`（值照留或清空，照 input 的慣例），在 options 按 `Esc` 回到 `current PIN`。
-  - 不一致：錯誤寫在 `confirm PIN` 的錯誤列、值清空、框留著；要重打新的 PIN 就 `Esc` 回 `new PIN`。不再跳 toast。
-  - 路由、`closeTop`、繪製、`popupDepth`、`owns()`、F8 的「哪一層亮」都要看得到這一疊。
-  - 測試：每一步開著時底下那一步還 `owns()`；`Esc` 從 `confirm PIN` 回到 `new PIN`、從 options 回到 `current PIN`；不一致時錯誤在
-    `confirm PIN` 的框內、沒有 toast；完成時整疊清掉。mutation：換內容而不是疊、`Esc` 關整串、不一致跳 toast。
-  - 文件：`ux.md` §2.2 PIN 三連問、§5 浮層行為的「PIN 那串中途 `Esc` 取消整串」、toast 清單拿掉 `PIN mismatch`；`ui.md` 的層數。
-
 ## 已定案（2026-09-28，使用者）
 
 1. **PIN 框寬度照 F7**：PIN 最多 64 字，每個點後面一格空白、再一格游標，整列 129 欄，超過 120 的上限（使用者：「用這個總寬和 120 來判斷」），

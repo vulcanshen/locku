@@ -66,7 +66,7 @@ func (m AppModel) press(keys ...string) AppModel {
 // settle runs every popup animation to its end.
 func (m AppModel) settle() AppModel {
 	for i := 0; i < animFrames+1; i++ {
-		for _, t := range []string{"spacemenu", "options", "globalmenu", "help", "input", "confirm", "quit", "quithelp", "toast"} {
+		for _, t := range []string{"spacemenu", "options", "globalmenu", "help", "input", "pincurrent", "pinconfirm", "confirm", "quit", "quithelp", "toast"} {
 			mm, _ := m.Update(AnimTickMsg{Target: t})
 			m = mm.(AppModel)
 		}
@@ -878,53 +878,90 @@ func TestPINSetChangeClear(t *testing.T) {
 	if !strings.Contains(m.input.err, "4-64") {
 		t.Fatalf("a short PIN must be refused: %q", m.input.err)
 	}
+	// Each step is its own popup, over the one before (tdp v0.1.9 F1).
 	m = m.press("ctrl+u").typed("1234").press("enter")
-	if m.input.title != "confirm PIN" {
-		t.Fatalf("expected the confirm box, got %q", m.input.title)
+	if m.pinConfirm.title != "confirm PIN" || !m.pinConfirm.anim.owns() || !m.input.anim.owns() {
+		t.Fatalf("confirm PIN must open over new PIN: confirm %v, new %v", m.pinConfirm.anim.owns(), m.input.anim.owns())
 	}
+	// A mismatch is refused in the confirm box itself, no toast (tdp K3).
 	m = m.typed("9999").press("enter")
-	if m.input.title != "new PIN" || !strings.Contains(m.toast.msg, "mismatch") {
-		t.Fatalf("a mismatch goes back to new PIN with a toast: %q %q", m.input.title, m.toast.msg)
+	if m.pinConfirm.err != "not the new PIN" || m.pinConfirm.value != "" || !m.pinConfirm.anim.owns() || m.toast.isActive() {
+		t.Fatalf("a mismatch: err %q, value %q, toast %v", m.pinConfirm.err, m.pinConfirm.value, m.toast.isActive())
 	}
-	m = m.typed("1234").press("enter").typed("1234").press("enter")
+	// Esc takes one step back: to the new PIN, as typed (tdp F4, K4).
+	m = m.press("esc")
+	if m.pinConfirm.anim.owns() || !m.input.anim.owns() || m.input.value != "1234" {
+		t.Fatalf("Esc on confirm PIN: confirm %v, new %v %q", m.pinConfirm.anim.owns(), m.input.anim.owns(), m.input.value)
+	}
+	m = m.press("enter").typed("1234").press("enter")
 	if !m.cfg.HasPIN() || !saved(t).CheckPIN("1234") || m.toast.msg != "PIN set" {
 		t.Fatal("PIN not set")
 	}
+	if m.input.anim.owns() || m.pinConfirm.anim.owns() || m.pinNew != "" {
+		t.Error("the chain must close whole once the PIN is set")
+	}
 	// Change: the current one first, and a wrong one freezes the box.
-	m = m.press("enter")
-	if m.input.title != "current PIN" {
-		t.Fatalf("change must ask the current PIN, got %q", m.input.title)
+	m = m.expireToast().press("enter")
+	if m.pinCurrent.title != "current PIN" || !m.pinCurrent.anim.owns() {
+		t.Fatalf("change must ask the current PIN, got %q", m.pinCurrent.title)
 	}
 	m = m.typed("0000").press("enter")
-	if m.input.err != "wrong PIN" || !m.input.frozen {
-		t.Fatalf("wrong current: %+v", m.input)
+	if m.pinCurrent.err != "wrong PIN" || !m.pinCurrent.frozen {
+		t.Fatalf("wrong current: %+v", m.pinCurrent)
 	}
 	m = m.typed("1")
-	if m.input.value != "" {
+	if m.pinCurrent.value != "" {
 		t.Fatal("frozen box took a key")
 	}
-	mm, _ := m.Update(inputThawMsg{gen: m.input.frozenGen})
+	// Another box's thaw is not this one's.
+	mm, _ := m.Update(inputThawMsg{target: "input", gen: m.pinCurrent.frozenGen})
+	if !mm.(AppModel).pinCurrent.frozen {
+		t.Fatal("input's thaw thawed current PIN")
+	}
+	mm, _ = m.Update(inputThawMsg{target: "pincurrent", gen: m.pinCurrent.frozenGen})
 	m = mm.(AppModel)
-	// The right current PIN opens the choice: a new PIN, or none.
+	// The right current PIN opens the choice over it: a new PIN, or none.
 	m = m.typed("1234").press("enter")
 	if !m.options.isInteractive() || len(m.options.items) != 2 || m.options.items[0].label != "New PIN" || m.options.items[1].label != "Remove PIN" {
 		t.Fatalf("after the current PIN: %+v", m.options.items)
 	}
-	m = m.press("enter").typed("5678").press("enter").typed("5678").press("enter")
+	if !m.pinCurrent.anim.owns() {
+		t.Fatal("current PIN must stay under the choice")
+	}
+	// Esc on the choice is back on current PIN, which takes the keys again.
+	m = m.press("esc")
+	if m.options.anim.owns() || !m.pinCurrent.anim.owns() {
+		t.Fatalf("Esc on the choice: options %v, current %v", m.options.anim.owns(), m.pinCurrent.anim.owns())
+	}
+	m = m.press("ctrl+u").typed("1234").press("enter", "enter")
+	if !m.input.anim.owns() || !m.options.anim.owns() || !m.pinCurrent.anim.owns() {
+		t.Fatalf("new PIN must open over the choice and current PIN: %v %v %v", m.input.anim.owns(), m.options.anim.owns(), m.pinCurrent.anim.owns())
+	}
+	m = m.typed("5678").press("enter").typed("5678").press("enter")
 	if !m.cfg.CheckPIN("5678") {
 		t.Fatal("PIN not changed")
 	}
-	// Remove: current PIN, the choice, Enter — done, no confirm.
+	if m.pinCurrent.anim.owns() || m.options.anim.owns() || m.input.anim.owns() || m.pinConfirm.anim.owns() {
+		t.Error("the chain must close whole once the PIN is changed")
+	}
+	// Remove: current PIN, the choice, Enter — done, no confirm, all of it closed.
 	m = m.expireToast().press("enter").typed("5678").press("enter", "j", "enter")
 	if m.confirm.isActive() || m.cfg.HasPIN() || saved(t).HasPIN() || m.toast.msg != "PIN removed" {
 		t.Errorf("PIN not removed: hasPIN=%v toast=%q", m.cfg.HasPIN(), m.toast.msg)
 	}
-	// Esc anywhere in a chain cancels all of it. (The toast goes first —
-	// Esc takes the topmost thing down, and a toast is a thing — so it is
-	// expired here as its timer would have.)
-	m = m.expireToast().press("enter").typed("1234").press("enter", "esc")
-	if m.input.anim.owns() || m.pinNew != "" || m.cfg.HasPIN() {
-		t.Error("Esc did not cancel the chain")
+	if m.pinCurrent.anim.owns() || m.options.anim.owns() {
+		t.Error("the chain must close whole once the PIN is removed")
+	}
+	// Esc walks the chain back a step at a time, and nothing is set.
+	m = m.expireToast().press("enter").typed("1234").press("enter")
+	for _, want := range []string{"new PIN", ""} {
+		m = m.press("esc")
+		if top := m.typingIn(); (top == nil) != (want == "") || (top != nil && top.title != want) {
+			t.Fatalf("Esc: top box %+v, want %q", top, want)
+		}
+	}
+	if m.cfg.HasPIN() {
+		t.Error("an Esc'd chain set a PIN")
 	}
 }
 
