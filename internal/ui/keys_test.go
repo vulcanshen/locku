@@ -61,3 +61,38 @@ func TestHintAndFooterColours(t *testing.T) {
 		t.Errorf("hint: j/k Blue, :move Overlay0: %q", h)
 	}
 }
+
+// helpLines is the ? box's every line, colours and all.
+func helpLines(m AppModel) string {
+	_, _, lines := m.help.layout()
+	return strings.Join(lines, "\n")
+}
+
+// In ?, keys are Blue and what they do Text; keys that do one thing are
+// joined with /, a range with – (tdp M5, D2, 2026-09-29). A glossary's
+// left column is the settings' names, not keys: it stays as it was.
+func TestKeyReferenceKeys(t *testing.T) {
+	colours(t)
+	m := newTestApp(t)
+	ref := helpLines(m.press("?"))
+	if s := ansi.Strip(ref); !strings.Contains(s, "q/Ctrl-C") || !strings.Contains(s, "Tab/1–2") || strings.Contains(s, "q · Ctrl-C") {
+		t.Errorf("keys doing one thing, with / and –:\n%s", s)
+	}
+	l := line(ref, "close the top popup")
+	if !has(fgBefore(l, "Esc"), focusColor) || has(l, handColor) || !has(fgBefore(l, "close the top popup"), textColor) {
+		t.Errorf("Esc Blue, what it does Text: %q", l)
+	}
+	if s := ansi.Strip(helpLines(m.press(" ", "?"))); !strings.Contains(s, "Space/Esc") {
+		t.Errorf("the Space menu's ?:\n%s", s)
+	}
+	tmux := m.press("G", "k", "k", "2", "?")
+	g := line(helpLines(tmux), "locku's block is in the file")
+	if !has(fgBefore(g, "activate"), handColor) || has(g, focusColor) {
+		t.Errorf("tmux's glossary: the name is not a key: %q", g)
+	}
+	// The same box, a key reference again after the glossary.
+	l = line(helpLines(tmux.press("esc", "1", "?")), "close the top popup")
+	if !has(fgBefore(l, "Esc"), focusColor) {
+		t.Errorf("? on [1] after the glossary: Esc Blue: %q", l)
+	}
+}

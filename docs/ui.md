@@ -265,7 +265,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | 色帶 | 意思 | 值 |
 |---|---|---|
-| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24）；hint 與 footer 裡的鍵（2026-09-29，tdp D2） | `#89b4fa` |
+| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24）；hint、footer 與 key reference 裡的鍵（2026-09-29，tdp D2） | `#89b4fa` |
 | Surface2 | unfocused 面板邊框（2026-09-28 以前也是 PIN prompt 的 backdrop；現在畫布照原色淡化） | `#585b70` |
 | Green | 使用者足跡：啟用中的 profile `●`、PIN `set`、toggle `on`、activate `on`；custom 板子上 `EXIT 0` 的 0（2026-09-25） | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |

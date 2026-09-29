@@ -531,9 +531,9 @@ func (m *AppModel) openHelp() tea.Cmd {
 	if m.focus == panelDetail {
 		switch it := m.sideAt(); it.kind {
 		case sidePreference:
-			return m.help.open(m.layer(), helpPreference)
+			return m.help.openGlossary(m.layer(), helpPreference)
 		case sideTool:
-			return m.help.open(m.layer(), helpTool(tools[it.ref]))
+			return m.help.openGlossary(m.layer(), helpTool(tools[it.ref]))
 		}
 	}
 	return m.help.open(m.layer(), m.panelKeys())
