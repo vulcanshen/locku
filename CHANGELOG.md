@@ -13,7 +13,7 @@
 
 ### Fixed
 - On a terminal smaller than the PIN prompt, the prompt starts at its top-left and what does not fit is cut, its title always showing; over a custom saver its lower rows used to pile up on the terminal's last line.
-- On a Nerd Font that draws its icons two cells wide, as some made for CJK do, the board, the splash, the popups and their titles keep their shape: locku asks the terminal how far an icon moves the cursor when it starts, and `LOCKU__ICON_WIDTH=1` or `2` settles it by hand. Inside another terminu app's terminal it takes the width that app gives it in `TERMINU__ICON_WIDTH`, and it gives its own the same way to a custom saver's program.
+- On a Nerd Font that draws its icons two cells wide, as some made for CJK do, the board, the splash, the popups and their titles keep their shape: locku asks the terminal how far an icon moves the cursor when it starts, and `TERMINU__ICON_WIDTH=1` or `2`, which every terminu app reads, settles it by hand for the whole family (`LOCKU__ICON_WIDTH`, locku's own, comes first). Inside another terminu app's terminal that app sets `TERMINU__ICON_WIDTH` for locku, and locku sets it the same way for a custom saver's program.
 - A popup's hint too wide for its box — the PIN prompt on a narrow terminal — drops whole items from the end instead of being cut mid-word.
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
 - `Ctrl-C` in a box being typed in asks about quitting over the box, and `Enter` then quits; it used to submit the box under it.
