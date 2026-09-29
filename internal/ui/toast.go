@@ -65,6 +65,6 @@ func (m toastModel) view() string {
 		title = " " + glyphWarn + " locku "
 	}
 	rows := []string{style.Render(padRight("  "+m.msg, innerW))}
-	return drawPopupBox(popupLayerColor(1), title, hintLegend([][2]string{{"Esc", "close"}}),
+	return drawPopupBox(popupLayerColor(1), title, [][2]string{{"Esc", "close"}},
 		animRows(m.anim, capRows(rows, m.screenH)), innerW)
 }

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -122,5 +123,35 @@ func TestKeysInSentencesAreBracketed(t *testing.T) {
 	s, _ = s.update(splashHintMsg{})
 	if v := ansi.Strip(s.render(100, 40)); !strings.Contains(v, "Press [Esc] to close") {
 		t.Errorf("the splash:\n%s", v)
+	}
+}
+
+// A hint too wide for its box drops whole pairs from the end, as the
+// footer does, never cut inside one (tdp D3, 2026-09-29).
+func TestHintDropsWholePairs(t *testing.T) {
+	path := func(w int) string { // tmux's config file path, with an offer
+		m := newTestApp(t).size(w, 30).press("G", "k", "k", "2", "j", "enter")
+		return ansi.Strip(line(m.View(), "Enter:save"))
+	}
+	if l := path(80); !strings.Contains(l, "╰─ Enter:save Tab:edit it Backspace:clear Esc:cancel ─") {
+		t.Errorf("80 columns hold the whole hint: %q", l)
+	}
+	if l := path(40); !strings.Contains(l, "╰─ Enter:save Tab:edit it ─") || strings.Contains(l, "Backspace") {
+		t.Errorf("40 columns: the first two pairs, whole: %q", l)
+	}
+	pin := func(w int) string { // the lock's PIN prompt
+		m := testLock(t, "1234", nil)
+		m, _ = m.step(tea.WindowSizeMsg{Width: w, Height: 12})
+		return ansi.Strip(line(openPrompt(t, m).View(), "Enter:unlock"))
+	}
+	// The hint is 23 cells: 28 columns hold it to the corner, 27 only
+	// the first pair.
+	if l := pin(28); !strings.Contains(l, "╰─ Enter:unlock Esc:back ╯") {
+		t.Errorf("28 columns: %q", l)
+	}
+	for _, w := range []int{27, 24} {
+		if l := pin(w); !strings.Contains(l, "╰─ Enter:unlock ─") || strings.Contains(l, "Esc") {
+			t.Errorf("%d columns: Enter:unlock alone: %q", w, l)
+		}
 	}
 }

@@ -154,9 +154,9 @@ func (m inputPopup) view() string {
 		// width, the same air, the same spaced dots from the middle — one
 		// look for a PIN wherever it is typed (user, 2026-09-24).
 		innerW := popupInnerW(m.screenW)
-		hint := hintLegend([][2]string{{"Enter", m.accept}, {"Esc", "cancel"}})
+		hint := [][2]string{{"Enter", m.accept}, {"Esc", "cancel"}}
 		if m.frozen {
-			hint = ""
+			hint = nil
 		}
 		return drawPopupBox(bc, " "+glyphLock+" "+m.title+" ", hint,
 			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW), errorRow(m.err, innerW, true)}), innerW)
@@ -187,9 +187,9 @@ func (m inputPopup) view() string {
 	if offered {
 		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Backspace", "clear"})
 	}
-	hint := hintLegend(append(pairs, [2]string{"Esc", "cancel"}))
+	hint := append(pairs, [2]string{"Esc", "cancel"})
 	if m.frozen {
-		hint = ""
+		hint = nil
 	}
 	return drawPopupBox(bc, " "+glyphInput+" "+m.title+" ", hint,
 		animRows(m.anim, rows), innerW)

@@ -149,19 +149,18 @@ func animRows(a popupAnimator, rows []string) []string {
 // The hint is not decoration — it is the standing disclosure of what this
 // surface can do, and it is what lets a text-entry popup opt out of the Space
 // entry key without opening a hole in the principle (tdp K8).
-func drawPopupBox(bc lipgloss.Color, title, hint string, rows []string, innerW int) string {
+func drawPopupBox(bc lipgloss.Color, title string, hint [][2]string, rows []string, innerW int) string {
 	return drawPopupBoxPad(bc, title, hint, rows, innerW, true)
 }
 
-func drawPopupBoxPad(bc lipgloss.Color, title, hint string, rows []string, innerW int, pad bool) string {
+func drawPopupBoxPad(bc lipgloss.Color, title string, pairs [][2]string, rows []string, innerW int, pad bool) string {
 	bs := lipgloss.NewStyle().Foreground(bc)
 	ts := lipgloss.NewStyle().Foreground(bc).Bold(true)
 
 	// A title or hint wider than the box would push the border out and shear the
-	// frame — clip both. The hint arrives pre-styled from hintLegend, so it has to
-	// be clipped ANSI-aware; only the title is styled here.
+	// frame. The title is clipped; the hint keeps only the pairs that fit.
 	title = truncate(title, innerW-1)
-	hint = clipANSI(hint, innerW-1)
+	hint := hintLegend(pairs, innerW-1)
 
 	var b strings.Builder
 	b.WriteString(bs.Render("╭─") + ts.Render(title) +
@@ -208,16 +207,32 @@ func popupInnerW(screenW int) int {
 	return max(10, min(screenW-2, popupMaxW)-2)
 }
 
-// hintLegend builds a popup's bottom-border hint: Key:what, one space
-// apart — the key Blue, the colon and what it does Overlay0 (tdp M5, D2,
-// 2026-09-29; "Key what", two spaces apart, until then). It is the same
-// reading as the footer legend — bright is the key you press, dim is what
-// it does — so the rule is learned once and holds everywhere.
-func hintLegend(pairs [][2]string) string {
+// hintLegend builds a popup's bottom-border hint within w cells: Key:what,
+// one space apart — the key Blue, the colon and what it does Overlay0 (tdp
+// M5, D2, 2026-09-29; "Key what", two spaces apart, until then). It is the
+// same reading as the footer legend — bright is the key you press, dim is
+// what it does — so the rule is learned once and holds everywhere. Pairs
+// that do not fit go whole, from the end, as the footer's do; with none
+// left there is no hint (tdp D3, 2026-09-29; cut mid-pair until then).
+func hintLegend(pairs [][2]string, w int) string {
+	plainW := func(n int) int {
+		total := 2 + max(0, n-1)
+		for _, p := range pairs[:n] {
+			total += dispW(p[0]) + 1 + dispW(p[1])
+		}
+		return total
+	}
+	n := len(pairs)
+	for n > 0 && plainW(n) > w {
+		n--
+	}
+	if n == 0 {
+		return ""
+	}
 	k := lipgloss.NewStyle().Foreground(focusColor)
 	d := lipgloss.NewStyle().Foreground(dimColor)
-	parts := make([]string, 0, len(pairs))
-	for _, p := range pairs {
+	parts := make([]string, 0, n)
+	for _, p := range pairs[:n] {
 		parts = append(parts, k.Render(p[0])+d.Render(":"+p[1]))
 	}
 	return " " + strings.Join(parts, " ") + " "

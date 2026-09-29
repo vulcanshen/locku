@@ -11,6 +11,7 @@
 - The footer and the hints on the popups write each key as `Key:what`, one space apart — `Space:menu ?:help Tab/1–2:panels q:quit` — and name keys as the keycap does: `Backspace`, not `Bksp`. In `?` the keys are blue, and keys that do one thing are written `q/Ctrl-C`, `Tab/1–2`. A key named in a sentence is in brackets: `Press [Esc] to close`.
 
 ### Fixed
+- A popup's hint too wide for its box — the PIN prompt on a narrow terminal — drops whole items from the end instead of being cut mid-word.
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
 - `Ctrl-C` in a box being typed in asks about quitting over the box, and `Enter` then quits; it used to submit the box under it.
 - `q` on a help draws the question about quitting over the help, where it used to be hidden under it.
