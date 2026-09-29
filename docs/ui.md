@@ -35,7 +35,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ║                        ║│   R               ──────────●─ 242               │
 ║                        ║│   G               ────────●─── 183               │
 ╚════════════════════════╝╰──────────────────────────────────────────────────╯
- space menu   ? help   tab/1-2 panels   q quit                                  ← footer
+ Space:menu ?:help Tab/1–2:panels q:quit                                        ← footer
 ```
 
 每個 `[2]` 第一列是表頭：`Property` 與 `Value`（單數，2026-09-25 同日改），用側欄區塊標題的 Blue，不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
@@ -198,7 +198,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
 
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
-下邊框、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
+下邊框（`鍵:說明`，項目之間一格，2026-09-29，tdp M5）、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
 
 ### 3.1 設定畫面
 
@@ -234,7 +234,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 │            ● ● ● ●            │
 │                               │     錯誤列，空白
 │                               │
-╰──── enter unlock · esc back ──╯
+╰────── Enter:unlock Esc:back ──╯
 
 ╭ PIN ──────────────────────────╮     wrong：Red，1 秒，點點清空，吞輸入
 │                               │
@@ -265,13 +265,13 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | 色帶 | 意思 | 值 |
 |---|---|---|
-| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24） | `#89b4fa` |
+| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24）；hint 與 footer 裡的鍵（2026-09-29，tdp D2） | `#89b4fa` |
 | Surface2 | unfocused 面板邊框（2026-09-28 以前也是 PIN prompt 的 backdrop；現在畫布照原色淡化） | `#585b70` |
 | Green | 使用者足跡：啟用中的 profile `●`、PIN `set`、toggle `on`、activate `on`；custom 板子上 `EXIT 0` 的 0（2026-09-25） | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
 | saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
 | saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
-| Overlay0 | 狀態列、hint、唯讀的 type 列與色票列 | `#6c7086` |
+| Overlay0 | 狀態列、hint 與 footer 的冒號與說明、唯讀的 type 列與色票列 | `#6c7086` |
 | 淡化（dim） | 有浮層開著時，最上層以外的一切——面板、footer、底下的浮層、鎖定畫布與狀態列——每個顏色（前景與背景）各自 `c × 0.45 + base × 0.55`，比原色亮就維持原色；沒有顏色的字給淡化後的 Text（2026-09-28，tdp F8、D2；`internal/ui/dim.go`，照 filu 的參考實作） | tdp D2 |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
@@ -290,7 +290,7 @@ Blue 不出現在那裡。
 | Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 左上角 `[2] <名字>`（邊框色底、深色字），顏色草稿未存時接一顆 `unsaved`（focus 時 Yellow，沒 focus 整條 Surface2）；沒有種類、沒有狀態、沒有 config 路徑（使用者：分類資訊多餘，狀態是 `activate` 列）；膠囊字緊貼圓頭 cap、不留空白（同 sshu / filu），接縫兩側各一格、底色不同是左邊那顆的實心斜切、相同是 canvas 色細斜線；寬度不夠先丟 `unsaved` | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | 無 | 無 |
-| footer | `space menu   ? help   tab/1-2 panels   q quit` | 無 |
+| footer | `Space:menu ?:help Tab/1–2:panels q:quit`，跟 hint 同一個寫法（2026-09-29，tdp M5、D1；之前是 `space menu   ? help   tab/1-2 panels   q quit`）；太窄從右邊整組丟 | 無 |
 
 custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 框，沒有 locku 的任何 chrome（2026-09-25）。
 

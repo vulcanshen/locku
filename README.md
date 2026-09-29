@@ -118,7 +118,7 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 ║ Settings               ║│   B               ───●──────── 68                │
 ║   preference           ║│ fg                ■ #f2b753                      │
 ╚════════════════════════╝╰──────────────────────────────────────────────────╯
- space menu   ? help   tab/1-2 panels   q quit
+ Space:menu ?:help Tab/1–2:panels q:quit
 ```
 
 Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — what each row means on preference's, tmux's or screen's `[2]`, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.

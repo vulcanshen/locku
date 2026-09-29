@@ -1,0 +1,63 @@
+package ui
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/charmbracelet/x/ansi"
+)
+
+// fgBefore is the last foreground l sets before s, "" if s is not in l
+// as one run of text.
+func fgBefore(l, s string) string {
+	i := strings.Index(l, s)
+	if i < 0 {
+		return ""
+	}
+	ms := fgRe.FindAllString(l[:i], -1)
+	if len(ms) == 0 {
+		return ""
+	}
+	return ms[len(ms)-1]
+}
+
+// footer is the view's last row.
+func footer(m AppModel) string {
+	ls := strings.Split(m.View(), "\n")
+	return ls[len(ls)-1]
+}
+
+// A hint and the footer are Key:what, one space apart, keys named as
+// the keycap names them (tdp M5, D1, 2026-09-29).
+func TestHintsAndFooterAreKeyColonWhat(t *testing.T) {
+	m := newTestApp(t)
+	if got := strings.TrimSpace(ansi.Strip(footer(m))); got != "Space:menu ?:help Tab/1–2:panels q:quit" {
+		t.Errorf("footer: %q", got)
+	}
+	// Too narrow for all four: whole pairs go, from the right.
+	if got := strings.TrimSpace(ansi.Strip(footer(m.size(30, 12)))); got != "Space:menu ?:help" {
+		t.Errorf("footer at 30 columns: %q", got)
+	}
+	if v := ansi.Strip(m.press(" ").View()); !strings.Contains(v, "j/k:move Enter:run Esc:close") {
+		t.Errorf("the Space menu's hint:\n%s", v)
+	}
+	// tmux's config file path, with an offer to take.
+	v := ansi.Strip(m.press("G", "k", "k", "2", "j", "enter").View())
+	if !strings.Contains(v, "Enter:save Tab:edit it Backspace:clear Esc:cancel") || strings.Contains(v, "Bksp") {
+		t.Errorf("the path box's hint:\n%s", v)
+	}
+}
+
+// The key Blue, the colon and what it does Overlay0 (tdp D2).
+func TestHintAndFooterColours(t *testing.T) {
+	colours(t)
+	m := newTestApp(t)
+	f := footer(m)
+	if !has(fgBefore(f, "Space"), focusColor) || !has(fgBefore(f, ":menu"), dimColor) {
+		t.Errorf("footer: Space Blue, :menu Overlay0: %q", f)
+	}
+	h := line(m.press(" ").View(), "j/k:move")
+	if !has(fgBefore(h, "j/k"), focusColor) || !has(fgBefore(h, ":move"), dimColor) {
+		t.Errorf("hint: j/k Blue, :move Overlay0: %q", h)
+	}
+}

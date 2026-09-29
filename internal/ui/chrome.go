@@ -139,13 +139,14 @@ func panelFrame(innerW int, body []string, title []chip, focused bool) string {
 	return strings.Join(out, "\n")
 }
 
-// keyLegend renders the footer's "key desc" pairs: the standing
-// disclosure of the two entry keys (tdp M1). A user who never read a
-// README learns Space and ? exist by reading this row. When the terminal
-// is too narrow, pairs are dropped from the RIGHT — the entry keys are
-// listed first precisely so they are the last thing to go.
+// keyLegend renders the footer's Key:what pairs, written as a popup's
+// hint is (hintLegend; tdp M5, D1, 2026-09-29): the standing disclosure
+// of the two entry keys (tdp M1). A user who never read a README learns
+// Space and ? exist by reading this row. When the terminal is too narrow,
+// pairs are dropped from the RIGHT — the entry keys are listed first
+// precisely so they are the last thing to go.
 func keyLegend(pairs [][2]string, w int) string {
-	const sep = "   "
+	const sep = " "
 	plainW := func(n int) int {
 		total := 1
 		for i := 0; i < n; i++ {
@@ -164,7 +165,7 @@ func keyLegend(pairs [][2]string, w int) string {
 	d := lipgloss.NewStyle().Foreground(dimColor)
 	parts := make([]string, 0, n)
 	for i := 0; i < n; i++ {
-		parts = append(parts, k.Render(pairs[i][0])+" "+d.Render(pairs[i][1]))
+		parts = append(parts, k.Render(pairs[i][0])+d.Render(":"+pairs[i][1]))
 	}
 	return " " + strings.Join(parts, sep) + strings.Repeat(" ", max(0, w-plainW(n)))
 }

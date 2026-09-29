@@ -12,8 +12,8 @@
 
 | Track | 入口 | 入口自身怎麼被揭露 | 完整性 |
 |---|---|---|---|
-| **能做** | `Space` | footer 常駐 `space menu` | 當前 focus 的動作 100% 在 Space menu 內；全域動作 100% 在它最後一列 `Global operation` 開出的 global operation popup 內（2026-09-27，tdp M2、M4） |
-| **能讀** | `?` | footer 常駐 `? help` | 這裡能按的鍵 100% 在 key reference 內；唯讀，不能執行（2026-09-27，tdp K6） |
+| **能做** | `Space` | footer 常駐 `Space:menu` | 當前 focus 的動作 100% 在 Space menu 內；全域動作 100% 在它最後一列 `Global operation` 開出的 global operation popup 內（2026-09-27，tdp M2、M4） |
+| **能讀** | `?` | footer 常駐 `?:help` | 這裡能按的鍵 100% 在 key reference 內；唯讀，不能執行（2026-09-27，tdp K6） |
 
 **規則：一個操作沒進 Space menu（含 global operation popup）就等於不存在；`?` 是對照，不是入口。** core key 沒有字母可以括，鍵寫進 label：
 `[Enter] Edit`、`[Enter] Choose`。
@@ -143,7 +143,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | show_status | Enter 翻轉並寫檔，不開框 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → 錯誤列 `a whole number, 0 or more` 框留著 |
 | bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |
-| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → 錯誤列 `an absolute or ~/ path` 框留著。footer 有提議時多 `Tab edit it · Bksp clear`；on 時改路徑，區塊搬到新檔（2026-09-25） |
+| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → 錯誤列 `an absolute or ~/ path` 框留著。下框的 hint 有提議時多 `Tab:edit it Backspace:clear`（2026-09-29，tdp M5）；on 時改路徑，區塊搬到新檔（2026-09-25） |
 | R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 

@@ -118,7 +118,7 @@ locku pin reset
 ║ Settings               ║│   B               ───●──────── 68                │
 ║   preference           ║│ fg                ■ #f2b753                      │
 ╚════════════════════════╝╰──────────────────────────────────────────────────╯
- space menu   ? help   tab/1-2 panels   q quit
+ Space:menu ?:help Tab/1–2:panels q:quit
 ```
 
 兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，Property / Value 兩欄的表。`Tab`、`1`、`2` 在兩邊移動；`Enter` 進 `[2]` 或編輯一列；`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上是每一列的說明，在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。

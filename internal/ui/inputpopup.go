@@ -185,7 +185,7 @@ func (m inputPopup) view() string {
 	}
 	pairs := [][2]string{{"Enter", m.accept}}
 	if offered {
-		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Bksp", "clear"})
+		pairs = append(pairs, [2]string{"Tab", "edit it"}, [2]string{"Backspace", "clear"})
 	}
 	hint := hintLegend(append(pairs, [2]string{"Esc", "cancel"}))
 	if m.frozen {

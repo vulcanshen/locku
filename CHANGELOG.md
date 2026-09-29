@@ -8,6 +8,7 @@
 - A box whose Enter can be refused keeps a row for why from the moment it opens, and the reason is written there — `name is taken`, `wrong PIN`, `try again in 27 s` — instead of on its border.
 - Changing the PIN, each step is a box of its own over the one before: `Esc` goes back one step instead of cancelling the lot, and a confirmation that does not match says so in its own box instead of in a message that sent you back to the new PIN.
 - With a popup open, everything under the topmost fades, the popups under it included: every colour, foreground and background, goes darker as itself, so the capsules, the cursor bars, the swatches and the yellow `unsaved` are still there. Under the lock's PIN prompt the whole board fades the same way, the status row too. The colours are 24-bit: a truecolor terminal is needed.
+- The footer and the hints on the popups write each key as `Key:what`, one space apart — `Space:menu ?:help Tab/1–2:panels q:quit` — and name keys as the keycap does: `Backspace`, not `Bksp`.
 
 ### Fixed
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
