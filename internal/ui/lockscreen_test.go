@@ -8,7 +8,6 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vulcanshen/locku/internal/config"
@@ -262,23 +261,28 @@ func TestPreviewUnlockHandsBack(t *testing.T) {
 }
 
 func TestViewIsExactlyTheTerminal(t *testing.T) {
-	for _, sz := range [][2]int{{80, 24}, {81, 25}, {40, 12}, {20, 5}} {
-		m := testLock(t, "1234", nil)
-		m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-		check := func(label string) {
-			lines := strings.Split(m.View(), "\n")
-			if len(lines) != sz[1] {
-				t.Errorf("%dx%d %s: %d lines", sz[0], sz[1], label, len(lines))
-			}
-			for i, l := range lines {
-				if w := lipgloss.Width(l); w != sz[0] {
-					t.Errorf("%dx%d %s: line %d is %d wide", sz[0], sz[1], label, i, w)
+	// Once more with icons two cells wide: the board's pixels and the
+	// prompt's title (tdp D6, L4).
+	for _, cells := range []int{1, 2} {
+		withIcons(t, cells)
+		for _, sz := range [][2]int{{80, 24}, {81, 25}, {40, 12}, {20, 5}} {
+			m := testLock(t, "1234", nil)
+			m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+			check := func(label string) {
+				lines := strings.Split(m.View(), "\n")
+				if len(lines) != sz[1] {
+					t.Errorf("icons %d, %dx%d %s: %d lines", cells, sz[0], sz[1], label, len(lines))
+				}
+				for i, l := range lines {
+					if w := dispW(l); w != sz[0] {
+						t.Errorf("icons %d, %dx%d %s: line %d is %d wide", cells, sz[0], sz[1], label, i, w)
+					}
 				}
 			}
+			check("saver")
+			m = openPrompt(t, m)
+			check("prompt")
 		}
-		check("saver")
-		m = openPrompt(t, m)
-		check("prompt")
 	}
 }
 

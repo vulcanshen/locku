@@ -170,7 +170,7 @@ func keyLegend(pairs [][2]string, w int) string {
 	return " " + strings.Join(parts, sep) + strings.Repeat(" ", max(0, w-plainW(n)))
 }
 
-// joinHorizontal is a display-width aware block join.
+// joinHorizontal is a display-width aware block join (joinH).
 func joinHorizontal(blocks ...string) string {
-	return lipgloss.JoinHorizontal(lipgloss.Top, blocks...)
+	return joinH(blocks...)
 }

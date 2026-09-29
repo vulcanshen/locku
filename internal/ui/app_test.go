@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/vulcanshen/locku/internal/config"
 )
@@ -1140,31 +1139,36 @@ func TestMenuCoversEveryHotkey(t *testing.T) {
 }
 
 func TestViewFitsTheTerminal(t *testing.T) {
+	cells := 1
 	check := func(t *testing.T, m AppModel, label string) {
 		t.Helper()
 		lines := strings.Split(m.View(), "\n")
 		if len(lines) != m.height {
-			t.Errorf("%s: %d lines for height %d", label, len(lines), m.height)
+			t.Errorf("icons %d, %s: %d lines for height %d", cells, label, len(lines), m.height)
 		}
 		for i, l := range lines {
-			if w := lipgloss.Width(l); w != m.width {
-				t.Errorf("%s: line %d is %d wide, want %d", label, i, w, m.width)
+			if w := dispW(l); w != m.width {
+				t.Errorf("icons %d, %s: line %d is %d wide, want %d", cells, label, i, w, m.width)
 			}
 		}
 	}
-	for _, sz := range [][2]int{{100, 30}, {80, 24}, {59, 20}, {40, 12}} {
-		m := newTestApp(t).size(sz[0], sz[1])
-		check(t, m, "plain")
-		check(t, m.press(" "), "menu")
-		check(t, m.press("?"), "help")
-		check(t, m.press("r"), "input")
-		check(t, m.press("2", "j", "enter"), "options")
-		check(t, m.press("2"), "detail focused")
-		check(t, m.press("G", "2"), "preference")
-		check(t, m.press("2", "G", "enter", "G", "enter"), "profile with a draft")
-		check(t, m.press("2", " "), "profile menu with regions")
-		check(t, m.press("G", "k", "k", "k", "2"), "a saver detail")
-		check(t, m.press("G", "k", "2"), "a tool detail")
+	// Once more with icons two cells wide (tdp D6, L4).
+	for _, cells = range []int{1, 2} {
+		withIcons(t, cells)
+		for _, sz := range [][2]int{{100, 30}, {80, 24}, {59, 20}, {40, 12}} {
+			m := newTestApp(t).size(sz[0], sz[1])
+			check(t, m, "plain")
+			check(t, m.press(" "), "menu")
+			check(t, m.press("?"), "help")
+			check(t, m.press("r"), "input")
+			check(t, m.press("2", "j", "enter"), "options")
+			check(t, m.press("2"), "detail focused")
+			check(t, m.press("G", "2"), "preference")
+			check(t, m.press("2", "G", "enter", "G", "enter"), "profile with a draft")
+			check(t, m.press("2", " "), "profile menu with regions")
+			check(t, m.press("G", "k", "k", "k", "2"), "a saver detail")
+			check(t, m.press("G", "k", "2"), "a tool detail")
+		}
 	}
 }
 

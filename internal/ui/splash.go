@@ -156,7 +156,7 @@ func (m splashModel) render(width, height int) string {
 		var line strings.Builder
 		for c := 0; c < cols; c++ {
 			if color := cellColor[r*cols+c]; color != "" {
-				line.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(pixelCell))
+				line.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(pixelCell()))
 			} else {
 				line.WriteString("  ")
 			}
@@ -188,14 +188,14 @@ func (m splashModel) render(width, height int) string {
 		devMailText = dim.Render("vulcan.shen.2304@gmail.com")
 	}
 	caption := "\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, identityText) + "\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, versionText) + "\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, taglineText) + "\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, devLabelText) + "\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, devMailText) + "\n\n" +
-		lipgloss.PlaceHorizontal(logoW, lipgloss.Center, hintText)
+		centerDisp(logoW, 0, identityText) + "\n" +
+		centerDisp(logoW, 0, versionText) + "\n" +
+		centerDisp(logoW, 0, taglineText) + "\n\n" +
+		centerDisp(logoW, 0, devLabelText) + "\n" +
+		centerDisp(logoW, 0, devMailText) + "\n\n" +
+		centerDisp(logoW, 0, hintText)
 
-	return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, logo+caption)
+	return centerDisp(width, height, logo+caption)
 }
 
 // update handles key events and animation ticks while the splash is active.

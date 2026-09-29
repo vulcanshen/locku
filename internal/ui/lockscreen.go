@@ -70,8 +70,9 @@ type LockModel struct {
 	// paint draws the prompt's box for a prompt-only lock that has no
 	// renderer of its own: the custom saver's, where the box goes over
 	// the program's frozen picture and nothing else may be drawn (user,
-	// 2026-09-25).
-	paint func(box string)
+	// 2026-09-25). It is given the box's width too: the program's side
+	// cannot tell how wide an icon is (tdp D6).
+	paint func(box string, w int)
 
 	now func() time.Time
 }
@@ -127,7 +128,7 @@ func (m LockModel) withWord(word saver.Word, note string) LockModel {
 // the first frame, drawn by paint over the program's frozen picture on
 // a cols × rows screen; Esc or the timeout ends the program with Back
 // set, the right PIN with it clear.
-func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string)) LockModel {
+func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string, w int)) LockModel {
 	m := newLock(cfg, problem, false)
 	m.promptOnly, m.game, m.paint = true, nil, paint
 	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
@@ -188,7 +189,8 @@ func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
 func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m, cmd := m.step(msg)
 	if m.promptOnly && m.paint != nil && !m.over {
-		m.paint(m.prompt.view(m.now()))
+		box := m.prompt.view(m.now())
+		m.paint(box, blockWidth(strings.Split(box, "\n")))
 	}
 	return m, cmd
 }
@@ -479,7 +481,7 @@ func (m LockModel) View() string {
 		view = dimANSI(view)
 	}
 	if m.prompt.anim.isActive() {
-		view = overlay.Composite(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
+		view = compositeDisp(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
 	}
 	return view
 }

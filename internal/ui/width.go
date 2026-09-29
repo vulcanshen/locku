@@ -3,20 +3,56 @@ package ui
 import (
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
+	overlay "github.com/rmhubbert/bubbletea-overlay"
 )
 
 // Everything drawn into a fixed slot goes through these. A panel is a
 // fixed-width box (tdp L2), so a field that miscounts its own width does not
 // merely look off — it pushes the right border out and breaks the frame.
 //
-// Rule: measure and pad PLAIN text, then apply the style. lipgloss.Width knows
-// how to skip ANSI, but padding a styled string means the pad lands inside the
+// Rule: measure and pad PLAIN text, then apply the style. dispW knows how to
+// skip ANSI, but padding a styled string means the pad lands inside the
 // styled span and picks up its background.
+//
+// Every width is measured here, and nowhere else by lipgloss or x/ansi
+// (tdp D6, 2026-09-29; filu's width.go is the reference): with some fonts
+// an icon moves the cursor two cells where they count one, and a box that
+// counts it one comes out crooked.
 
-// dispW is the terminal cell width of s.
-func dispW(s string) int { return lipgloss.Width(s) }
+// iconCells is how many cells a Nerd Font icon moves the cursor: 1 on most
+// fonts, 2 on some made for CJK. DetectIconWidth sets it at start; 1 leaves
+// every width as lipgloss and x/ansi measure it.
+var iconCells = 1
+
+// isWideIcon reports whether r is a Nerd Font icon that such a font draws
+// two cells wide: the Private Use Areas, less the powerline caps
+// (U+E0A0–E0D7), which stay one cell even there.
+func isWideIcon(r rune) bool {
+	if r >= 0xe0a0 && r <= 0xe0d7 {
+		return false
+	}
+	return (r >= 0xe000 && r <= 0xf8ff) || (r >= 0xf0000 && r <= 0xffffd)
+}
+
+// iconCount is how many wide icons s holds, styles aside; none are counted
+// while an icon is one cell.
+func iconCount(s string) int {
+	if iconCells == 1 {
+		return 0
+	}
+	n := 0
+	for _, r := range ansi.Strip(s) {
+		if isWideIcon(r) {
+			n++
+		}
+	}
+	return n
+}
+
+// dispW is the terminal cell width of s: as measured, and a cell more for
+// each icon where an icon takes two.
+func dispW(s string) int { return ansi.StringWidth(s) + iconCount(s)*(iconCells-1) }
 
 // truncate clips s to at most w cells, marking the cut with a single-cell "…".
 // w <= 0 yields "". A string that already fits is returned untouched.
@@ -68,7 +104,9 @@ func truncateHead(s string, w int) string {
 
 // clipANSI cuts a possibly-styled string to w cells without severing an escape
 // sequence. truncate() is for plain text; using it on styled output would cut
-// mid-ANSI and bleed the style into everything after it.
+// mid-ANSI and bleed the style into everything after it. The first w measured
+// cells are at least w on screen, and each icon among them takes one more, so
+// it steps back until they fit.
 func clipANSI(s string, w int) string {
 	if w <= 0 {
 		return ""
@@ -76,7 +114,158 @@ func clipANSI(s string, w int) string {
 	if dispW(s) <= w {
 		return s
 	}
-	return ansi.Truncate(s, w, "")
+	for t := w; t > 0; t-- {
+		if out := ansi.Truncate(s, t, ""); dispW(out) <= w {
+			return out
+		}
+	}
+	return ""
+}
+
+// dispCutLeft drops the first n cells of s and returns the rest, styles
+// kept. An icon or wide character cut in half becomes spaces, so the rest
+// is always dispW(s) − n wide.
+func dispCutLeft(s string, n int) string {
+	if n <= 0 {
+		return s
+	}
+	total := dispW(s)
+	if n >= total {
+		return ""
+	}
+	// m measured cells hold at least n on screen; start where they would if
+	// every icon so far were narrow, and step past a wide one.
+	m := max(n-iconCount(s)*(iconCells-1), 0)
+	for dispW(ansi.Truncate(s, m, "")) < n {
+		m++
+	}
+	rest := ansi.TruncateLeft(s, m, "")
+	return strings.Repeat(" ", max(total-n-dispW(rest), 0)) + rest
+}
+
+// compositeDisp draws fg over bg as overlay.Composite does, but every width
+// is dispW, so an icon in the popup or in what it covers cannot push a line
+// past the screen (tdp D6, L4). Left / Top at 0, Center at half the
+// background less half the foreground (each halved on its own), Right /
+// Bottom flush; then moved by the offsets and kept on screen.
+func compositeDisp(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) string {
+	if fg == "" {
+		return bg
+	}
+	if bg == "" {
+		return fg
+	}
+	fgLines, bgLines := strings.Split(fg, "\n"), strings.Split(bg, "\n")
+	fgW, bgW := blockWidth(fgLines), blockWidth(bgLines)
+	fgH, bgH := len(fgLines), len(bgLines)
+	if fgW >= bgW && fgH >= bgH {
+		return fg
+	}
+	x := clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW)
+	y := clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH)
+	for i, line := range fgLines {
+		// A box taller than the screen shows its middle, as overlay does:
+		// y is then above the top.
+		if y+i < 0 {
+			continue
+		}
+		if y+i >= bgH {
+			break
+		}
+		row := bgLines[y+i]
+		left := clipANSI(row, x)
+		left += spaces(x - dispW(left)) // an icon cut at x, or a short row
+		right := dispCutLeft(row, x+dispW(line))
+		bgLines[y+i] = left + line + right
+	}
+	return strings.Join(bgLines, "\n")
+}
+
+// centerDisp centres s in a w × h area by dispW, as lipgloss.Place(w, h,
+// Center, Center, s) does: the smaller half of the gap goes left and on
+// top. In a direction s already fills it is left as it is; h 0 centres
+// across only.
+func centerDisp(w, h int, s string) string {
+	lines := strings.Split(s, "\n")
+	width := blockWidth(lines)
+	if w > width {
+		for i, l := range lines {
+			gap := w - dispW(l)
+			lines[i] = spaces(gap/2) + l + spaces(gap-gap/2)
+		}
+		width = w
+	}
+	if gap := h - len(lines); gap > 0 {
+		blank := spaces(width)
+		out := make([]string, 0, h)
+		for range gap / 2 {
+			out = append(out, blank)
+		}
+		out = append(out, lines...)
+		for len(out) < h {
+			out = append(out, blank)
+		}
+		lines = out
+	}
+	return strings.Join(lines, "\n")
+}
+
+// blockWidth is the width of the widest line.
+func blockWidth(lines []string) int {
+	w := 0
+	for _, l := range lines {
+		w = max(w, dispW(l))
+	}
+	return w
+}
+
+// placeOffset is where a span of size fg starts in one of size bg.
+func placeOffset(p overlay.Position, bg, fg int) int {
+	switch p {
+	case overlay.Center:
+		return bg/2 - fg/2
+	case overlay.Right, overlay.Bottom:
+		return bg - fg
+	}
+	return 0
+}
+
+// clampSpan keeps v between 0 and hi, either way round, as overlay does.
+func clampSpan(v, hi int) int {
+	lo := 0
+	if lo > hi {
+		lo, hi = hi, lo
+	}
+	return min(max(v, lo), hi)
+}
+
+// joinH lays blocks side by side, each block's lines padded to that
+// block's own width, so an icon in one never shoves the next along — as
+// lipgloss.JoinHorizontal does, whose widths count an icon one cell.
+func joinH(blocks ...string) string {
+	rows := make([][]string, len(blocks))
+	widths := make([]int, len(blocks))
+	maxRows := 0
+	for i, b := range blocks {
+		rows[i] = strings.Split(b, "\n")
+		widths[i] = blockWidth(rows[i])
+		maxRows = max(maxRows, len(rows[i]))
+	}
+	var out strings.Builder
+	for r := 0; r < maxRows; r++ {
+		for i := range rows {
+			if r < len(rows[i]) {
+				l := clipANSI(rows[i][r], widths[i])
+				out.WriteString(l + spaces(widths[i]-dispW(l)))
+			} else {
+				out.WriteString(spaces(widths[i]))
+			}
+		}
+		if r < maxRows-1 {
+			out.WriteByte('\n')
+		}
+	}
+	return out.String()
 }
 
 // padRight fits s into exactly w cells, truncating or right-padding as needed.

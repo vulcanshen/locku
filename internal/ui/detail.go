@@ -468,10 +468,10 @@ func (m AppModel) detailBody(innerW, innerH int) []string {
 			// The saved colour, and the draft after an arrow when it differs.
 			plain = padRight(label+"  "+r.value, innerW)
 			styled = dim.Render(label) + swatch(r.hex) + " " + dim.Render(r.hex)
-			used := lw + 2 + dispW(r.hex)
+			used := lw + dispW(pixelGlyph) + 1 + dispW(r.hex)
 			if r.draft != "" {
 				styled += dim.Render("  →  ") + swatch(r.draft) + " " + dim.Render(r.draft)
-				used += 5 + 2 + dispW(r.draft)
+				used += 5 + dispW(pixelGlyph) + 1 + dispW(r.draft)
 			}
 			styled = clipANSI(styled, innerW) + spaces(innerW-min(used, innerW))
 		case rowChannel:

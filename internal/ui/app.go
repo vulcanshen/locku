@@ -502,10 +502,10 @@ func (m AppModel) View() string {
 		if top >= 0 && i != top {
 			v = dimANSI(v)
 		}
-		out = overlay.Composite(v, out, overlay.Center, overlay.Center, 0, 0)
+		out = compositeDisp(v, out, overlay.Center, overlay.Center, 0, 0)
 	}
 	if m.toast.isActive() {
-		out = overlay.Composite(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
+		out = compositeDisp(m.toast.view(), out, overlay.Center, overlay.Bottom, 0, -2)
 	}
 	return out
 }
