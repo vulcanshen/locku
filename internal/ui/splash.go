@@ -183,7 +183,7 @@ func (m splashModel) render(width, height int) string {
 		taglineText = line.Render("A screensaver with a PIN, for the terminal")
 	}
 	if m.hintVisible {
-		hintText = dim.Render("Press Esc to close")
+		hintText = dim.Render("Press [Esc] to close")
 		devLabelText = dim.Render("developed by")
 		devMailText = dim.Render("vulcan.shen.2304@gmail.com")
 	}

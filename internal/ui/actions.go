@@ -667,7 +667,7 @@ func (m *AppModel) editPath() tea.Cmd {
 	if offer == "" {
 		offer = usualConf[name]
 	}
-	return m.input.ask(inputPopup{title: "path", prompt: "config file path — the file " + name + "'s block goes into; Backspace then Enter to unset",
+	return m.input.ask(inputPopup{title: "path", prompt: "config file path — the file " + name + "'s block goes into; [Backspace] then [Enter] to unset",
 		placeholder: offer, accept: "save", action: inputPath}, m.layer())
 }
 

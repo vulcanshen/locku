@@ -96,3 +96,31 @@ func TestKeyReferenceKeys(t *testing.T) {
 		t.Errorf("? on [1] after the glossary: Esc Blue: %q", l)
 	}
 }
+
+// A key named in a sentence is in square brackets: a confirm's lines, a
+// box's prompt, a glossary's words, the splash (tdp M5, 2026-09-29).
+func TestKeysInSentencesAreBracketed(t *testing.T) {
+	m := newTestApp(t)
+	q := m.press("2").typed(strings.Repeat("j", stopBgR)).press("enter", "G", "enter", "q")
+	if v := ansi.Strip(q.View()); !strings.Contains(v, "[S] on the profile saves them, [R] drops them") {
+		t.Errorf("the quit confirm:\n%s", v)
+	}
+	if v := ansi.Strip(m.press("G", "k", "k", "2", "j", "enter").View()); !strings.Contains(v, "[Backspace] then [Enter] to unset") {
+		t.Errorf("the path box's prompt:\n%s", v)
+	}
+	activate := ""
+	for _, e := range m.press("G", "k", "k", "2", "?").help.entries {
+		if e.key == "activate" {
+			activate = e.desc
+		}
+	}
+	if !strings.Contains(activate, "[Enter] turns it") {
+		t.Errorf("tmux's glossary, activate: %q", activate)
+	}
+	s := newSplashModel()
+	s.show()
+	s, _ = s.update(splashHintMsg{})
+	if v := ansi.Strip(s.render(100, 40)); !strings.Contains(v, "Press [Esc] to close") {
+		t.Errorf("the splash:\n%s", v)
+	}
+}

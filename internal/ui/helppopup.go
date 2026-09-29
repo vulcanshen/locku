@@ -126,7 +126,7 @@ var helpPreference = []helpEntry{
 func helpTool(name string) []helpEntry {
 	out := []helpEntry{
 		{desc: "[2] " + name + " — what each row is"},
-		{key: "activate", desc: "on: locku's block is in the file, and every row here is written into it the moment it changes; off: it is not. Enter turns it, after a confirm"},
+		{key: "activate", desc: "on: locku's block is in the file, and every row here is written into it the moment it changes; off: it is not. [Enter] turns it, after a confirm"},
 		{key: "config file path", desc: "the file locku's block is written into; ~/ allowed"},
 		{desc: "under the line: " + name + "'s own settings"},
 	}
