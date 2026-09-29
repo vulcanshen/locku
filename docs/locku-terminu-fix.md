@@ -14,6 +14,8 @@ finder 的 focus、D2 失焦 panel 邊框上的 hint、D3 下框 hint 放不下�
 要修的兩條：下框 hint 截在項目中間（第 1 條，D3）、icon 的實際寬度（第 2 條，D6，**等 filu 做完再做**）。模式、finder、失焦 panel 的 hint、
 PTY 都不適用，見最後。
 
+> **2026-09-29**：第 1 條修好、從清單刪掉（locku `drawPopupBox()` 收 pairs，`hintLegend(pairs, w)` 從尾端整組丟）；剩第 2 條，等 filu。
+
 指向 tdp 的五處連結（兩份 README、`docs/ux.md`、`docs/ui.md`、`docs/dev-remarks.md` 開頭）已經改釘 `tree/v0.1.19/principle`，在工作樹裡、
 未 commit。
 
@@ -29,40 +31,6 @@ PTY 都不適用，見最後。
 - **不 push、不發版。**
 - **把這一輪寫進 terminu repo 的 `.local/family-fix/locku/README.md`**（本機、不進版控）：開頭的輪次清單加「對照 v0.1.18」一行，「修了什麼」、
   「已經符合」各加一節，「給下一個 app 的經驗」與「發布」補上這一輪。
-
-
-## 1. 下框 hint 放不下時截在項目中間 —— D3
-
-**現況**：
-
-- `internal/ui/popup.go` `drawPopupBoxPad()`：`hint = clipANSI(hint, innerW-1)`，照格數硬截（`ansi.Truncate`，不加 `…`），不看項目邊界。
-  `hintLegend()` 只組字串、不知道框多寬。每個 popup 都走這裡：Space menu、global operation popup、options（`spacemenu.go` `view()`）、
-  confirm 與離開的 confirm（`confirm.go` `view()`）、input 與三個 PIN 框（`inputpopup.go` `view()`）、key reference 與字典
-  （`helppopup.go` `view()`）、toast（`toast.go` `view()`）、鎖定畫面的 PIN prompt（`pinprompt.go` `view()`）。
-- 框的內寬是 `min(W − 2, 120) − 2`，hint 可用 `W − 5` 格（W ≤ 122 時），所以 hint 長度 + 5 > W 就被截。實測（scratch、`ansi.Strip` 後的下框）：
-  - `path` 框有提議時（`Enter:save Tab:edit it Backspace:clear Esc:cancel`，含頭尾空白 51 格）：W = 59 放得下；W = 40 是
-    `╰─ Enter:save Tab:edit it Backspace:c╯`。
-  - 鎖定畫面的 PIN prompt（`Enter:unlock Esc:back`，23 格）：W = 30 放得下；W = 24 是 `╰─ Enter:unlock Esc:b╯`，W = 20 是
-    `╰─ Enter:unlock E╯`。鎖可以跑在任何大小的終端機上（裸 tty、小視窗），這不只是 80 欄以下的設定畫面才碰得到。
-  - 其他：Space menu（30 格）W < 35、離開的 confirm（`Enter:quit anyway Esc:cancel`，30 格）W < 35、key reference（22 格）W < 27 開始截。
-- footer 不受影響：`chrome.go` `keyLegend()` 已經從右邊整組丟（D1）。
-
-**規則**：D3（v0.1.18）—— 下框 hint 放不下時，從尾端整組捨棄（跟 D1 的 footer 一樣），不截在項目中間。
-
-**怎麼改**：
-
-- 讓 hint 知道自己可用的寬度，照 `keyLegend()` 的做法從尾端整組丟：例如 `hintLegend(pairs, w)` 收寬度，或 `drawPopupBox()` 改收 pairs
-  自己組。一組都放不下就不畫 hint，只有框線。`drawPopupBoxPad()` 的 `clipANSI(hint, …)` 之後只是保險。
-- 丟的是最後面的組：`path` 框在 40 欄會先丟 `Esc:cancel`、再丟 `Backspace:clear`。要保留哪一組就把它排前面（footer 是把入口鍵排前面）；
-  順序由 app 決定，這一條不要求改順序。
-- 測試：① W = 40 開有提議的 `path` 框（`TestToolsHaveTheirFileAndIdleTime` 的走法），`ansi.Strip` 後的下框去掉框線，剩下的每一組都是完整的
-  `鍵:說明`（例：`Enter:save Tab:edit it`），沒有 `Backspace:c` 這種半組。② 鎖定畫面 W = 24 開 PIN prompt（`testLock` + `openPrompt`）：
-  下框是 `Enter:unlock`，沒有 `Esc:b`。③ 放得下時不變：W = 80 的下框跟現在一樣。mutation：改回 `clipANSI` 硬截要紅；丟組時少算項目間的
-  一格空白（差一格）也要紅 —— 挑一個寬度讓 hint 剛好卡在邊界。`TestViewFitsTheTerminal`、`TestViewIsExactlyTheTerminal` 守每一列的寬度。
-- 文件：`docs/ui.md` §3 的 popup 慣例那段（「title = glyph + 文字、hint 嵌下邊框」）補一句「放不下從尾端整組丟」。README 沒寫 hint 的截法，
-  不用動。
-- CHANGELOG `[Unreleased]` 加一條 Fixed，例：A popup's hint too wide for its box — the PIN prompt on a narrow terminal — drops whole items
-  from the end instead of being cut mid-word。
 
 
 ## 2. icon 的實際寬度 —— D6（等 filu 做完再做）

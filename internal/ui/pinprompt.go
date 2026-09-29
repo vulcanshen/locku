@@ -90,7 +90,8 @@ func (p pinPrompt) view(now time.Time) string {
 	innerW := popupInnerW(p.screenW)
 	bc := popupLayerColor(1)
 	title := " " + glyphLock + " PIN "
-	hint, row, err := "", spaces(innerW), ""
+	var hint [][2]string
+	row, err := spaces(innerW), ""
 	switch {
 	case p.anim.phase == animClosing && p.timedOut:
 		title += "· closing "
@@ -98,9 +99,9 @@ func (p pinPrompt) view(now time.Time) string {
 		bc, err = warnColor, "wrong PIN"
 	case p.state == promptLockout:
 		bc, err = warnColor, "try again in "+itoa(p.remaining(now))+" s"
-		hint = hintLegend([][2]string{{"Esc", "back"}})
+		hint = [][2]string{{"Esc", "back"}}
 	default:
-		hint = hintLegend([][2]string{{"Enter", "unlock"}, {"Esc", "back"}})
+		hint = [][2]string{{"Enter", "unlock"}, {"Esc", "back"}}
 		row = pinRow(len(p.value), innerW)
 	}
 	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row, errorRow(err, innerW, true)}), innerW)

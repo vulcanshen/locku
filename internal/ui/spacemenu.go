@@ -244,9 +244,9 @@ func (m spaceMenu) view() string {
 		labelW = max(labelW, dispW(bracketHotkey(it.label, it.key)))
 		hintW = max(hintW, dispW(it.hint))
 	}
-	legend := hintLegend([][2]string{{"j/k", "move"}, {"Enter", "run"}, {"Esc", "close"}})
+	legend := [][2]string{{"j/k", "move"}, {"Enter", "run"}, {"Esc", "close"}}
 	if len(m.items) == 0 {
-		legend = hintLegend([][2]string{{"Esc", "close"}})
+		legend = [][2]string{{"Esc", "close"}}
 	}
 	innerW := popupInnerW(m.screenW)
 	hintW = max(0, min(hintW, innerW-labelW-3))

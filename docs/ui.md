@@ -198,7 +198,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
 
 全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
-下邊框（`鍵:說明`，項目之間一格，2026-09-29，tdp M5）、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
+下邊框（`鍵:說明`，項目之間一格，2026-09-29，tdp M5；放不下從尾端整組丟，不截在項目中間，跟 footer 一樣，2026-09-29，tdp D3）、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
 
 ### 3.1 設定畫面
 
