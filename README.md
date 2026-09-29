@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
-**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. A Nerd Font that draws its icons two cells wide, as some made for CJK do, works too: locku asks the terminal at start; `LOCKU__ICON_WIDTH=1` or `2` settles it by hand. Run inside another terminu app's terminal, locku takes the width that app gives it in `TERMINU__ICON_WIDTH`, and gives its own the same way to a custom saver's program.
+**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. A Nerd Font that draws its icons two cells wide, as some made for CJK do, works too: locku asks the terminal at start. To settle it by hand, set `TERMINU__ICON_WIDTH=1` or `2`: every terminu app reads it, so once is enough for the whole family; `LOCKU__ICON_WIDTH` is locku's own and comes first. Inside another terminu app's terminal, that app sets `TERMINU__ICON_WIDTH` for locku, and locku sets it the same way for a custom saver's program.
 
 **A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
 
