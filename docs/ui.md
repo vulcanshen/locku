@@ -206,7 +206,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 |---|---|---|
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
-| `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
+| `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
 | input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變；`command` 送出不會被拒，不留（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
