@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
-**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. A Nerd Font that draws its icons two cells wide, as some made for CJK do, works too: locku asks the terminal at start; `LOCKU_ICON_WIDTH=1` or `2` settles it by hand.
+**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. A Nerd Font that draws its icons two cells wide, as some made for CJK do, works too: locku asks the terminal at start; `LOCKU__ICON_WIDTH=1` or `2` settles it by hand.
 
 **A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
 
@@ -218,8 +218,8 @@ A new shell has it. A screen already running gets it once detached and attached 
 
 | | What | Where |
 |---|---|---|
-| settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU_CONFIG` names it outright) |
-| data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU_DATA`) |
+| settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU__CONFIG` names it outright) |
+| data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU__DATA`) |
 
 No history, no cache, no session. `config.yaml` is written atomically, mode 0600, and can be edited by hand:
 

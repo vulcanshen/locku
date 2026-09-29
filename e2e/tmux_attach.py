@@ -31,7 +31,7 @@ with open(os.path.join(cfgDir, "config.yaml"), "w") as f:
     f.write('tmux:\n  conf: "' + conf + '"\n')
 # TMUX_TMPDIR keeps every tmux here away from the user's own server.
 env = {"HOME": work, "PATH": binDir + ":" + os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
-       "LOCKU_CONFIG": cfgDir, "TMUX_TMPDIR": work, "USER": os.environ.get("USER", "u")}
+       "LOCKU__CONFIG": cfgDir, "TMUX_TMPDIR": work, "USER": os.environ.get("USER", "u")}
 SOCK = "default"  # the server locku's settings screen applies to, under its own TMUX_TMPDIR
 
 

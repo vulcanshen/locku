@@ -19,7 +19,7 @@ cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 cfgFile = os.path.join(cfgDir, "config.yaml")
 env = {"HOME": work, "PATH": os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
-       "LOCKU_CONFIG": cfgDir, "USER": os.environ.get("USER", "u")}
+       "LOCKU__CONFIG": cfgDir, "USER": os.environ.get("USER", "u")}
 MARK = "LOCKU-E2E-MARK"
 PIXEL = "".encode()   # the board's cell
 PROMPT = "".encode()  # the PIN prompt's lock

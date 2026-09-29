@@ -280,7 +280,7 @@ func TestNewPINIsEightDigits(t *testing.T) {
 // none, or not readable.
 func TestLoadPINHash(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("LOCKU_CONFIG", dir)
+	t.Setenv("LOCKU__CONFIG", dir)
 	if _, ok := LoadPINHash(); ok {
 		t.Error("no file must not read as anything")
 	}
@@ -340,5 +340,23 @@ func TestHexHelpers(t *testing.T) {
 	}
 	if ValidHex("#12345") || ValidHex("123456") || !ValidHex("#ABCdef") {
 		t.Error("ValidHex")
+	}
+}
+
+// The variables are the family's, APP__NAME, and the old names are not
+// read (tdp D6, 2026-09-29).
+func TestOldVariableNamesAreNotRead(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU__CONFIG", "")
+	t.Setenv("LOCKU__DATA", "")
+	t.Setenv("LOCKU_CONFIG", dir)
+	t.Setenv("LOCKU_DATA", dir)
+	if Dir() == dir || DataDir() == dir {
+		t.Errorf("an old name was read: %q %q", Dir(), DataDir())
+	}
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", dir)
+	if Dir() != dir || DataDir() != dir {
+		t.Errorf("the new names: %q %q", Dir(), DataDir())
 	}
 }

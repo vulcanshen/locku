@@ -30,7 +30,7 @@ func testLock(t *testing.T, pin string, tweak func(*config.Config)) LockModel {
 	t.Helper()
 	// No file: the lock keeps the hash it was made with (the file is
 	// read at every key, when there is one).
-	t.Setenv("LOCKU_CONFIG", t.TempDir())
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	cfg := config.Default()
 	cfg.Profiles[0].Size, cfg.Profiles[0].Font, cfg.Profiles[0].Time, cfg.Profiles[0].Date = "medium", "3x7", "HH MM", "off"
 	if pin != "" {
@@ -347,7 +347,7 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 // with no PIN opens at any key.
 func TestLockReadsTheFilesPINAtEveryKey(t *testing.T) {
 	m := testLock(t, "1234", nil)
-	path := filepath.Join(os.Getenv("LOCKU_CONFIG"), "config.yaml")
+	path := filepath.Join(os.Getenv("LOCKU__CONFIG"), "config.yaml")
 	cfg := config.Default()
 	if err := cfg.SetPIN("9999"); err != nil {
 		t.Fatal(err)

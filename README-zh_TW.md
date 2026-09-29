@@ -53,7 +53,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 從原始碼建置見 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
 
-**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。icon 畫成兩格的 Nerd Font（有些給 CJK 用的就是）也可以：locku 啟動時問終端機；`LOCKU_ICON_WIDTH=1` 或 `2` 可以手動指定。
+**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。icon 畫成兩格的 Nerd Font（有些給 CJK 用的就是）也可以：locku 啟動時問終端機；`LOCKU__ICON_WIDTH=1` 或 `2` 可以手動指定。
 
 **需要 truecolor 終端機**：點陣板用 profile 自己的顏色畫，浮層底下的畫面會淡化，全部用 24 位元色。顏色數比較少的終端機上，顏色會失真。
 
@@ -218,8 +218,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 | | 什麼 | 哪裡 |
 |---|---|---|
-| 設定 | `config.yaml`——PIN 的 hash、profile、各 saver 的預設值、整合設定 | `~/.config/locku`（有設 `$XDG_CONFIG_HOME` 就是 `$XDG_CONFIG_HOME/locku`；`$LOCKU_CONFIG` 直接指定） |
-| 資料 | `pin-resets.log`——每次 `locku pin reset`，不含 PIN | `~/.locku/data`（`$LOCKU_DATA`） |
+| 設定 | `config.yaml`——PIN 的 hash、profile、各 saver 的預設值、整合設定 | `~/.config/locku`（有設 `$XDG_CONFIG_HOME` 就是 `$XDG_CONFIG_HOME/locku`；`$LOCKU__CONFIG` 直接指定） |
+| 資料 | `pin-resets.log`——每次 `locku pin reset`，不含 PIN | `~/.locku/data`（`$LOCKU__DATA`） |
 
 無 history、無 cache、無 session。`config.yaml` 原子寫入、mode 0600，可以手改：
 

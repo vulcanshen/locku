@@ -44,8 +44,8 @@ func typing(t *testing.T, lines ...string) *os.File {
 // 2026-09-25: as elasticsearch resets a password).
 func TestPINResetAsksTwiceAndRotates(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("LOCKU_CONFIG", dir)
-	t.Setenv("LOCKU_DATA", filepath.Join(dir, "data"))
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
 	cfg := config.Default()
 	if err := cfg.SetPIN("1234"); err != nil {
 		t.Fatal(err)
@@ -93,7 +93,7 @@ func TestPINResetAsksTwiceAndRotates(t *testing.T) {
 
 // Without a terminal there is nothing to ask on.
 func TestPINResetNeedsATerminal(t *testing.T) {
-	t.Setenv("LOCKU_CONFIG", t.TempDir())
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	f, err := os.CreateTemp(t.TempDir(), "in")
 	if err != nil {
 		t.Fatal(err)

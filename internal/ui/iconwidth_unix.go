@@ -20,12 +20,12 @@ import (
 // cursor is (CPR). The icon is nf-fa-folder, as filu's: every icon is as
 // wide as the next on such a font, and the board's own square would read
 // as a pixel of the board drawn over a custom saver's program.
-// LOCKU_ICON_WIDTH, 1 or 2, overrides it. Any failure — not a terminal,
+// LOCKU__ICON_WIDTH, 1 or 2, overrides it. Any failure — not a terminal,
 // no answer within 200 ms — leaves iconCells at 1. Call it once, before
 // the program starts; on a lock, before termreply.DropPending, which
 // takes an answer that came too late.
 func DetectIconWidth() {
-	if v := os.Getenv("LOCKU_ICON_WIDTH"); v != "" {
+	if v := os.Getenv("LOCKU__ICON_WIDTH"); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 2 {
 			iconCells = n
 			return
