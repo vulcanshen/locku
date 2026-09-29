@@ -2,6 +2,7 @@ package custom
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -59,7 +60,7 @@ func ended(t *testing.T, p *Proxy) Outcome {
 func TestTheBoxRidesOnEveryFrame(t *testing.T) {
 	out := &sink{}
 	scr := &screen{out: out, cols: 80, rows: 24}
-	p, err := Start("printf ONE; sleep 0.3; printf TWO; sleep 0.4; printf THREE; sleep 30", scr, 80, 24)
+	p, err := Start("printf ONE; sleep 0.3; printf TWO; sleep 0.4; printf THREE; sleep 30", 1, scr, 80, 24)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +119,7 @@ func TestOutcomes(t *testing.T) {
 		{"no-such-program-locku", saver.ExitWord(127), "custom saver: exit 127 · "},
 		{"kill -SEGV $$", saver.ExitWord(139), "custom saver: killed: segmentation fault"},
 	} {
-		p, err := Start(c.cmd, io.Discard, 80, 24)
+		p, err := Start(c.cmd, 1, io.Discard, 80, 24)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -135,7 +136,7 @@ func TestOutcomes(t *testing.T) {
 
 // No command is no program: Start refuses it, and NoCommand is its word.
 func TestNoCommand(t *testing.T) {
-	if _, err := Start("  ", io.Discard, 80, 24); err == nil {
+	if _, err := Start("  ", 1, io.Discard, 80, 24); err == nil {
 		t.Error("an empty command started")
 	}
 	if o := NoCommand(); o.Word != saver.WordNone || o.Note != "custom saver: no command" {
@@ -147,7 +148,7 @@ func TestNoCommand(t *testing.T) {
 // terminal's would.
 func TestSizeReachesTheProgram(t *testing.T) {
 	out := &sink{}
-	p, err := Start("stty size; trap 'stty size' WINCH; while :; do sleep 0.1; done", out, 100, 40)
+	p, err := Start("stty size; trap 'stty size' WINCH; while :; do sleep 0.1; done", 1, out, 100, 40)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,5 +234,25 @@ func TestTheBoxNeverCutsASequence(t *testing.T) {
 	scr.Clear()
 	if !strings.HasSuffix(out.String()[:len(out.String())-len(syncBegin+saveCur+"\x1b[0m\x1b[11;39H   "+restoreCur+syncEnd)], "\x1b[5;5") {
 		t.Errorf("Clear must let what was held out first:\n%q", out.String())
+	}
+}
+
+// The program is told how wide an icon is, once, over whatever locku was
+// given: a family app on locku's pty cannot ask the terminal, whose answer
+// comes back to locku (tdp D6, v0.1.22).
+func TestProgramIsToldTheIconWidth(t *testing.T) {
+	t.Setenv("TERMINU__ICON_WIDTH", "9") // from outside: replaced, not doubled
+	for _, cells := range []int{1, 2} {
+		out := &sink{}
+		p, err := Start(`printf '%s|<%s>' "$(env | grep -c '^TERMINU__ICON_WIDTH=')" "$TERMINU__ICON_WIDTH"; sleep 30`, cells, out, 80, 24)
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := fmt.Sprintf("1|<%d>", cells)
+		waitFor(t, want, func() bool { return strings.Contains(out.String(), "|<") })
+		if s := out.String(); !strings.Contains(s, want) {
+			t.Errorf("icons %d: the program saw %q", cells, s)
+		}
+		p.Kill()
 	}
 }

@@ -169,7 +169,7 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 		return board(custom.Failed(err))
 	}
 	cols, rows := t.Size()
-	p, err := custom.Start(command, t.Writer(), cols, rows)
+	p, err := custom.Start(command, ui.IconCells(), t.Writer(), cols, rows)
 	if err != nil {
 		t.Give()
 		return board(custom.Failed(err))
