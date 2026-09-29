@@ -67,7 +67,7 @@ func TestTheBoxRidesOnEveryFrame(t *testing.T) {
 	if s := out.String(); strings.Contains(s, syncBegin) || strings.Contains(s, saveCur) {
 		t.Errorf("with no box up the output goes through bare:\n%q", s)
 	}
-	scr.Overlay("[box]")
+	scr.Overlay("[box]", 5)
 	waitFor(t, "TWO", func() bool { return strings.Contains(out.String(), "TWO") })
 	s := out.String()
 	i := strings.Index(s, "TWO")
@@ -161,7 +161,7 @@ func TestSizeReachesTheProgram(t *testing.T) {
 // place and nothing else touched; Clear blanks exactly that rectangle.
 func TestOverlayTouchesOnlyItsBox(t *testing.T) {
 	var out bytes.Buffer
-	top, left, w, h := paintBox(&out, 80, 24, "+----+\n|\x1b[31m ab \x1b[0m|\n+----+")
+	top, left, w, h := paintBox(&out, 80, 24, "+----+\n|\x1b[31m ab \x1b[0m|\n+----+", 6)
 	if top != 10 || left != 37 || w != 6 || h != 3 {
 		t.Errorf("box at %d,%d %dx%d", top, left, w, h)
 	}
@@ -179,8 +179,13 @@ func TestOverlayTouchesOnlyItsBox(t *testing.T) {
 	if c := out.String(); strings.Count(c, "\x1b[0m\x1b[") != 3 || !strings.Contains(c, "\x1b[11;38H      ") || !strings.Contains(c, "\x1b[13;38H      ") {
 		t.Errorf("clear must blank the three rows and nothing more: %q", c)
 	}
-	if top, left, w, h := paintBox(&out, 80, 24, ""); w != 0 || h != 0 || top != 0 || left != 0 {
+	if top, left, w, h := paintBox(&out, 80, 24, "", 0); w != 0 || h != 0 || top != 0 || left != 0 {
 		t.Errorf("nothing to paint: %d,%d %dx%d", top, left, w, h)
+	}
+	// The width is the drawer's: an icon two cells wide is one to x/ansi
+	// (tdp D6), so the box is centred and cleared by what it was given.
+	if _, left, w, _ := paintBox(&out, 80, 24, "[ab]\n[cd]", 6); w != 6 || left != 37 {
+		t.Errorf("the width given: at %d, %d wide", left, w)
 	}
 }
 
@@ -214,7 +219,7 @@ func TestTheBoxNeverCutsASequence(t *testing.T) {
 		}
 	}
 	var out bytes.Buffer
-	scr := &screen{out: &out, cols: 80, rows: 24, box: "[b]"}
+	scr := &screen{out: &out, cols: 80, rows: 24, box: "[b]", boxW: 3}
 	scr.Write([]byte("abc\x1b[3;1"))
 	scr.Write([]byte("33Hxyz"))
 	s := out.String()

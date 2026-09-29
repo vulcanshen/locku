@@ -95,6 +95,10 @@ func runLock(socket, session string) int {
 	// meanwhile is locked too (function.md §6.2); a terminal that goes
 	// away leaves the mark, and the next client in meets the lock.
 	tmux.SetLocked(socket, session, true)
+	// How wide an icon is, for the board's pixels and the prompt's title
+	// (tdp D6): asked before the pending input goes, so an answer that
+	// comes after its 200 ms goes with it.
+	ui.DetectIconWidth()
 	// What is already waiting on the terminal came before the lock:
 	// keys, or pieces of its answers that a key-reader would take for a
 	// key (termreply.DropPending). The lock starts from nothing.
@@ -264,6 +268,7 @@ func runPrompt(cfg config.Config, problem string, t *custom.Terminal) (unlocked,
 // buttons, in place of a `locku setup` command).
 func runSettings() int {
 	cfg, problem := config.Load()
+	ui.DetectIconWidth() // how wide an icon is (tdp D6)
 	p := tea.NewProgram(ui.NewApp(cfg, problem), tea.WithAltScreen())
 	_, err := p.Run()
 	switch {

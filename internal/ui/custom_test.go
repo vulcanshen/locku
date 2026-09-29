@@ -141,7 +141,7 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	var painted []string
-	p := NewLockPrompt(cfg, "", 100, 30, func(box string) { painted = append(painted, box) })
+	p := NewLockPrompt(cfg, "", 100, 30, func(box string, _ int) { painted = append(painted, box) })
 	if p.initCmd == nil || !p.prompt.anim.isActive() || p.width != 100 {
 		t.Fatal("the prompt must be up from the first frame, at the size given")
 	}

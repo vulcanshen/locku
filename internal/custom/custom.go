@@ -27,7 +27,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/term"
 	"github.com/creack/pty"
 	"github.com/muesli/cancelreader"
@@ -239,6 +238,7 @@ type screen struct {
 	out        io.Writer
 	cols, rows int
 	box        string
+	boxW       int // box's width on the screen, as the one who drew it measured it
 	rect       struct{ top, left, w, h int }
 	// pending is the end of the program's last chunk that could not be
 	// cut from — an escape sequence or a character not yet whole —
@@ -346,7 +346,7 @@ func complete(seq []byte) bool {
 
 // paint writes the box into w and widens the rectangle it has taken.
 func (s *screen) paint(w io.Writer) {
-	top, left, wd, h := paintBox(w, s.cols, s.rows, s.box)
+	top, left, wd, h := paintBox(w, s.cols, s.rows, s.box, s.boxW)
 	if h == 0 {
 		return
 	}
@@ -359,12 +359,13 @@ func (s *screen) paint(w io.Writer) {
 	s.rect.w, s.rect.h = right-s.rect.left, bottom-s.rect.top
 }
 
-// Overlay puts box — the PIN prompt's lines — over the middle of the
-// screen, and keeps it there over whatever the program draws.
-func (s *screen) Overlay(box string) {
+// Overlay puts box — the PIN prompt's lines, w cells wide — over the
+// middle of the screen, and keeps it there over whatever the program
+// draws.
+func (s *screen) Overlay(box string, w int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.box = box
+	s.box, s.boxW = box, w
 	var b bytes.Buffer
 	b.WriteString(syncBegin + saveCur)
 	s.paint(&b)
@@ -399,18 +400,17 @@ func (s *screen) Resized(cols, rows int) {
 	s.mu.Unlock()
 }
 
-// paintBox writes box's lines centred on a cols × rows screen, each at
-// its own position, and returns the rectangle they took. Nothing
-// outside the lines is touched.
-func paintBox(out io.Writer, cols, rows int, box string) (top, left, w, h int) {
+// paintBox writes box's lines, boxW cells wide, centred on a cols × rows
+// screen, each at its own position, and returns the rectangle they took.
+// Nothing outside the lines is touched. The width comes from the one who
+// drew the box: an icon in its title takes two cells with some fonts,
+// which only the ui knows (tdp D6, 2026-09-29; measured here until then).
+func paintBox(out io.Writer, cols, rows int, box string, boxW int) (top, left, w, h int) {
 	lines := strings.Split(strings.TrimRight(box, "\n"), "\n")
 	if box == "" || len(lines) == 0 {
 		return 0, 0, 0, 0
 	}
-	for _, l := range lines {
-		w = max(w, ansi.StringWidth(l))
-	}
-	h = len(lines)
+	w, h = boxW, len(lines)
 	top, left = max(0, (rows-h)/2), max(0, (cols-w)/2)
 	var b strings.Builder
 	for i, l := range lines {
@@ -471,9 +471,9 @@ func (t *Terminal) Writer() io.Writer { return t.scr }
 
 // Overlay puts the PIN prompt's box over the program's picture, and
 // keeps it there; Clear takes it away; Resized follows the terminal.
-func (t *Terminal) Overlay(box string)     { t.scr.Overlay(box) }
-func (t *Terminal) Clear()                 { t.scr.Clear() }
-func (t *Terminal) Resized(cols, rows int) { t.scr.Resized(cols, rows) }
+func (t *Terminal) Overlay(box string, w int) { t.scr.Overlay(box, w) }
+func (t *Terminal) Clear()                    { t.scr.Clear() }
+func (t *Terminal) Resized(cols, rows int)    { t.scr.Resized(cols, rows) }
 
 // Size is the terminal's, in cells.
 func (t *Terminal) Size() (cols, rows int) {

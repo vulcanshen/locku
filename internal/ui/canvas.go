@@ -38,8 +38,9 @@ const (
 // at large.
 func gap(k int) int { return (k + 1) / 2 }
 
-// pixelCell is one pixel on the terminal: the glyph and its space.
-var pixelCell = pixelGlyph + " "
+// pixelCell is one pixel on the terminal, two cells: the glyph and its
+// space, or the glyph alone where it takes two (tdp D6, 2026-09-29).
+func pixelCell() string { return pixelGlyph + spaces(2-iconCells) }
 
 // board is the pixel grid: w pixels across (half the columns), h down (the
 // rows above the status row).
@@ -370,7 +371,7 @@ func boardRows(b board, bg, fg, accent lipgloss.Color, cols int) []string {
 			for run < b.w && b.at(run, y) == lit && b.tone[y*b.w+run] == tone {
 				run++
 			}
-			cells := strings.Repeat(pixelCell, run-x)
+			cells := strings.Repeat(pixelCell(), run-x)
 			switch {
 			case lit && tone:
 				sb.WriteString(acc.Render(cells))
@@ -393,7 +394,7 @@ func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int) []string {
 	off := lipgloss.NewStyle().Foreground(bg)
 	txt := lipgloss.NewStyle().Foreground(fg).Bold(true)
 	w := cols / 2
-	blank := off.Render(strings.Repeat(pixelCell, w)) + spaces(cols-w*2)
+	blank := off.Render(strings.Repeat(pixelCell(), w)) + spaces(cols-w*2)
 	out := make([]string, max(0, rows))
 	for i := range out {
 		out[i] = blank
@@ -410,9 +411,9 @@ func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int) []string {
 		leftPx := leftCols / 2
 		rightCols := cols - leftCols - tw
 		rightPx := rightCols / 2
-		out[y] = off.Render(strings.Repeat(pixelCell, leftPx)) + spaces(leftCols-leftPx*2) +
+		out[y] = off.Render(strings.Repeat(pixelCell(), leftPx)) + spaces(leftCols-leftPx*2) +
 			txt.Render(l) +
-			spaces(rightCols-rightPx*2) + off.Render(strings.Repeat(pixelCell, rightPx))
+			spaces(rightCols-rightPx*2) + off.Render(strings.Repeat(pixelCell(), rightPx))
 	}
 	return out
 }

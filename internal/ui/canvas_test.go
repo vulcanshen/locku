@@ -287,25 +287,30 @@ func TestSceneFitsAndPaints(t *testing.T) {
 
 func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 	bg, fg := lipgloss.Color("#313244"), lipgloss.Color("#f2b753")
-	for _, cols := range []int{80, 81, 40, 7} {
-		rows := 23
-		l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
-		var out []string
-		if len(l.blocks) > 0 {
-			out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols)
-		} else {
-			out = plainRows(plain, bg, fg, cols, rows)
-		}
-		if len(out) != rows {
-			t.Fatalf("cols %d: %d rows, want %d", cols, len(out), rows)
-		}
-		for i, r := range out {
-			if w := lipgloss.Width(r); w != cols {
-				t.Errorf("cols %d row %d is %d wide", cols, i, w)
+	// Once more with icons two cells wide: a pixel is then the glyph
+	// alone, still two cells (tdp D6, L4).
+	for _, cells := range []int{1, 2} {
+		withIcons(t, cells)
+		for _, cols := range []int{80, 81, 40, 7} {
+			rows := 23
+			l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
+			var out []string
+			if len(l.blocks) > 0 {
+				out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols)
+			} else {
+				out = plainRows(plain, bg, fg, cols, rows)
 			}
-		}
-		if s := statusRow(cols, true, "vulcan", "prod-db-01", at, true, "", ""); lipgloss.Width(s) != cols {
-			t.Errorf("cols %d status is %d wide", cols, lipgloss.Width(s))
+			if len(out) != rows {
+				t.Fatalf("icons %d, cols %d: %d rows, want %d", cells, cols, len(out), rows)
+			}
+			for i, r := range out {
+				if w := dispW(r); w != cols {
+					t.Errorf("icons %d, cols %d row %d is %d wide", cells, cols, i, w)
+				}
+			}
+			if s := statusRow(cols, true, "vulcan", "prod-db-01", at, true, "", ""); dispW(s) != cols {
+				t.Errorf("icons %d, cols %d status is %d wide", cells, cols, dispW(s))
+			}
 		}
 	}
 }
