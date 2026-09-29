@@ -208,17 +208,19 @@ func popupInnerW(screenW int) int {
 	return max(10, min(screenW-2, popupMaxW)-2)
 }
 
-// hintLegend builds a popup's bottom-border hint: key bright, description dim.
-// It is the same reading as the footer legend — bright is the key you press, dim
-// is what it does — so the rule is learned once and holds everywhere (tdp M5).
+// hintLegend builds a popup's bottom-border hint: Key:what, one space
+// apart — the key Blue, the colon and what it does Overlay0 (tdp M5, D2,
+// 2026-09-29; "Key what", two spaces apart, until then). It is the same
+// reading as the footer legend — bright is the key you press, dim is what
+// it does — so the rule is learned once and holds everywhere.
 func hintLegend(pairs [][2]string) string {
 	k := lipgloss.NewStyle().Foreground(focusColor)
 	d := lipgloss.NewStyle().Foreground(dimColor)
 	parts := make([]string, 0, len(pairs))
 	for _, p := range pairs {
-		parts = append(parts, k.Render(p[0])+" "+d.Render(p[1]))
+		parts = append(parts, k.Render(p[0])+d.Render(":"+p[1]))
 	}
-	return " " + strings.Join(parts, "  ") + " "
+	return " " + strings.Join(parts, " ") + " "
 }
 
 // hotkeyIndex picks which of keys a keystroke fires, or -1: EXACTLY the

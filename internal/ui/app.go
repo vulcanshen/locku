@@ -461,7 +461,7 @@ func (m AppModel) View() string {
 			panelFrame(sideW-2, m.sidebarBody(sideW-2, innerH), sideChips, m.focus == panelSide),
 			panelFrame(w2, m.detailBody(w2, innerH), m.detailChips(), m.focus == panelDetail))
 	}
-	footer := keyLegend([][2]string{{"space", "menu"}, {"?", "help"}, {"tab/1-2", "panels"}, {"q", "quit"}}, m.width)
+	footer := keyLegend([][2]string{{"Space", "menu"}, {"?", "help"}, {"Tab/1–2", "panels"}, {"q", "quit"}}, m.width)
 	out := panels + "\n" + footer
 
 	// Bottom to top: the order Esc and the keys take them in, reversed.
