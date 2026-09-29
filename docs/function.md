@@ -16,7 +16,7 @@
 
 ### 0.2 為什麼不能在 pane 內做
 
-按鍵流向：實體終端機 → tmux client 進程 → tmux server 進程 → 該 pane 的 PTY（pseudo terminal，虛擬終端）→ pane 內的程式。prefix 在 tmux server 就被消化，那個 byte 永遠不會進到 pane。screen 的 Ctrl+a 同理。所以「在 pane 內攔 prefix」在架構上不可能，locku 必須站在 tmux/screen 之外，由它們把 tty 交出來。
+按鍵流向：實體終端機 → tmux client 進程 → tmux server 進程 → 該 pane 的 PTY（pseudo terminal，虛擬終端）→ pane 內的程式。prefix 在 tmux server 就被消化，那個 byte 永遠不會進到 pane。screen 的 C-a 同理。所以「在 pane 內攔 prefix」在架構上不可能，locku 必須站在 tmux/screen 之外，由它們把 tty 交出來。
 
 ### 0.3 與既有工具比較
 
@@ -28,7 +28,7 @@
 | tmux 整合 | 手動設 lock-command | tmux 預設值 | 不適用 | 文件提供設定 |
 | macOS | 無 | 無 | 有 | 有 |
 
-PAM 是 Pluggable Authentication Modules，Linux/macOS 的系統驗證框架。VT 是 virtual terminal，Linux 的實體主控台 Alt+F1 到 F7。
+PAM 是 Pluggable Authentication Modules，Linux/macOS 的系統驗證框架。VT 是 virtual terminal，Linux 的實體主控台 Alt-F1–F7。
 
 ## 1. 執行模型
 
@@ -63,7 +63,7 @@ tmux `lock-session` 對每個 attach 中的 client 各跑一份 locku，彼此�
 
 ### 2.1 終端機模式
 
-- raw mode：關 ICANON、ECHO、ISIG。ISIG 關掉後 Ctrl+C、Ctrl+Z、Ctrl+\ 變成普通 byte 進到程式，不再產生 SIGINT、SIGTSTP、SIGQUIT。
+- raw mode：關 ICANON、ECHO、ISIG。ISIG 關掉後 Ctrl-C、Ctrl-Z、Ctrl-\ 變成普通 byte 進到程式，不再產生 SIGINT、SIGTSTP、SIGQUIT。
 - alternate screen：避免捲動緩衝區露出鎖定前的內容。
 - 不開 mouse tracking：滑鼠留給終端機本身做文字選取，無害。
 - **終端機的回答不是按鍵**（2026-09-28）：終端機回答別人問它的事（背景色、游標位置、它是什麼）走的是跟按鍵同一條輸入，鎖定畫面又把任何鍵都當成按鍵——回答一進來就開 PIN 框，沒設 PIN 就直接解鎖。tmux 在 client attach 的那一刻會問終端機背景色、DA1、DA2、XTVERSION，而 hook 把 attach 進已鎖 tmux 的 client 鎖起來是緊接在後（§6.2），回答就落到 locku 手上（實測 3.7c：鎖 17 ms 就沒了，每次）。所以兩條讀按鍵的路（畫布與 PIN prompt 經 Bubble Tea、custom 的 `Key`）都先過`internal/termreply`：OSC（`ESC ]` 加數字，到 BEL 或 `ESC \`）、DCS（`ESC P` 加數字、`>` 或 `!`，到 `ESC \`）、CSI 帶 `?` `>` `=`、或結尾是 `R` `n` `t` `c`、或 `$y`，整段丟掉；跨兩次讀取的也丟得乾淨。其他都是按鍵。單獨一個 `Esc` 在一次讀取的結尾就當場算數，不等下一個 byte；`ESC ]`、`ESC P` 在結尾則等下一次讀取（Alt-] / Alt-P 沒人在鎖上按，回答漏進來卻會解鎖）。Shift-F3 在部分終端機是 `ESC [ 1 ; 2 R`，跟游標回報同形，一起丟掉，按別的鍵就好。
@@ -75,18 +75,18 @@ tmux `lock-session` 對每個 attach 中的 client 各跑一份 locku，彼此�
 |---|---|---|
 | SIGINT / SIGTERM / SIGQUIT | kill 預設、ISIG | 忽略 |
 | SIGHUP | tty 掛斷 | 忽略，交由 read EOF 決定是否結束 |
-| SIGTSTP / SIGTTIN / SIGTTOU | Ctrl+Z、背景讀寫 | 忽略 |
+| SIGTSTP / SIGTTIN / SIGTTOU | Ctrl-Z、背景讀寫 | 忽略 |
 | SIGWINCH | 視窗大小改變 | 接收並重繪；custom saver 再把新尺寸轉給程式的 pty（5.5） |
 | SIGKILL / SIGSTOP | kill -9 | 無法攔截，範圍外 |
 
-Bubble Tea 實作注意：預設會安裝 SIGINT/SIGTERM handler 讓程式結束，必須用 `tea.WithoutSignalHandler()` 並自行 `signal.Ignore`。Ctrl+C 會以 KeyMsg 進來，當成一般按鍵處理即可。
+Bubble Tea 實作注意：預設會安裝 SIGINT/SIGTERM handler 讓程式結束，必須用 `tea.WithoutSignalHandler()` 並自行 `signal.Ignore`。Ctrl-C 會以 KeyMsg 進來，當成一般按鍵處理即可。
 
 ### 2.3 攔不到的東西（範圍外，README 要說清楚）
 
 - ssh client 端的 `~.`：在本機端處理，byte 不會過線。
-- Linux VT 的 Alt+F1 到 F7 切換、SysRq：需要 VT_LOCKSWITCH ioctl 與 root，vlock 的領域，不做。
+- Linux VT 的 Alt-F1–F7 切換、SysRq：需要 VT_LOCKSWITCH ioctl 與 root，vlock 的領域，不做。
 - 另一條 SSH：`tmux attach -d`、`tmux kill-server`、`kill -9`。
-- 終端機模擬器自身的快捷鍵：iTerm2 分頁切換、Cmd+W 等。
+- 終端機模擬器自身的快捷鍵：iTerm2 分頁切換、Cmd-W 等。
 
 ## 3. 狀態機
 
@@ -510,8 +510,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 ## 12. MVP 驗收
 
-- tmux 內 `lock-session` 後：prefix+d、prefix+&、prefix+c、prefix+x 皆無反應。
-- Ctrl+C、Ctrl+Z、Ctrl+\ 無反應。
+- tmux 內 `lock-session` 後：prefix d、prefix &、prefix c、prefix x 皆無反應。
+- Ctrl-C、Ctrl-Z、Ctrl-\ 無反應。
 - 錯誤 PIN 留在 prompt；正確 PIN 後 tmux 畫面完整恢復，pane 內程式狀態未變。
 - 錯誤 PIN 後 1 秒內的輸入被吞掉。wrong_pin_attempts 設 3 時，第 3 次錯誤後顯示倒數，倒數期間輸入無效，結束後可再試。
 - 鎖定中 resize 視窗，畫面重繪不破。
@@ -530,5 +530,5 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 - custom 一輪（`e2e/custom_lock.py`，pty 上跑真的 binary，24 項，本機有 cmatrix 再加 4 項；2026-09-25）：無 PIN——程式的輸出出現在終端機、程式在跑、任意鍵結束並殺掉程式。設定畫面設 PIN。有 PIN——按鍵出 PIN 框，框直接疊在畫面上（沒有點陣板的 glyph、沒有切 screen），框開著時程式的輸出還在增加、框畫了不只三次，Esc 後框拿掉（有 `?2026l`）、輸出繼續、鎖與程式都還在，PIN 結束並殺程式。`echo boom >&2; exit 3` / `exit 0` / 沒填指令三種：都出現點陣板、狀態列各是 `custom saver: exit 3`（含 `boom`）/ `custom saver exited 0` / `custom saver: no command`、鎖不退、PIN 結束。cmatrix：`exec cmatrix -b -u 5` 有畫、按鍵出框、PIN 結束並殺乾淨。單元：`internal/custom`（框跟著每一幀補畫、結束碼與訊號的字、沒指令、尺寸到得了程式、框只碰自己的矩形）、`internal/ui/custom_test.go`（custom 的 `[2]` 只有 command、檔案只給 custom 存 command 且沒有顏色、板子上 `EXIT` 金 / 0 綠 / 其他 peach / `NONE` 紅與退階、prompt-only 的鎖每一步都經 callback 畫框、全域 `P` 對 custom 交出終端機且 `[1]` 上不作用）。
 - screen 一輪（`e2e/screen_lock.py`，真的 macOS screen 4.00.03，15 項；自己的 SCREENDIR、HOME、SHELL=/bin/sh）：先開一個 session 在還沒有區塊的 rc 上（環境裡有 LOCKPRG，等於新 shell）；設定畫面填 `bind l`、activate 打開：rc 有區塊（`idle 300 lockscreen`、`bind l lockscreen`，每行 `# locku`，使用者自己的 `startup_message off` 留著）、`~/.profile` 有 `export LOCKPRG=<絕對路徑>`、toast `wrote`；`C-a x` 出點陣板、任意鍵解；`C-a l` 也出點陣板——這個 session 是在沒有 bind 的檔上開的，證明 `-X bind` 即時到了；再開一個 session 在有區塊的檔上，`C-a l` 一樣鎖；畫面上把 idle 改 2，檔案立刻是 `idle 2 lockscreen`、toast `wrote`、跑著的 session 兩秒後自己鎖；activate 關掉：兩個檔的區塊都消失（使用者的行留著）、toast `removed`、跑著的 session 不再自己鎖、`C-a l` 不再鎖。toast 只驗前幾個字（80 欄一行放不下整句）。
 - 忘記 PIN（2026-09-25）：`cmd/locku/pin_test.go` 在 pty 上跑 `pinReset`——`y` + 正確密碼：畫面先有 `[y/N]` 與 `Password for`，再顯示一次八位數 `New PIN:`，檔案認新 PIN、不認舊的，log 有 `pin reset by …: a new PIN written`、不含 PIN；密碼錯：拒絕、log 記 `refused`、檔案不變；答 `n`：不問密碼、不變；stdin 不是 tty：`needs a terminal`、exit 2。`internal/config`：`NewPIN` 八位數字；`LoadPINHash` 沒檔案 / 非 bcrypt 回 ok=false，沒有 `pin_hash` 回空字串。`internal/ui/lockscreen_test.go` `TestLockReadsTheFilesPINAtEveryKey`：鎖定中檔案換了新 hash，舊 PIN `wrong`、新 PIN 開；檔案壞掉沿用原 hash；檔案清空任意鍵開。
-- tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix+d、prefix+c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix+d 才 detach）。
+- tmux lock-command 期間 prefix 到不了 tmux（2026-09-24 以探針實測：鎖定中送 prefix d、prefix c 都被鎖定程式吞掉，client 仍 attached；解鎖後 prefix d 才 detach）。
 - shell 環境有 LOCKPRG 時 `C-a x` 進的是 locku（2026-09-24 以探針實測通過；`.screenrc` 的 `setenv` 路線實測不通，6.2 已改為 shell rc）。
