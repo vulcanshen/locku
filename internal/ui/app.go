@@ -632,7 +632,7 @@ func (m *AppModel) quit() tea.Cmd {
 	}
 	if m.anyDirty() {
 		return m.quitAsk.ask(confirmPopup{title: "Unsaved colours", accept: "quit anyway",
-			lines: []string{"Quit without saving the colours?", "S on the profile saves them, R drops them"}}, m.layer())
+			lines: []string{"Quit without saving the colours?", "[S] on the profile saves them, [R] drops them"}}, m.layer())
 	}
 	return tea.Quit
 }
