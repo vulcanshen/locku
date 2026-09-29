@@ -18,7 +18,7 @@ import (
 // date.
 func newTestApp(t *testing.T) AppModel {
 	t.Helper()
-	t.Setenv("LOCKU_CONFIG", t.TempDir())
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	cfg := config.Default()
 	second := config.DefaultProfile()
 	second.Name, second.Time, second.Date = "clock2", "HH MM", "off"

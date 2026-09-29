@@ -14,13 +14,13 @@ import (
 )
 
 // TestDump prints the screens at a few sizes, for eyes rather than
-// assertions: LOCKU_DUMP=1 go test ./internal/ui -run TestDump -v
+// assertions: LOCKU__DUMP=1 go test ./internal/ui -run TestDump -v
 // (the family's `make dump`). Without the variable it is a no-op.
 func TestDump(t *testing.T) {
-	if os.Getenv("LOCKU_DUMP") == "" {
-		t.Skip("set LOCKU_DUMP=1 to print the screens")
+	if os.Getenv("LOCKU__DUMP") == "" {
+		t.Skip("set LOCKU__DUMP=1 to print the screens")
 	}
-	t.Setenv("LOCKU_CONFIG", t.TempDir())
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	cfg := config.Default()
 	second := config.DefaultProfile()
 	second.Name, second.Time, second.Date = "clock2", "HH MM SS", "YYYY-MMM-DD"

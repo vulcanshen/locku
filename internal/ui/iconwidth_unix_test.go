@@ -4,20 +4,20 @@ package ui
 
 import "testing"
 
-// LOCKU_ICON_WIDTH decides when set to 1 or 2; anything else is asked of
+// LOCKU__ICON_WIDTH decides when set to 1 or 2; anything else is asked of
 // the terminal, which a test has none of.
 func TestIconWidthOverride(t *testing.T) {
 	withIcons(t, 1)
-	t.Setenv("LOCKU_ICON_WIDTH", "2")
+	t.Setenv("LOCKU__ICON_WIDTH", "2")
 	DetectIconWidth()
 	if iconCells != 2 {
-		t.Errorf("LOCKU_ICON_WIDTH=2: %d", iconCells)
+		t.Errorf("LOCKU__ICON_WIDTH=2: %d", iconCells)
 	}
 	iconCells = 1
-	t.Setenv("LOCKU_ICON_WIDTH", "3")
+	t.Setenv("LOCKU__ICON_WIDTH", "3")
 	DetectIconWidth()
 	if iconCells != 1 {
-		t.Errorf("LOCKU_ICON_WIDTH=3 is not a width: %d", iconCells)
+		t.Errorf("LOCKU__ICON_WIDTH=3 is not a width: %d", iconCells)
 	}
 }
 

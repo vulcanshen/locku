@@ -35,7 +35,7 @@ profile = os.path.join(work, ".profile")
 sdir = os.path.join(work, "screens")
 os.makedirs(sdir, mode=0o700)
 env = {"HOME": work, "PATH": binDir + ":" + os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
-       "LOCKU_CONFIG": cfgDir, "SCREENDIR": sdir, "USER": os.environ.get("USER", "u")}
+       "LOCKU__CONFIG": cfgDir, "SCREENDIR": sdir, "USER": os.environ.get("USER", "u")}
 # What activate writes into ~/.profile: LOCKPRG is locku as PATH finds
 # it. A screen started here gets it the way a new shell would.
 screenEnv = dict(env, LOCKPRG=os.path.join(binDir, "locku"))

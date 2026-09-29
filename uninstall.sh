@@ -43,8 +43,8 @@ ask() {
 }
 
 # What the user wrote: the PIN's hash, the savers, the colours.
-if [ -n "$LOCKU_CONFIG" ]; then
-  CONFIG_DIR="$LOCKU_CONFIG"
+if [ -n "$LOCKU__CONFIG" ]; then
+  CONFIG_DIR="$LOCKU__CONFIG"
 elif [ -n "$XDG_CONFIG_HOME" ]; then
   CONFIG_DIR="$XDG_CONFIG_HOME/locku"
 else

@@ -12,12 +12,12 @@
 - **tmux：預設整台 server 一起鎖（`lock` 可改成只鎖這個 session，2026-09-25），預設不綁熱鍵，鎖著的時候誰進來都被鎖（2026-09-24）。** `prefix :` 打 `locku` 就是 `lock-server`（command alias，不跟你的 bind 撞；要熱鍵就在 `bind-key` 自己填一個，2026-09-25），所有 session 的所有 client 一起變保護程式；tmux 本身沒有「鎖著」的狀態，locku 在 `locku lock` 啟動時把全域 `@locked` 設起來，`client-attached` / `client-session-changed` hook 看到就 `lock-client -t #{hook_client}`（指名觸發的那個 client；不指名時兩個 client 同時 attach 會鎖錯人，2026-09-28 實測，理由見 function.md §6.2）——attach 哪個 session 都一樣，PIN 對了才清掉，tty 消失不清。閒置鎖是 tmux 每個 session 各自計時，哪個畫面閒置就鎖哪個畫面。lock-command 是 locku 的絕對路徑，由 tmux 展開 `#{socket_path}` 帶給 `locku lock -S`，非預設 socket 也對。`lock-session` 時旗立在 session 上、hooks 不變，別的 session 照常用；lock 程式從自己 session 的 lock-command 得知 session（`-t`），因為鎖定中用 tty 反查會拿到錯的 session（實測）。跑著的 server 拿到的是整個區塊（`source-file`，2026-09-25）：跟檔案同一份文字，先 undo 舊區塊做過、新區塊不做的事，再對每個既有 session 設它自己的 lock-command。
 - **screen：原理照 tmux、名字用 screen 的（2026-09-25）。** `idle N lockscreen` 與 `bind <鍵> lockscreen` 寫進 screenrc、跑著的每個 session 即時 `screen -X`；LOCKPRG 只能走 shell 環境（2026-09-24 實測 `.screenrc` 的 `setenv` 對 lock 無效：lock 是 attacher 呼叫 `getenv`），所以 activate 連 shell rc 一起寫，新開 shell 生效，已在跑的 session detach 後從新 shell `screen -r`；在那之前那些 session 鎖到的是 screen 內建的 `Key:` 鎖，toast 與 `?` 都說明。沒有 `lock`：screen 沒有 server，沒有範圍可選。
 - **custom saver：你自己的程式當保護程式的動畫（2026-09-25）。** profile 填一個 `command`（`sh -c` 跑，例如 `cmatrix -b`），locku 管鎖、PIN、整合。程式跑在 locku 開的 pty 上、自己一個 process group，輸出直通終端機，按鍵永遠在 locku 手上；locku 不重啟它、不讀它的畫面，解鎖就 SIGKILL 整個 group。PIN 框疊在還在動的畫面上：每一幀後面補畫一次框、DECSC / DECRC 包住、一次 synchronised update，沒有一幀被丟；框只插在 escape sequence / UTF-8 完整的切點（`safeCut`）；收起時清掉框的位置，只對閒置半秒以上的程式送 SIGWINCH（正在畫的被要求重畫會閃一下從頭來，cmatrix 實測）。程式結束（它不該結束）鎖不退：locku 的點陣板照實寫 `EXIT <code>`（`EXIT` 金字，數字 0 綠、其他 peach；被訊號殺是 128 + 號碼，沒填指令是紅色的 `NONE`），狀態列紅字寫原因。custom 沒有 bg / fg：畫面是程式的。指令不做任何 sanitize：是使用者自己機器上自己的指令。設定畫面的預覽把終端機整個交給程式，任意鍵回來。
-- **忘記 PIN：`locku pin reset`（2026-09-25）。** `[y/N]` 後要登入密碼（靜態 binary 沒有 PAM，用 `su` 在 pty 上驗），過了就產生新的八位數 PIN、bcrypt 覆蓋 config 的 `pin_hash` 並顯示一次（照 elasticsearch 的 reset password，不把 `pin_hash` 清空、不留一個開著的鎖），紀錄寫 `~/.locku/data/pin-resets.log`（`$LOCKU_DATA` 可改；成功或密碼錯被拒都記，不含 PIN）；鎖定中的 locku 每一鍵重讀 `pin_hash`，下一鍵就認得新 PIN、舊的不能用；檔案壞掉沿用原本的 hash，`pin_hash` 被清空視同無 PIN。沒有終端機不跑；config 讀不到不跑。能這樣做的人本來就能殺掉鎖——locku 不是安全邊界，帳號才是。
+- **忘記 PIN：`locku pin reset`（2026-09-25）。** `[y/N]` 後要登入密碼（靜態 binary 沒有 PAM，用 `su` 在 pty 上驗），過了就產生新的八位數 PIN、bcrypt 覆蓋 config 的 `pin_hash` 並顯示一次（照 elasticsearch 的 reset password，不把 `pin_hash` 清空、不留一個開著的鎖），紀錄寫 `~/.locku/data/pin-resets.log`（`$LOCKU__DATA` 可改；成功或密碼錯被拒都記，不含 PIN）；鎖定中的 locku 每一鍵重讀 `pin_hash`，下一鍵就認得新 PIN、舊的不能用；檔案壞掉沿用原本的 hash，`pin_hash` 被清空視同無 PIN。沒有終端機不跑；config 讀不到不跑。能這樣做的人本來就能殺掉鎖——locku 不是安全邊界，帳號才是。
 - **進程活著 = 鎖著，結束 = 解鎖。** 任何錯誤都不得讓進程結束；只有 PIN 正確、無 PIN 模式任意鍵、tty 消失三種情況會結束。
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格（icon 畫成兩格的字型上只有方塊，仍是兩格，見下面 icon 的實際寬度），暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。各 size 需要的終端機尺寸表在 README「你會看到什麼」。
 - **狀態列**：`user@host · locked since HH:MM`（`show_status` 可關）→ config error → `no PIN · any key unlocks` → custom 的結束原因，這個順序，超過終端機寬度從尾端截掉。已知的邊角（2026-09-25）：hostname 很長加窄終端時被截的是尾端的 `no PIN` / custom note——GitHub 的 macOS runner hostname 62 字元沒有點，狀態列在 80 欄放不下，`internal/ui` 的測試在 `TestMain` 把 `whoami` 固定成 `user@host`。是設計決定，未改。
 
-- **icon 的實際寬度（2026-09-29，tdp D6）。** 有的 Nerd Font（給 CJK 用的）icon 讓游標前進兩格，lipgloss 與 x/ansi 算一格，框就歪。`ui.DetectIconWidth()` 照 filu：在第一欄印一個 icon（跟 filu 一樣用 nf-fa-folder；用點陣板的方塊的話，custom saver 的 e2e 會把它當成畫在程式上的底）、送 CPR（`\e[6n`）問游標在哪，200 ms 內沒回答就當一格；`LOCKU_ICON_WIDTH=1|2` 直接指定。`locku`（設定畫面）與 `locku lock` 各探一次；鎖上放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——探測自己讀完回答，逾時才到的回答被 `DropPending` 清掉，就算漏進鎖裡，`termreply` 也把以 `R` 結尾的 CSI 當回報丟掉，不會叫出 PIN 框或解鎖。量寬度只走 `width.go`：`dispW()`（x/ansi 的寬度加上每個 icon 多的格數）、`clipANSI()`、`dispCutLeft()`、`compositeDisp()`（取代 `overlay.Composite`；比畫面高的框照 overlay 只畫中間，filu 的版本在這裡會 panic）、`centerDisp()`（取代 `lipgloss.Place`）、`joinH()`（取代 `lipgloss.JoinHorizontal`）。custom saver 的 PIN 框在 `internal/custom` 貼，那邊看不到 icon 寬度，所以框寬由 ui 量好連框一起給（`Overlay(box, w)`）。一格時畫面一個位元組都不變（改之前後把各種大小的畫面印出來比過）。
+- **icon 的實際寬度（2026-09-29，tdp D6）。** 有的 Nerd Font（給 CJK 用的）icon 讓游標前進兩格，lipgloss 與 x/ansi 算一格，框就歪。`ui.DetectIconWidth()` 照 filu：在第一欄印一個 icon（跟 filu 一樣用 nf-fa-folder；用點陣板的方塊的話，custom saver 的 e2e 會把它當成畫在程式上的底）、送 CPR（`\e[6n`）問游標在哪，200 ms 內沒回答就當一格；`LOCKU__ICON_WIDTH=1|2` 直接指定。`locku`（設定畫面）與 `locku lock` 各探一次；鎖上放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——探測自己讀完回答，逾時才到的回答被 `DropPending` 清掉，就算漏進鎖裡，`termreply` 也把以 `R` 結尾的 CSI 當回報丟掉，不會叫出 PIN 框或解鎖。量寬度只走 `width.go`：`dispW()`（x/ansi 的寬度加上每個 icon 多的格數）、`clipANSI()`、`dispCutLeft()`、`compositeDisp()`（取代 `overlay.Composite`；比畫面高的框照 overlay 只畫中間，filu 的版本在這裡會 panic）、`centerDisp()`（取代 `lipgloss.Place`）、`joinH()`（取代 `lipgloss.JoinHorizontal`）。custom saver 的 PIN 框在 `internal/custom` 貼，那邊看不到 icon 寬度，所以框寬由 ui 量好連框一起給（`Overlay(box, w)`）。一格時畫面一個位元組都不變（改之前後把各種大小的畫面印出來比過）。
 
 ### 程式碼目錄
 
@@ -46,6 +46,7 @@ locku/
 - **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿用該通道自己的顏色畫（R 列 `#RR0000`），改的是草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。custom 沒有顏色。
 - **設定畫面的細節**：`[1]` 的 `P` 無效（`p` 才是游標那列），profile 列 `a` 直接設為啟用（決定 41，2026-09-25）；每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊——`[2]` 名字（草稿未存接黃色 `unsaved`，只有 focus 時亮）、`[1] locku`，沒有種類 tag、沒有底部 hint；`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改；`activate` 是「區塊在不在檔案裡」，Enter 後 confirm 才寫，路徑沒填就 disabled 並說明；區塊只碰 `# >>> locku >>>` … `# <<< locku <<<`，每行尾巴 `# locku`，冪等；preview 不驗 PIN。
 - **Enter = 進 `[2]` / 編輯 / 送出，Esc 只做取消，`X` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。
+- **環境變數照家族的 `LOCKU__NAME`（2026-09-29，tdp D6）。** app 名後兩個底線：`LOCKU__CONFIG`（設定目錄）、`LOCKU__DATA`（資料目錄）、`LOCKU__ICON_WIDTH`、測試用的 `LOCKU__DUMP`。舊名 `LOCKU_CONFIG`、`LOCKU_DATA`（v0.1.3 已發佈）不再讀、不留相容（user 裁定），CHANGELOG 寫了新舊對照；`uninstall.sh` 與三個 e2e 腳本一起改。
 
 ## 已否決，不要重提
 
@@ -149,7 +150,7 @@ make install    # → $GOBIN；make uninstall 移除
 
 ```bash
 make check                                       # fmt-check + vet + go test -race
-LOCKU_DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的畫面
+LOCKU__DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的畫面
 make lock                                        # 編譯並鎖住這個終端機
 make e2e                                         # 端到端：真的 tmux（e2e/tmux_attach.py，自己的 TMUX_TMPDIR）、custom saver（e2e/custom_lock.py）、真的 screen（e2e/screen_lock.py，自己的 SCREENDIR）；不碰你的 server 與 session
 make gif                                         # 重錄 docs/demo.gif，見下方「demo gif」
@@ -163,7 +164,7 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make ch
 
 ### demo gif（2026-09-26）
 
-README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（clock / dino / 以 cmatrix 當 custom 的三個 profile，PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 複製到 `.local/demos/config`、以 `LOCKU_CONFIG` / `LOCKU_DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font、cmatrix。
+README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（clock / dino / 以 cmatrix 當 custom 的三個 profile，PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 複製到 `.local/demos/config`、以 `LOCKU__CONFIG` / `LOCKU__DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font、cmatrix。
 
 VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），用 0.11.0：`make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs`。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
 

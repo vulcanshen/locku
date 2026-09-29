@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Changed
+- The environment variables are named as the rest of the family's, with two underscores after the name: `LOCKU_CONFIG` is now `LOCKU__CONFIG` and `LOCKU_DATA` is now `LOCKU__DATA`. The old names are no longer read: set the new ones, or locku falls back to `~/.config/locku` and `~/.locku/data`.
 - `?` lists the keys, to read: on `[1]` and on a profile's or a saver's `[2]`, that panel's keys — every row of its Space menu, one that cannot run now dimmed as it is there — then the ones that work everywhere. Nothing on it runs; it used to be a menu with `Quit` on it.
 - A Space menu ends, under a line and with no title over it, in one row, `Global operation`, and its `Enter` opens the global operation popup, where `Quit` is. `Esc` there comes back to the Space menu. `Quit` used to sit in every Space menu, under a `global operation` title.
 - Every popup is as wide as the terminal less a column on either side, up to 120 columns, whatever it holds: a box no longer grows as you type in it, and the PIN boxes, on the lock and in the settings, are as wide as the rest instead of 48.
@@ -11,7 +12,7 @@
 - The footer and the hints on the popups write each key as `Key:what`, one space apart — `Space:menu ?:help Tab/1–2:panels q:quit` — and name keys as the keycap does: `Backspace`, not `Bksp`. In `?` the keys are blue, and keys that do one thing are written `q/Ctrl-C`, `Tab/1–2`. A key named in a sentence is in brackets: `Press [Esc] to close`.
 
 ### Fixed
-- On a Nerd Font that draws its icons two cells wide, as some made for CJK do, the board, the splash, the popups and their titles keep their shape: locku asks the terminal how far an icon moves the cursor when it starts, and `LOCKU_ICON_WIDTH=1` or `2` settles it by hand.
+- On a Nerd Font that draws its icons two cells wide, as some made for CJK do, the board, the splash, the popups and their titles keep their shape: locku asks the terminal how far an icon moves the cursor when it starts, and `LOCKU__ICON_WIDTH=1` or `2` settles it by hand.
 - A popup's hint too wide for its box — the PIN prompt on a narrow terminal — drops whole items from the end instead of being cut mid-word.
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
 - `Ctrl-C` in a box being typed in asks about quitting over the box, and `Enter` then quits; it used to submit the box under it.

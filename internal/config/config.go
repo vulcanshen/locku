@@ -241,10 +241,11 @@ func (cfg Config) NewProfile(name, kind string) Profile {
 	return p
 }
 
-// Dir is where config.yaml lives: $LOCKU_CONFIG, else $XDG_CONFIG_HOME/locku,
-// else ~/.config/locku (ui.md §6).
+// Dir is where config.yaml lives: $LOCKU__CONFIG, else $XDG_CONFIG_HOME/locku,
+// else ~/.config/locku (ui.md §6). The name is the family's, APP__NAME
+// (tdp D6, 2026-09-29); the old LOCKU_CONFIG is not read (user).
 func Dir() string {
-	if d := os.Getenv("LOCKU_CONFIG"); d != "" {
+	if d := os.Getenv("LOCKU__CONFIG"); d != "" {
 		return d
 	}
 	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
@@ -668,9 +669,10 @@ func LoadPINHash() (hash string, ok bool) {
 }
 
 // DataDir is where locku keeps what is not configuration — the log of
-// PIN resets: $LOCKU_DATA, or ~/.locku/data (user, 2026-09-25).
+// PIN resets: $LOCKU__DATA, or ~/.locku/data (user, 2026-09-25; LOCKU_DATA
+// until 2026-09-29, not read now — tdp D6).
 func DataDir() string {
-	if d := os.Getenv("LOCKU_DATA"); d != "" {
+	if d := os.Getenv("LOCKU__DATA"); d != "" {
 		return d
 	}
 	h, err := os.UserHomeDir()
