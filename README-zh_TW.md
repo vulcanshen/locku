@@ -86,7 +86,7 @@ locku version    # 版本；locku help 印用法
 - 任何鍵開 PIN 框，那個鍵不算輸入。`Enter` 送出、`Esc` 回 saver、`Backspace` 刪一字。
 - 錯誤 PIN 邊框變紅 1 秒並吞掉所有輸入。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
 - 狀態列 `user@host · locked since HH:MM`（`show_status: false` 可關），沒設 PIN 時標明 `no PIN · any key unlocks`。
-- Ctrl+C、Ctrl+Z、Ctrl+\ 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。進程只在三種情況結束：PIN 正確、無 PIN 時任意鍵、終端機消失。
+- `Ctrl-C`、`Ctrl-Z`、`Ctrl-\` 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。進程只在三種情況結束：PIN 正確、無 PIN 時任意鍵、終端機消失。
 - 沒設 PIN、或 config 讀不到，一律 fail open：saver 照常顯示、狀態列說明原因、任何鍵結束。
 
 **不是安全邊界。** locku 擋的是誤觸與路人，擋不住你自己帳號的另一條 session。攔不到的：ssh 的 `~.`（在 client 端處理，byte 不會過線）、Linux VT 切換（vlock 的領域，要 root）、另一條 SSH 的 `tmux attach -d` / `kill -9`、終端機模擬器自身的快捷鍵。
@@ -182,13 +182,13 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 | 鍵 | |
 |---|---|
-| `Tab` · `1` · `2` | 下一個面板 / 直達面板 |
+| `Tab` / `1`–`2` | 下一個面板 / 直達面板 |
 | `Enter` | `[1]` 上：這列的欄位進 `[2]`；`[2]` 上：編輯、選、切換、挑 |
 | `Esc` | 關最上層的浮層 |
 | `Space` | 這裡能做什麼：這一列、這個面板，以及 `Global operation` 底下的離開 |
 | `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上是每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
-| `q` · `Ctrl-C` | 離開；有未存的顏色先問，這時再按一次 `Ctrl-C` 立刻離開 |
+| `q` / `Ctrl-C` | 離開；有未存的顏色先問，這時再按一次 `Ctrl-C` 立刻離開 |
 | `j` / `k` · `u` / `d` · `gg` / `G` | 下 / 上 · 半頁 · 首 / 尾 |
 
 ### `[1]` 側欄
@@ -270,7 +270,7 @@ screen:
 刻意不做的：
 - **Windows**——鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品
 - **系統密碼**——驗證只有 locku 自己的 PIN；`auth: pam` 只是保留位
-- **鎖 Linux 的虛擬主控台**（Alt+F1 … F7）——vlock 的領域
+- **鎖 Linux 的虛擬主控台**（`Alt-F1`–`F7`）——vlock 的領域
 - **鎖定畫面上的「忘記 PIN」入口**——回來的路是 `locku pin reset`，在 shell 裡、用登入密碼
 
 ## 相關連結

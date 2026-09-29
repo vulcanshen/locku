@@ -83,10 +83,10 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 |---|---|
 | Preview（只在 `[2]`：profile / saver 的 `[2]` 是那一個、preference / tmux / screen 的 `[2]` 是啟用中的 profile，帶著顏色草稿，任意鍵回來；custom 把終端機交給程式；`[1]` 上不作用——那裡 `p` 預覽游標那列，2026-09-25） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
-| 離開 | `q` 與 `Ctrl+C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl+C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl+C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl+C` 不問就走。menu 的路：`Space` → `Global operation` → `[q]uit`（2026-09-27） |
+| 離開 | `q` 與 `Ctrl-C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl-C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl-C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl-C` 不問就走。menu 的路：`Space` → `Global operation` → `[q]uit`（2026-09-27） |
 | splash 彩蛋 | `V`（不揭露） |
 
-全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl+C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl+C` 也只是一個
+全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl-C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl-C` 也只是一個
 按鍵（ISIG 已關，`function.md` §2.1；偏離 tdp，見 dev-remarks）。
 
 `?` 打開最前端那個 surface 的 key reference：唯讀、可以捲動，沒有游標、不能執行（2026-09-27，tdp K6、M4；之前 panel 上是可執行的 `?` menu）。內容看 focus 在哪：
@@ -221,7 +221,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 **從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）每一步是自己的框、一層疊一層，整串做完才清；中途 `Esc` 退一步，退完第一步回到 menu（2026-09-28，tdp v0.1.9 F1；之前中途 `Esc` 取消整串）。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
 
-**離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、D3）：有未存顏色時 `q`、`Ctrl+C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl+C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
+**離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、D3）：有未存顏色時 `q`、`Ctrl-C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl-C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
 
 層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28；2026-09-27 起五層，之前三層）。
 
@@ -269,7 +269,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 ## 附錄 — hotkey 全表
 
 ### Core key
-`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu（最後一列 `Global operation`） · `?` key reference（唯讀）/ popup 的鍵 / 字典 · `q`、`Ctrl+C` quit
+`Tab` 切面板 · `Enter` 進 `[2]` / 編輯 / 送出 · `Esc` 關浮層 / 回 saver · `Space` menu（最後一列 `Global operation`） · `?` key reference（唯讀）/ popup 的鍵 / 字典 · `q`、`Ctrl-C` quit
 
 ### 全域
 `P` preview（只在 `[2]`） · `1` / `2` 直達面板

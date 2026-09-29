@@ -111,6 +111,8 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明。在這裡放 key reference，等於把真正需要的資訊擠掉，
   換成換個 panel 就看得到的東西：這三個 `[2]` 的動作（各列的 `Enter`、`[P] Preview`）都在 Space menu 裡，離開在
   Space menu 的 `Global operation` 與 `q`，core key 在 `[1]` 與其他 `[2]` 的 `?`。其他 panel 的 `?` 照 K6、M4。
+  字典的左欄是設定名稱、不是鍵，所以維持 Subtext1，不跟 key reference 的鍵一起變 Blue（2026-09-29，tdp D2）；
+  說明裡提到的鍵照 M5 加方括號（`[Enter] turns it`），tmux / screen 自己的鍵照它們的寫法（`C-a x`）。
 - **custom saver 的 PIN prompt 底下不變暗（F8；2026-09-28，使用者定案）。** F8 要最上層以外的一切都 dim，但這時底下是使用者自己的程式的畫面：
   程式的輸出直接送到終端機，locku 只在上面畫框（`internal/custom` 的 screen writer），手上沒有那張畫面的副本。要 dim 就得在 locku 裡放
   一個終端機模擬器重畫程式的畫面——2026-09-25 否決過（多一個依賴、忠實度與效能都要驗）；使用者也定過「框之外什麼都不畫」。
@@ -151,7 +153,7 @@ make e2e                                         # 端到端：真的 tmux（e2e
 make gif                                         # 重錄 docs/demo.gif，見下方「demo gif」
 ```
 
-TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix+d、prefix+c、Ctrl+C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
+TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix d、prefix c、Ctrl-C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
 
 任何看狀態列文字的 ui 測試都要固定 `whoami`（`lockscreen_test.go` 的 `TestMain`），原因見「運作方式」的狀態列那條。
 

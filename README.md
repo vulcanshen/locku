@@ -86,7 +86,7 @@ locku version    # the version; locku help prints the usage
 - Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` deletes a digit.
 - A wrong PIN turns the border red for a second and swallows every key. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
 - The status row reads `user@host · locked since HH:MM` (`show_status: false` hides it), and says `no PIN · any key unlocks` when there is none.
-- Ctrl+C, Ctrl+Z and Ctrl+\ are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock comes back up. The process ends in three cases only: the right PIN, any key with no PIN set, the terminal going away.
+- `Ctrl-C`, `Ctrl-Z` and `Ctrl-\` are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock comes back up. The process ends in three cases only: the right PIN, any key with no PIN set, the terminal going away.
 - No PIN set, or a config file that cannot be read, fails open: the saver shows, the status row says why, any key ends it.
 
 **Not a security boundary.** locku keeps stray keys and passers-by off your screen; it does not keep out another session of your own account. What it cannot catch: ssh's `~.` (handled on the client side, the byte never crosses the wire), Linux VT switching (vlock's territory, needs root), `tmux attach -d` / `kill -9` from another SSH session, and the terminal emulator's own shortcuts.
@@ -182,13 +182,13 @@ A new shell has it. A screen already running gets it once detached and attached 
 
 | Key | |
 |---|---|
-| `Tab` · `1` · `2` | next panel / this panel |
+| `Tab` / `1`–`2` | next panel / this panel |
 | `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
 | `Esc` | close the top popup |
 | `Space` | what can be done here: the row, the panel, and — under `Global operation` — quitting |
 | `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
-| `q` · `Ctrl-C` | quit; asks first when colours are unsaved, and a second `Ctrl-C` then leaves at once |
+| `q` / `Ctrl-C` | quit; asks first when colours are unsaved, and a second `Ctrl-C` then leaves at once |
 | `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
 
 ### `[1]` sidebar
@@ -270,7 +270,7 @@ screen:
 Not there, on purpose:
 - **Windows** — the lock stands on the tty, the pty, `su` and tmux / screen; a native port would be another product
 - **the system password** — the only check is locku's own PIN; `auth: pam` is reserved, nothing more
-- **locking the Linux virtual console** (Alt+F1 … F7) — vlock's territory
+- **locking the Linux virtual console** (`Alt-F1`–`F7`) — vlock's territory
 - **a "forgot my PIN" entry on the lock screen** — the way back is `locku pin reset`, from a shell, with your login password
 
 ## Links
