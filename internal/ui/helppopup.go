@@ -20,6 +20,9 @@ type helpPopup struct {
 	layer   int
 	screenW int
 	screenH int
+	// glossary: the left column is the settings' names, not keys, so it
+	// is not drawn as keys are (openGlossary).
+	glossary bool
 }
 
 func newHelpPopup() helpPopup { return helpPopup{anim: newPopupAnimator("help")} }
@@ -27,11 +30,19 @@ func newHelpPopup() helpPopup { return helpPopup{anim: newPopupAnimator("help")}
 func (m helpPopup) isActive() bool      { return m.anim.isActive() }
 func (m helpPopup) isInteractive() bool { return m.anim.isInteractive() }
 
-// open shows entries: a popup's keys, or one panel's glossary.
+// open shows a key reference: a popup's keys, or a panel's.
 func (m *helpPopup) open(layer int, entries []helpEntry) tea.Cmd {
-	m.layer, m.top, m.entries = layer, 0, entries
+	m.layer, m.top, m.entries, m.glossary = layer, 0, entries, false
 	return m.anim.open()
 }
+
+// openGlossary shows one panel's glossary: what each of its rows means.
+func (m *helpPopup) openGlossary(layer int, entries []helpEntry) tea.Cmd {
+	cmd := m.open(layer, entries)
+	m.glossary = true
+	return cmd
+}
+
 func (m *helpPopup) close() tea.Cmd   { return m.anim.close() }
 func (m *helpPopup) setSize(w, h int) { m.screenW, m.screenH = w, h }
 
@@ -40,34 +51,35 @@ type helpEntry struct{ key, desc string }
 
 // keyReference is the foot of a panel's key reference (tdp M4): the core
 // keys and the walking keys, which work on every panel. The panel's own
-// keys come first, off its actions.
+// keys come first, off its actions. Keys that do one thing are joined with
+// /, a range with – (tdp M5, 2026-09-29; with " · " and "-" until then).
 var keyReference = []helpEntry{
-	{"Tab · 1-2", "next panel / this panel"},
+	{"Tab/1–2", "next panel / this panel"},
 	{"Enter", "[1]: the row's fields, in [2]; [2]: edit, choose, toggle, pick"},
 	{"Esc", "close the top popup"},
 	{"Space", "what can be done here"},
 	{"?", "the keys here; on a popup, that popup's keys"},
-	{"q · Ctrl-C", "quit; asks first when colours are unsaved"},
-	{"j · k", "next / previous row"},
-	{"u · d", "half a page"},
-	{"gg · G", "first / last"},
+	{"q/Ctrl-C", "quit; asks first when colours are unsaved"},
+	{"j/k", "next / previous row"},
+	{"u/d", "half a page"},
+	{"gg/G", "first / last"},
 }
 
 // menuHelp is ? on the Space menu: that box's keys (tdp K6).
 var menuHelp = []helpEntry{
 	{"", "Space menu"},
-	{"j · k", "next / previous row"},
-	{"u · d", "half a page"},
-	{"gg · G", "first / last"},
+	{"j/k", "next / previous row"},
+	{"u/d", "half a page"},
+	{"gg/G", "first / last"},
 	{"Enter", "run the row; a dimmed one cannot run now"},
 	{"[x]", "the letter in a row's brackets runs it"},
-	{"Space · Esc", "close"},
+	{"Space/Esc", "close"},
 }
 
 // globalMenuHelp is ? on the global operation popup: that box's keys.
 var globalMenuHelp = []helpEntry{
 	{"", "Global operation"},
-	{"j · k", "next / previous row"},
+	{"j/k", "next / previous row"},
 	{"Enter", "run the row"},
 	{"[x]", "the letter in a row's brackets runs it"},
 	{"Esc", "back to the Space menu"},
@@ -76,9 +88,9 @@ var globalMenuHelp = []helpEntry{
 // optionsHelp is ? on an options list.
 var optionsHelp = []helpEntry{
 	{"", "Choose one"},
-	{"j · k", "next / previous"},
-	{"u · d", "half a page"},
-	{"gg · G", "first / last"},
+	{"j/k", "next / previous"},
+	{"u/d", "half a page"},
+	{"gg/G", "first / last"},
 	{"Enter", "take this one"},
 	{"Esc", "close, nothing changed"},
 }
@@ -145,7 +157,9 @@ func (m *helpPopup) update(msg tea.KeyMsg) {
 func (m helpPopup) visible(n int) int { return max(1, min(n, m.screenH-6)) }
 
 // layout is the key column's width, the box's inner width, and every
-// line. The box is as wide as every popup (tdp F7; as wide as its longest
+// line. Keys are Blue and what they do Text (tdp D2, 2026-09-29; keys
+// were Subtext1 until then, which a glossary's names still are). The box
+// is as wide as every popup (tdp F7; as wide as its longest
 // description until 2026-09-28, the old D4); a description longer than
 // its column wraps under itself, with the key on its first line only
 // (user, 2026-09-25: the glossary must wrap, not be cut), a column clear
@@ -158,7 +172,10 @@ func (m helpPopup) layout() (keyW, innerW int, lines []string) {
 	descW := max(1, innerW-keyW-5)
 
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	key := lipgloss.NewStyle().Foreground(handColor)
+	key := lipgloss.NewStyle().Foreground(focusColor)
+	if m.glossary {
+		key = key.Foreground(handColor)
+	}
 	txt := lipgloss.NewStyle().Foreground(textColor)
 
 	for _, e := range m.entries {
