@@ -1529,6 +1529,36 @@ func TestHelpIsThePopupsOwn(t *testing.T) {
 	}
 }
 
+// In ?, a key whose target is here but cannot run now is listed dimmed,
+// key and words, as its Space menu row is; one that can is bright (tdp
+// M6, 2026-09-29).
+func TestHelpDimsWhatCannotRunNow(t *testing.T) {
+	colours(t)
+	lit := func(l string) bool { return has(l, focusColor) && has(l, textColor) && !has(l, dimColor) }
+	dark := func(l string) bool {
+		return has(l, dimColor) && !has(l, focusColor) && !has(l, handColor) && !has(l, textColor)
+	}
+	check := func(h string, want func(string) bool, how string, rows ...string) {
+		t.Helper()
+		for _, r := range rows {
+			if l := line(h, r); !want(l) {
+				t.Errorf("%q %s: %q", r, how, l)
+			}
+		}
+	}
+	m := newTestApp(t) // [1], on clock: the active one
+	h := helpLines(m.press("?"))
+	check(h, dark, "dimmed on the active profile", "Activate — ", "Delete — this profile")
+	check(h, lit, "bright", "Preview — ", "Duplicate — ", "Rename — ")
+	check(helpLines(m.press("j", "?")), lit, "bright on clock2", "Activate — ", "Delete — this profile")
+
+	// A profile's [2]: Save and Reset have something to do only with a draft.
+	d := m.press("2")
+	check(helpLines(d.press("?")), dark, "dimmed with no draft", "Save — ", "Reset — ")
+	d = d.typed(strings.Repeat("j", stopBgR)).press("enter", "G", "enter")
+	check(helpLines(d.press("?")), lit, "bright with a draft", "Save — ", "Reset — ")
+}
+
 // [a] on a profile in [1] makes it the one the lock shows, at once
 // (user, 2026-09-25): the dot moves, the file is written; on the
 // active one the row is dimmed and the key does nothing (tdp M6).

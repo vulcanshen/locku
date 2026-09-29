@@ -18,7 +18,7 @@ func TestEveryPopupIsF7Wide(t *testing.T) {
 		menu.setSize(W, H)
 		menu.setItems([]menuItem{{label: "Edit", key: "enter", hint: "its rows"}}, "[1] locku", 1)
 		menu.anim = open
-		help := helpPopup{anim: open, entries: []helpEntry{{"x", "short"}, {"y", long}}, screenW: W, screenH: H}
+		help := helpPopup{anim: open, entries: []helpEntry{{key: "x", desc: "short"}, {key: "y", desc: long}}, screenW: W, screenH: H}
 		views := map[string]string{
 			"Space menu": menu.view(),
 			"confirm":    confirmPopup{anim: open, title: "Delete", accept: "delete", lines: []string{"Delete clock?"}, screenW: W, screenH: H}.view(),

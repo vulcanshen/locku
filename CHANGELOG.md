@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 ### Changed
-- `?` lists the keys, to read: on `[1]` and on a profile's or a saver's `[2]`, that panel's keys — every row of its Space menu — then the ones that work everywhere. Nothing on it runs; it used to be a menu with `Quit` on it.
+- `?` lists the keys, to read: on `[1]` and on a profile's or a saver's `[2]`, that panel's keys — every row of its Space menu, one that cannot run now dimmed as it is there — then the ones that work everywhere. Nothing on it runs; it used to be a menu with `Quit` on it.
 - A Space menu ends, under a line and with no title over it, in one row, `Global operation`, and its `Enter` opens the global operation popup, where `Quit` is. `Esc` there comes back to the Space menu. `Quit` used to sit in every Space menu, under a `global operation` title.
 - Every popup is as wide as the terminal less a column on either side, up to 120 columns, whatever it holds: a box no longer grows as you type in it, and the PIN boxes, on the lock and in the settings, are as wide as the rest instead of 48.
 - A box whose Enter can be refused keeps a row for why from the moment it opens, and the reason is written there — `name is taken`, `wrong PIN`, `try again in 27 s` — instead of on its border.

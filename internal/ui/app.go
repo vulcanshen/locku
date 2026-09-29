@@ -541,13 +541,14 @@ func (m *AppModel) openHelp() tea.Cmd {
 
 // panelKeys is a panel's key reference (tdp M4): its keys, read off the
 // same table its Space menu is built from, so the two cannot disagree —
-// then the keys that work everywhere.
+// one that cannot run now dimmed in both (tdp M6) — then the keys that
+// work everywhere.
 func (m AppModel) panelKeys() []helpEntry {
 	title := "[1] locku"
 	if m.focus == panelDetail {
 		title = m.detailTitle()
 	}
-	out := []helpEntry{{"", title}}
+	out := []helpEntry{{desc: title}}
 	enter := false
 	for _, a := range m.actions() {
 		k, what := a.key, a.label
@@ -557,9 +558,9 @@ func (m AppModel) panelKeys() []helpEntry {
 		if a.hint != "" {
 			what += " — " + a.hint
 		}
-		out = append(out, helpEntry{k, what})
+		out = append(out, helpEntry{key: k, desc: what, disabled: a.disabled})
 	}
-	out = append(out, helpEntry{"", "everywhere"})
+	out = append(out, helpEntry{desc: "everywhere"})
 	for _, e := range keyReference {
 		// Enter is said for this panel already, what it does on this row.
 		if e.key == "Enter" && enter {
