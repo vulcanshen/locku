@@ -25,6 +25,10 @@ import (
 // every width as lipgloss and x/ansi measure it.
 var iconCells = 1
 
+// IconCells is iconCells, for what locku runs on a pty of its own: the
+// custom saver's program is told it (tdp D6).
+func IconCells() int { return iconCells }
+
 // isWideIcon reports whether r is a Nerd Font icon that such a font draws
 // two cells wide: the Private Use Areas, less the powerline caps
 // (U+E0A0–E0D7), which stay one cell even there.

@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -93,11 +94,19 @@ type Proxy struct {
 // program's — comes through a pipe of its own, so what was said on the
 // way down can be read back (sh: x: command not found), while stdout
 // keeps the pty: a terminal, to the program.
-func Start(command string, out io.Writer, cols, rows int) (*Proxy, error) {
+//
+// iconCells is how many cells an icon takes on the terminal, and the
+// program is told it in TERMINU__ICON_WIDTH: the family's word to a family
+// app run on our pty (tdp D6, v0.1.22, 2026-09-29). Its own probe cannot
+// find out — what it asks goes out to the terminal, and the answer comes
+// back to locku, whose key reader drops it. Set after our own environment,
+// it is the one the program sees: exec keeps the last of a name.
+func Start(command string, iconCells int, out io.Writer, cols, rows int) (*Proxy, error) {
 	if strings.TrimSpace(command) == "" {
 		return nil, errors.New("no command")
 	}
 	cmd := exec.Command("sh", "-c", command)
+	cmd.Env = append(os.Environ(), "TERMINU__ICON_WIDTH="+strconv.Itoa(iconCells))
 	pr, pw, err := os.Pipe()
 	if err != nil {
 		return nil, err
@@ -524,7 +533,8 @@ func (t *Terminal) Cancel() {
 // program ends: a look at it from the settings screen (function.md
 // §5.5). It returns the outcome of a program that ended, and nil for a
 // key; either way the program is killed and the terminal given back.
-func Preview(command string, tty, out *os.File) *Outcome {
+// iconCells is as Start has it.
+func Preview(command string, iconCells int, tty, out *os.File) *Outcome {
 	t, err := Take(tty, out)
 	if err != nil {
 		o := Failed(err)
@@ -532,7 +542,7 @@ func Preview(command string, tty, out *os.File) *Outcome {
 	}
 	defer t.Give()
 	cols, rows := t.Size()
-	p, err := Start(command, t.Writer(), cols, rows)
+	p, err := Start(command, iconCells, t.Writer(), cols, rows)
 	if err != nil {
 		o := Failed(err)
 		return &o

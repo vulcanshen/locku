@@ -335,7 +335,7 @@ func (c *customPreview) SetStdin(io.Reader)  {}
 func (c *customPreview) SetStdout(io.Writer) {}
 func (c *customPreview) SetStderr(io.Writer) {}
 func (c *customPreview) Run() error {
-	if o := custom.Preview(c.command, os.Stdin, os.Stdout); o != nil {
+	if o := custom.Preview(c.command, iconCells, os.Stdin, os.Stdout); o != nil {
 		return ended{*o}
 	}
 	return nil
