@@ -148,6 +148,12 @@ func dispCutLeft(s string, n int) string {
 // past the screen (tdp D6, L4). Left / Top at 0, Center at half the
 // background less half the foreground (each halved on its own), Right /
 // Bottom flush; then moved by the offsets and kept on screen.
+//
+// A box wider or taller than the screen — the frame a resize lands in, or
+// the PIN prompt on a lock a few rows high — starts at 0 and what falls
+// off the screen is cut (tdp D6, v0.1.21, 2026-09-29; its middle, as
+// overlay shows it, until then). That holds when it is larger both ways
+// too, where overlay handed back the box whole, wider than the screen.
 func compositeDisp(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) string {
 	if fg == "" {
 		return bg
@@ -158,20 +164,13 @@ func compositeDisp(fg, bg string, xPos, yPos overlay.Position, xOff, yOff int) s
 	fgLines, bgLines := strings.Split(fg, "\n"), strings.Split(bg, "\n")
 	fgW, bgW := blockWidth(fgLines), blockWidth(bgLines)
 	fgH, bgH := len(fgLines), len(bgLines)
-	if fgW >= bgW && fgH >= bgH {
-		return fg
-	}
-	x := clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW)
-	y := clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH)
+	x := max(clampSpan(placeOffset(xPos, bgW, fgW)+xOff, bgW-fgW), 0)
+	y := max(clampSpan(placeOffset(yPos, bgH, fgH)+yOff, bgH-fgH), 0)
 	for i, line := range fgLines {
-		// A box taller than the screen shows its middle, as overlay does:
-		// y is then above the top.
-		if y+i < 0 {
-			continue
-		}
 		if y+i >= bgH {
 			break
 		}
+		line = clipANSI(line, bgW-x)
 		row := bgLines[y+i]
 		left := clipANSI(row, x)
 		left += spaces(x - dispW(left)) // an icon cut at x, or a short row

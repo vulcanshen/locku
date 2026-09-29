@@ -66,8 +66,8 @@ func TestWidthsCountTheIcon(t *testing.T) {
 // keeps the background's width whatever icon is in either (tdp D6).
 func TestCompositeDisp(t *testing.T) {
 	bg := strings.Repeat("0123456789\n", 4) + "0123456789"
-	// With icons one cell it is overlay.Composite, a box taller than the
-	// screen and the toast's place included.
+	// With icons one cell, and a box that fits, it is overlay.Composite:
+	// the centre, the toast's place, a box pushed against the edge.
 	for _, c := range []struct {
 		fg         string
 		x, y       overlay.Position
@@ -75,7 +75,6 @@ func TestCompositeDisp(t *testing.T) {
 	}{
 		{"ab\ncd", overlay.Center, overlay.Center, 0, 0},
 		{"abc", overlay.Center, overlay.Bottom, 0, -2},
-		{"a\nb\nc\nd\ne\nf\ng", overlay.Center, overlay.Center, 0, 0},
 		{"abcd\nefgh", overlay.Left, overlay.Top, 8, 0},
 	} {
 		if got, want := compositeDisp(c.fg, bg, c.x, c.y, c.xOff, c.yOff), overlay.Composite(c.fg, bg, c.x, c.y, c.xOff, c.yOff); got != want {
@@ -107,11 +106,29 @@ func TestCompositeDisp(t *testing.T) {
 	if got := rows(compositeDisp("xy", iconBG, overlay.Left, overlay.Top, 0, 0))[0]; got != "xy 3456789" {
 		t.Errorf("cut on its right: %q", got)
 	}
-	// Taller than the screen: its middle, as overlay shows it.
+	// Larger than the screen — the frame a resize lands in, a PIN prompt
+	// on a lock a few rows high: from 0, what falls off is cut, never a
+	// panic (tdp D6, v0.1.21).
 	tall := "a\nb\nc\nd\ne\nf\ng"
-	if got := rows(compositeDisp(tall, bg, overlay.Center, overlay.Center, 0, 0)); got[0] != "01234b6789" || got[4] != "01234f6789" {
-		t.Errorf("a box taller than the screen: %q", got)
+	for _, pos := range []overlay.Position{overlay.Center, overlay.Bottom} {
+		if got := rows(compositeDisp(tall, bg, overlay.Center, pos, 0, -1)); len(got) != 5 || got[0] != "01234a6789" || got[4] != "01234e6789" {
+			t.Errorf("a box taller than the screen, from the top: %q", got)
+		}
 	}
+	wide := strings.Repeat("W", 14) + "\n" + strings.Repeat("W", 14)
+	out = compositeDisp(wide, bg, overlay.Center, overlay.Center, 0, 0)
+	check("a box wider than the screen", out)
+	if rows(out)[1] != strings.Repeat("W", 10) {
+		t.Errorf("a box wider than the screen, from the left: %q", rows(out)[1])
+	}
+	both := strings.Repeat(strings.Repeat("B", 14)+"\n", 7) + strings.Repeat("B", 14)
+	out = compositeDisp(both, bg, overlay.Center, overlay.Center, 0, 0)
+	check("a box larger both ways", out)
+	if len(rows(out)) != 5 {
+		t.Errorf("a box larger both ways: %d rows", len(rows(out)))
+	}
+	// An icon on the screen's last cell is not half drawn.
+	check("an icon at the edge", compositeDisp(strings.Repeat("W", 9)+pixelGlyph, bg, overlay.Left, overlay.Top, 0, 0))
 }
 
 // Every popup of the settings screen, with icons one cell and two: the box
@@ -221,6 +238,36 @@ func TestSplashWithIcons(t *testing.T) {
 		for r, l := range strings.Split(s.render(100, 40), "\n") {
 			if dispW(l) != 100 {
 				t.Errorf("icons %d: splash row %d is %d wide, want 100", cells, r, dispW(l))
+			}
+		}
+	}
+}
+
+// On a lock a few rows high the PIN prompt starts at the top and what
+// falls off is cut, on the board and over a custom saver's program alike:
+// handed on whole, the rows past the bottom would land on the last one
+// (tdp D6, v0.1.21).
+func TestPromptOnATinyScreen(t *testing.T) {
+	for _, sz := range [][2]int{{20, 5}, {11, 4}} {
+		m := testLock(t, "1234", nil)
+		m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+		m = openPrompt(t, m)
+		if top := strings.Split(m.View(), "\n")[0]; !strings.Contains(top, "╭") {
+			t.Errorf("%v on the board: the top row is %q", sz, ansi.Strip(top))
+		}
+		var box string
+		var w int
+		var pm tea.Model = NewLockPrompt(m.cfg, "", sz[0], sz[1], func(b string, bw int) { box, w = b, bw })
+		for i := 0; i < animFrames+1; i++ {
+			pm, _ = pm.(LockModel).Update(AnimTickMsg{Target: "pinprompt"})
+		}
+		lines := strings.Split(box, "\n")
+		if len(lines) != sz[1] || !strings.Contains(lines[0], "╭") || w > sz[0] {
+			t.Errorf("%v over a custom saver: %d rows, %d wide, the top %q", sz, len(lines), w, ansi.Strip(lines[0]))
+		}
+		for r, l := range lines {
+			if dispW(l) > sz[0] {
+				t.Errorf("%v over a custom saver: row %d is %d wide", sz, r, dispW(l))
 			}
 		}
 	}

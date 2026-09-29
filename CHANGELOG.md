@@ -12,6 +12,7 @@
 - The footer and the hints on the popups write each key as `Key:what`, one space apart — `Space:menu ?:help Tab/1–2:panels q:quit` — and name keys as the keycap does: `Backspace`, not `Bksp`. In `?` the keys are blue, and keys that do one thing are written `q/Ctrl-C`, `Tab/1–2`. A key named in a sentence is in brackets: `Press [Esc] to close`.
 
 ### Fixed
+- On a terminal smaller than the PIN prompt, the prompt starts at its top-left and what does not fit is cut, its title always showing; over a custom saver its lower rows used to pile up on the terminal's last line.
 - On a Nerd Font that draws its icons two cells wide, as some made for CJK do, the board, the splash, the popups and their titles keep their shape: locku asks the terminal how far an icon moves the cursor when it starts, and `LOCKU__ICON_WIDTH=1` or `2` settles it by hand.
 - A popup's hint too wide for its box — the PIN prompt on a narrow terminal — drops whole items from the end instead of being cut mid-word.
 - With colours unsaved, `q` or `Ctrl-C` on another question — deleting a profile, turning an integration on or off — asks about quitting on top of it and leaves it as it was: `Esc` comes back to it. The question used to be replaced.
