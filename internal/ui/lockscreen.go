@@ -189,8 +189,15 @@ func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
 func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m, cmd := m.step(msg)
 	if m.promptOnly && m.paint != nil && !m.over {
-		box := m.prompt.view(m.now())
-		m.paint(box, blockWidth(strings.Split(box, "\n")))
+		// Cut to the screen as compositeDisp cuts a box on the board: from
+		// the top left, what falls off goes; the program's side would put
+		// the rows past the bottom over the last one (tdp D6, 2026-09-29).
+		lines := strings.Split(m.prompt.view(m.now()), "\n")
+		lines = lines[:min(len(lines), max(m.height, 0))]
+		for i, l := range lines {
+			lines[i] = clipANSI(l, m.width)
+		}
+		m.paint(strings.Join(lines, "\n"), blockWidth(lines))
 	}
 	return m, cmd
 }

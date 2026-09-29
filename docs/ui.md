@@ -255,6 +255,8 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 設定畫面的三個 PIN 框（`current PIN`、`new PIN`、`confirm PIN`）同一個畫法，錯誤列也一樣置中。
 
+終端機比框小（寬不到 12 或高不到 6）時，框從左上角開始畫、超出畫面的切掉：上框與標題永遠看得到（2026-09-29，tdp D6；之前鎖定畫布上是畫中間，custom saver 上超出最後一列的會疊在最後一列）。
+
 錯誤與 lockout 的 Red 是 override 色（tdp D2），不參與層級。
 
 ---
