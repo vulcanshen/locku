@@ -4,20 +4,29 @@ package ui
 
 import "testing"
 
-// LOCKU__ICON_WIDTH decides when set to 1 or 2; anything else is asked of
-// the terminal, which a test has none of.
+// LOCKU__ICON_WIDTH decides, then TERMINU__ICON_WIDTH, when set to 1 or 2;
+// with neither the terminal is asked, which a test has none of (tdp D6,
+// v0.1.22).
 func TestIconWidthOverride(t *testing.T) {
 	withIcons(t, 1)
-	t.Setenv("LOCKU__ICON_WIDTH", "2")
-	DetectIconWidth()
-	if iconCells != 2 {
-		t.Errorf("LOCKU__ICON_WIDTH=2: %d", iconCells)
-	}
-	iconCells = 1
-	t.Setenv("LOCKU__ICON_WIDTH", "3")
-	DetectIconWidth()
-	if iconCells != 1 {
-		t.Errorf("LOCKU__ICON_WIDTH=3 is not a width: %d", iconCells)
+	for _, c := range []struct {
+		own, family string
+		want        int
+	}{
+		{"2", "", 2},
+		{"", "2", 2},
+		{"1", "2", 1}, // the user's own over the family's
+		{"2", "1", 2},
+		{"3", "2", 2}, // not a width: as if unset
+		{"x", "0", 1}, // neither: asked, and no terminal answers
+	} {
+		iconCells = 1
+		t.Setenv("LOCKU__ICON_WIDTH", c.own)
+		t.Setenv("TERMINU__ICON_WIDTH", c.family)
+		DetectIconWidth()
+		if iconCells != c.want {
+			t.Errorf("LOCKU__ICON_WIDTH=%q TERMINU__ICON_WIDTH=%q: %d, want %d", c.own, c.family, iconCells, c.want)
+		}
 	}
 }
 

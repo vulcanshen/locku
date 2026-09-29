@@ -20,13 +20,19 @@ import (
 // cursor is (CPR). The icon is nf-fa-folder, as filu's: every icon is as
 // wide as the next on such a font, and the board's own square would read
 // as a pixel of the board drawn over a custom saver's program.
-// LOCKU__ICON_WIDTH, 1 or 2, overrides it. Any failure — not a terminal,
-// no answer within 200 ms — leaves iconCells at 1. Call it once, before
-// the program starts; on a lock, before termreply.DropPending, which
-// takes an answer that came too late.
+// Any failure — not a terminal, no answer within 200 ms — leaves
+// iconCells at 1. Call it once, before the program starts; on a lock,
+// before termreply.DropPending, which takes an answer that came too late.
+//
+// Before asking it reads, in order (tdp D6, v0.1.22, 2026-09-29):
+// LOCKU__ICON_WIDTH, the user's own; then TERMINU__ICON_WIDTH, which a
+// family app with a pty sets for what runs in it — in another app's pty
+// the probe is answered by that app's terminal emulator, which counts an
+// icon one cell. Only 1 or 2 is taken, anything else counts as unset;
+// with either set nothing is asked.
 func DetectIconWidth() {
-	if v := os.Getenv("LOCKU__ICON_WIDTH"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 1 && n <= 2 {
+	for _, name := range []string{"LOCKU__ICON_WIDTH", "TERMINU__ICON_WIDTH"} {
+		if n, err := strconv.Atoi(os.Getenv(name)); err == nil && n >= 1 && n <= 2 {
 			iconCells = n
 			return
 		}
