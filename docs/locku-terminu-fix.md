@@ -1,7 +1,11 @@
 # locku — terminu fix
 
-locku 尚未符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.19/principle)（tdp v0.1.19）的地方，逐條待修。
+locku 尚未符合 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.20/principle)（tdp v0.1.20）的地方，逐條待修。
 修好一條就刪掉一條，並同步 README（兩份）與 `docs/` 裡描述該行為的段落。有意不修的，改寫成 `dev-remarks.md`「偏離 tdp」的一條並附理由。
+
+> **v0.1.20（2026-09-29）**：K11 / D3 —— 模式名夾在兩個框線接頭之間（雙線 `╡Drag╞`、單線 `┤Visual├`），模式色加粗、盡量一個詞，
+> 放不下先截標題，panel 膠囊跟著外框換色；D6 —— icon 寬度量的是游標實際前進幾格，參考實作的完整清單、`<APP>_ICON_WIDTH`
+> 覆寫、只在 unix 探測、做完的驗收。filu 的參考實作已完成，icon 寬度那一條現在可以做。本清單的每一條已照 v0.1.20 重新核對過。
 
 > **v0.1.19（2026-09-29，這份清單寫完後才出）**：L5 —— focus 不能只靠顏色分辨（模式會換框色），家族預設雙線；K10 ——
 > 子程序還沒準備好時可以不轉送一般的鍵，但 `Ctrl-C` 照樣轉送。本清單的每一條已照 v0.1.19 重新核對過。
@@ -16,7 +20,7 @@ PTY 都不適用，見最後。
 
 > **2026-09-29**：第 1 條修好、從清單刪掉（locku `drawPopupBox()` 收 pairs，`hintLegend(pairs, w)` 從尾端整組丟）；剩第 2 條，等 filu。
 
-指向 tdp 的五處連結（兩份 README、`docs/ux.md`、`docs/ui.md`、`docs/dev-remarks.md` 開頭）已經改釘 `tree/v0.1.19/principle`，在工作樹裡、
+指向 tdp 的五處連結（兩份 README、`docs/ux.md`、`docs/ui.md`、`docs/dev-remarks.md` 開頭）已經改釘 `tree/v0.1.20/principle`，在工作樹裡、
 未 commit。
 
 
@@ -27,13 +31,27 @@ PTY 都不適用，見最後。
   在那之前只做第 1 條，第 2 條留在清單上。
 - **每修一處補 model test，逐處 mutation**：把修正單獨改回舊行為，確認對應的測試會紅。
 - **同一個 commit 同步 README 兩份與 `docs/`（`ux.md`、`ui.md`、`dev-remarks.md`），CHANGELOG 記 `[Unreleased]`**；已經有的條目就併進去。
-- **修完拿 v0.1.19 全文再逐條對一次**，不只這兩條與 CHANGELOG。
+- **修完拿 v0.1.20 全文再逐條對一次**，不只這兩條與 CHANGELOG。
 - **不 push、不發版。**
 - **把這一輪寫進 terminu repo 的 `.local/family-fix/locku/README.md`**（本機、不進版控）：開頭的輪次清單加「對照 v0.1.18」一行，「修了什麼」、
   「已經符合」各加一節，「給下一個 app 的經驗」與「發布」補上這一輪。
 
 
-## 2. icon 的實際寬度 —— D6（等 filu 做完再做）
+## 2. icon 的實際寬度 —— D6（filu 已完成，照搬）
+
+**filu 的參考實作已完成**（2026-09-29，`e1de220`，filu 第六輪）。照搬的東西（v0.1.20 的 D6 有同一份清單，細節在 terminu
+`.local/family-fix/filu/README.md`「第六輪」最後的「D6 照搬清單」）：
+
+- filu `internal/ui/width.go` 整個檔：`iconCells` / `IconCells()`、`isWideIcon()`、`iconCount()`、`dispWidth()`、`dispClip()`、
+  `padDisp()`、`padDispRight()`、`truncate()`、`dispCutLeft()`、`compositeDisp()`（跟 `overlay.Composite` 同介面，直接換掉呼叫）、
+  `centerDisp()`（取代 `lipgloss.Place`）、`blockWidth()`、`joinH()` / `joinV()`（取代 lipgloss 的 Join）。
+- `iconwidth_unix.go` 的 `DetectIconWidth()`，在 `tea.NewProgram` 之前呼叫；手動覆寫用 `<APP>_ICON_WIDTH`（filu 是
+  `FILU_ICON_WIDTH`）。探測只在 unix 做，Windows 預設一格、靠環境變數覆寫。
+- 測試照 `d6_test.go`：icon 1 / 2 格下每一種 popup 各開一次，量**單獨的框**（並排的框量單一個）與**疊上去的整個畫面**每一列；
+  `compositeDisp()` 的四種邊界（popup 列有 icon、被蓋的列有 icon、icon 被左 / 右框邊切半）。
+- 驗收：`grep -n 'lipgloss.Width\|lipgloss.Size\|lipgloss.Place\|ansi.StringWidth\|ansi.Truncate' internal/ui/*.go` 只剩寬度函式本身。
+- filu 的提醒：寬度改走 `dispWidth()` 後，在 `iconCells = 1` 的終端機上畫面完全不變（既有測試原封不動通過），只有探測到 2 才作用。
+
 
 **現況**：locku 量寬度只有一套、而且看不到 icon 的實際寬度：`internal/ui/width.go` 的 `dispW()`（= `lipgloss.Width`）、`truncate()`、
 `truncateHead()`、`clipANSI()`（`ansi.Truncate`）、`padRight()`、`padLeft()`、`fitLines()`、`wrap()`，都把 icon 算成一格。
