@@ -280,7 +280,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.13/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [webu](https://github.com/vulcanshen/webu) (the web).
+locku follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.17/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [webu](https://github.com/vulcanshen/webu) (the web).
 
 ## License
 
