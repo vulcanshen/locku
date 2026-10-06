@@ -210,7 +210,7 @@ func TestPromptBoxWithIcons(t *testing.T) {
 	}
 	cfg := testLock(t, "1234", nil).cfg
 	var widths []int
-	p := NewLockPrompt(cfg, "", 100, 30, func(_ string, w int) { widths = append(widths, w) })
+	p := NewLockPrompt(cfg, "", 100, 30, func(_ string, w int) { widths = append(widths, w) }, Tries{})
 	var pm tea.Model = p
 	for i := 0; i < animFrames+1; i++ {
 		pm, _ = pm.(LockModel).Update(AnimTickMsg{Target: "pinprompt"})
@@ -257,7 +257,7 @@ func TestPromptOnATinyScreen(t *testing.T) {
 		}
 		var box string
 		var w int
-		var pm tea.Model = NewLockPrompt(m.cfg, "", sz[0], sz[1], func(b string, bw int) { box, w = b, bw })
+		var pm tea.Model = NewLockPrompt(m.cfg, "", sz[0], sz[1], func(b string, bw int) { box, w = b, bw }, Tries{})
 		for i := 0; i < animFrames+1; i++ {
 			pm, _ = pm.(LockModel).Update(AnimTickMsg{Target: "pinprompt"})
 		}

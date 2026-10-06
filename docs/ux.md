@@ -172,7 +172,7 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 | Backspace | 刪一字（`\r\n` 整個） |
 | Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空。值裡有換行或 Tab → 不比對、不算一次連錯：錯誤列 `PIN can't have line breaks or tabs`、邊框 Red、點點留著，下一鍵恢復（2026-10-06） |
 | Esc | 回 saver、輸入丟掉 |
-| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
+| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中；custom：新尺寸也轉給程式的 pty |
 | custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停；框在的時候 bracketed paste 開著，貼上的換行跟其他 lock 一樣是值裡的一個換行，不是 Enter（2026-10-06） |

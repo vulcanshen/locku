@@ -140,7 +140,7 @@ custom saver（5.5）是同一張圖：saver 是程式自己的畫面，prompt �
 已決（2026-09-24）：兩層。
 
 - debounce，固定不可設定：每次錯誤後 1 秒內顯示錯誤訊息並吞掉所有輸入，之後清空輸入回到可輸入。目的是明確的「錯了」回饋，且不能用連打 Enter 閃過訊息。
-- 連續錯誤冷卻，config 設定，預設關閉：連續錯 `wrong_pin_attempts` 次後進入冷卻 `wrong_pin_attempt_cooldown` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`wrong_pin_attempts: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。
+- 連續錯誤冷卻，config 設定，預設關閉：連續錯 `wrong_pin_attempts` 次後進入冷卻 `wrong_pin_attempt_cooldown` 秒，期間 prompt 顯示剩餘秒數並吞掉所有輸入。`wrong_pin_attempts: 0` 即關閉。計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零，成功解鎖進程即結束。custom saver 也一樣：它的每個 prompt 是各自的 lock 程式，計數與冷卻的結束時間由 locku 一個接一個傳下去（2026-10-06；之前每次開 prompt 從零開始，冷卻可以用 Esc 繞過）。冷卻在 prompt 收起的時候結束，下次打開也歸零，跟在 prompt 上看著它結束一樣（2026-10-06；之前計數留著，下一次錯就又進冷卻）。
 
 ### 4.5 忘記 PIN：`locku pin reset`（2026-09-25，使用者定案）
 

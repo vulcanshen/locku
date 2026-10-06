@@ -124,16 +124,29 @@ func (m LockModel) withWord(word saver.Word, note string) LockModel {
 	return m
 }
 
+// Tries is a lock's wrong PINs in a row and the end of its cooling-off
+// (function.md §4.4): the whole lock's, which a custom saver's prompts —
+// a program each — hand on from one to the next.
+type Tries struct {
+	failures int
+	until    time.Time
+}
+
+// Tries is what this lock leaves the next prompt.
+func (m LockModel) Tries() Tries { return Tries{m.failures, m.lockoutUntil} }
+
 // NewLockPrompt is the PIN prompt alone, for the custom saver: up from
 // the first frame, drawn by paint over the program's frozen picture on
 // a cols × rows screen; Esc or the timeout ends the program with Back
-// set, the right PIN with it clear.
-func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string, w int)) LockModel {
+// set, the right PIN with it clear. tries is where the prompt before it
+// left off.
+func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string, w int), tries Tries) LockModel {
 	m := newLock(cfg, problem, false)
 	m.promptOnly, m.game, m.paint = true, nil, paint
 	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
 	m.width, m.height = cols, rows
 	m.prompt.setSize(cols, rows)
+	m.failures, m.lockoutUntil = tries.failures, tries.until
 	m.initCmd = m.openPrompt()
 	return m
 }
@@ -258,7 +271,7 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		}
 		if !m.now().Before(m.lockoutUntil) {
 			// The cooling-off is over and the count starts again (§4.4).
-			m.failures = 0
+			m.endLockout()
 			m.prompt.state = promptIdle
 			return m, m.armTimeout()
 		}
@@ -338,11 +351,20 @@ func (m *LockModel) openPrompt() tea.Cmd {
 	m.promptGen++
 	cmd := m.prompt.open()
 	if m.now().Before(m.lockoutUntil) {
-		m.prompt.state = promptLockout
+		m.prompt.state, m.prompt.until = promptLockout, m.lockoutUntil
 		return tea.Batch(cmd, m.lockoutTick())
+	}
+	if !m.lockoutUntil.IsZero() {
+		// It ran out while the prompt was down: the count starts again
+		// all the same (2026-10-06; it used to stay, and the next wrong
+		// PIN was a cooling-off again).
+		m.endLockout()
 	}
 	return tea.Batch(cmd, m.armTimeout())
 }
+
+// endLockout starts the count again once a cooling-off is over.
+func (m *LockModel) endLockout() { m.failures, m.lockoutUntil = 0, time.Time{} }
 
 // closePrompt takes it down; the board never stopped. Prompt-only, the
 // program is waiting for the screen: this lock ends, with Back.
