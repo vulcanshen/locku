@@ -2,6 +2,7 @@ package saver
 
 import (
 	"math/rand/v2"
+	"slices"
 	"time"
 )
 
@@ -16,8 +17,10 @@ import (
 // merely lie side by side can be told apart, as on the Nokia's screen.
 //
 // The rest is the user's, the same day. It has a head: two pixels over
-// the body's line, the jaw a pixel ahead under an open mouth (it was
-// three square with an eye, and too big). The apple blinks in the colour
+// the body's line (it was three square with an eye, and too big), its
+// mouth shut — the front flush — but as it eats: the move before, and
+// the move it eats, the jaw drops a pixel ahead under the open mouth.
+// The apple blinks in the colour
 // the snake turns when it eats it — a colour at random, another each
 // time — and an apple eaten is a lump that runs down the body to the
 // tail, a segment a move, and is gone (it stayed where it was swallowed
@@ -55,9 +58,10 @@ var snakeRoom = Room{W: snakePitch * 16, H: snakePitch * 10, Most: 2}
 type shape [][2]int
 
 var (
-	// The head: the jaw ahead, the node and the link behind, and the
-	// crown over the node and the link's first pixel.
-	snakeHead = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
+	// The head: the node and the link behind, and the crown over the
+	// node and the link's first pixel — and, eating, the jaw ahead.
+	snakeHead = shape{{0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
+	snakeEats = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
 	// A lump: an apple on its way through, two pixels as the crown is
 	// (user, 2026-10-06: it was three).
 	snakeLump = shape{{0, -1}, {1, -1}}
@@ -292,6 +296,13 @@ func (s *Snake) Step() {
 	}
 }
 
+// eating says whether the mouth is open: the apple is the next move's
+// — the move is the same whenever it is worked out — or it was this
+// one's, its lump still at the head.
+func (s *Snake) eating() bool {
+	return slices.Contains(s.lumps, 0) || (s.apple >= 0 && s.move() == s.apple)
+}
+
 // digest moves every lump by places towards the tail; one past it is
 // gone.
 func (s *Snake) digest(by int) {
@@ -355,7 +366,11 @@ func (s *Snake) Draw(w, h int) Scene {
 	}
 	// The head goes the way it came: from the cell behind it.
 	dx, dy := s.way(s.body[1], s.body[0])
-	s.stamp(&sc, snakeHead, s.body[0], dx, dy, ink)
+	head := snakeHead
+	if s.eating() {
+		head = snakeEats
+	}
+	s.stamp(&sc, head, s.body[0], dx, dy, ink)
 	if s.apple >= 0 && (s.t/snakeBlink)%2 == 0 {
 		x, y := s.cellAt(s.apple)
 		sc.put(x, y, uint8(1+s.next))

@@ -181,12 +181,13 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 	}
 }
 
-// The head, the lump, turned for each way the snake goes: the jaw a
-// pixel ahead, the link behind; the crown two pixels, over the node and
-// the link — above along a row, to the right up or down a column — and
-// over the jaw nothing, the open mouth (user, 2026-10-06: two pixels,
-// the three square with an eye was too big). A lump is the crown's two
-// pixels (user, the same day: it was three).
+// The head, the lump, turned for each way the snake goes: eating, the
+// jaw a pixel ahead, the link behind; the crown two pixels, over the
+// node and the link — above along a row, to the right up or down a
+// column — and over the jaw nothing, the open mouth (user, 2026-10-06:
+// two pixels, the three square with an eye was too big); not eating,
+// the same without the jaw. A lump is the crown's two pixels (user, the
+// same day: it was three).
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	for _, c := range []struct {
 		dx, dy         int
@@ -199,10 +200,20 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 		{0, 1, [2]int{1, 0}, [2]int{1, -1}, [2]int{1, 1}},
 	} {
 		at := map[[2]int]bool{}
-		for _, p := range snakeHead {
+		for _, p := range snakeEats {
 			x, y := turn(p, c.dx, c.dy)
 			at[[2]int{x, y}] = true
 		}
+		shut := map[[2]int]bool{}
+		for _, p := range snakeHead {
+			x, y := turn(p, c.dx, c.dy)
+			shut[[2]int{x, y}] = true
+		}
+		delete(at, [2]int{c.dx, c.dy})
+		if !reflect.DeepEqual(shut, at) {
+			t.Errorf("going %d,%d: the shut head %v is not the open one but the jaw", c.dx, c.dy, shut)
+		}
+		at[[2]int{c.dx, c.dy}] = true
 		if len(at) != 6 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown1] || !at[c.crown2] || at[c.mouth] {
 			t.Errorf("going %d,%d: the head is %v", c.dx, c.dy, at)
 		}
@@ -343,5 +354,40 @@ func TestSnakeLumpRunsToTheTail(t *testing.T) {
 	}
 	if moves < 2 {
 		t.Errorf("gone in %d moves", moves)
+	}
+}
+
+// The mouth opens to eat (user, 2026-10-06): the jaw is out the move
+// before the apple, and the move it is eaten; the rest of the time the
+// mouth is shut.
+func TestSnakeOpensItsMouthToEat(t *testing.T) {
+	s := NewSnake(8)
+	s.Draw(76, 31)
+	jaw := func() bool {
+		sc := s.Draw(76, 31)
+		x, y := s.cellAt(s.body[0])
+		dx, dy := s.way(s.body[1], s.body[0])
+		return sc.Pix[(y+dy)*sc.W+x+dx] != 0
+	}
+	open, eats := 0, 0
+	for i := 0; i < 2000; i++ {
+		before := s.apple >= 0 && s.move() == s.apple
+		long := len(s.body)
+		if jaw() != before && !slices.Contains(s.lumps, 0) {
+			t.Fatalf("move %d: the jaw out %v, the apple next %v", i, jaw(), before)
+		}
+		if before {
+			open++
+		}
+		s.Step()
+		if len(s.body) > long {
+			eats++
+			if !jaw() {
+				t.Fatalf("move %d: ate with the mouth shut", i)
+			}
+		}
+	}
+	if eats < 10 || open != eats {
+		t.Errorf("%d apples, the mouth opened before %d", eats, open)
 	}
 }
