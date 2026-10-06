@@ -2,6 +2,7 @@ package saver
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 )
 
@@ -72,8 +73,10 @@ func check(t *testing.T, s *Snake, step int) {
 		if k != on[c] {
 			t.Fatalf("step %d: cell %d taken %v, body %v", step, c, k, on[c])
 		}
-		if s.fed[c] && !on[c] {
-			t.Fatalf("step %d: a lump at %d, off the body", step, c)
+	}
+	for _, i := range s.lumps {
+		if i < 0 || i >= len(s.body) {
+			t.Fatalf("step %d: a lump at %d, off a body %d long", step, i, len(s.body))
 		}
 	}
 	// Along the cycle the body lies behind the head in order: from the
@@ -111,8 +114,8 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 			s.Step()
 			steps++
 			check(t, s, steps)
-			if len(s.body) > long && (s.colour != next || !s.fed[s.body[0]]) {
-				t.Fatalf("%v step %d: ate, and is colour %d (the apple was %d), lump %v", sz, steps, s.colour, next, s.fed[s.body[0]])
+			if len(s.body) > long && (s.colour != next || !slices.Contains(s.lumps, 0)) {
+				t.Fatalf("%v step %d: ate, and is colour %d (the apple was %d), lumps %v", sz, steps, s.colour, next, s.lumps)
 			}
 			if len(s.body) == long && (s.colour != colour || s.next != next) {
 				t.Fatalf("%v step %d: the colours changed with nothing eaten", sz, steps)
@@ -124,22 +127,33 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 		if len(s.body) != n {
 			t.Fatalf("%v: no apple, %d of %d", sz, len(s.body), n)
 		}
-		// The full board sits in the middle of the scene with the head's
-		// room round it — a pixel left and below, two above and to the
-		// right — the dark left over halved as near as it goes.
+		// The full board sits in the middle of the scene with a pixel
+		// round it for the jaw and the crown, the dark left over halved
+		// as near as it goes.
 		used := s.cw
 		if s.cw%2 != 0 && s.ch%2 != 0 {
 			used--
 		}
-		l, r := s.ox-1, sz[0]-1-(s.ox+snakePitch*(used-1))-2
-		u, d := s.oy-2, sz[1]-1-(s.oy+snakePitch*(s.ch-1))-1
+		l, r := s.ox-1, sz[0]-1-(s.ox+snakePitch*(used-1))-1
+		u, d := s.oy-1, sz[1]-1-(s.oy+snakePitch*(s.ch-1))-1
 		if l < 0 || r < 0 || u < 0 || d < 0 || l-r > 1 || r-l > 1 || u-d > 1 || d-u > 1 {
 			t.Errorf("%v: %d, %d dark either side and %d, %d above and below, past the head's room", sz, l, r, u, d)
 		}
 		for j := 0; j < snakeHold-1; j++ {
+			before := slices.Clone(s.lumps)
 			s.Step()
 			if len(s.body) != n {
 				t.Fatalf("%v: the full board went after %d frames", sz, j+1)
+			}
+			// The body is still; the lumps run on, a place a frame.
+			var want []int
+			for _, i := range before {
+				if i+1 < n {
+					want = append(want, i+1)
+				}
+			}
+			if !slices.Equal(s.lumps, want) {
+				t.Fatalf("%v: the lumps %v on a full board, then %v", sz, before, s.lumps)
 			}
 		}
 		s.Step()
@@ -168,25 +182,28 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 }
 
 // The head, the lump, turned for each way the snake goes: the jaw a
-// pixel ahead, the link behind; the crown above along a row, to the
-// right up or down a column, the eye in it a hole.
+// pixel ahead, the link behind; the crown two pixels, over the node and
+// the link — above along a row, to the right up or down a column — and
+// over the jaw nothing, the open mouth (user, 2026-10-06: two pixels,
+// the three square with an eye was too big).
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	for _, c := range []struct {
-		dx, dy       int
-		crown, eye   [2]int
-		lumpX, lumpY int // the lump's middle
+		dx, dy         int
+		crown1, crown2 [2]int
+		mouth          [2]int
+		lumpX, lumpY   int // the lump's middle
 	}{
-		{-1, 0, [2]int{1, -2}, [2]int{1, -1}, 0, -1},
-		{1, 0, [2]int{-1, -2}, [2]int{-1, -1}, 0, -1},
-		{0, -1, [2]int{2, 1}, [2]int{1, 1}, 1, 0},
-		{0, 1, [2]int{2, -1}, [2]int{1, -1}, 1, 0},
+		{-1, 0, [2]int{0, -1}, [2]int{1, -1}, [2]int{-1, -1}, 0, -1},
+		{1, 0, [2]int{0, -1}, [2]int{-1, -1}, [2]int{1, -1}, 0, -1},
+		{0, -1, [2]int{1, 0}, [2]int{1, 1}, [2]int{1, -1}, 1, 0},
+		{0, 1, [2]int{1, 0}, [2]int{1, -1}, [2]int{1, 1}, 1, 0},
 	} {
 		at := map[[2]int]bool{}
 		for _, p := range snakeHead {
 			x, y := turn(p, c.dx, c.dy)
 			at[[2]int{x, y}] = true
 		}
-		if len(at) != 9 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown] || at[c.eye] {
+		if len(at) != 6 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown1] || !at[c.crown2] || at[c.mouth] {
 			t.Errorf("going %d,%d: the head is %v", c.dx, c.dy, at)
 		}
 		if x, y := turn(snakeLump[1], c.dx, c.dy); x != c.lumpX || y != c.lumpY {
@@ -204,8 +221,8 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		s.Step()
 	}
-	// A lump a few segments back, wherever the last apple went.
-	s.fed[s.body[2]] = true
+	// A lump a few segments down, wherever the last apple is.
+	s.lumps = []int{2}
 	ink := uint8(1 + s.colour)
 	at := func(sc Scene, x, y int) uint8 { return sc.Pix[y*sc.W+x] }
 	lit := map[bool]bool{}
@@ -233,8 +250,8 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 				t.Fatalf("frame %d: the head at %d,%d", f, px, py)
 			}
 		}
-		if ex, ey := turn([2]int{1, -1}, dx, dy); at(sc, hx+ex, hy+ey) != 0 {
-			t.Fatalf("frame %d: no eye", f)
+		if mx, my := turn([2]int{-1, -1}, dx, dy); at(sc, hx+mx, hy+my) != 0 {
+			t.Fatalf("frame %d: the mouth is shut", f)
 		}
 		lx, ly := s.cellAt(s.body[2])
 		ldx, ldy := s.way(s.body[2], s.body[1])
@@ -285,5 +302,41 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 		if k != 0 {
 			t.Fatal("a scene too small lit a pixel")
 		}
+	}
+}
+
+// An apple eaten is a lump that runs down the body to the tail (user,
+// 2026-10-06): the body carries it a place a move, and it runs a place
+// more, so it is two further from the head each move, and gone past the
+// tail.
+func TestSnakeLumpRunsToTheTail(t *testing.T) {
+	s := NewSnake(3)
+	s.Draw(76, 31)
+	for i := 0; len(s.lumps) == 0; i++ {
+		if i > 1000 {
+			t.Fatal("no lump in a thousand moves")
+		}
+		s.Step()
+	}
+	if !slices.Equal(s.lumps, []int{0}) {
+		t.Fatalf("just eaten: lumps %v", s.lumps)
+	}
+	at, moves := 0, 0
+	for {
+		s.Step()
+		moves++
+		if at+2 >= len(s.body) {
+			if slices.Contains(s.lumps, at+2) || (len(s.lumps) > 0 && s.lumps[0] >= at) {
+				t.Fatalf("past the tail, %d long: lumps %v", len(s.body), s.lumps)
+			}
+			break
+		}
+		if s.lumps[0] != at+2 {
+			t.Fatalf("move %d: the lump at %d, then %v", moves, at, s.lumps)
+		}
+		at += 2
+	}
+	if moves < 2 {
+		t.Errorf("gone in %d moves", moves)
 	}
 }
