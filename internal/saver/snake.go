@@ -18,15 +18,15 @@ import (
 //
 // The rest is the user's, the same day. It has a head: two pixels over
 // the body's line, the snout a pixel ahead of it (it was three square
-// with an eye, and too big). The move before an apple — the apple the
-// next cell — it opens its jaws on it: they reach along the link to the
-// apple, the upper lip and, across the line, the lower, two pixels
-// each, the mouth between them the pixel next to the apple, and the
-// crown a pixel back; the line runs on to the mouth, so nothing of the
-// snake falls short (the head went back a segment at first, and the
-// snake looked broken). The move it eats, the mouth is shut again and a
-// pixel of lump stands behind the head. The apple blinks in the colour
-// the snake turns when it eats it — a colour at random, another each
+// with an eye, and too big). It eats in three moves, as the user drew
+// them: the move before, the apple the next cell, its head reaches the
+// apple, the snout touching it; the move it eats, the jaws are round the
+// apple — the upper three pixels over it and on behind, the lower two
+// under it — the apple still in its own colour and the snake still in
+// its old; the move after, the mouth is shut, the snake is the apple's
+// colour, and a pixel of lump stands behind the head. (The jaws opened
+// short of the apple at first, and the snake looked broken.) The apple
+// blinks in the colour the snake turns when it eats it — a colour at random, another each
 // time — and an apple eaten is a lump that runs down the body to the
 // tail, a segment a move, and is gone (it stayed where it was swallowed
 // at first, as on the Nokia). The snake is the longer for it at once,
@@ -74,10 +74,15 @@ var (
 	// The head: the snout ahead, the node and the link behind, and the
 	// crown over the node and the link's first pixel.
 	snakeHead = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
-	// The mouth open on the apple ahead: the line on to the link's
-	// nearer pixel, the lips over and under the link, the mouth the pixel
-	// next to the apple between them; the crown a pixel back.
-	snakeOpen = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {-2, -1}, {-1, -1}, {-2, 1}, {-1, 1}, {1, -1}, {2, -1}}
+	// Touching the apple in the next cell: the head a pixel on towards
+	// it, the snout against it. It faces the apple, which may be round a
+	// corner: the link behind is the body's to draw, from wherever the
+	// head came.
+	snakeTouch = shape{{-2, 0}, {-1, 0}, {0, 0}, {-1, -1}, {0, -1}}
+	// The jaws round the apple, which is at the node: the upper jaw over
+	// it and two on, the lower under it and one on, the link behind. The
+	// node is the apple's to draw.
+	snakeOpen = shape{{1, 0}, {2, 0}, {0, -1}, {1, -1}, {2, -1}, {0, 1}, {1, 1}}
 	// Swallowing: the mouth shut, a pixel of lump behind the crown.
 	snakeSwallow = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}, {4, -1}}
 	// A lump: an apple on its way through, two pixels as the crown is
@@ -114,6 +119,7 @@ type Snake struct {
 	apple  int    // -1 when the board is full
 	colour int    // the snake's, in ownColours
 	next   int    // the apple's: the snake's when it is eaten
+	was    int    // the snake's before the apple now in its jaws
 	t      int    // frames played
 	hold   int    // frames a full board has still to stay
 	frame  time.Duration
@@ -314,33 +320,53 @@ func (s *Snake) Step() {
 	// further from the head for it, and one more for its run.
 	s.digest(2)
 	if ate {
-		s.lumps = append(s.lumps, 0)
-		s.colour, s.next = s.next, otherColour(s.rng, s.next)
+		s.lumps = append(s.lumps, snakeBitten)
+		s.was, s.colour, s.next = s.colour, s.next, otherColour(s.rng, s.next)
 		if s.place(); s.apple < 0 {
 			s.hold = s.frames(snakeHold)
 		}
 	}
 }
 
-// head is the head's shape this move: open when the apple is the next
-// move's — the move is the same whenever it is worked out — swallowing
-// when it was this one's, its lump still at the head, shut else.
-func (s *Snake) head() shape {
+// snakeBitten is the place of an apple still in the jaws, the move it
+// is eaten: the move after it is at the head, swallowed, and then it
+// runs.
+const snakeBitten = -2
+
+// bitten says whether the apple is in the jaws this move.
+func (s *Snake) bitten() bool { return slices.Contains(s.lumps, snakeBitten) }
+
+// head is the head's shape this move and the way it faces: the jaws
+// round the apple when it is eaten this move; touching it, facing it,
+// when it is the next move's — the move is the same whenever it is
+// worked out; swallowing the move after it is eaten, its lump at the
+// head; shut else. But touching, it faces the way it came.
+func (s *Snake) head() (shape, int, int) {
+	dx, dy := s.way(s.body[1], s.body[0])
 	switch {
+	case s.bitten():
+		return snakeOpen, dx, dy
 	case s.apple >= 0 && s.move() == s.apple:
-		return snakeOpen
+		dx, dy = s.way(s.body[0], s.apple)
+		return snakeTouch, dx, dy
 	case slices.Contains(s.lumps, 0):
-		return snakeSwallow
+		return snakeSwallow, dx, dy
 	}
-	return snakeHead
+	return snakeHead, dx, dy
 }
 
 // digest moves every lump by places towards the tail; one past it is
-// gone.
+// gone. An apple in the jaws is at the head the move after, whatever the
+// body does.
 func (s *Snake) digest(by int) {
 	keep := s.lumps[:0]
 	for _, i := range s.lumps {
-		if i += by; i < len(s.body) {
+		if i < 0 {
+			i += -snakeBitten
+		} else {
+			i += by
+		}
+		if i < len(s.body) {
 			keep = append(keep, i)
 		}
 	}
@@ -377,13 +403,18 @@ func (s *Snake) Draw(w, h int) Scene {
 		return sc
 	}
 	ink := uint8(1 + s.colour)
+	if s.bitten() {
+		ink = uint8(1 + s.was) // the colour comes with the swallowing
+	}
 	lump := make([]bool, len(s.body))
 	for _, i := range s.lumps {
-		lump[i] = true
+		if i >= 0 {
+			lump[i] = true
+		}
 	}
 	for i, c := range s.body {
 		if i == 0 {
-			continue // the head's node is the head's to draw: open, it is the mouth
+			continue // the head's node is the head's to draw: open, it is the apple
 		}
 		x, y := s.cellAt(c)
 		sc.put(x, y, ink)
@@ -396,9 +427,14 @@ func (s *Snake) Draw(w, h int) Scene {
 			s.stamp(&sc, snakeLump, c, dx, dy, ink)
 		}
 	}
-	// The head goes the way it came: from the cell behind it.
-	dx, dy := s.way(s.body[1], s.body[0])
-	s.stamp(&sc, s.head(), s.body[0], dx, dy, ink)
+	head, dx, dy := s.head()
+	s.stamp(&sc, head, s.body[0], dx, dy, ink)
+	if s.bitten() {
+		// The apple in the jaws, in its colour: the snake's from the next
+		// move.
+		x, y := s.cellAt(s.body[0])
+		sc.put(x, y, uint8(1+s.colour))
+	}
 	if s.apple >= 0 && (s.t/s.frames(snakeBlink))%2 == 0 {
 		x, y := s.cellAt(s.apple)
 		sc.put(x, y, uint8(1+s.next))

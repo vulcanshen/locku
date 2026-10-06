@@ -3,7 +3,7 @@
 ## [Unreleased]
 ### Added
 - A fourth saver, `bounce`: a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. It has nothing to set, not even colours: they are its own.
-- A fifth saver, `snake`: the Nokia game playing itself until the board is full, then again from the start. It never runs into itself; it has a head that opens its jaws on the apple, each segment is a dot and each link between two is lit, and the apple blinks in the colour the snake turns when it eats it, then runs down its body as a lump to the tail. Its one setting is its `speed`, in cells a second, 1 to 30 and 12 to begin with; its colours are its own.
+- A fifth saver, `snake`: the Nokia game playing itself until the board is full, then again from the start. It never runs into itself; it has a head that reaches the apple, closes its jaws round it and swallows, each segment is a dot and each link between two is lit, and the apple blinks in the colour the snake turns when it eats it, then runs down its body as a lump to the tail. Its one setting is its `speed`, in cells a second, 1 to 30 and 12 to begin with; its colours are its own.
 - The dino has a `character`: the T-Rex as before, or a cat, a rabbit, a horse, or Pac-Man's ghost, in any of the six runners.
 
 ## [0.2.0] - 2026-10-06
