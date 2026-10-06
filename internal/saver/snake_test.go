@@ -185,18 +185,18 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 // pixel ahead, the link behind; the crown two pixels, over the node and
 // the link — above along a row, to the right up or down a column — and
 // over the jaw nothing, the open mouth (user, 2026-10-06: two pixels,
-// the three square with an eye was too big).
+// the three square with an eye was too big). A lump is the crown's two
+// pixels (user, the same day: it was three).
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	for _, c := range []struct {
 		dx, dy         int
 		crown1, crown2 [2]int
 		mouth          [2]int
-		lumpX, lumpY   int // the lump's middle
 	}{
-		{-1, 0, [2]int{0, -1}, [2]int{1, -1}, [2]int{-1, -1}, 0, -1},
-		{1, 0, [2]int{0, -1}, [2]int{-1, -1}, [2]int{1, -1}, 0, -1},
-		{0, -1, [2]int{1, 0}, [2]int{1, 1}, [2]int{1, -1}, 1, 0},
-		{0, 1, [2]int{1, 0}, [2]int{1, -1}, [2]int{1, 1}, 1, 0},
+		{-1, 0, [2]int{0, -1}, [2]int{1, -1}, [2]int{-1, -1}},
+		{1, 0, [2]int{0, -1}, [2]int{-1, -1}, [2]int{1, -1}},
+		{0, -1, [2]int{1, 0}, [2]int{1, 1}, [2]int{1, -1}},
+		{0, 1, [2]int{1, 0}, [2]int{1, -1}, [2]int{1, 1}},
 	} {
 		at := map[[2]int]bool{}
 		for _, p := range snakeHead {
@@ -206,8 +206,13 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 		if len(at) != 6 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown1] || !at[c.crown2] || at[c.mouth] {
 			t.Errorf("going %d,%d: the head is %v", c.dx, c.dy, at)
 		}
-		if x, y := turn(snakeLump[1], c.dx, c.dy); x != c.lumpX || y != c.lumpY {
-			t.Errorf("going %d,%d: the lump at %d,%d", c.dx, c.dy, x, y)
+		lump := map[[2]int]bool{}
+		for _, p := range snakeLump {
+			x, y := turn(p, c.dx, c.dy)
+			lump[[2]int{x, y}] = true
+		}
+		if len(lump) != 2 || !lump[c.crown1] || !lump[c.crown2] {
+			t.Errorf("going %d,%d: the lump is %v", c.dx, c.dy, lump)
 		}
 	}
 }
