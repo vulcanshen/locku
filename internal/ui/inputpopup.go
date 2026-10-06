@@ -33,7 +33,9 @@ const (
 // 2026-09-28; it used to be a suffix on the border, ` · taken`).
 //
 // While it is up every printable key is a character: Space is a space and
-// ? is a question mark (tdp K8).
+// ? is a question mark (tdp K8). A line break or a tab pasted in stays, and
+// is drawn as a red `\n` / `\t`; the box will not take the value with one
+// (oneline.go).
 type inputPopup struct {
 	anim   popupAnimator
 	title  string // the type: "name", "number", "current PIN", …
@@ -111,8 +113,8 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 			m.value, m.placeholder = m.placeholder, ""
 		}
 	case tea.KeyBackspace:
-		if r := []rune(m.value); len(r) > 0 {
-			m.value = string(r[:len(r)-1])
+		if m.value != "" {
+			m.value = dropLast(m.value)
 		} else {
 			m.placeholder = ""
 		}
@@ -121,13 +123,15 @@ func (m *inputPopup) update(msg tea.KeyMsg) {
 	case tea.KeySpace:
 		m.value += " "
 	case tea.KeyRunes:
-		m.value += string(msg.Runes)
+		m.value += takeText(msg.Runes)
 	}
 }
 
 // canFail: an Enter here can be refused, so the box keeps a row for why
-// from the moment it opens (tdp F7). A command is taken as it is typed.
-func (m inputPopup) canFail() bool { return m.action != inputCommand && m.action != inputNone }
+// from the moment it opens (tdp F7). Every box's can: a line break or a
+// tab in the value is refused in all of them, a command's too, which was
+// taken as it was typed until 2026-10-06.
+func (m inputPopup) canFail() bool { return m.action != inputNone }
 
 // errorRow is an input's row for why its Enter was refused (tdp F7, K3):
 // blank until then, red with the reason after. A PIN box's is centred
@@ -159,16 +163,15 @@ func (m inputPopup) view() string {
 			hint = nil
 		}
 		return drawPopupBox(bc, " "+glyphLock+" "+m.title+" ", hint,
-			animRows(m.anim, []string{pinRow(len([]rune(m.value)), innerW), errorRow(m.err, innerW, true)}), innerW)
+			animRows(m.anim, []string{pinRow(valueLen(m.value), innerW), errorRow(m.err, innerW, true)}), innerW)
 	}
 
 	innerW := popupInnerW(m.screenW)
 	dim := lipgloss.NewStyle().Foreground(dimColor)
-	edit := lipgloss.NewStyle().Foreground(editColor)
 	cur := lipgloss.NewStyle().Foreground(lipgloss.Color(baseHex)).Background(editColor)
 
-	value := truncateHead(m.value, innerW-3)
-	line := " " + edit.Render(value) + cur.Render(" ") + spaces(max(0, innerW-2-dispW(value)))
+	value, vw := valueView(m.value, innerW-3)
+	line := " " + value + cur.Render(" ") + spaces(max(0, innerW-2-vw))
 	offered := m.value == "" && m.placeholder != ""
 	if offered {
 		// The offer, dim, after the cursor: not typed, so not lavender.

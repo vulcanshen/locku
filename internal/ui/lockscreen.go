@@ -271,7 +271,7 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 
 // key is every keystroke (ux.md §2.3). On the saver any key opens the
 // prompt and is not input. In the prompt: Enter checks, Esc goes back,
-// Backspace deletes, a printable character is appended — and while the
+// Backspace deletes, a character is appended — and while the
 // prompt says "wrong" or is locked out, keys are swallowed, Esc excepted
 // during a lockout.
 func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
@@ -307,19 +307,24 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 		}
 		return m, nil
 	}
+	m.prompt.err = ""
 	switch msg.Type {
 	case tea.KeyEsc:
 		return m, m.closePrompt(false)
 	case tea.KeyEnter:
+		// A PIN with a line break or a tab in it could never be set: it is
+		// not checked, and not a wrong one (oneline.go).
+		if hasBreak(string(m.prompt.value)) {
+			m.prompt.err = breakErr("PIN")
+			return m, m.armTimeout()
+		}
 		return m.check()
 	case tea.KeyBackspace:
 		m.prompt.backspace()
 	case tea.KeySpace:
-		m.prompt.add(' ')
+		m.prompt.add([]rune{' '})
 	case tea.KeyRunes:
-		for _, r := range msg.Runes {
-			m.prompt.add(r)
-		}
+		m.prompt.add(msg.Runes)
 	}
 	// Every key restarts the idle timer, so a PIN typed slowly does not
 	// vanish halfway (function.md §3).

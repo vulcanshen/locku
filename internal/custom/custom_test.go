@@ -256,3 +256,28 @@ func TestProgramIsToldTheIconWidth(t *testing.T) {
 		p.Kill()
 	}
 }
+
+// While the prompt is up the terminal brackets a paste, so that a line
+// break pasted into the PIN is one, not an Enter: the prompt is a Bubble
+// Tea program with no renderer, and the renderer is what would ask for it
+// (terminu, 2026-10-06). The box going up asks; Clear stops it before
+// what was held back, where the program was last cut; a box never up has
+// nothing to stop.
+func TestThePromptGetsPastesBracketed(t *testing.T) {
+	var out bytes.Buffer
+	scr := &screen{out: &out, cols: 80, rows: 24}
+	scr.Clear()
+	if strings.Contains(out.String(), pasteOff) {
+		t.Errorf("no box was up, and Clear stopped a paste mode: %q", out.String())
+	}
+	scr.Overlay("[b]", 3)
+	if s := out.String(); !strings.Contains(s, syncBegin+pasteOn) {
+		t.Errorf("the box must ask for bracketed paste: %q", s)
+	}
+	scr.Write([]byte("ab\x1b[5;5"))
+	out.Reset()
+	scr.Clear()
+	if s := out.String(); !strings.HasPrefix(s, pasteOff+"\x1b[5;5") {
+		t.Errorf("Clear must stop it, before what was held back: %q", s)
+	}
+}
