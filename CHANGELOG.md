@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.2.0] - 2026-10-06
 ### Changed
 - The environment variables are named as the rest of the family's, with two underscores after the name: `LOCKU_CONFIG` is now `LOCKU__CONFIG` and `LOCKU_DATA` is now `LOCKU__DATA`. The old names are no longer read: set the new ones, or locku falls back to `~/.config/locku` and `~/.locku/data`.
 - `?` lists the keys, to read: on `[1]` and on a profile's or a saver's `[2]`, that panel's keys — every row of its Space menu, one that cannot run now dimmed as it is there — then the ones that work everywhere. Nothing on it runs; it used to be a menu with `Quit` on it.
