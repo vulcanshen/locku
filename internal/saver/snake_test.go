@@ -186,10 +186,10 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 // Shut: the snout a pixel ahead, the node, the link behind, and the
 // crown two pixels over the node and the link — above along a row, to
 // the right up or down a column — nothing over the snout. Open: the
-// crown a segment back, the upper lip where it was, the lower lip across
-// the line, the node between them dark and no snout. Swallowing: shut,
-// and a pixel of lump behind the crown. A lump is the crown's two
-// pixels.
+// line on to the snout, the lips over and under the two pixels ahead of
+// the node, the mouth between them dark next to the apple, the crown a
+// pixel back. Swallowing: shut, and a pixel of lump behind the crown. A
+// lump is the crown's two pixels.
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	set := func(sh shape, dx, dy int) map[[2]int]bool {
 		at := map[[2]int]bool{}
@@ -209,7 +209,7 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 		{0, 1, [2]int{1, 0}, [2]int{1, -1}},
 	} {
 		dx, dy := c.dx, c.dy
-		back := func(p [2]int) [2]int { return [2]int{p[0] - 3*dx, p[1] - 3*dy} }
+		back := func(p [2]int, by int) [2]int { return [2]int{p[0] - by*dx, p[1] - by*dy} }
 		across := func(p [2]int) [2]int {
 			if dy == 0 {
 				return [2]int{p[0], -p[1]}
@@ -224,12 +224,13 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 			t.Errorf("going %d,%d: shut, the head is %v", dx, dy, shut)
 		}
 		open := set(snakeOpen, dx, dy)
-		if len(open) != 8 || open[snout] || open[node] || !open[link1] || !open[link2] ||
-			!open[back(c.crown1)] || !open[back(c.crown2)] || !open[c.crown1] || !open[c.crown2] || !open[across(c.crown1)] || !open[across(c.crown2)] {
+		lip1, lip2 := back(c.crown1, -2), back(c.crown2, -2)
+		if len(open) != 10 || !open[snout] || open[[2]int{2 * dx, 2 * dy}] || !open[node] || !open[link1] || !open[link2] ||
+			!open[lip1] || !open[lip2] || !open[across(lip1)] || !open[across(lip2)] || !open[back(c.crown1, 1)] || !open[back(c.crown2, 1)] || open[c.crown1] {
 			t.Errorf("going %d,%d: open, the head is %v", dx, dy, open)
 		}
 		swallow := set(snakeSwallow, dx, dy)
-		delete(swallow, back(c.crown2))
+		delete(swallow, back(c.crown2, 3))
 		if !reflect.DeepEqual(swallow, shut) {
 			t.Errorf("going %d,%d: swallowing is not the shut head and a pixel of lump: %v", dx, dy, swallow)
 		}
@@ -376,7 +377,8 @@ func TestSnakeOpensItsMouthToEat(t *testing.T) {
 		x, y := s.cellAt(s.body[0])
 		dx, dy := s.way(s.body[1], s.body[0])
 		px, py := turn(p, dx, dy)
-		return sc.Pix[(y+py)*sc.W+x+px] != 0
+		x, y = x+px, y+py
+		return x >= 0 && x < sc.W && y >= 0 && y < sc.H && sc.Pix[y*sc.W+x] != 0
 	}
 	opened, swallowed, eats := 0, 0, 0
 	for i := 0; i < 2000; i++ {
@@ -393,7 +395,7 @@ func TestSnakeOpensItsMouthToEat(t *testing.T) {
 			t.Fatalf("move %d: the apple next %v, just eaten %v: the head %v", i, next, just, s.head())
 		}
 		sc := s.Draw(76, 31)
-		if open := !px(sc, [2]int{0, 0}) && px(sc, [2]int{0, 1}) && !px(sc, [2]int{-1, 0}); open != next {
+		if open := !px(sc, [2]int{-2, 0}) && px(sc, [2]int{-2, 1}) && px(sc, [2]int{-2, -1}); open != next {
 			t.Fatalf("move %d: drawn open %v, the apple next %v", i, open, next)
 		}
 		long := len(s.body)
