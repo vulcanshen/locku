@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
 )
 
 func adjacent(cw, a, b int) bool {
@@ -102,7 +103,7 @@ func check(t *testing.T, s *Snake, step int) {
 // colour, leaves a lump where it was, and the next is in another.
 func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 	for i, sz := range [][2]int{{15, 11}, {21, 13}, {40, 23}, {31, 19}, {16, 9}, {76, 31}, {50, 29}, {49, 31}, {11, 7}, {100, 59}} {
-		s := NewSnake(uint64(4 + i))
+		s := NewSnake(uint64(4+i), SnakeSpeedDefault)
 		s.Draw(sz[0], sz[1])
 		n := len(s.tour)
 		if len(s.body) != snakeStart || n == 0 {
@@ -139,7 +140,7 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 		if l < 0 || r < 0 || u < 0 || d < 0 || l-r > 1 || r-l > 1 || u-d > 1 || d-u > 1 {
 			t.Errorf("%v: %d, %d dark either side and %d, %d above and below, past the head's room", sz, l, r, u, d)
 		}
-		for j := 0; j < snakeHold-1; j++ {
+		for j := 0; j < s.frames(snakeHold)-1; j++ {
 			before := slices.Clone(s.lumps)
 			s.Step()
 			if len(s.body) != n {
@@ -167,7 +168,7 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 // Short cuts while the board is mostly empty: a game takes fewer steps
 // than following the cycle for every apple would.
 func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
-	s := NewSnake(11)
+	s := NewSnake(11, SnakeSpeedDefault)
 	s.Draw(76, 31)
 	n := len(s.tour)
 	steps := 0
@@ -181,49 +182,59 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 	}
 }
 
-// The head, the lump, turned for each way the snake goes: eating, the
-// jaw a pixel ahead, the link behind; the crown two pixels, over the
-// node and the link — above along a row, to the right up or down a
-// column — and over the jaw nothing, the open mouth (user, 2026-10-06:
-// two pixels, the three square with an eye was too big); not eating,
-// the same without the jaw. A lump is the crown's two pixels (user, the
-// same day: it was three).
+// The head, turned for each way the snake goes (user, 2026-10-06).
+// Shut: the snout a pixel ahead, the node, the link behind, and the
+// crown two pixels over the node and the link — above along a row, to
+// the right up or down a column — nothing over the snout. Open: the
+// crown a segment back, the upper lip where it was, the lower lip across
+// the line, the node between them dark and no snout. Swallowing: shut,
+// and a pixel of lump behind the crown. A lump is the crown's two
+// pixels.
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
+	set := func(sh shape, dx, dy int) map[[2]int]bool {
+		at := map[[2]int]bool{}
+		for _, p := range sh {
+			x, y := turn(p, dx, dy)
+			at[[2]int{x, y}] = true
+		}
+		return at
+	}
 	for _, c := range []struct {
 		dx, dy         int
 		crown1, crown2 [2]int
-		mouth          [2]int
 	}{
-		{-1, 0, [2]int{0, -1}, [2]int{1, -1}, [2]int{-1, -1}},
-		{1, 0, [2]int{0, -1}, [2]int{-1, -1}, [2]int{1, -1}},
-		{0, -1, [2]int{1, 0}, [2]int{1, 1}, [2]int{1, -1}},
-		{0, 1, [2]int{1, 0}, [2]int{1, -1}, [2]int{1, 1}},
+		{-1, 0, [2]int{0, -1}, [2]int{1, -1}},
+		{1, 0, [2]int{0, -1}, [2]int{-1, -1}},
+		{0, -1, [2]int{1, 0}, [2]int{1, 1}},
+		{0, 1, [2]int{1, 0}, [2]int{1, -1}},
 	} {
-		at := map[[2]int]bool{}
-		for _, p := range snakeEats {
-			x, y := turn(p, c.dx, c.dy)
-			at[[2]int{x, y}] = true
+		dx, dy := c.dx, c.dy
+		back := func(p [2]int) [2]int { return [2]int{p[0] - 3*dx, p[1] - 3*dy} }
+		across := func(p [2]int) [2]int {
+			if dy == 0 {
+				return [2]int{p[0], -p[1]}
+			}
+			return [2]int{-p[0], p[1]}
 		}
-		shut := map[[2]int]bool{}
-		for _, p := range snakeHead {
-			x, y := turn(p, c.dx, c.dy)
-			shut[[2]int{x, y}] = true
+		snout, node, link1, link2 := [2]int{dx, dy}, [2]int{0, 0}, [2]int{-dx, -dy}, [2]int{-2 * dx, -2 * dy}
+		mouth := [2]int{dx + c.crown1[0], dy + c.crown1[1]}
+
+		shut := set(snakeHead, dx, dy)
+		if len(shut) != 6 || !shut[snout] || !shut[node] || !shut[link1] || !shut[link2] || !shut[c.crown1] || !shut[c.crown2] || shut[mouth] {
+			t.Errorf("going %d,%d: shut, the head is %v", dx, dy, shut)
 		}
-		delete(at, [2]int{c.dx, c.dy})
-		if !reflect.DeepEqual(shut, at) {
-			t.Errorf("going %d,%d: the shut head %v is not the open one but the jaw", c.dx, c.dy, shut)
+		open := set(snakeOpen, dx, dy)
+		if len(open) != 8 || open[snout] || open[node] || !open[link1] || !open[link2] ||
+			!open[back(c.crown1)] || !open[back(c.crown2)] || !open[c.crown1] || !open[c.crown2] || !open[across(c.crown1)] || !open[across(c.crown2)] {
+			t.Errorf("going %d,%d: open, the head is %v", dx, dy, open)
 		}
-		at[[2]int{c.dx, c.dy}] = true
-		if len(at) != 6 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown1] || !at[c.crown2] || at[c.mouth] {
-			t.Errorf("going %d,%d: the head is %v", c.dx, c.dy, at)
+		swallow := set(snakeSwallow, dx, dy)
+		delete(swallow, back(c.crown2))
+		if !reflect.DeepEqual(swallow, shut) {
+			t.Errorf("going %d,%d: swallowing is not the shut head and a pixel of lump: %v", dx, dy, swallow)
 		}
-		lump := map[[2]int]bool{}
-		for _, p := range snakeLump {
-			x, y := turn(p, c.dx, c.dy)
-			lump[[2]int{x, y}] = true
-		}
-		if len(lump) != 2 || !lump[c.crown1] || !lump[c.crown2] {
-			t.Errorf("going %d,%d: the lump is %v", c.dx, c.dy, lump)
+		if lump := set(snakeLump, dx, dy); len(lump) != 2 || !lump[c.crown1] || !lump[c.crown2] {
+			t.Errorf("going %d,%d: the lump is %v", dx, dy, lump)
 		}
 	}
 }
@@ -232,7 +243,7 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 // every link, its head, its lumps — and the apple in the next colour
 // every other few frames.
 func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
-	s := NewSnake(6)
+	s := NewSnake(6, SnakeSpeedDefault)
 	s.Draw(76, 31)
 	for i := 0; i < 200; i++ {
 		s.Step()
@@ -242,11 +253,11 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	ink := uint8(1 + s.colour)
 	at := func(sc Scene, x, y int) uint8 { return sc.Pix[y*sc.W+x] }
 	lit := map[bool]bool{}
-	for f := 0; f < 2*snakeBlink; f++ {
+	for f := 0; f < 2*s.frames(snakeBlink); f++ {
 		sc := s.Draw(76, 31)
 		for i, c := range s.body {
 			x, y := s.cellAt(c)
-			if at(sc, x, y) != ink {
+			if i > 0 && at(sc, x, y) != ink {
 				t.Fatalf("frame %d: node %d is ink %d", f, i, at(sc, x, y))
 			}
 			if i > 0 {
@@ -260,14 +271,11 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 		}
 		hx, hy := s.cellAt(s.body[0])
 		dx, dy := s.way(s.body[1], s.body[0])
-		for _, p := range snakeHead {
+		for _, p := range s.head() {
 			px, py := turn(p, dx, dy)
 			if at(sc, hx+px, hy+py) != ink {
 				t.Fatalf("frame %d: the head at %d,%d", f, px, py)
 			}
-		}
-		if mx, my := turn([2]int{-1, -1}, dx, dy); at(sc, hx+mx, hy+my) != 0 {
-			t.Fatalf("frame %d: the mouth is shut", f)
 		}
 		lx, ly := s.cellAt(s.body[2])
 		ldx, ldy := s.way(s.body[2], s.body[1])
@@ -299,7 +307,7 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 // The same seed is the same game; a new size is a new one, and a scene
 // too small has none and draws nothing.
 func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
-	a, b := NewSnake(9), NewSnake(9)
+	a, b := NewSnake(9, SnakeSpeedDefault), NewSnake(9, SnakeSpeedDefault)
 	for i := 0; i < 300; i++ {
 		if !reflect.DeepEqual(a.Draw(40, 23), b.Draw(40, 23)) {
 			t.Fatalf("frame %d differs", i)
@@ -311,7 +319,7 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 	if a.cw != 16 || a.ch != 9 || len(a.body) != snakeStart {
 		t.Errorf("after a resize: %dx%d, %d long", a.cw, a.ch, len(a.body))
 	}
-	tiny := NewSnake(1)
+	tiny := NewSnake(1, SnakeSpeedDefault)
 	sc := tiny.Draw(4, 7)
 	tiny.Step()
 	for _, k := range sc.Pix {
@@ -326,7 +334,7 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 // more, so it is two further from the head each move, and gone past the
 // tail.
 func TestSnakeLumpRunsToTheTail(t *testing.T) {
-	s := NewSnake(3)
+	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
 	for i := 0; len(s.lumps) == 0; i++ {
 		if i > 1000 {
@@ -357,37 +365,80 @@ func TestSnakeLumpRunsToTheTail(t *testing.T) {
 	}
 }
 
-// The mouth opens to eat (user, 2026-10-06): the jaw is out the move
-// before the apple, and the move it is eaten; the rest of the time the
-// mouth is shut.
+// The mouth opens to eat (user, 2026-10-06): open the move before the
+// apple, swallowing the move it is eaten, shut the rest of the time —
+// and drawn so: open, the node is dark and the lower lip lit; else the
+// snout is out.
 func TestSnakeOpensItsMouthToEat(t *testing.T) {
-	s := NewSnake(8)
+	s := NewSnake(8, SnakeSpeedDefault)
 	s.Draw(76, 31)
-	jaw := func() bool {
-		sc := s.Draw(76, 31)
+	px := func(sc Scene, p [2]int) bool {
 		x, y := s.cellAt(s.body[0])
 		dx, dy := s.way(s.body[1], s.body[0])
-		return sc.Pix[(y+dy)*sc.W+x+dx] != 0
+		px, py := turn(p, dx, dy)
+		return sc.Pix[(y+py)*sc.W+x+px] != 0
 	}
-	open, eats := 0, 0
+	opened, swallowed, eats := 0, 0, 0
 	for i := 0; i < 2000; i++ {
-		before := s.apple >= 0 && s.move() == s.apple
+		next := s.apple >= 0 && s.move() == s.apple
+		just := slices.Contains(s.lumps, 0)
+		want := snakeHead
+		switch {
+		case next:
+			want, opened = snakeOpen, opened+1
+		case just:
+			want, swallowed = snakeSwallow, swallowed+1
+		}
+		if !reflect.DeepEqual(s.head(), want) {
+			t.Fatalf("move %d: the apple next %v, just eaten %v: the head %v", i, next, just, s.head())
+		}
+		sc := s.Draw(76, 31)
+		if open := !px(sc, [2]int{0, 0}) && px(sc, [2]int{0, 1}) && !px(sc, [2]int{-1, 0}); open != next {
+			t.Fatalf("move %d: drawn open %v, the apple next %v", i, open, next)
+		}
 		long := len(s.body)
-		if jaw() != before && !slices.Contains(s.lumps, 0) {
-			t.Fatalf("move %d: the jaw out %v, the apple next %v", i, jaw(), before)
-		}
-		if before {
-			open++
-		}
 		s.Step()
 		if len(s.body) > long {
 			eats++
-			if !jaw() {
-				t.Fatalf("move %d: ate with the mouth shut", i)
-			}
 		}
 	}
-	if eats < 10 || open != eats {
-		t.Errorf("%d apples, the mouth opened before %d", eats, open)
+	if eats < 10 || opened != eats || swallowed != eats {
+		t.Errorf("%d apples: opened %d times, swallowed %d", eats, opened, swallowed)
+	}
+}
+
+// The speed is cells a second (user, 2026-10-06): a move every second
+// over it, from one to thirty, twelve for any other; a full board stays
+// three seconds, and the apple blinks a third of a second, at any speed.
+func TestSnakeSpeed(t *testing.T) {
+	now := time.Date(2026, time.October, 6, 21, 5, 0, 0, time.UTC)
+	for _, c := range []struct {
+		speed, moves, hold, blink int
+	}{
+		{1, 1, 3, 1},
+		{12, 12, 36, 3},
+		{30, 30, 90, 9},
+		{0, 12, 36, 3},
+		{31, 12, 36, 3},
+		{-5, 12, 36, 3},
+	} {
+		s := NewSnake(1, c.speed)
+		if got := s.Next(now).Sub(now); got != time.Second/time.Duration(c.moves) {
+			t.Errorf("speed %d: a move every %v", c.speed, got)
+		}
+		if h, b := s.frames(snakeHold), s.frames(snakeBlink); h != c.hold || b != c.blink {
+			t.Errorf("speed %d: holds %d moves, blinks every %d", c.speed, h, b)
+		}
+	}
+	// At thirty a second the apple is lit nine moves, then dark nine.
+	s := NewSnake(1, 30)
+	s.Draw(76, 31)
+	x, y := s.cellAt(s.apple)
+	for f := 0; f < 36; f++ {
+		s.t = f
+		sc := s.Draw(76, 31)
+		if lit := sc.Pix[y*sc.W+x] != 0; lit != ((f/9)%2 == 0) {
+			t.Fatalf("move %d: the apple lit %v", f, lit)
+		}
 	}
 }

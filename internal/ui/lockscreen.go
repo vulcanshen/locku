@@ -179,7 +179,7 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	case saver.KindBounce:
 		m.game = saver.NewBounce(seed, time.Now, func(l string) []string { return spell(faceShort, l) })
 	case saver.KindSnake:
-		m.game = saver.NewSnake(seed)
+		m.game = saver.NewSnake(seed, s.Speed)
 	}
 	if !saver.Coloured(s.Saver) {
 		// No colours of its own: what the lock draws in the profile's
