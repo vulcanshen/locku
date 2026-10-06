@@ -78,9 +78,9 @@ func TestSpellIsTheBoardsLettering(t *testing.T) {
 // set: no rows of its own, no colours, and so no draft to save or reset
 // — a profile of it is its name and its saver, and P shows it.
 func TestBounceHasNothingToSet(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k") // the bouncing box, above the custom saver
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // the bouncing box, above the snake
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindBounce {
-		t.Fatalf("the bouncing box sits above the custom saver, not %+v", it)
+		t.Fatalf("the bouncing box sits above the snake, not %+v", it)
 	}
 	if v := m.View(); !strings.Contains(v, "the time in a box, bouncing, changing colour") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") {
 		t.Errorf("the bouncing box's [2]:\n%s", v)

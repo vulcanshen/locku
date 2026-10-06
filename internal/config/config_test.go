@@ -56,8 +56,8 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 4 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
-		cfg.Saver("bounce") != NewProfile("", "bounce") {
+	if len(cfg.Savers) != 5 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
+		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -384,5 +384,22 @@ func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
 	if s := string(body); !strings.Contains(s, "  - name: box\n      saver: bounce\n") || strings.Contains(s, "#000000") || strings.Contains(s, "cmatrix") ||
 		!strings.Contains(s, "    bounce:\n        saver: bounce\n    clock:") {
 		t.Errorf("saved:\n%s", s)
+	}
+}
+
+// The snake has its two colours and nothing else (2026-10-06): what
+// else a snake profile carries goes; colours it lacks, or has wrong,
+// are its own defaults — the Nokia's greens, not the clock's.
+func TestASnakeProfileIsItsColours(t *testing.T) {
+	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    size: large\n    runner: big\n    command: cmatrix\n    fg: \"#ABCDEF\"\n  - name: t\n    saver: snake\n    bg: nope\n")
+	cfg, _ := LoadFile(p)
+	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake", BG: SnakeBG, FG: "#abcdef"}) {
+		t.Errorf("the snake profile %+v", s)
+	}
+	if cfg.Profiles[1] != (Profile{Name: "t", Saver: "snake", BG: SnakeBG, FG: SnakeFG}) {
+		t.Errorf("a snake with a bad colour %+v", cfg.Profiles[1])
+	}
+	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake", BG: SnakeBG, FG: SnakeFG}) {
+		t.Errorf("a new one %+v", n)
 	}
 }
