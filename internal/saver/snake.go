@@ -58,8 +58,9 @@ var (
 	// The head: the jaw ahead, the node and the link behind, and the
 	// crown over the node and the link's first pixel.
 	snakeHead = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
-	// A lump: an apple on its way through.
-	snakeLump = shape{{-1, -1}, {0, -1}, {1, -1}}
+	// A lump: an apple on its way through, two pixels as the crown is
+	// (user, 2026-10-06: it was three).
+	snakeLump = shape{{0, -1}, {1, -1}}
 )
 
 // turn is a pixel of a shape for a snake going dx, dy: going right the
