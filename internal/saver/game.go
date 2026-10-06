@@ -1,6 +1,9 @@
 package saver
 
-import "time"
+import (
+	"math/rand/v2"
+	"time"
+)
 
 // A Game is a saver that moves rather than spells (2026-10-06): the dino
 // run, and every saver after it that draws a picture of its own — the
@@ -33,10 +36,38 @@ type Inked interface {
 	Inks() []string
 }
 
+// The colours a saver with colours of its own draws in (user,
+// 2026-10-06): surface0, the family's ground, as the other savers'
+// default bg (config.DefaultBG); and the splash gold and
+// catppuccin-mocha's accents, a hue apart from each other.
+const ownGround = "#313244"
+
+var ownColours = []string{
+	"#f2b753", // gold
+	"#f38ba8", // red
+	"#fab387", // peach
+	"#f9e2af", // yellow
+	"#a6e3a1", // green
+	"#94e2d5", // teal
+	"#89dceb", // sky
+	"#89b4fa", // blue
+	"#cba6f7", // mauve
+	"#f5c2e7", // pink
+}
+
+// ownInks are the ground and the colours, as Inks gives them: colour c
+// is ink 1 + c.
+func ownInks() []string { return append([]string{ownGround}, ownColours...) }
+
+// otherColour is a colour at random that is not c.
+func otherColour(rng *rand.Rand, c int) int {
+	return (c + 1 + rng.IntN(len(ownColours)-1)) % len(ownColours)
+}
+
 // Coloured says whether a kind of saver is drawn in its profile's bg
 // and fg: not the custom saver, whose picture is its program's (user,
 // 2026-09-25), nor one with colours of its own (user, 2026-10-06).
-func Coloured(kind string) bool { return kind != KindCustom && kind != KindBounce }
+func Coloured(kind string) bool { return kind != KindCustom && kind != KindBounce && kind != KindSnake }
 
 // Scene is one frame: a bitmap in the game's own pixels, row by row, each
 // pixel an ink — 0 the ground, the others lit.
