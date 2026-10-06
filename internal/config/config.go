@@ -71,6 +71,8 @@ type Profile struct {
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
+	// The snake's own (user, 2026-10-06): cells a second.
+	Speed int `yaml:"speed,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -184,10 +186,13 @@ func NewProfile(name, kind string) Profile {
 		// No program until the user names one, and no colours: the
 		// picture is the program's (user, 2026-09-25).
 		return Profile{Name: name, Saver: kind}
-	case saver.KindBounce, saver.KindSnake:
-		// Nothing to set: no settings, and colours of their own (user,
+	case saver.KindBounce:
+		// Nothing to set: no settings, and colours of its own (user,
 		// 2026-10-06).
 		return Profile{Name: name, Saver: kind}
+	case saver.KindSnake:
+		// Its speed alone: colours of its own (user, 2026-10-06).
+		return Profile{Name: name, Saver: kind, Speed: saver.SnakeSpeedDefault}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -457,12 +462,19 @@ func tidy(p Profile, kind string) Profile {
 	switch {
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Character, p.Scene = "", "", "", "", "", "", "", ""
-		p.BG, p.FG = "", ""
+		p.BG, p.FG, p.Speed = "", "", 0
 		return p
-	case kind == saver.KindBounce || kind == saver.KindSnake:
+	case kind == saver.KindBounce:
 		return Profile{Name: p.Name, Saver: kind}
+	case kind == saver.KindSnake:
+		// A speed it cannot run at is quietly the default, as a colour
+		// that is not one is.
+		if p.Speed < saver.SnakeSpeedMin || p.Speed > saver.SnakeSpeedMax {
+			p.Speed = d.Speed
+		}
+		return Profile{Name: p.Name, Saver: kind, Speed: p.Speed}
 	case kind == saver.KindDino:
-		p.Command = ""
+		p.Command, p.Speed = "", 0
 		if p.Runner == "" {
 			p.Runner = d.Runner
 		}
@@ -477,7 +489,7 @@ func tidy(p Profile, kind string) Profile {
 		}
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
 	default:
-		p.Command = ""
+		p.Command, p.Speed = "", 0
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}

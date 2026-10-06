@@ -50,6 +50,7 @@ const (
 	rowCharacter
 	rowScene
 	rowCommand // a custom saver's program
+	rowSpeed   // the snake's, cells a second
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -193,12 +194,15 @@ func (m AppModel) anyDirty() bool {
 }
 
 // fieldRows is a saver's own settings for p: the clock's shapes and
-// size, the run's runner and scene, the custom saver's command — or
-// none, the bouncing box's and the snake's (2026-10-06).
+// size, the run's runner and scene, the custom saver's command, the
+// snake's speed (user, 2026-10-06) — or none, the bouncing box's.
 func fieldRows(p config.Profile) []row {
 	value := valueColor
-	if p.Saver == saver.KindBounce || p.Saver == saver.KindSnake {
+	if p.Saver == saver.KindBounce {
 		return nil
+	}
+	if p.Saver == saver.KindSnake {
+		return []row{{kind: rowSpeed, label: "speed", value: itoa(p.Speed) + " cells a second", color: value, stop: true}}
 	}
 	if p.Saver == saver.KindCustom {
 		// The program, as sh -c runs it; none yet is said in yellow, as

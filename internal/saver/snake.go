@@ -17,11 +17,13 @@ import (
 // merely lie side by side can be told apart, as on the Nokia's screen.
 //
 // The rest is the user's, the same day. It has a head: two pixels over
-// the body's line (it was three square with an eye, and too big), its
-// mouth shut — the front flush — but as it eats: the move before, and
-// the move it eats, the jaw drops a pixel ahead under the open mouth.
-// The apple blinks in the colour
-// the snake turns when it eats it — a colour at random, another each
+// the body's line, the snout a pixel ahead of it (it was three square
+// with an eye, and too big). The move before an apple it opens its
+// mouth: the head goes back a segment, and where it was are the upper
+// lip and, across the line, the lower — two pixels each, the node
+// between them dark — so the jaws close on the apple; the move it eats,
+// the mouth is shut again and a pixel of lump stands behind the head.
+// The apple blinks in the colour the snake turns when it eats it — a colour at random, another each
 // time — and an apple eaten is a lump that runs down the body to the
 // tail, a segment a move, and is gone (it stayed where it was swallowed
 // at first, as on the Nokia). The snake is the longer for it at once,
@@ -31,17 +33,25 @@ import (
 // down a column.
 //
 // Its colours are its own (user, 2026-10-06: a saver of many colours
-// brings them, and has no bg / fg). It has no settings at all.
+// brings them, and has no bg / fg). Its one setting is its speed, in
+// cells a second (user, the same day).
 
 const KindSnake = "snake"
 
-// SnakeFrame is the time between two moves: twelve and a half a second.
-const SnakeFrame = 80 * time.Millisecond
+// The snake's speed, cells a second (user, 2026-10-06): the user's
+// number, from one to thirty — thirty frames a second is as many as the
+// lock draws, or a key in the PIN box would wait on the output — and
+// twelve when none is given, near the twelve and a half it ran at.
+const (
+	SnakeSpeedMin     = 1
+	SnakeSpeedMax     = 30
+	SnakeSpeedDefault = 12
+)
 
 const (
-	snakeStart = 3  // cells long at the start
-	snakeHold  = 38 // frames a full board stays, three seconds
-	snakeBlink = 4  // frames the apple is lit, then dark
+	snakeStart = 3                      // cells long at the start
+	snakeHold  = 3 * time.Second        // a full board stays
+	snakeBlink = 320 * time.Millisecond // the apple is lit, then dark, at any speed
 	// snakePitch is a cell: its node and the two pixels of a link. The
 	// two dark rows between two runs of the body side by side hold the
 	// head or a lump, a pixel proud of the line, and keep a dark row
@@ -58,10 +68,15 @@ var snakeRoom = Room{W: snakePitch * 16, H: snakePitch * 10, Most: 2}
 type shape [][2]int
 
 var (
-	// The head: the node and the link behind, and the crown over the
-	// node and the link's first pixel — and, eating, the jaw ahead.
-	snakeHead = shape{{0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
-	snakeEats = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
+	// The head: the snout ahead, the node and the link behind, and the
+	// crown over the node and the link's first pixel.
+	snakeHead = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
+	// The mouth open: the crown a segment back, over the next node and
+	// its link; the upper lip where the crown was, the lower lip across
+	// the line from it; the node between them dark, the snout gone.
+	snakeOpen = shape{{1, 0}, {2, 0}, {3, -1}, {4, -1}, {0, -1}, {1, -1}, {0, 1}, {1, 1}}
+	// Swallowing: the mouth shut, a pixel of lump behind the crown.
+	snakeSwallow = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}, {4, -1}}
 	// A lump: an apple on its way through, two pixels as the crown is
 	// (user, 2026-10-06: it was three).
 	snakeLump = shape{{0, -1}, {1, -1}}
@@ -98,19 +113,27 @@ type Snake struct {
 	next   int    // the apple's: the snake's when it is eaten
 	t      int    // frames played
 	hold   int    // frames a full board has still to stay
+	frame  time.Duration
 }
 
-// NewSnake is a game from its first frame. The same seed is the same
-// game.
-func NewSnake(seed uint64) *Snake {
-	return &Snake{rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))}
+// NewSnake is a game from its first frame, speed cells a second — out
+// of SnakeSpeedMin … SnakeSpeedMax, SnakeSpeedDefault. The same seed is
+// the same game.
+func NewSnake(seed uint64, speed int) *Snake {
+	if speed < SnakeSpeedMin || speed > SnakeSpeedMax {
+		speed = SnakeSpeedDefault
+	}
+	return &Snake{rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)), frame: time.Second / time.Duration(speed)}
 }
+
+// frames is how many moves d is at the snake's speed; one at least.
+func (s *Snake) frames(d time.Duration) int { return max(1, int(d/s.frame)) }
 
 // Room is the board the game needs.
 func (s *Snake) Room() Room { return snakeRoom }
 
 // Next is when the next move is due.
-func (s *Snake) Next(now time.Time) time.Time { return now.Add(SnakeFrame) }
+func (s *Snake) Next(now time.Time) time.Time { return now.Add(s.frame) }
 
 // Inks are the ground and the colours.
 func (s *Snake) Inks() []string { return ownInks() }
@@ -291,16 +314,22 @@ func (s *Snake) Step() {
 		s.lumps = append(s.lumps, 0)
 		s.colour, s.next = s.next, otherColour(s.rng, s.next)
 		if s.place(); s.apple < 0 {
-			s.hold = snakeHold
+			s.hold = s.frames(snakeHold)
 		}
 	}
 }
 
-// eating says whether the mouth is open: the apple is the next move's
-// — the move is the same whenever it is worked out — or it was this
-// one's, its lump still at the head.
-func (s *Snake) eating() bool {
-	return slices.Contains(s.lumps, 0) || (s.apple >= 0 && s.move() == s.apple)
+// head is the head's shape this move: open when the apple is the next
+// move's — the move is the same whenever it is worked out — swallowing
+// when it was this one's, its lump still at the head, shut else.
+func (s *Snake) head() shape {
+	switch {
+	case s.apple >= 0 && s.move() == s.apple:
+		return snakeOpen
+	case slices.Contains(s.lumps, 0):
+		return snakeSwallow
+	}
+	return snakeHead
 }
 
 // digest moves every lump by places towards the tail; one past it is
@@ -350,11 +379,11 @@ func (s *Snake) Draw(w, h int) Scene {
 		lump[i] = true
 	}
 	for i, c := range s.body {
+		if i == 0 {
+			continue // the head's node is the head's to draw: open, it is the mouth
+		}
 		x, y := s.cellAt(c)
 		sc.put(x, y, ink)
-		if i == 0 {
-			continue
-		}
 		px, py := s.cellAt(s.body[i-1])
 		for k := 1; k < snakePitch; k++ {
 			sc.put(x+(px-x)*k/snakePitch, y+(py-y)*k/snakePitch, ink)
@@ -366,12 +395,8 @@ func (s *Snake) Draw(w, h int) Scene {
 	}
 	// The head goes the way it came: from the cell behind it.
 	dx, dy := s.way(s.body[1], s.body[0])
-	head := snakeHead
-	if s.eating() {
-		head = snakeEats
-	}
-	s.stamp(&sc, head, s.body[0], dx, dy, ink)
-	if s.apple >= 0 && (s.t/snakeBlink)%2 == 0 {
+	s.stamp(&sc, s.head(), s.body[0], dx, dy, ink)
+	if s.apple >= 0 && (s.t/s.frames(snakeBlink))%2 == 0 {
 		x, y := s.cellAt(s.apple)
 		sc.put(x, y, uint8(1+s.next))
 	}
