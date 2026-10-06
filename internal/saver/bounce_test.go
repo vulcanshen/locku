@@ -102,14 +102,14 @@ func TestBounceCornerFlashes(t *testing.T) {
 	b.Draw(w, h)
 	b.x, b.y, b.dx, b.dy = 39, 40, 1, 1
 	b.Step()
-	if b.x != 40 || b.y != 41 || b.dx != -1 || b.dy != -1 || b.flash != 2*len(bounceColours) {
+	if b.x != 40 || b.y != 41 || b.dx != -1 || b.dy != -1 || b.flash != 2*len(ownColours) {
 		t.Fatalf("at %d,%d going %d,%d, flash %d", b.x, b.y, b.dx, b.dy, b.flash)
 	}
-	for i := 0; i < 2*len(bounceColours); i++ {
+	for i := 0; i < 2*len(ownColours); i++ {
 		was := b.ink
 		b.Draw(w, h)
 		b.Step()
-		if b.ink != (was+1)%len(bounceColours) {
+		if b.ink != (was+1)%len(ownColours) {
 			t.Fatalf("flash frame %d: colour %d after %d", i, b.ink, was)
 		}
 	}

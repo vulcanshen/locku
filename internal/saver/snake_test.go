@@ -50,8 +50,9 @@ func TestHamiltonIsACycle(t *testing.T) {
 }
 
 // check is the game's state as it must always be: the body on distinct
-// cells, each beside the next, marked taken and nothing else; the apple
-// on an empty cell of the cycle.
+// cells, each beside the next, marked taken and nothing else, lumps on
+// the body alone; the apple on an empty cell of the cycle, in a colour
+// not the snake's.
 func check(t *testing.T, s *Snake, step int) {
 	t.Helper()
 	on := map[int]bool{}
@@ -71,6 +72,9 @@ func check(t *testing.T, s *Snake, step int) {
 		if k != on[c] {
 			t.Fatalf("step %d: cell %d taken %v, body %v", step, c, k, on[c])
 		}
+		if s.fed[c] && !on[c] {
+			t.Fatalf("step %d: a lump at %d, off the body", step, c)
+		}
 	}
 	// Along the cycle the body lies behind the head in order: from the
 	// tail forward through every segment to the head, and on to the tail
@@ -85,12 +89,16 @@ func check(t *testing.T, s *Snake, step int) {
 	if s.apple >= 0 && (on[s.apple] || s.pos[s.apple] < 0) {
 		t.Fatalf("step %d: the apple at %d", step, s.apple)
 	}
+	if s.next == s.colour {
+		t.Fatalf("step %d: the apple is the snake's colour", step)
+	}
 }
 
 // It plays the board full without ever running into itself, holds the
-// full board, and starts again.
+// full board, and starts again; an apple eaten turns the snake its
+// colour, leaves a lump where it was, and the next is in another.
 func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
-	for i, sz := range [][2]int{{15, 11}, {21, 13}, {40, 23}, {31, 19}, {16, 9}, {15, 11}, {21, 13}, {31, 19}, {16, 9}, {11, 7}} {
+	for i, sz := range [][2]int{{15, 11}, {21, 13}, {40, 23}, {31, 19}, {16, 9}, {76, 31}, {50, 29}, {49, 31}, {11, 7}, {100, 59}} {
 		s := NewSnake(uint64(4 + i))
 		s.Draw(sz[0], sz[1])
 		n := len(s.tour)
@@ -99,9 +107,16 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 		}
 		steps := 0
 		for s.apple >= 0 {
+			long, colour, next := len(s.body), s.colour, s.next
 			s.Step()
 			steps++
 			check(t, s, steps)
+			if len(s.body) > long && (s.colour != next || !s.fed[s.body[0]]) {
+				t.Fatalf("%v step %d: ate, and is colour %d (the apple was %d), lump %v", sz, steps, s.colour, next, s.fed[s.body[0]])
+			}
+			if len(s.body) == long && (s.colour != colour || s.next != next) {
+				t.Fatalf("%v step %d: the colours changed with nothing eaten", sz, steps)
+			}
 			if steps > n*n {
 				t.Fatalf("%v: %d long after %d steps", sz, len(s.body), steps)
 			}
@@ -109,28 +124,22 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 		if len(s.body) != n {
 			t.Fatalf("%v: no apple, %d of %d", sz, len(s.body), n)
 		}
-		// The full board sits in the middle of the scene, the dark left
-		// over halved as near as it goes.
-		sc := s.Draw(sz[0], sz[1])
-		x0, y0, x1, y1, lit := sc.W, sc.H, -1, -1, 0
-		for y := 0; y < sc.H; y++ {
-			for x := 0; x < sc.W; x++ {
-				if sc.Pix[y*sc.W+x] != 0 {
-					x0, y0, x1, y1 = min(x0, x), min(y0, y), max(x1, x), max(y1, y)
-					lit++
-				}
-			}
+		// The full board sits in the middle of the scene with the head's
+		// room round it — a pixel left and below, two above and to the
+		// right — the dark left over halved as near as it goes.
+		used := s.cw
+		if s.cw%2 != 0 && s.ch%2 != 0 {
+			used--
 		}
-		if lit != 2*n-1 {
-			t.Errorf("%v: %d lit for a full board of %d: some of it is off the scene", sz, lit, n)
+		l, r := s.ox-1, sz[0]-1-(s.ox+snakePitch*(used-1))-2
+		u, d := s.oy-2, sz[1]-1-(s.oy+snakePitch*(s.ch-1))-1
+		if l < 0 || r < 0 || u < 0 || d < 0 || l-r > 1 || r-l > 1 || u-d > 1 || d-u > 1 {
+			t.Errorf("%v: %d, %d dark either side and %d, %d above and below, past the head's room", sz, l, r, u, d)
 		}
-		if l, r, u, d := x0, sc.W-1-x1, y0, sc.H-1-y1; l-r > 1 || r-l > 1 || u-d > 1 || d-u > 1 {
-			t.Errorf("%v: the full board has %d, %d dark either side and %d, %d above and below", sz, l, r, u, d)
-		}
-		for i := 0; i < snakeHold-1; i++ {
+		for j := 0; j < snakeHold-1; j++ {
 			s.Step()
 			if len(s.body) != n {
-				t.Fatalf("%v: the full board went after %d frames", sz, i+1)
+				t.Fatalf("%v: the full board went after %d frames", sz, j+1)
 			}
 		}
 		s.Step()
@@ -145,7 +154,7 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 // than following the cycle for every apple would.
 func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 	s := NewSnake(11)
-	s.Draw(40, 23)
+	s.Draw(76, 31)
 	n := len(s.tour)
 	steps := 0
 	for len(s.body) < n/4 {
@@ -158,43 +167,99 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 	}
 }
 
-// A frame lights each cell of the body, the link between each two, and
-// the apple every other few frames.
-func TestSnakeDrawsNodesLinksAndABlinkingApple(t *testing.T) {
+// The head, the lump, turned for each way the snake goes: the jaw a
+// pixel ahead, the link behind; the crown above along a row, to the
+// right up or down a column, the eye in it a hole.
+func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
+	for _, c := range []struct {
+		dx, dy       int
+		crown, eye   [2]int
+		lumpX, lumpY int // the lump's middle
+	}{
+		{-1, 0, [2]int{1, -2}, [2]int{1, -1}, 0, -1},
+		{1, 0, [2]int{-1, -2}, [2]int{-1, -1}, 0, -1},
+		{0, -1, [2]int{2, 1}, [2]int{1, 1}, 1, 0},
+		{0, 1, [2]int{2, -1}, [2]int{1, -1}, 1, 0},
+	} {
+		at := map[[2]int]bool{}
+		for _, p := range snakeHead {
+			x, y := turn(p, c.dx, c.dy)
+			at[[2]int{x, y}] = true
+		}
+		if len(at) != 9 || !at[[2]int{c.dx, c.dy}] || !at[[2]int{0, 0}] || !at[[2]int{-c.dx, -c.dy}] || !at[[2]int{-2 * c.dx, -2 * c.dy}] || !at[c.crown] || at[c.eye] {
+			t.Errorf("going %d,%d: the head is %v", c.dx, c.dy, at)
+		}
+		if x, y := turn(snakeLump[1], c.dx, c.dy); x != c.lumpX || y != c.lumpY {
+			t.Errorf("going %d,%d: the lump at %d,%d", c.dx, c.dy, x, y)
+		}
+	}
+}
+
+// A frame is the snake in its colour — every node, the two pixels of
+// every link, its head, its lumps — and the apple in the next colour
+// every other few frames.
+func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	s := NewSnake(6)
-	s.Draw(40, 23)
-	for i := 0; i < 30; i++ {
+	s.Draw(76, 31)
+	for i := 0; i < 200; i++ {
 		s.Step()
 	}
-	lit := func(sc Scene) int {
-		n := 0
-		for _, k := range sc.Pix {
-			if k != 0 {
-				n++
-			}
-		}
-		return n
-	}
-	seen := map[int]bool{}
-	for i := 0; i < 2*snakeBlink; i++ {
-		sc := s.Draw(40, 23)
-		body := 2*len(s.body) - 1
-		switch got := lit(sc); got {
-		case body, body + 1:
-			seen[got-body] = true
-		default:
-			t.Fatalf("frame %d: %d lit for %d segments", i, got, len(s.body))
-		}
-		for _, c := range s.body {
+	// A lump a few segments back, wherever the last apple went.
+	s.fed[s.body[2]] = true
+	ink := uint8(1 + s.colour)
+	at := func(sc Scene, x, y int) uint8 { return sc.Pix[y*sc.W+x] }
+	lit := map[bool]bool{}
+	for f := 0; f < 2*snakeBlink; f++ {
+		sc := s.Draw(76, 31)
+		for i, c := range s.body {
 			x, y := s.cellAt(c)
-			if sc.Pix[y*sc.W+x] != 1 || (x-s.ox)%2 != 0 || (y-s.oy)%2 != 0 {
-				t.Fatalf("frame %d: node %d at %d,%d", i, c, x, y)
+			if at(sc, x, y) != ink {
+				t.Fatalf("frame %d: node %d is ink %d", f, i, at(sc, x, y))
 			}
+			if i > 0 {
+				px, py := s.cellAt(s.body[i-1])
+				for k := 1; k < snakePitch; k++ {
+					if at(sc, x+(px-x)*k/snakePitch, y+(py-y)*k/snakePitch) != ink {
+						t.Fatalf("frame %d: the link to segment %d", f, i)
+					}
+				}
+			}
+		}
+		hx, hy := s.cellAt(s.body[0])
+		dx, dy := s.way(s.body[1], s.body[0])
+		for _, p := range snakeHead {
+			px, py := turn(p, dx, dy)
+			if at(sc, hx+px, hy+py) != ink {
+				t.Fatalf("frame %d: the head at %d,%d", f, px, py)
+			}
+		}
+		if ex, ey := turn([2]int{1, -1}, dx, dy); at(sc, hx+ex, hy+ey) != 0 {
+			t.Fatalf("frame %d: no eye", f)
+		}
+		lx, ly := s.cellAt(s.body[2])
+		ldx, ldy := s.way(s.body[2], s.body[1])
+		for _, p := range snakeLump {
+			px, py := turn(p, ldx, ldy)
+			if at(sc, lx+px, ly+py) != ink {
+				t.Fatalf("frame %d: the lump at %d,%d", f, px, py)
+			}
+		}
+		ax, ay := s.cellAt(s.apple)
+		switch at(sc, ax, ay) {
+		case uint8(1 + s.next):
+			lit[true] = true
+		case 0:
+			lit[false] = true
+		default:
+			t.Fatalf("frame %d: the apple is ink %d, the next colour %d", f, at(sc, ax, ay), 1+s.next)
 		}
 		s.t++
 	}
-	if !seen[0] || !seen[1] {
-		t.Errorf("the apple is lit %v", seen)
+	if !lit[true] || !lit[false] {
+		t.Errorf("the apple is lit %v", lit)
+	}
+	if inks := s.Inks(); len(inks) != 1+len(ownColours) || inks[0] != ownGround {
+		t.Errorf("inks %v", inks)
 	}
 }
 
@@ -210,11 +275,11 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 		b.Step()
 	}
 	a.Draw(50, 29)
-	if a.cw != 25 || a.ch != 15 || len(a.body) != snakeStart {
+	if a.cw != 16 || a.ch != 9 || len(a.body) != snakeStart {
 		t.Errorf("after a resize: %dx%d, %d long", a.cw, a.ch, len(a.body))
 	}
 	tiny := NewSnake(1)
-	sc := tiny.Draw(1, 5)
+	sc := tiny.Draw(4, 7)
 	tiny.Step()
 	for _, k := range sc.Pix {
 		if k != 0 {

@@ -387,19 +387,16 @@ func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
 	}
 }
 
-// The snake has its two colours and nothing else (2026-10-06): what
-// else a snake profile carries goes; colours it lacks, or has wrong,
-// are its own defaults — the Nokia's greens, not the clock's.
-func TestASnakeProfileIsItsColours(t *testing.T) {
-	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    size: large\n    runner: big\n    command: cmatrix\n    fg: \"#ABCDEF\"\n  - name: t\n    saver: snake\n    bg: nope\n")
+// The snake changes colour at every apple, so its colours are its own
+// (user, 2026-10-06), as the bouncing box's: a snake profile is its name
+// and its saver, whatever else the file has.
+func TestASnakeProfileIsItsNameAndSaver(t *testing.T) {
+	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    size: large\n    runner: big\n    command: cmatrix\n    bg: \"#43523d\"\n    fg: \"#ABCDEF\"\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake", BG: SnakeBG, FG: "#abcdef"}) {
+	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake"}) {
 		t.Errorf("the snake profile %+v", s)
 	}
-	if cfg.Profiles[1] != (Profile{Name: "t", Saver: "snake", BG: SnakeBG, FG: SnakeFG}) {
-		t.Errorf("a snake with a bad colour %+v", cfg.Profiles[1])
-	}
-	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake", BG: SnakeBG, FG: SnakeFG}) {
+	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake"}) {
 		t.Errorf("a new one %+v", n)
 	}
 }

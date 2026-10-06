@@ -22,25 +22,6 @@ const KindBounce = "bounce"
 // each way a frame.
 const BounceFrame = 100 * time.Millisecond
 
-// bounceGround is the dark cell: surface0, the family's ground, as the
-// other savers' default bg (config.DefaultBG).
-const bounceGround = "#313244"
-
-// bounceColours are the box's: the splash gold and catppuccin-mocha's
-// accents, a hue apart from each other.
-var bounceColours = []string{
-	"#f2b753", // gold
-	"#f38ba8", // red
-	"#fab387", // peach
-	"#f9e2af", // yellow
-	"#a6e3a1", // green
-	"#94e2d5", // teal
-	"#89dceb", // sky
-	"#89b4fa", // blue
-	"#cba6f7", // mauve
-	"#f5c2e7", // pink
-}
-
 const (
 	bouncePad   = 2 // dark pixels between the frame and the time
 	bounceRooms = 3 // the box is about a third of the screen each way
@@ -56,7 +37,7 @@ type Bounce struct {
 	w, h   int // the scene as last drawn; nothing moves before the first draw
 	x, y   int // the box's top-left
 	dx, dy int // a pixel a frame, each way
-	ink    int // the box's colour, in bounceColours
+	ink    int // the box's colour, in ownColours
 	flash  int // frames of a corner's flash still to come
 }
 
@@ -71,7 +52,7 @@ func NewBounce(seed uint64, now func() time.Time, spell func(string) []string) *
 	}
 	t := spell("00 00")
 	b.bw, b.bh = len(t[0])+2*(bouncePad+1), len(t)+2*(bouncePad+1)
-	b.ink = b.rng.IntN(len(bounceColours))
+	b.ink = b.rng.IntN(len(ownColours))
 	b.dx, b.dy = 1-2*b.rng.IntN(2), 1-2*b.rng.IntN(2)
 	return b
 }
@@ -85,7 +66,7 @@ func (b *Bounce) Room() Room {
 func (b *Bounce) Next(now time.Time) time.Time { return now.Add(BounceFrame) }
 
 // Inks are the ground and the box's colours.
-func (b *Bounce) Inks() []string { return append([]string{bounceGround}, bounceColours...) }
+func (b *Bounce) Inks() []string { return ownInks() }
 
 // Step moves the box a pixel each way. An edge it reaches turns it back
 // and changes its colour; two at once, a corner, start the flash.
@@ -95,16 +76,16 @@ func (b *Bounce) Step() {
 	}
 	if b.flash > 0 {
 		b.flash--
-		b.ink = (b.ink + 1) % len(bounceColours)
+		b.ink = (b.ink + 1) % len(ownColours)
 	}
 	var hitX, hitY bool
 	b.x, b.dx, hitX = bounceAxis(b.x, b.dx, b.w-b.bw)
 	b.y, b.dy, hitY = bounceAxis(b.y, b.dy, b.h-b.bh)
 	switch {
 	case hitX && hitY:
-		b.flash = 2 * len(bounceColours)
+		b.flash = 2 * len(ownColours)
 	case hitX || hitY:
-		b.ink = b.other()
+		b.ink = otherColour(b.rng, b.ink)
 	}
 }
 
@@ -122,11 +103,6 @@ func bounceAxis(p, d, span int) (int, int, bool) {
 		return span, -1, true
 	}
 	return p, d, false
-}
-
-// other is a colour that is not the box's now.
-func (b *Bounce) other() int {
-	return (b.ink + 1 + b.rng.IntN(len(bounceColours)-1)) % len(bounceColours)
 }
 
 // place puts the box anywhere on a new scene, or, on a scene of a new

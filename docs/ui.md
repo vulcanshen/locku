@@ -61,7 +61,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；dino：runner / character / scene；這兩種再 bg / fg 各一色票列加 R G B；custom：只有 command，沒有顏色列；bounce：什麼都沒有，沒有顏色列；snake：只有 bg / fg（2026-10-06） |
+| （預設值） | clock：layout / size / font / time / date；dino：runner / character / scene；這兩種再 bg / fg 各一色票列加 R G B；custom：只有 command，沒有顏色列；bounce 與 snake：什麼都沒有，沒有顏色列（2026-10-06） |
 
 `[2]` 在 profile 上：
 
