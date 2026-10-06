@@ -4,7 +4,6 @@ import (
 	"math"
 	"strings"
 	"time"
-	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -20,10 +19,12 @@ import (
 // gets: the dots it has no room for go from the front (user, 2026-09-28:
 // the widest PIN against 120 settles the width). Under the dots is its
 // error row, blank until an Enter is refused (tdp F7, K3; 2026-09-28 — the
-// error used to be in the title). It has four looks, and the box never
+// error used to be in the title). It has five looks, and the box never
 // changes size:
 //
 //	idle        the layer colour, enter unlock · esc back
+//	not taken   red, why in the error row — a line break or a tab in it
+//	            (oneline.go) — the dots kept, until the next key
 //	wrong PIN   red for a second, the dots cleared, every key swallowed
 //	try again   red, `try again in 27 s` counting down, every key but Esc swallowed
 //	closing     `PIN · closing` in the title: pin_prompt_timeout ran out, the
@@ -48,8 +49,10 @@ type pinPrompt struct {
 	until time.Time
 	// timedOut marks a close that pin_prompt_timeout caused, for the title.
 	timedOut bool
-	screenW  int
-	screenH  int
+	// err is why the last Enter was not even checked; the next key clears it.
+	err     string
+	screenW int
+	screenH int
 }
 
 func newPinPrompt() pinPrompt { return pinPrompt{anim: newPopupAnimator("pinprompt")} }
@@ -57,28 +60,29 @@ func newPinPrompt() pinPrompt { return pinPrompt{anim: newPopupAnimator("pinprom
 func (p *pinPrompt) setSize(w, h int) { p.screenW, p.screenH = w, h }
 
 func (p *pinPrompt) open() tea.Cmd {
-	p.value, p.timedOut = nil, false
+	p.value, p.timedOut, p.err = nil, false, ""
 	p.state = promptIdle
 	return p.anim.open()
 }
 
 func (p *pinPrompt) close(timedOut bool) tea.Cmd {
-	p.value, p.timedOut = nil, timedOut
+	p.value, p.timedOut, p.err = nil, timedOut, ""
 	return p.anim.close()
 }
 
-// add appends one character, up to the PIN's longest allowed.
-func (p *pinPrompt) add(r rune) {
-	if len(p.value) < config.PINMax && unicode.IsPrint(r) {
-		p.value = append(p.value, r)
+// add appends what of rs goes into a value (oneline.go: a line break or a
+// tab too; until 2026-10-06 printable characters only), up to the PIN's
+// longest allowed.
+func (p *pinPrompt) add(rs []rune) {
+	for _, r := range takeText(rs) {
+		if len(p.value) < config.PINMax {
+			p.value = append(p.value, r)
+		}
 	}
 }
 
-func (p *pinPrompt) backspace() {
-	if n := len(p.value); n > 0 {
-		p.value = p.value[:n-1]
-	}
-}
+// backspace takes the last unit: a "\r\n" whole.
+func (p *pinPrompt) backspace() { p.value = []rune(dropLast(string(p.value))) }
 
 // remaining is the whole seconds left in a lockout, at least 1 while it
 // is on.
@@ -102,7 +106,10 @@ func (p pinPrompt) view(now time.Time) string {
 		hint = [][2]string{{"Esc", "back"}}
 	default:
 		hint = [][2]string{{"Enter", "unlock"}, {"Esc", "back"}}
-		row = pinRow(len(p.value), innerW)
+		row = pinRow(valueLen(string(p.value)), innerW)
+		if p.err != "" {
+			bc, err = warnColor, p.err
+		}
 	}
 	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row, errorRow(err, innerW, true)}), innerW)
 }

@@ -10,8 +10,9 @@ import (
 
 // An input whose Enter can be refused keeps a row for why from the moment
 // it opens: with the error or without, the box is as tall, and the error
-// is in that row inside it, not on the border (tdp F7, K3, 2026-09-28). A
-// box whose Enter is never refused keeps none (v0.1.9).
+// is in that row inside it, not on the border (tdp F7, K3, 2026-09-28).
+// Every box's Enter can be: a command's too, since a line break or a tab
+// is refused in all of them (2026-10-06; until then it kept none).
 func TestInputErrorRow(t *testing.T) {
 	open := popupAnimator{phase: animOpen}
 	boxes := map[string]func(err string) string{
@@ -31,8 +32,8 @@ func TestInputErrorRow(t *testing.T) {
 	}
 	name := inputPopup{anim: open, title: "name", prompt: "name", action: inputRename, screenW: 100, screenH: 30}.view()
 	command := inputPopup{anim: open, title: "command", prompt: "command", action: inputCommand, screenW: 100, screenH: 30}.view()
-	if strings.Count(command, "\n") != strings.Count(name, "\n")-1 {
-		t.Errorf("a command box, never refused, keeps an error row:\n%s", command)
+	if strings.Count(command, "\n") != strings.Count(name, "\n") {
+		t.Errorf("a command box keeps no error row:\n%s", command)
 	}
 }
 

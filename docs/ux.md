@@ -149,6 +149,11 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號、`q` 是 q。Backspace 刪一字；沒有游標移動。
 
+貼上的換行（`\r\n` 算一個）與 Tab 留在值裡、畫成 Red 的 `\n` / `\t`，其他控制字元丟掉；`Backspace` 一次刪掉整個。值裡有換行或
+Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have line breaks or tabs`（PIN 框寫 `PIN`），框留著，什麼都不寫、不比對
+（2026-10-06；之前照收，值列斷成兩列，new PIN 存得進一個鎖定畫面打不出來的換行）。打字的 `Tab` 鍵照舊：有提議時接受提議，
+其他時候不做事。
+
 ### §2.2 PIN 三連問
 
 | 動作 | 順序 | 失敗 |
@@ -163,14 +168,14 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | 事件 | 行為 |
 |---|---|
 | saver 上任何鍵 | 開 prompt；那個鍵**不算**輸入 |
-| 可列印字元 | 追加，最多 64；`●` 遮罩 |
-| Backspace | 刪一字 |
-| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空 |
+| 字元 | 追加，最多 64；`●` 遮罩；貼上的換行（`\r\n` 算一個）與 Tab 也收、一個一顆 `●`，其他控制字元丟掉（2026-10-06；之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來） |
+| Backspace | 刪一字（`\r\n` 整個） |
+| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空。值裡有換行或 Tab → 不比對、不算一次連錯：錯誤列 `PIN can't have line breaks or tabs`、邊框 Red、點點留著，下一鍵恢復（2026-10-06） |
 | Esc | 回 saver、輸入丟掉 |
 | 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續 |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中；custom：新尺寸也轉給程式的 pty |
-| custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停 |
+| custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停；框在的時候 bracketed paste 開著，貼上的換行跟其他 lock 一樣是值裡的一個換行，不是 Enter（2026-10-06） |
 | custom saver：Esc / 逾時 | 框佔過的位置清掉、畫面繼續；閒置 ≥ 500 ms 沒畫東西的程式被要求重畫一次（SIGWINCH），正在畫的不會 |
 | custom saver：Enter 正確 | 殺掉程式（整個 process group）、結束進程 |
 

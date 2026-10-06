@@ -763,9 +763,19 @@ func (m *AppModel) takeName(v string, self int) (string, bool) {
 	return name, true
 }
 
-// commitInput is Enter in box: m.input, or a step of the PIN chain.
+// commitInput is Enter in box: m.input, or a step of the PIN chain. A
+// value with a line break or a tab is refused first, whatever the box
+// (oneline.go): a current PIN is not checked, so not a wrong one.
 func (m *AppModel) commitInput(box *inputPopup) tea.Cmd {
 	v := box.value
+	if hasBreak(v) {
+		field := box.title
+		if box.masked {
+			field = "PIN"
+		}
+		box.err = breakErr(field)
+		return nil
+	}
 	switch box.action {
 	case inputNew:
 		name, ok := m.takeName(v, -1)
@@ -873,7 +883,7 @@ func (m *AppModel) commitInput(box *inputPopup) tea.Cmd {
 		// on the line, a # the rest of the line a comment.
 		v = strings.TrimSpace(v)
 		name, t := m.tool()
-		if strings.ContainsAny(v, " \t#") {
+		if strings.ContainsAny(v, " #") {
 			m.input.err = "one key, e.g. l or C-l"
 			if name == tools[toolScreen] {
 				m.input.err = "one key, e.g. l or ^L"

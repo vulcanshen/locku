@@ -207,7 +207,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
 | `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
-| input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變；`command` 送出不會被拒，不留（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
+| input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；每個框都留，`command` 也是（2026-10-06：值裡有換行或 Tab 每個框都不收；之前 `command` 送出不會被拒，不留）；目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
@@ -219,14 +219,21 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
 一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
 
+值裡的換行與 Tab（2026-10-06，terminu 定案，之後寫進 tdp components 的 input）：貼上的換行（`\r\n` 算一個，單獨的 `\n`、`\r`
+也各算一個）與 Tab 留在值裡，畫成 Red 的 `\n`、`\t`，佔 2 格，跟手打的 `\`、`n` 分得開；從前面截掉時整個留或整個去，不切開。
+其他控制字元丟掉。PIN 框照樣一個一顆 `●`，不露出 `\n`。`Backspace` 一次刪掉整個。值裡有換行或 Tab 時每個框的 Enter 都不收，
+錯誤列寫 `<邊框的型別> can't have line breaks or tabs`（`name`、`number`、`path`、`key`、`command`；PIN 框一律寫 `PIN`），
+什麼都不寫、`current PIN` 也不比對。之前換行照收，值列被斷成兩列；new PIN 貼 `12\n34` 存得進去，鎖定畫面卻打不出換行，那個 PIN
+永遠解不開。
+
 ### 3.2 鎖定畫布
 
 | Popup | 類型 | 用途 |
 |---|---|---|
 | PIN prompt | input，遮罩，跟每個 popup 一樣寬（tdp F7，2026-09-28；之前固定 48 欄）、置中，框內上下各留一列；`●` 之間空一格，從框的橫向中央開始、向兩側長；PIN 最多 64 字，整列 129 欄，比 120 的上限寬，放不下的從前面截掉、游標那端留在畫面上（2026-09-28，使用者：用最長的 PIN 對 120 來判斷）；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
-| PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案） | custom 鎖定中唯一的 popup |
+| PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
-點點底下是一列**錯誤列**，打開時就在、平常空白（2026-09-28，tdp F7、K3；之前錯誤寫在 title）。四個狀態，框的大小都不變：
+點點底下是一列**錯誤列**，打開時就在、平常空白（2026-09-28，tdp F7、K3；之前錯誤寫在 title）。五個狀態，框的大小都不變（第五個，值裡有換行或 Tab，在圖下）：
 
 ```
 ╭ PIN ──────────────────────────╮     idle：layer 色
@@ -252,6 +259,9 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 ╭ PIN · closing ────────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver；不是錯誤，留在 title
 ```
+
+值裡有換行或 Tab（貼上的，§3.1）時 Enter 不比對、不算一次連錯：錯誤列 `PIN can't have line breaks or tabs`、邊框 Red、點點留著，
+下一鍵恢復（2026-10-06）。
 
 設定畫面的三個 PIN 框（`current PIN`、`new PIN`、`confirm PIN`）同一個畫法，錯誤列也一樣置中。
 

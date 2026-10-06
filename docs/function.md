@@ -122,7 +122,7 @@ custom saver（5.5）是同一張圖：saver 是程式自己的畫面，prompt �
 
 ### 4.2 PIN 規格
 
-- 長度 4 到 64 字元，任意可列印字元。
+- 長度 4 到 64 字元，換行、Tab 與其他控制字元以外的任何字元（2026-10-06：貼上的換行與 Tab 進得了框、畫得出來，但 Enter 不收；之前設定畫面照收、鎖定畫面打不進去，設得出一個永遠解不開的 PIN）。
 - bcrypt cost 10，存於 config，檔案權限 600。
 - 修改：在 `locku` 設定 TUI 內操作，需先輸入舊 PIN。忘記走 `locku pin reset`（4.5）。
 
@@ -246,7 +246,7 @@ dino 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一個
 
 ### 5.5 custom：使用者自己的程式（2026-09-25，使用者定案）
 
-使用者自己開發保護程式的動畫，locku 管其餘的——鎖、PIN、整合。profile 只有一個 `command`，`sh -c` 跑（可帶參數與 pipe），不做任何 sanitize：是使用者自己機器上自己的指令，README 寫明。
+使用者自己開發保護程式的動畫，locku 管其餘的——鎖、PIN、整合。profile 只有一個 `command`，`sh -c` 跑（可帶參數與 pipe），不做任何 sanitize：是使用者自己機器上自己的指令，README 寫明。只有換行與 Tab 不收：單行的值都不收（2026-10-06，ux.md §2.1）。
 
 - **誰擁有終端機**：locku。真 tty 由 locku 握著（raw、ISIG 關、alternate screen、游標藏起），程式跑在 locku 開的 **pty** 上、自己一個 process group：它以為自己有終端機（尺寸、SIGWINCH、curses 正常初始化），它的 termios、崩潰、亂送訊號都碰不到 locku 的 tty。它輸出的 bytes 經 locku 的 `screen` writer 原樣轉到真 tty（每一個 byte 都到，不丟幀）；離開時 locku 自己送 reset 序列收尾。按鍵永遠到 locku（否則 `q` 就把 cmatrix 關了、PIN 也收不到）。stderr 另接一條 pipe，只留最後一行給狀態列。
 - **不干涉生命週期**（使用者定案）：程式該無限迴圈；locku 不重啟、不讀它的畫面，只在鎖結束時對整個 process group 送 SIGKILL（`sh -c` 跟它底下的程式一起走）並等它被回收。視窗大小改變轉給 pty，這是任何終端機都會做的事。

@@ -258,8 +258,10 @@ type screen struct {
 const (
 	syncBegin  = "\x1b[?2026h" // a synchronised update: what follows shows as one
 	syncEnd    = "\x1b[?2026l"
-	saveCur    = "\x1b7" // DECSC: the cursor, its attributes
-	restoreCur = "\x1b8" // DECRC
+	saveCur    = "\x1b7"       // DECSC: the cursor, its attributes
+	restoreCur = "\x1b8"       // DECRC
+	pasteOn    = "\x1b[?2004h" // a paste comes bracketed, told apart from keys
+	pasteOff   = "\x1b[?2004l"
 )
 
 func (s *screen) Write(p []byte) (int, error) {
@@ -370,23 +372,31 @@ func (s *screen) paint(w io.Writer) {
 
 // Overlay puts box — the PIN prompt's lines, w cells wide — over the
 // middle of the screen, and keeps it there over whatever the program
-// draws.
+// draws. While it is up a paste comes bracketed: the prompt is a Bubble
+// Tea program with no renderer, and the renderer is what asks for it
+// elsewhere; unbracketed, a line break pasted into the PIN is an Enter
+// (terminu, 2026-10-06). Asked each time, so a program that switched it
+// off under the box is overruled at the next key.
 func (s *screen) Overlay(box string, w int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.box, s.boxW = box, w
 	var b bytes.Buffer
-	b.WriteString(syncBegin + saveCur)
+	b.WriteString(syncBegin + pasteOn + saveCur)
 	s.paint(&b)
 	b.WriteString(restoreCur + syncEnd)
 	s.out.Write(b.Bytes())
 }
 
 // Clear takes the box away and blanks its place, the largest it was;
-// what was held back goes out first, whole now or not.
+// what was held back goes out first, whole now or not. Pastes come plain
+// again, said where the program was last cut.
 func (s *screen) Clear() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.box != "" {
+		s.out.Write([]byte(pasteOff))
+	}
 	s.box = ""
 	if len(s.pending) > 0 {
 		s.out.Write(s.pending)
@@ -469,9 +479,10 @@ func Take(tty, out *os.File) (*Terminal, error) {
 }
 
 // Give hands the terminal back as it was: the main screen, the cursor,
-// the attributes, and the modes it had.
+// the attributes, and the modes it had — pastes plain, as a prompt up at
+// the unlock left them bracketed.
 func (t *Terminal) Give() {
-	t.out.WriteString("\x1b[0m\x1b[2J\x1b[H\x1b[?25h\x1b[?1049l")
+	t.out.WriteString("\x1b[0m\x1b[2J\x1b[H\x1b[?25h" + pasteOff + "\x1b[?1049l")
 	term.Restore(t.tty.Fd(), t.state)
 }
 
