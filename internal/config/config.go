@@ -183,6 +183,10 @@ func NewProfile(name, kind string) Profile {
 		// No program until the user names one, and no colours: the
 		// picture is the program's (user, 2026-09-25).
 		return Profile{Name: name, Saver: kind}
+	case saver.KindBounce:
+		// Nothing to set: no settings, and colours of its own (user,
+		// 2026-10-06).
+		return Profile{Name: name, Saver: kind}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -454,6 +458,8 @@ func tidy(p Profile, kind string) Profile {
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Scene = "", "", "", "", "", "", ""
 		p.BG, p.FG = "", ""
 		return p
+	case kind == saver.KindBounce:
+		return Profile{Name: p.Name, Saver: kind}
 	case kind == saver.KindDino:
 		p.Command = ""
 		if p.Runner == "" {

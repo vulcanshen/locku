@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- A fourth saver, `bounce`: a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. It has nothing to set, not even colours: they are its own.
 
 ## [0.2.0] - 2026-10-06
 ### Changed

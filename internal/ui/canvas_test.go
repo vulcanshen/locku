@@ -337,3 +337,35 @@ func TestStatusRowSaysWhatMatters(t *testing.T) {
 		t.Errorf("%q", s)
 	}
 }
+
+// Each ink is drawn in its colour, the ground's first; an ink past the
+// colours given wears the last (2026-10-06).
+func TestEachInkWearsItsColour(t *testing.T) {
+	colours(t)
+	b := newBoard(4, 1)
+	b.put(1, 0, 1)
+	b.put(2, 0, 2)
+	b.put(3, 0, 9)
+	row := boardRows(b, []lipgloss.Color{"#102030", "#405060", "#708090"}, 8)[0]
+	seen := fgRe.FindAllStringSubmatch(row, -1)
+	var got []string
+	for _, m := range seen {
+		got = append(got, m[1]+";"+m[2]+";"+m[3])
+	}
+	if want := []string{"16;32;48", "64;80;96", "112;128;144", "112;128;144"}; strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("the four pixels in %v, want %v", got, want)
+	}
+}
+
+// A scene's pixels keep their inks on the board, each k × k.
+func TestPaintSceneKeepsTheInks(t *testing.T) {
+	sc := saver.Scene{W: 4, H: 1, Pix: []uint8{0, 1, 2, 7}}
+	b := paintScene(sc, 2, 16, 2)
+	for y := 0; y < 2; y++ {
+		for x, want := range []uint8{0, 0, 1, 1, 2, 2, 7, 7} {
+			if got := b.ink[y*b.w+x]; got != want {
+				t.Fatalf("cell %d,%d ink %d, want %d", x, y, got, want)
+			}
+		}
+	}
+}

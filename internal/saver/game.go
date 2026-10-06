@@ -33,6 +33,11 @@ type Inked interface {
 	Inks() []string
 }
 
+// Coloured says whether a kind of saver is drawn in its profile's bg
+// and fg: not the custom saver, whose picture is its program's (user,
+// 2026-09-25), nor one with colours of its own (user, 2026-10-06).
+func Coloured(kind string) bool { return kind != KindCustom && kind != KindBounce }
+
 // Scene is one frame: a bitmap in the game's own pixels, row by row, each
 // pixel an ink — 0 the ground, the others lit.
 type Scene struct {

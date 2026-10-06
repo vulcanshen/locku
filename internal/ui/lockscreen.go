@@ -172,8 +172,17 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		preview: preview,
 		now:     time.Now,
 	}
-	if s.Saver == saver.KindDino {
-		m.game = saver.NewDino(uint64(time.Now().UnixNano()), s.Runner, s.Scene)
+	seed := uint64(time.Now().UnixNano())
+	switch s.Saver {
+	case saver.KindDino:
+		m.game = saver.NewDino(seed, s.Runner, s.Scene)
+	case saver.KindBounce:
+		m.game = saver.NewBounce(seed, time.Now, func(l string) []string { return spell(faceShort, l) })
+	}
+	if !saver.Coloured(s.Saver) {
+		// No colours of its own: what the lock draws in the profile's
+		// wears the defaults, as a custom saver's prompt does.
+		m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
 	}
 	m.lockedAt = m.now()
 	m.user, m.host = whoami()

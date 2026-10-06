@@ -156,9 +156,12 @@ func (m AppModel) actions() []action {
 			save.disabled, reset.disabled = true, true
 		}
 		preview := action{key: "P", label: "Preview", hint: "the lock, showing " + what + " and its draft", panelOp: true, run: (*AppModel).previewThis}
-		if p.Saver == saver.KindCustom {
+		if !saver.Coloured(p.Saver) {
 			// No colours, no draft: nothing to save or reset.
-			preview.hint = "the program, on the terminal, until a key"
+			preview.hint = "the lock, showing " + what
+			if p.Saver == saver.KindCustom {
+				preview.hint = "the program, on the terminal, until a key"
+			}
 			return append(out, preview)
 		}
 		out = append(out, preview, save, reset)

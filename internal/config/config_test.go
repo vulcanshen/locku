@@ -56,7 +56,8 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 3 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") {
+	if len(cfg.Savers) != 4 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
+		cfg.Saver("bounce") != NewProfile("", "bounce") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -84,7 +85,7 @@ func TestSaverDefaultsAreTheFilesOwn(t *testing.T) {
 		t.Fatal(err)
 	}
 	body, _ := os.ReadFile(p)
-	if s := string(body); !strings.Contains(s, "savers:\n    clock:") || !strings.Contains(s, "        size: medium") || !strings.Contains(s, "    dino:") {
+	if s := string(body); !strings.Contains(s, "savers:\n") || !strings.Contains(s, "\n    clock:\n        saver: clock\n") || !strings.Contains(s, "        size: medium") || !strings.Contains(s, "    dino:") {
 		t.Errorf("saved:\n%s", s)
 	}
 	back, _ := LoadFile(p)
@@ -166,7 +167,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
-		!strings.Contains(s, "savers:\n    clock:") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
+		!strings.Contains(s, "\n    clock:\n        saver: clock\n") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
 		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") ||
 		!strings.Contains(s, "tmux:\n    conf: ~/.tmux.conf\n    lock-after-time: 45") || !strings.Contains(s, "screen:\n    conf: \"\"\n    idle: 45") ||
 		strings.Contains(s, "tmux_conf") || strings.Contains(s, "\nidle_lock") {
@@ -358,5 +359,30 @@ func TestOldVariableNamesAreNotRead(t *testing.T) {
 	t.Setenv("LOCKU__DATA", dir)
 	if Dir() != dir || DataDir() != dir {
 		t.Errorf("the new names: %q %q", Dir(), DataDir())
+	}
+}
+
+// The bouncing box has no settings and colours of its own (user,
+// 2026-10-06): whatever else a bounce profile carries in the file goes,
+// and it is written back as its name and its saver.
+func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
+	p := write(t, "profile: box\nprofiles:\n  - name: box\n    saver: bounce\n    bg: \"#000000\"\n    fg: \"#ffffff\"\n    size: large\n    runner: big\n    command: cmatrix\n")
+	cfg, note := LoadFile(p)
+	if note != "" {
+		t.Errorf("note %q", note)
+	}
+	if s, ok := cfg.Active(); !ok || s != (Profile{Name: "box", Saver: "bounce"}) {
+		t.Errorf("the bounce profile %+v", s)
+	}
+	if n := cfg.NewProfile("b", "bounce"); n != (Profile{Name: "b", Saver: "bounce"}) {
+		t.Errorf("a new one %+v", n)
+	}
+	if err := SaveFile(p, cfg); err != nil {
+		t.Fatal(err)
+	}
+	body, _ := os.ReadFile(p)
+	if s := string(body); !strings.Contains(s, "  - name: box\n      saver: bounce\n") || strings.Contains(s, "#000000") || strings.Contains(s, "cmatrix") ||
+		!strings.Contains(s, "    bounce:\n        saver: bounce\n    clock:") {
+		t.Errorf("saved:\n%s", s)
 	}
 }

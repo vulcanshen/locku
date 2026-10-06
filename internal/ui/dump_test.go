@@ -72,6 +72,8 @@ func TestDump(t *testing.T) {
 		two.Step()
 	}
 	show("big-small in the desert, 152x32 after 90 frames", ascii(paintScene(two.Draw(76, 31), 1, 152, 31)))
+	box := saver.NewBounce(5, func() time.Time { return at }, func(l string) []string { return spell(faceShort, l) })
+	show("the bouncing box, 152x32", ascii(paintScene(box.Draw(76, 31), 1, 152, 31)))
 
 	lk := testLock(t, "1234", nil)
 	lk.now = func() time.Time { return at }
