@@ -403,3 +403,22 @@ func TestASnakeProfileIsItsColours(t *testing.T) {
 		t.Errorf("a new one %+v", n)
 	}
 }
+
+// A dino has a character, the T-Rex unless it says (user, 2026-10-06);
+// no other saver has one.
+func TestADinoHasACharacter(t *testing.T) {
+	p := write(t, "profile: d\nprofiles:\n  - name: d\n    saver: dino\n  - name: c\n    saver: dino\n    character: cat\n  - name: k\n    saver: clock\n    character: cat\n  - name: m\n    saver: custom\n    character: cat\n")
+	cfg, _ := LoadFile(p)
+	if c := cfg.Profiles[0].Character; c != "t-rex" {
+		t.Errorf("a dino without one: %q", c)
+	}
+	if c := cfg.Profiles[1].Character; c != "cat" {
+		t.Errorf("a dino with one: %q", c)
+	}
+	if cfg.Profiles[2].Character != "" || cfg.Profiles[3].Character != "" {
+		t.Errorf("not a dino: %+v %+v", cfg.Profiles[2], cfg.Profiles[3])
+	}
+	if cfg.Saver("dino").Character != "t-rex" || NewProfile("x", "dino").Character != "t-rex" {
+		t.Errorf("the dino's defaults %+v", cfg.Saver("dino"))
+	}
+}

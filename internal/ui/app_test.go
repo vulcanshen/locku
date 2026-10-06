@@ -801,7 +801,7 @@ func TestNewProfileOfASaver(t *testing.T) {
 	}
 	m = m.press("ctrl+u").typed("dino").press("enter")
 	p := m.cfg.Profiles[2]
-	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "big" || p.Scene != "grassland" ||
+	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "big" || p.Character != "t-rex" || p.Scene != "grassland" ||
 		len(saved(t).Profiles) != 3 || saved(t).Profiles[2].Saver != "dino" {
 		t.Fatalf("profiles %+v", m.cfg.Profiles)
 	}
@@ -809,10 +809,10 @@ func TestNewProfileOfASaver(t *testing.T) {
 		t.Errorf("the cursor must land on the new profile's [2]: cur1 %d focus %d", m.cur1, m.focus)
 	}
 	v := m.View()
-	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "grassland") {
+	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "character") || !strings.Contains(v, "grassland") {
 		t.Errorf("a dino's rows:\n%s", v)
 	}
-	if got := len(m.stops()); got != 9 { // name, runner, scene, six channels — no size
+	if got := len(m.stops()); got != 10 { // name, runner, character, scene, six channels — no size
 		t.Errorf("%d stops", got)
 	}
 	if p.Size != "" || p.Layout != "" || strings.Contains(v, "size") {

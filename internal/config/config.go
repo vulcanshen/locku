@@ -68,10 +68,11 @@ type Profile struct {
 	// program's; its PIN prompt and its ending board wear the defaults).
 	BG string `yaml:"bg,omitempty"`
 	FG string `yaml:"fg,omitempty"`
-	// The dino run's own (2026-09-24): who runs, and where. A clock
-	// leaves them out of the file.
-	Runner string `yaml:"runner,omitempty"`
-	Scene  string `yaml:"scene,omitempty"`
+	// The dino run's own (2026-09-24): how many run, as what (user,
+	// 2026-10-06), and where. A clock leaves them out of the file.
+	Runner    string `yaml:"runner,omitempty"`
+	Character string `yaml:"character,omitempty"`
+	Scene     string `yaml:"scene,omitempty"`
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
@@ -183,7 +184,7 @@ type Config struct {
 func NewProfile(name, kind string) Profile {
 	switch kind {
 	case saver.KindDino:
-		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Character: saver.Characters[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
 	case saver.KindCustom:
 		// No program until the user names one, and no colours: the
 		// picture is the program's (user, 2026-09-25).
@@ -463,7 +464,7 @@ func tidy(p Profile, kind string) Profile {
 	p.Command = strings.TrimSpace(p.Command)
 	switch {
 	case kind == saver.KindCustom:
-		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Scene = "", "", "", "", "", "", ""
+		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Character, p.Scene = "", "", "", "", "", "", "", ""
 		p.BG, p.FG = "", ""
 		return p
 	case kind == saver.KindBounce:
@@ -477,6 +478,9 @@ func tidy(p Profile, kind string) Profile {
 		}
 		if r, ok := renamedRunner[p.Runner]; ok {
 			p.Runner = r
+		}
+		if p.Character == "" {
+			p.Character = d.Character
 		}
 		if p.Scene == "" {
 			p.Scene = d.Scene
@@ -499,7 +503,7 @@ func tidy(p Profile, kind string) Profile {
 		if p.Date == "" {
 			p.Date = d.Date
 		}
-		p.Runner, p.Scene = "", ""
+		p.Runner, p.Character, p.Scene = "", "", ""
 	}
 	if !ValidHex(p.BG) {
 		p.BG = d.BG
