@@ -16,17 +16,6 @@ tdp 版本不變，連結不用改。這份清單由 terminu session 寫好留�
   terminu `.local/family-fix/locku/README.md`。
 
 
-## 2. custom saver 的連錯次數與冷卻，`Esc` 再開就歸零
-
-**現況**：custom saver 每次開 prompt 都是新的 `NewLockPrompt`（`cmd/locku/main.go` 的 `runPrompt`；盤點時在 `:218`、
-`:245`），連錯次數與冷卻倒數只存在同一次 prompt 裡：`Esc` 或逾時收起後，下一鍵開的 prompt 從零開始，冷卻可以用 `Esc`
-繞過。文件寫的是不會：`docs/function.md:143`「計數只在進程內存活，Esc 回 saver 不重置，冷卻結束才歸零」、`docs/ux.md:170`
-「Esc 仍可回 saver，再開 prompt 倒數繼續」。盤點是讀程式碼判斷的，沒有實際跑 custom 鎖。
-
-**怎麼改**：連錯次數與冷卻的結束時間放在整個 custom 鎖定的進程裡，每次開 prompt 帶進去、收起時帶回來，跟內建 saver 一樣。
-測試：連錯到冷卻、`Esc`、再開，倒數接著走；冷卻結束才歸零。
-
-
 ## 3. `docs/ui.md` 的舊寫法
 
 - §3.1 input 列：寫 new 的 `name`「目前值當提議」、提議 saver 自己的名字；程式碼是預填（值直接在框裡、可接著編輯），不是

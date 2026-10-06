@@ -25,12 +25,13 @@ PIXEL = "".encode()   # the board's cell
 PROMPT = "".encode()  # the PIN prompt's lock
 
 
-def config(command, pin_hash=None):
+def config(command, pin_hash=None, extra=""):
     """A file whose active profile is a custom saver running command."""
     with open(cfgFile, "w") as f:
         f.write('profile: run\nprofiles:\n  - name: run\n    saver: custom\n    command: ' + repr(command) + '\n')
         if pin_hash:
             f.write('pin_hash: ' + repr(pin_hash) + '\n')
+        f.write(extra)
 
 
 def spawn(argv):
@@ -166,6 +167,29 @@ os.write(fd, b"1234\r")
 check("the PIN ends the lock", wait_exit(pid, 3))
 time.sleep(0.5)
 check("and the program with it", not running(MARK))
+
+# 3b. The wrong PINs in a row and the cooling-off are the lock's: Esc and
+# a key put up a new prompt, and the countdown is still on it (function.md
+# §4.4; terminu, 2026-10-06 — each prompt used to start from nothing).
+config(loop, pin_hash, "wrong_pin_attempts: 2\nwrong_pin_attempt_cooldown: 4\n")
+pid, fd, out = lock()
+os.write(fd, b"x")
+time.sleep(0.8)
+os.write(fd, b"0000\r")
+time.sleep(1.3)
+os.write(fd, b"0000\r")
+time.sleep(0.6)
+check("two wrong PINs: the cooling-off", b"try again in" in output(out))
+os.write(fd, b"\x1b")
+time.sleep(0.8)
+seen = len(output(out))
+os.write(fd, b"x")
+time.sleep(0.8)
+check("Esc and a key: the countdown goes on in the new prompt", b"try again in" in output(out)[seen:])
+time.sleep(3.5)
+os.write(fd, b"1234\r")
+check("over, the PIN ends the lock", wait_exit(pid, 3))
+kill(pid)
 
 # 4. A program that ends is EXIT and its code on the board, with why,
 # and the lock stays — 0 included; none set is NONE. The PIN ends each.

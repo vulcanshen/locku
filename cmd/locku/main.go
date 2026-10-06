@@ -178,6 +178,10 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 	signal.Notify(winch, syscall.SIGWINCH)
 	defer signal.Stop(winch)
 	keys := t.Key()
+	// The wrong PINs in a row and the cooling-off are the lock's, not one
+	// prompt's: each prompt takes them over from the last (function.md
+	// §4.4; terminu, 2026-10-06 — Esc and a key used to start them over).
+	var tries ui.Tries
 	for {
 		select {
 		case <-winch:
@@ -215,7 +219,8 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 			// is asked to paint itself; one that draws fills the place by
 			// itself, and is not asked — asked, a curses program starts
 			// its picture over.
-			unlocked, back := runPrompt(cfg, problem, t)
+			var unlocked, back bool
+			unlocked, back, tries = runPrompt(cfg, problem, t, tries)
 			if !back {
 				p.Kill()
 				t.Give()
@@ -236,31 +241,32 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 // locku's hid the picture, and a switch of screens under the prompt
 // left it to be painted again). It reports whether the PIN unlocked,
 // and whether the prompt closed instead — Esc, the timeout — so the
-// picture is to come back. A prompt that cannot even run leaves the
-// lock as it is, the program back on the screen.
-func runPrompt(cfg config.Config, problem string, t *custom.Terminal) (unlocked, back bool) {
+// picture is to come back, and the tries it leaves the next. A prompt
+// that cannot even run leaves the lock as it is, the program back on
+// the screen.
+func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.Tries) (unlocked, back bool, left ui.Tries) {
 	var p *tea.Program
 	in := ui.LockInput(os.Stdin, func() { p.Send(ui.TTYGoneMsg{}) })
 	cols, rows := t.Size()
-	p = tea.NewProgram(ui.NewLockPrompt(cfg, problem, cols, rows, t.Overlay),
+	p = tea.NewProgram(ui.NewLockPrompt(cfg, problem, cols, rows, t.Overlay, tries),
 		tea.WithoutRenderer(),
 		tea.WithoutSignalHandler(),
 		tea.WithInput(in),
 	)
 	m, err := p.Run()
 	if err != nil {
-		return false, true
+		return false, true, tries
 	}
 	lm, ok := m.(ui.LockModel)
 	switch {
 	case !ok:
-		return true, false
+		return true, false, tries
 	case lm.TTYGone():
-		return false, false
+		return false, false, tries
 	case lm.Back():
-		return false, true
+		return false, true, lm.Tries()
 	}
-	return true, false
+	return true, false, tries
 }
 
 // runSettings is the bare `locku`: the settings screen, where the tmux
