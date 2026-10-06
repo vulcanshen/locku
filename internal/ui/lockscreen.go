@@ -24,9 +24,9 @@ type LockModel struct {
 	cfg     config.Config
 	problem string
 	clock   saver.Clock
-	game    *saver.Dino // the dino run, when that is the profile's saver; the clock is idle then
-	word    saver.Word  // a custom saver's ending on the board; the clock is idle then
-	note    string      // the custom saver's ending, in red on the status row
+	game    saver.Game // the dino run or another game, when that is the profile's saver; the clock is idle then
+	word    saver.Word // a custom saver's ending on the board; the clock is idle then
+	note    string     // the custom saver's ending, in red on the status row
 	// The accent (2026-09-25): the colour the code after EXIT wears, and
 	// the rune it starts at — green for 0, red for the rest, while EXIT
 	// keeps the gold; 0 accents nothing.
@@ -420,8 +420,8 @@ func (m LockModel) unlock() (LockModel, tea.Cmd) {
 func (m *LockModel) refit() board {
 	rows := m.height - 1
 	if m.game != nil {
-		// The run has no size of its own: as large as the terminal allows.
-		k, w, h := fitScene(sceneMaxScale, m.width, rows)
+		// A game has no size of its own: as large as the terminal allows.
+		k, w, h := fitScene(m.game.Room(), m.width, rows)
 		return paintScene(m.game.Draw(w, h), k, m.width, rows)
 	}
 	var s saver.Saver = m.clock
@@ -485,6 +485,19 @@ func (m LockModel) lockoutTick() tea.Cmd {
 	return tea.Tick(time.Second, func(time.Time) tea.Msg { return lockoutTickMsg{gen} })
 }
 
+// inks are the board's colours: a game's own when it has them (user,
+// 2026-10-06), else the profile's ground and fg, and the accent.
+func (m LockModel) inks() []lipgloss.Color {
+	if g, ok := m.game.(saver.Inked); ok {
+		var out []lipgloss.Color
+		for _, c := range g.Inks() {
+			out = append(out, lipgloss.Color(c))
+		}
+		return out
+	}
+	return []lipgloss.Color{lipgloss.Color(m.style.BG), lipgloss.Color(m.style.FG), m.accent}
+}
+
 func (m LockModel) View() string {
 	if m.width <= 0 || m.height <= 0 {
 		return ""
@@ -500,7 +513,7 @@ func (m LockModel) View() string {
 			// profile's ground alone.
 			out = plainRows(nil, bg, fg, m.width, rows)
 		case len(m.layout.blocks) > 0 || m.game != nil:
-			out = boardRows(m.shown, bg, fg, m.accent, m.width)
+			out = boardRows(m.shown, m.inks(), m.width)
 		default:
 			out = plainRows(m.plain, bg, fg, m.width, rows)
 		}

@@ -13,8 +13,8 @@ func TestRevealTouchesOnlyWhatChanged(t *testing.T) {
 	for {
 		frames++
 		done := r.advance()
-		for i := range to.lit {
-			if from.lit[i] == to.lit[i] && r.cur.lit[i] != to.lit[i] {
+		for i := range to.ink {
+			if from.ink[i] == to.ink[i] && r.cur.ink[i] != to.ink[i] {
 				t.Fatalf("frame %d changed an unchanged pixel %d", frames, i)
 			}
 		}
@@ -25,8 +25,8 @@ func TestRevealTouchesOnlyWhatChanged(t *testing.T) {
 			t.Fatalf("still going after %d frames", frames)
 		}
 	}
-	for i := range to.lit {
-		if r.cur.lit[i] != to.lit[i] {
+	for i := range to.ink {
+		if r.cur.ink[i] != to.ink[i] {
 			t.Fatalf("pixel %d not revealed", i)
 		}
 	}

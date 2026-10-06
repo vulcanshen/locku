@@ -15,8 +15,9 @@ import (
 // the board's bg colour, lit pixels its fg. The saver's lines are set in
 // the pixel font at the saver's size, and centred.
 //
-// It is the only way anything is drawn. A saver never sees a colour, a
-// glyph or a position.
+// It is the only way anything is drawn. A saver never sees a glyph or a
+// position, nor a colour — but a game with colours of its own, which
+// names them (saver.Inked; user, 2026-10-06), and has no bg / fg.
 //
 // Two units (user, 2026-09-24): the DISPLAY unit is one font pixel, k × k
 // cells at size k; the GAP unit is the dark between things — two glyphs,
@@ -43,52 +44,59 @@ func gap(k int) int { return (k + 1) / 2 }
 func pixelCell() string { return pixelGlyph + spaces(2-iconCells) }
 
 // board is the pixel grid: w pixels across (half the columns), h down (the
-// rows above the status row).
+// rows above the status row). Each pixel is an ink: 0 is dark, the
+// board's ground; the others are lit, each in its own colour, which the
+// one drawing the board gives (boardRows). A clock lights in one ink; a
+// custom saver's ending board lights the code after EXIT in a second,
+// the accent (2026-09-25); a saver with colours of its own lights in as
+// many as it has (2026-10-06).
 type board struct {
 	w, h int
-	lit  []bool
-	// tone: lit in the accent colour rather than the fg — the code after
-	// EXIT on a custom saver's ending board (2026-09-25). The one board
-	// with two lit colours.
-	tone []bool
+	ink  []uint8
 }
+
+// The inks of a board the clock draws: dark, the fg, and the accent.
+const (
+	inkOff uint8 = iota
+	inkOn
+	inkAccent
+)
 
 func newBoard(w, h int) board {
-	n := max(0, w) * max(0, h)
-	return board{w: max(0, w), h: max(0, h), lit: make([]bool, n), tone: make([]bool, n)}
+	return board{w: max(0, w), h: max(0, h), ink: make([]uint8, max(0, w)*max(0, h))}
 }
 
-func (b board) at(x, y int) bool { return b.lit[y*b.w+x] }
+// at reports whether the pixel at x, y is lit, in any ink.
+func (b board) at(x, y int) bool { return b.ink[y*b.w+x] != inkOff }
 
-func (b *board) set(x, y int) {
+// put inks the pixel at x, y, if it is on the board.
+func (b *board) put(x, y int, ink uint8) {
 	if x >= 0 && x < b.w && y >= 0 && y < b.h {
-		b.lit[y*b.w+x] = true
+		b.ink[y*b.w+x] = ink
 	}
 }
 
-// mark makes the pixel at x, y the accent's when it is lit.
-func (b *board) mark(x, y int) {
-	if x >= 0 && x < b.w && y >= 0 && y < b.h {
-		b.tone[y*b.w+x] = true
-	}
-}
+func (b *board) set(x, y int) { b.put(x, y, inkOn) }
 
 func (b board) same(o board) bool { return b.w == o.w && b.h == o.h }
 
 func (b board) clone() board {
-	c := board{w: b.w, h: b.h, lit: make([]bool, len(b.lit)), tone: make([]bool, len(b.tone))}
-	copy(c.lit, b.lit)
-	copy(c.tone, b.tone)
+	c := board{w: b.w, h: b.h, ink: make([]uint8, len(b.ink))}
+	copy(c.ink, b.ink)
 	return c
 }
 
-// toned is a clone of b wearing o's tones: a reveal from b to o changes
-// the pixels one by one, but the colours are the destination's from
-// the first frame.
+// toned is a clone of b wearing o's inks where both are lit: a reveal
+// from b to o lights and darkens the pixels one by one, but the colours
+// are the destination's from the first frame.
 func (b board) toned(o board) board {
 	c := b.clone()
 	if b.same(o) {
-		copy(c.tone, o.tone)
+		for i, k := range o.ink {
+			if k != inkOff && c.ink[i] != inkOff {
+				c.ink[i] = k
+			}
+		}
 	}
 	return c
 }
@@ -96,8 +104,8 @@ func (b board) toned(o board) board {
 // count is how many pixels are lit.
 func (b board) count() int {
 	n := 0
-	for _, l := range b.lit {
-		if l {
+	for _, k := range b.ink {
+		if k != inkOff {
 			n++
 		}
 	}
@@ -277,12 +285,16 @@ func paint(f face, l layout, cols, rows int) board {
 }
 
 // stampLine lights line on b at scale k, its top-left cell at x, y; the
-// runes from accentFrom on, when it is above 0, are marked the accent's.
+// runes from accentFrom on, when it is above 0, are in the accent's ink.
 func stampLine(b *board, f face, line string, k, x, y, accentFrom int) {
 	g := gap(k)
 	n := 0
 	for _, r := range line {
 		if gl, ok := f.g[r]; ok && r != ' ' {
+			ink := inkOn
+			if accentFrom > 0 && n >= accentFrom {
+				ink = inkAccent
+			}
 			for fy := 0; fy < f.h; fy++ {
 				for fx := 0; fx < len(gl[fy]); fx++ {
 					if gl[fy][fx] != '#' {
@@ -290,10 +302,7 @@ func stampLine(b *board, f face, line string, k, x, y, accentFrom int) {
 					}
 					for dy := 0; dy < k; dy++ {
 						for dx := 0; dx < k; dx++ {
-							b.set(x+fx*k+dx, y+fy*k+dy)
-							if accentFrom > 0 && n >= accentFrom {
-								b.mark(x+fx*k+dx, y+fy*k+dy)
-							}
+							b.put(x+fx*k+dx, y+fy*k+dy, ink)
 						}
 					}
 				}
@@ -304,27 +313,14 @@ func stampLine(b *board, f face, line string, k, x, y, accentFrom int) {
 	}
 }
 
-// A game scene needs room to be played: the runner, a jump over the
-// tallest cactus, the ground, and a runway — in its own pixels: the
-// rows are the T-Rex, fourteen, its jump, eleven, the ground, two, and
-// one of sky (2026-09-25: twenty-eight; twenty-five while the jump was
-// eight, before the large obstacles). A game has no size setting
-// (user, 2026-09-24): it is drawn at the largest scale, up to
-// sceneMaxScale, that leaves the scene its room.
-const (
-	sceneMinW     = 40
-	sceneMinH     = 28
-	sceneMaxScale = 3
-)
-
-// fitScene picks a game's scale on a cols × rows canvas: from most,
-// stepped down until a scene has its room — or 1, and the game clips
-// what it must. The scene is the whole board, which is why the ground
-// runs edge to edge.
-func fitScene(most, cols, rows int) (k, w, h int) {
+// fitScene picks a game's scale on a cols × rows canvas: from the room's
+// most, stepped down until the scene has its room — or 1, and the game
+// clips what it must. The scene is the whole board, which is why the
+// dino's ground runs edge to edge.
+func fitScene(r saver.Room, cols, rows int) (k, w, h int) {
 	cells := cols / 2
-	for k = max(1, most); k > 1; k-- {
-		if cells/k >= sceneMinW && rows/k >= sceneMinH {
+	for k = max(1, r.Most); k > 1; k-- {
+		if cells/k >= r.W && rows/k >= r.H {
 			break
 		}
 	}
@@ -332,19 +328,20 @@ func fitScene(most, cols, rows int) (k, w, h int) {
 }
 
 // paintScene lights a game's frame at scale k — every scene pixel k × k
-// cells, the odd cells left over at the edges dark. Nothing is lettered
-// over it: no score, no clock (user, 2026-09-24).
+// cells in its ink, the odd cells left over at the edges dark. Nothing is
+// lettered over it: no score, no clock (user, 2026-09-24).
 func paintScene(sc saver.Scene, k, cols, rows int) board {
 	b := newBoard(cols/2, rows)
 	ox, oy := (b.w-sc.W*k)/2, (b.h-sc.H*k)/2
 	for y := 0; y < sc.H; y++ {
 		for x := 0; x < sc.W; x++ {
-			if !sc.Pix[y*sc.W+x] {
+			ink := sc.Pix[y*sc.W+x]
+			if ink == inkOff {
 				continue
 			}
 			for dy := 0; dy < k; dy++ {
 				for dx := 0; dx < k; dx++ {
-					b.set(ox+x*k+dx, oy+y*k+dy)
+					b.put(ox+x*k+dx, oy+y*k+dy, ink)
 				}
 			}
 		}
@@ -356,30 +353,25 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // runs of pixels in one colour are rendered together, so a row costs a few
 // escape sequences rather than one per cell. An odd terminal leaves its
 // rightmost column blank (function.md §5.3). Under the PIN prompt the
-// lock fades whole, as drawn (LockModel.View).
-func boardRows(b board, bg, fg, accent lipgloss.Color, cols int) []string {
-	off := lipgloss.NewStyle().Foreground(bg)
-	on := lipgloss.NewStyle().Foreground(fg)
-	acc := lipgloss.NewStyle().Foreground(accent)
+// lock fades whole, as drawn (LockModel.View). inks are the colours, one
+// an ink, the ground first; an ink past the end wears the last.
+func boardRows(b board, inks []lipgloss.Color, cols int) []string {
+	styles := make([]lipgloss.Style, len(inks))
+	for i, c := range inks {
+		styles[i] = lipgloss.NewStyle().Foreground(c)
+	}
 	tail := spaces(cols - b.w*2)
 	rows := make([]string, b.h)
 	for y := 0; y < b.h; y++ {
 		var sb strings.Builder
 		for x := 0; x < b.w; {
-			lit, tone := b.at(x, y), b.tone[y*b.w+x]
+			ink := b.ink[y*b.w+x]
 			run := x
-			for run < b.w && b.at(run, y) == lit && b.tone[y*b.w+run] == tone {
+			for run < b.w && b.ink[y*b.w+run] == ink {
 				run++
 			}
 			cells := strings.Repeat(pixelCell(), run-x)
-			switch {
-			case lit && tone:
-				sb.WriteString(acc.Render(cells))
-			case lit:
-				sb.WriteString(on.Render(cells))
-			default:
-				sb.WriteString(off.Render(cells))
-			}
+			sb.WriteString(styles[min(int(ink), len(styles)-1)].Render(cells))
 			x = run
 		}
 		sb.WriteString(tail)

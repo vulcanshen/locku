@@ -109,8 +109,8 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 		for x := 0; x < lk.shown.w; x++ {
 			i := y*lk.shown.w + x
 			switch {
-			case !lk.shown.lit[i]:
-			case lk.shown.tone[i]:
+			case lk.shown.ink[i] == inkOff:
+			case lk.shown.ink[i] == inkAccent:
 				accMin = min(accMin, x)
 			default:
 				plainMax = max(plainMax, x)

@@ -52,30 +52,12 @@ var (
 // DinoFrame is the time between two frames: fourteen a second.
 const DinoFrame = 70 * time.Millisecond
 
-// Scene is one frame: a bitmap in the game's own pixels, row by row.
-// Nothing else — no score, no clock (user, 2026-09-24): it is a
-// screensaver, not a game being played.
-type Scene struct {
-	W, H int
-	Pix  []bool
-}
-
-func (s *Scene) set(x, y int) {
-	if x >= 0 && x < s.W && y >= 0 && y < s.H {
-		s.Pix[y*s.W+x] = true
-	}
-}
-
-// blit lights a sprite with its top-left pixel at x, y, clipped.
-func (s *Scene) blit(sp sprite, x, y int) {
-	for dy, row := range sp {
-		for dx := 0; dx < len(row); dx++ {
-			if row[dx] == '#' {
-				s.set(x+dx, y+dy)
-			}
-		}
-	}
-}
+// dinoRoom is the scene the run needs: the runner, a jump over the
+// tallest cactus, the ground, and a runway — the rows are the T-Rex,
+// fourteen, its jump, eleven, the ground, two, and one of sky
+// (2026-09-25: twenty-eight; twenty-five while the jump was eight,
+// before the large obstacles). Drawn at most three times over.
+var dinoRoom = Room{W: 40, H: 28, Most: 3}
 
 const (
 	speed     = 2   // pixels the world moves a frame
@@ -391,6 +373,9 @@ func NewDino(seed uint64, runner, scene string) *Dino {
 // Next is when the next frame is due.
 func (d *Dino) Next(now time.Time) time.Time { return now.Add(DinoFrame) }
 
+// Room is the scene the run needs.
+func (d *Dino) Room() Room { return dinoRoom }
+
 func (d *Dino) groundY() int { return d.h - groundH }
 
 // runnerX is where runner i stands: the first a sixth of the way in,
@@ -533,12 +518,13 @@ func tuft(x int, every uint32) bool {
 // Draw is the current frame at w × h pixels: the ground along the
 // bottom, the clouds, the obstacles, and the runners where their jumps
 // have them, each in the pose its stride is at — the one behind half a
-// stride off the one in front.
+// stride off the one in front. Nothing else — no score, no clock (user,
+// 2026-09-24): it is a screensaver, not a game being played.
 func (d *Dino) Draw(w, h int) Scene {
 	if w != d.w || h != d.h {
 		d.resize(w, h)
 	}
-	sc := Scene{W: w, H: h, Pix: make([]bool, w*h)}
+	sc := newScene(w, h)
 	gy := d.groundY()
 	for x := 0; x < w; x++ {
 		sc.set(x, gy)

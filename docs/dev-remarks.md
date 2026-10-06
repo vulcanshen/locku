@@ -28,7 +28,7 @@ locku/
 │   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN、pin_hash 重讀、NewPIN、data 目錄
 │   ├── custom/         custom saver：程式在 pty 上、輸出經 screen writer 直通、PIN 框疊在畫面上、按鍵留給 locku、結束的字（2026-09-25）
 │   ├── login/          `locku pin reset` 的登入密碼驗證：su 在 pty 上（2026-09-25）
-│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；dino 的跑者、場景、障礙與自動跳躍；custom 結束的 Word
+│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；會動的 saver 共用的 Game 介面與場景（game.go）；dino 的跑者、場景、障礙與自動跳躍；custom 結束的 Word
 │   ├── setup/          受管區塊寫入：tmux.conf（跑著的 server 整塊 source-file）、screenrc、shell rc
 │   ├── termreply/      鎖定時從讀到的輸入拿掉終端機的回答（OSC、DCS、CSI 回報），只留按鍵；鎖開始時清空已在等的輸入（2026-09-28）
 │   ├── tmux/           鎖定中對 tmux 立 / 清 @locked 旗
@@ -71,7 +71,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   - **反彈框**：一個框在螢幕裡飄、撞邊反彈變色；框裡放時鐘，順便防烙印；撞進角落是彩蛋。
   - **其他**：便宜的有星空飛行、雨 / 雪、煙火、迷宮生成與走迷宮、2D 水管、排序視覺化；貴的有 Doom 火焰、plasma、熔岩燈。
   - **貴的效果照做，告訴使用者**（2026-09-27，使用者）：不因耗電而不做，在該 saver 的說明寫「比較耗電」，讓使用者自己選。但幀率仍要有上限：輸出塞滿時 PIN 框的按鍵回應會變慢，經 SSH 更明顯，那是功能問題，不只是耗電。
-  - **底層**：這些共用同一套——像素各有顏色、定時更新、只重畫有變的；差別在顏色跟 profile 的 `bg` / `fg`，還是 saver 自帶調色盤。真的要做時先把「每個像素自己的顏色」定下來。
+  - **底層**：這些共用同一套——像素各有顏色、定時更新、只重畫有變的。2026-10-06 動手前定案：板子的每格是一種**墨**（`board.ink`，0 是暗、其他是亮，各一個顏色），場景也是（`saver.Scene.Pix`）；顏色由畫板子的人給（`boardRows(b, inks, cols)`）。會動的 saver 共用 `saver.Game`（`Room` / `Step` / `Draw` / `Next`），場景要多大、最多放大幾倍是各自的 `Room`，dino 是第一個搬上去的。顏色（使用者定案）：**多色的 saver 自帶配色，沒有 bg / fg**，跟 custom 一樣不給設定（實作 `saver.Inked`）；只用兩色的照舊是 profile 的 bg / fg。搬的時候拿改之前後各種 clock、EXIT、dino 的鎖定畫面逐位元組比過，一樣。
 - **未做：使用者自己描述的 saver**（2026-09-27 與使用者發想，沒有要動手）。custom 已經讓人跑自己的程式，但用不到 locku 的畫布；中間可以有一種資料檔，像 `.obj` 描述形狀那樣，描述 2D 的圖與運動。能描述的分三級：
   1. 逐格動畫：調色盤加幾張圖，照固定速度輪播。
   2. 物件加運動規則：每個物件是一組圖，加位置、速度、碰邊界時反彈 / 繞回 / 消失，可在範圍內隨機。反彈框、捲動背景、雲、星空、煙火都寫得出來。

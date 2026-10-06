@@ -236,8 +236,8 @@ func TestDinoLockRunsFrameByFrame(t *testing.T) {
 		t.Fatal("a frame must schedule the next and never reveal")
 	}
 	moved := false
-	for i := range before.lit {
-		if before.lit[i] != m.shown.lit[i] {
+	for i := range before.ink {
+		if before.ink[i] != m.shown.ink[i] {
 			moved = true
 			break
 		}
@@ -334,8 +334,8 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 		t.Fatal("reveal never finished")
 	}
 	want := paint(faceTall, one([]string{"21 06"}, 2), 120, 39)
-	for i := range want.lit {
-		if want.lit[i] != m.shown.lit[i] {
+	for i := range want.ink {
+		if want.ink[i] != m.shown.ink[i] {
 			t.Fatal("the board does not show 21:06")
 		}
 	}

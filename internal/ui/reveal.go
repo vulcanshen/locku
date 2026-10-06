@@ -31,8 +31,8 @@ func newReveal(from, to board) *reveal {
 		return nil
 	}
 	var order []int
-	for i := range to.lit {
-		if from.lit[i] != to.lit[i] {
+	for i := range to.ink {
+		if (from.ink[i] != inkOff) != (to.ink[i] != inkOff) {
 			order = append(order, i)
 		}
 	}
@@ -53,7 +53,7 @@ func newReveal(from, to board) *reveal {
 func (r *reveal) advance() bool {
 	n := min(len(r.order), r.done+r.step)
 	for _, i := range r.order[r.done:n] {
-		r.cur.lit[i] = r.to.lit[i]
+		r.cur.ink[i] = r.to.ink[i]
 	}
 	r.done = n
 	return r.done >= len(r.order)
