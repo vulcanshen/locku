@@ -313,6 +313,27 @@ func stampLine(b *board, f face, line string, k, x, y, accentFrom int) {
 	}
 }
 
+// spell is line in face f at scale 1, as rows of '#' lit and '.' dark,
+// spaced as the board spaces it: what a game lettering something of its
+// own — the bouncing box's time — draws.
+func spell(f face, line string) []string {
+	b := newBoard(lineW(f, line, 1), f.h)
+	stampLine(&b, f, line, 1, 0, 0, 0)
+	rows := make([]string, b.h)
+	for y := range rows {
+		var sb strings.Builder
+		for x := 0; x < b.w; x++ {
+			if b.at(x, y) {
+				sb.WriteByte('#')
+			} else {
+				sb.WriteByte('.')
+			}
+		}
+		rows[y] = sb.String()
+	}
+	return rows
+}
+
 // fitScene picks a game's scale on a cols × rows canvas: from the room's
 // most, stepped down until the scene has its room — or 1, and the game
 // clips what it must. The scene is the whole board, which is why the

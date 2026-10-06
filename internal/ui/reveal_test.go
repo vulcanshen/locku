@@ -44,3 +44,20 @@ func TestRevealIsNilWhenNothingToDo(t *testing.T) {
 		t.Error("different size")
 	}
 }
+
+// A reveal lights and darkens pixels one by one, but a pixel lit on both
+// boards wears the new one's ink from the first frame.
+func TestRevealRecoloursAtOnce(t *testing.T) {
+	from, to := newBoard(3, 1), newBoard(3, 1)
+	from.put(0, 0, inkOn)
+	from.put(1, 0, inkOn)
+	to.put(0, 0, inkAccent)
+	to.put(2, 0, inkOn)
+	r := newReveal(from, to)
+	if r == nil || len(r.order) != 2 {
+		t.Fatalf("reveal %+v", r)
+	}
+	if r.cur.ink[0] != inkAccent || r.cur.ink[1] != inkOn || r.cur.ink[2] != inkOff {
+		t.Errorf("first frame %v", r.cur.ink)
+	}
+}

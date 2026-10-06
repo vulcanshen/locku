@@ -89,6 +89,7 @@ const labelW = 28
 var about = map[string]string{
 	saver.KindClock:  "the time and the date, on the LED board",
 	saver.KindDino:   "the offline dino run, jumping by itself, for ever",
+	saver.KindBounce: "the time in a box, bouncing, changing colour",
 	saver.KindCustom: "your own program, on a terminal of its own, as the saver",
 }
 
@@ -190,9 +191,13 @@ func (m AppModel) anyDirty() bool {
 }
 
 // fieldRows is a saver's own settings for p: the clock's shapes and
-// size, the run's runner and scene, or the custom saver's command.
+// size, the run's runner and scene, the custom saver's command — or
+// none, the bouncing box's (user, 2026-10-06).
 func fieldRows(p config.Profile) []row {
 	value := valueColor
+	if p.Saver == saver.KindBounce {
+		return nil
+	}
 	if p.Saver == saver.KindCustom {
 		// The program, as sh -c runs it; none yet is said in yellow, as
 		// the PIN's "not set" is (user, 2026-09-25).
@@ -276,7 +281,7 @@ func (m AppModel) rows() []row {
 			{kind: rowAbout, label: "defaults", value: "for profiles made of it from now on", color: dimColor},
 		}
 		out = append(out, fieldRows(p)...)
-		if p.Saver != saver.KindCustom { // no colours of its own (user, 2026-09-25)
+		if saver.Coloured(p.Saver) { // no colours: custom (user, 2026-09-25), and a saver with its own (2026-10-06)
 			out = append(out, m.colourRows(key, p)...)
 		}
 		return out
@@ -291,7 +296,7 @@ func (m AppModel) rows() []row {
 			{kind: rowSaver, label: "saver", value: p.Saver, color: dimColor},
 		}
 		out = append(out, fieldRows(p)...)
-		if p.Saver != saver.KindCustom { // no colours of its own (user, 2026-09-25)
+		if saver.Coloured(p.Saver) { // no colours: custom (user, 2026-09-25), and a saver with its own (2026-10-06)
 			out = append(out, m.colourRows(key, p)...)
 		}
 		return out
