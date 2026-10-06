@@ -89,7 +89,9 @@ func (m AppModel) actions() []action {
 	case rowName:
 		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this profile", run: (*AppModel).renameProfile})
 	case rowRunner:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseRunner})
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one or two, big or small", run: (*AppModel).chooseRunner})
+	case rowCharacter:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseCharacter})
 	case rowScene:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "where it runs", run: (*AppModel).chooseScene})
 	case rowCommand:
@@ -486,6 +488,10 @@ func (m *AppModel) chooseRunner() tea.Cmd {
 	return m.choose("runner", saver.Runners, func(p config.Profile) string { return p.Runner })
 }
 
+func (m *AppModel) chooseCharacter() tea.Cmd {
+	return m.choose("character", saver.Characters, func(p config.Profile) string { return p.Character })
+}
+
 // chooseLock is Enter on tmux's lock: lock-server, or lock-session.
 func (m *AppModel) chooseLock() tea.Cmd {
 	return m.openOptions("lock", config.TmuxLocks, m.cfg.Tmux.Lock, 0)
@@ -561,6 +567,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 	switch r := m.optionsFor; r.kind {
 	case rowRunner:
 		m.edit(func(p *config.Profile) { p.Runner = v })
+	case rowCharacter:
+		m.edit(func(p *config.Profile) { p.Character = v })
 	case rowScene:
 		m.edit(func(p *config.Profile) { p.Scene = v })
 	case rowLayout:

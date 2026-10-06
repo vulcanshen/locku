@@ -33,48 +33,72 @@ func litIn(sc Scene, x0, y0, x1, y1 int) int {
 	return n
 }
 
+// lit is how many of a sprite's pixels are lit.
+func lit(sp sprite) int {
+	n := 0
+	for _, row := range sp {
+		for i := 0; i < len(row); i++ {
+			if row[i] == '#' {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 // The run is endless and no runner ever touches anything: every
-// obstacle is jumped — in every scene, by one runner or two — at the
-// user's terminal size and at the least the canvas allows.
+// obstacle is jumped — in every scene, by one runner or two, as every
+// character (2026-10-06) — at the user's terminal size and at the least
+// the canvas allows.
 func TestDinoNeverHitsAnything(t *testing.T) {
-	for _, runner := range Runners {
-		for _, scene := range Scenes {
-			for _, sz := range [][2]int{{76, 31}, {40, 28}, {100, 59}} {
-				d := NewDino(42, runner, scene)
-				d.Draw(sz[0], sz[1])
-				jumps, seen := 0, 0
-				for i := 0; i < 6000; i++ {
-					d.Step()
-					for _, a := range d.air {
-						if a == 0 {
-							jumps++
-						}
-					}
-					seen = max(seen, len(d.obs))
-					if o, ok := hit(d); ok {
-						t.Fatalf("%s in %s at %dx%d, frame %d: ran into obstacle %d at %d", runner, scene, sz[0], sz[1], i, o.kind, o.x)
-					}
-				}
-				if jumps < 20*d.runner.count() || seen == 0 {
-					t.Errorf("%s in %s at %dx%d: %d jumps, %d obstacles at most", runner, scene, sz[0], sz[1], jumps, seen)
-				}
-				sc := d.Draw(sz[0], sz[1])
-				if len(sc.Pix) != sz[0]*sz[1] {
-					t.Errorf("%dx%d: scene %d px", sz[0], sz[1], len(sc.Pix))
-				}
-				// The ground line runs the whole width, two rows up from
-				// the bottom, and every runner stands on it.
-				for x := 0; x < sz[0]; x++ {
-					if sc.Pix[(sz[1]-groundH)*sz[0]+x] == 0 {
-						t.Fatalf("%dx%d: no ground at %d", sz[0], sz[1], x)
-					}
-				}
-				for i := range d.air {
-					if n := litIn(sc, d.runnerX(i), 0, d.runnerX(i)+d.runnerW(i), sz[1]-groundH); n < 30 {
-						t.Errorf("%s at %dx%d: runner %d is %d pixels", runner, sz[0], sz[1], i, n)
-					}
+	for _, character := range Characters {
+		for _, runner := range Runners {
+			for _, scene := range Scenes {
+				for _, sz := range [][2]int{{76, 31}, {40, 28}, {100, 59}} {
+					runAndWatch(t, character, runner, scene, sz)
 				}
 			}
+		}
+	}
+}
+
+// runAndWatch runs one dino for 6000 frames: it never runs into
+// anything, it jumps, and it is drawn on its ground.
+func runAndWatch(t *testing.T, character, runner, scene string, sz [2]int) {
+	t.Helper()
+	d := NewDino(42, runner, character, scene)
+	d.Draw(sz[0], sz[1])
+	jumps, seen := 0, 0
+	for i := 0; i < 6000; i++ {
+		d.Step()
+		for _, a := range d.air {
+			if a == 0 {
+				jumps++
+			}
+		}
+		seen = max(seen, len(d.obs))
+		if o, ok := hit(d); ok {
+			t.Fatalf("%s %s in %s at %dx%d, frame %d: ran into obstacle %d at %d", runner, character, scene, sz[0], sz[1], i, o.kind, o.x)
+		}
+	}
+	if jumps < 20*d.runner.count() || seen == 0 {
+		t.Errorf("%s in %s at %dx%d: %d jumps, %d obstacles at most", runner, scene, sz[0], sz[1], jumps, seen)
+	}
+	sc := d.Draw(sz[0], sz[1])
+	if len(sc.Pix) != sz[0]*sz[1] {
+		t.Errorf("%dx%d: scene %d px", sz[0], sz[1], len(sc.Pix))
+	}
+	// The ground line runs the whole width, two rows up from
+	// the bottom, and every runner stands on it.
+	for x := 0; x < sz[0]; x++ {
+		if sc.Pix[(sz[1]-groundH)*sz[0]+x] == 0 {
+			t.Fatalf("%dx%d: no ground at %d", sz[0], sz[1], x)
+		}
+	}
+	for i, f := range d.runner.figures {
+		least := min(lit(f.run[0]), lit(f.run[1]), lit(f.air))
+		if n := litIn(sc, d.runnerX(i), 0, d.runnerX(i)+d.runnerW(i), sz[1]-groundH); n < least {
+			t.Errorf("%s %s at %dx%d: runner %d is %d pixels, its least pose %d", runner, character, sz[0], sz[1], i, n, least)
 		}
 	}
 }
@@ -93,7 +117,7 @@ func TestTwoRunnersJumpOnTheirOwn(t *testing.T) {
 		{RunnerSmallBig, 8, 12},
 		{RunnerBigSmall, 12, 8},
 	} {
-		d := NewDino(9, c.name, SceneDesert)
+		d := NewDino(9, c.name, CharacterTRex, SceneDesert)
 		d.Draw(76, 31)
 		if len(d.air) != 2 || d.runnerX(1) != d.runnerX(0)+d.runnerW(0)+runnerGap || d.runnerW(0) != c.w0 || d.runnerW(1) != c.w1 {
 			t.Fatalf("%s: runners at %d (%d wide) and %d (%d wide)", c.name, d.runnerX(0), d.runnerW(0), d.runnerX(1), d.runnerW(1))
@@ -117,12 +141,12 @@ func TestTwoRunnersJumpOnTheirOwn(t *testing.T) {
 
 // Nothing runs before the first draw, and a run is its seed.
 func TestDinoIsItsSeed(t *testing.T) {
-	d := NewDino(7, RunnerBig, SceneGrass)
+	d := NewDino(7, RunnerBig, CharacterTRex, SceneGrass)
 	d.Step()
 	if d.t != 0 {
 		t.Error("stepped before it was drawn")
 	}
-	a, b := NewDino(7, RunnerBig, SceneGrass), NewDino(7, RunnerBig, SceneGrass)
+	a, b := NewDino(7, RunnerBig, CharacterTRex, SceneGrass), NewDino(7, RunnerBig, CharacterTRex, SceneGrass)
 	a.Draw(76, 31)
 	b.Draw(76, 31)
 	for i := 0; i < 300; i++ {
@@ -132,7 +156,7 @@ func TestDinoIsItsSeed(t *testing.T) {
 	if !reflect.DeepEqual(a.Draw(76, 31), b.Draw(76, 31)) {
 		t.Error("two runs from one seed differ")
 	}
-	if reflect.DeepEqual(a.Draw(76, 31), NewDino(8, RunnerBig, SceneGrass).Draw(76, 31)) {
+	if reflect.DeepEqual(a.Draw(76, 31), NewDino(8, RunnerBig, CharacterTRex, SceneGrass).Draw(76, 31)) {
 		t.Error("a different seed is the same run")
 	}
 	// A resize keeps the run going, the clouds back in the sky.
@@ -165,7 +189,7 @@ func TestArtByName(t *testing.T) {
 		{"nonsense", []int{12}},
 	} {
 		var got []int
-		for _, f := range runnerOf(c.name).figures {
+		for _, f := range runnerOf(c.name, CharacterTRex).figures {
 			got = append(got, f.air.w())
 		}
 		if !reflect.DeepEqual(got, c.widths) {
@@ -242,7 +266,7 @@ func TestJumpIsTheObstaclesSize(t *testing.T) {
 	for _, scene := range Scenes {
 		for _, runner := range []string{RunnerBig, RunnerSmall} {
 			for kind, o := range sceneOf(scene).obstacles {
-				d := NewDino(3, runner, scene)
+				d := NewDino(3, runner, CharacterTRex, scene)
 				d.Draw(76, 31)
 				d.gap = 1000 // nothing else is due
 				d.obs = []obstacle{{x: 60, kind: kind}}
@@ -278,5 +302,41 @@ func TestBesideAlignsTheBottoms(t *testing.T) {
 	}
 	if got[0] != "......#.." || got[6] != ".#....#.." {
 		t.Errorf("rows:\n%s\n%s", got[0], got[6])
+	}
+}
+
+// Every character comes big and small (user, 2026-10-06): each as wide
+// as the T-Rex of its size, twelve or eight, which the jumps are timed
+// to, and no taller than it; its three poses one height, and its two
+// running ones not the same, or it would not run. A runner's figures
+// are the character's, in the runner's sizes; an unknown character is
+// the T-Rex.
+func TestEveryCharacterFitsTheRun(t *testing.T) {
+	for _, c := range Characters {
+		for i, f := range cast[c] {
+			w, h := trex.air.w(), trex.air.h()
+			if i == 1 {
+				w, h = smallTRex.air.w(), smallTRex.air.h()
+			}
+			for _, p := range []sprite{f.run[0], f.run[1], f.air} {
+				if p.h() != f.air.h() || p.h() > h {
+					t.Errorf("%s %d: a pose %d tall, the air %d, at most %d", c, i, p.h(), f.air.h(), h)
+				}
+				for _, row := range p {
+					if len(row) != w {
+						t.Fatalf("%s %d: a row %d wide, want %d: %q", c, i, len(row), w, row)
+					}
+				}
+			}
+			if reflect.DeepEqual(f.run[0], f.run[1]) {
+				t.Errorf("%s %d: its two running poses are the same", c, i)
+			}
+		}
+	}
+	if got := runnerOf(RunnerSmallBig, CharacterCat).figures; !reflect.DeepEqual(got, []figure{smallCat, cat}) {
+		t.Errorf("small-big cats: %v", got)
+	}
+	if got := runnerOf(RunnerBig, "dragon").figures; !reflect.DeepEqual(got, []figure{trex}) {
+		t.Errorf("an unknown character: %v", got)
 	}
 }

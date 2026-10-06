@@ -175,7 +175,7 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	seed := uint64(time.Now().UnixNano())
 	switch s.Saver {
 	case saver.KindDino:
-		m.game = saver.NewDino(seed, s.Runner, s.Scene)
+		m.game = saver.NewDino(seed, s.Runner, s.Character, s.Scene)
 	case saver.KindBounce:
 		m.game = saver.NewBounce(seed, time.Now, func(l string) []string { return spell(faceShort, l) })
 	case saver.KindSnake:

@@ -11,10 +11,12 @@ import (
 // them by itself, for ever. Nobody plays it: a jump is timed to clear
 // what is coming, at a random moment inside the window that clears it,
 // and now and then there is a jump for nothing when the way is clear
-// (user, 2026-09-24: endless, random obstacles, random jumps). Two of
-// its settings pick the art — the runner and the scene. Runners: a big
-// T-Rex, a small one, or two of either size one behind the other, each
-// jumping on its own (user, 2026-09-25: the six ways). Scenes:
+// (user, 2026-09-24: endless, random obstacles, random jumps). Three
+// of its settings pick the art — the runner, the character and the
+// scene. Runners: a big one, a small one, or two of either size one
+// behind the other, each jumping on its own (user, 2026-09-25: the six
+// ways). Characters: the T-Rex, a cat, a rabbit, a horse, Pac-Man's
+// ghost (user, 2026-10-06), any of them in any of the six. Scenes:
 // grassland, with cacti; the desert, with pyramids — either's in three
 // sizes, small, medium and large (user, 2026-09-25: there had been
 // only small and medium), and the jump is as high as the size asks
@@ -41,12 +43,21 @@ const (
 	RunnerBigSmall   = "big-small"
 	SceneGrass       = "grassland"
 	SceneDesert      = "desert"
+
+	// Who runs (user, 2026-10-06): the T-Rex, as it always was, or
+	// another, in either size.
+	CharacterTRex   = "t-rex"
+	CharacterCat    = "cat"
+	CharacterRabbit = "rabbit"
+	CharacterHorse  = "horse"
+	CharacterGhost  = "ghost"
 )
 
 var (
-	Kinds   = []string{KindClock, KindDino, KindBounce, KindSnake, KindCustom}
-	Runners = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
-	Scenes  = []string{SceneGrass, SceneDesert}
+	Kinds      = []string{KindClock, KindDino, KindBounce, KindSnake, KindCustom}
+	Runners    = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
+	Characters = []string{CharacterTRex, CharacterCat, CharacterRabbit, CharacterHorse, CharacterGhost}
+	Scenes     = []string{SceneGrass, SceneDesert}
 )
 
 // DinoFrame is the time between two frames: fourteen a second.
@@ -218,15 +229,188 @@ var smallTRex = figure{
 	air: append(append(sprite{}, smallTRexBody...), "...#.#..", "...#.#.."),
 }
 
-// runnerArts is the art each runner name picks: its figures as the
-// name reads them, back to front.
-var runnerArts = map[string]runnerArt{
-	RunnerBig:        {figures: []figure{trex}},
-	RunnerSmall:      {figures: []figure{smallTRex}},
-	RunnerBigBig:     {figures: []figure{trex, trex}},
-	RunnerSmallSmall: {figures: []figure{smallTRex, smallTRex}},
-	RunnerSmallBig:   {figures: []figure{smallTRex, trex}},
-	RunnerBigSmall:   {figures: []figure{trex, smallTRex}},
+// The other characters (user, 2026-10-06), each as wide as the T-Rex
+// of its size — twelve, or eight — which the jumps are timed to, and
+// no taller: they are lower, and the run has the room it always had.
+
+// A cat at a gallop, its tail up behind, its ears pricked: twelve wide
+// and nine tall.
+var catBody = sprite{
+	"#.......#..#",
+	"#.......####",
+	".#......#.##",
+	".#......####",
+	"..##########",
+	"..#########.",
+	"...########.",
+}
+
+var cat = figure{
+	run: [2]sprite{
+		append(append(sprite{}, catBody...), "..#......#..", ".#........#."),
+		append(append(sprite{}, catBody...), "....#...#...", "....#...#..."),
+	},
+	air: append(append(sprite{}, catBody...), ".##......##.", "#..........#"),
+}
+
+// A small cat, eight wide and six tall.
+var smallCatBody = sprite{
+	"#...#..#",
+	".#..####",
+	"..######",
+	"..#####.",
+}
+
+var smallCat = figure{
+	run: [2]sprite{
+		append(append(sprite{}, smallCatBody...), "..#...#.", ".#.....#"),
+		append(append(sprite{}, smallCatBody...), "...#.#..", "...#.#.."),
+	},
+	air: append(append(sprite{}, smallCatBody...), ".#....#.", "#......#"),
+}
+
+// A rabbit, ears up, hopping: twelve wide and thirteen tall.
+var rabbitBody = sprite{
+	".......#.#..",
+	".......#.#..",
+	".......#.#..",
+	"......#####.",
+	"......##.###",
+	"......######",
+	"..#########.",
+	".##########.",
+	"##########..",
+	".#########..",
+	"..#######...",
+}
+
+var rabbit = figure{
+	run: [2]sprite{
+		append(append(sprite{}, rabbitBody...), "..#.....#...", ".##.....##.."),
+		append(append(sprite{}, rabbitBody...), "...#...#....", "..##...##..."),
+	},
+	air: append(append(sprite{}, rabbitBody...), ".##......#..", "#.........#."),
+}
+
+// A small rabbit, eight wide and ten tall.
+var smallRabbitBody = sprite{
+	".....#.#",
+	".....#.#",
+	"....####",
+	"....#.##",
+	"..######",
+	"#######.",
+	".######.",
+	"..####..",
+}
+
+var smallRabbit = figure{
+	run: [2]sprite{
+		append(append(sprite{}, smallRabbitBody...), "..#..#..", ".##..##."),
+		append(append(sprite{}, smallRabbitBody...), "...##...", "..#..#.."),
+	},
+	air: append(append(sprite{}, smallRabbitBody...), ".#....#.", "#......#"),
+}
+
+// A horse at a gallop, its neck reaching forward, its tail streaming:
+// twelve wide and twelve tall.
+var horseBody = sprite{
+	"..........#.",
+	".........###",
+	"........##.#",
+	".......#####",
+	"......###...",
+	".....###....",
+	"#.#######...",
+	"##########..",
+	".#########..",
+}
+
+var horse = figure{
+	run: [2]sprite{
+		append(append(sprite{}, horseBody...), "..#.....#...", ".#.......#..", "#.........#."),
+		append(append(sprite{}, horseBody...), "..#.....#...", "...#...#....", "...#...#...."),
+	},
+	air: append(append(sprite{}, horseBody...), ".#.......#..", "#.........#.", "............"),
+}
+
+// A small horse, eight wide and nine tall.
+var smallHorseBody = sprite{
+	"......#.",
+	".....###",
+	"....#.##",
+	"...###..",
+	"#.####..",
+	"######..",
+	".#####..",
+}
+
+var smallHorse = figure{
+	run: [2]sprite{
+		append(append(sprite{}, smallHorseBody...), ".#...#..", "#.....#."),
+		append(append(sprite{}, smallHorseBody...), "..#.#...", "..#.#..."),
+	},
+	air: append(append(sprite{}, smallHorseBody...), "#.....#.", "........"),
+}
+
+// Pac-Man's ghost, looking the way it goes: no legs, its skirt swaying
+// from one frame to the next; twelve wide and twelve tall.
+var ghostBody = sprite{
+	"....####....",
+	"..########..",
+	".##########.",
+	".####..##..#",
+	"#####..##..#",
+	"############",
+	"############",
+	"############",
+	"############",
+}
+
+var ghost = figure{
+	run: [2]sprite{
+		append(append(sprite{}, ghostBody...), "############", "##.###.###.#", "#...#...#..."),
+		append(append(sprite{}, ghostBody...), "############", "#.###.###.##", "...#...#...#"),
+	},
+	air: append(append(sprite{}, ghostBody...), "############", "##.###.###.#", "#...#...#..."),
+}
+
+// A small ghost, eight wide and eight tall.
+var smallGhostBody = sprite{
+	"..####..",
+	".######.",
+	"###.##.#",
+	"###.##.#",
+	"########",
+	"########",
+}
+
+var smallGhost = figure{
+	run: [2]sprite{
+		append(append(sprite{}, smallGhostBody...), "########", "#.##.##."),
+		append(append(sprite{}, smallGhostBody...), "########", ".##.##.#"),
+	},
+	air: append(append(sprite{}, smallGhostBody...), "########", "#.##.##."),
+}
+
+// formations is what each runner name puts on the ground, back to
+// front: true a big one, false a small one.
+var formations = map[string][]bool{
+	RunnerBig:        {true},
+	RunnerSmall:      {false},
+	RunnerBigBig:     {true, true},
+	RunnerSmallSmall: {false, false},
+	RunnerSmallBig:   {false, true},
+	RunnerBigSmall:   {true, false},
+}
+
+// cast is each character, big and small.
+var cast = map[string][2]figure{
+	CharacterTRex:   {trex, smallTRex},
+	CharacterCat:    {cat, smallCat},
+	CharacterRabbit: {rabbit, smallRabbit},
+	CharacterHorse:  {horse, smallHorse},
+	CharacterGhost:  {ghost, smallGhost},
 }
 
 var (
@@ -319,13 +503,27 @@ var (
 	}
 )
 
-// runnerOf and sceneOf are the art a name picks; an unknown name is the
-// first choice, as a saver with no such setting would be.
-func runnerOf(name string) runnerArt {
-	if a, ok := runnerArts[name]; ok {
-		return a
+// runnerOf and sceneOf are the art a name picks: the runner's figures,
+// back to front, drawn as the character; an unknown name is the first
+// choice, as a saver with no such setting would be.
+func runnerOf(name, character string) runnerArt {
+	sizes, ok := formations[name]
+	if !ok {
+		sizes = formations[Runners[0]]
 	}
-	return runnerArts[Runners[0]]
+	who, ok := cast[character]
+	if !ok {
+		who = cast[Characters[0]]
+	}
+	var a runnerArt
+	for _, big := range sizes {
+		if big {
+			a.figures = append(a.figures, who[0])
+		} else {
+			a.figures = append(a.figures, who[1])
+		}
+	}
+	return a
 }
 
 func sceneOf(name string) sceneArt {
@@ -353,12 +551,12 @@ type Dino struct {
 type obstacle struct{ x, kind int }
 type cloud struct{ x, y int }
 
-// NewDino is a run from its first frame, with the art runner and scene
-// name. The same seed is the same run.
-func NewDino(seed uint64, runner, scene string) *Dino {
+// NewDino is a run from its first frame, with the art runner, character
+// and scene name. The same seed is the same run.
+func NewDino(seed uint64, runner, character, scene string) *Dino {
 	d := &Dino{
 		rng:    rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
-		runner: runnerOf(runner),
+		runner: runnerOf(runner, character),
 		scene:  sceneOf(scene),
 		gap:    firstGap,
 	}

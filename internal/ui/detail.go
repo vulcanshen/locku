@@ -47,6 +47,7 @@ const (
 	rowTime
 	rowDate
 	rowRunner
+	rowCharacter
 	rowScene
 	rowCommand // a custom saver's program
 	rowSwatch
@@ -213,6 +214,7 @@ func fieldRows(p config.Profile) []row {
 		// (user, 2026-09-24).
 		return []row{
 			{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
+			{kind: rowCharacter, label: "character", value: p.Character, color: value, stop: true},
 			{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true},
 		}
 	}
