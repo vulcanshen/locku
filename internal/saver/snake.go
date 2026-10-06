@@ -18,12 +18,15 @@ import (
 //
 // The rest is the user's, the same day. It has a head: two pixels over
 // the body's line, the snout a pixel ahead of it (it was three square
-// with an eye, and too big). The move before an apple it opens its
-// mouth: the head goes back a segment, and where it was are the upper
-// lip and, across the line, the lower — two pixels each, the node
-// between them dark — so the jaws close on the apple; the move it eats,
-// the mouth is shut again and a pixel of lump stands behind the head.
-// The apple blinks in the colour the snake turns when it eats it — a colour at random, another each
+// with an eye, and too big). The move before an apple — the apple the
+// next cell — it opens its jaws on it: they reach along the link to the
+// apple, the upper lip and, across the line, the lower, two pixels
+// each, the mouth between them the pixel next to the apple, and the
+// crown a pixel back; the line runs on to the mouth, so nothing of the
+// snake falls short (the head went back a segment at first, and the
+// snake looked broken). The move it eats, the mouth is shut again and a
+// pixel of lump stands behind the head. The apple blinks in the colour
+// the snake turns when it eats it — a colour at random, another each
 // time — and an apple eaten is a lump that runs down the body to the
 // tail, a segment a move, and is gone (it stayed where it was swallowed
 // at first, as on the Nokia). The snake is the longer for it at once,
@@ -71,10 +74,10 @@ var (
 	// The head: the snout ahead, the node and the link behind, and the
 	// crown over the node and the link's first pixel.
 	snakeHead = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}}
-	// The mouth open: the crown a segment back, over the next node and
-	// its link; the upper lip where the crown was, the lower lip across
-	// the line from it; the node between them dark, the snout gone.
-	snakeOpen = shape{{1, 0}, {2, 0}, {3, -1}, {4, -1}, {0, -1}, {1, -1}, {0, 1}, {1, 1}}
+	// The mouth open on the apple ahead: the line on to the link's
+	// nearer pixel, the lips over and under the link, the mouth the pixel
+	// next to the apple between them; the crown a pixel back.
+	snakeOpen = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {-2, -1}, {-1, -1}, {-2, 1}, {-1, 1}, {1, -1}, {2, -1}}
 	// Swallowing: the mouth shut, a pixel of lump behind the crown.
 	snakeSwallow = shape{{-1, 0}, {0, 0}, {1, 0}, {2, 0}, {0, -1}, {1, -1}, {4, -1}}
 	// A lump: an apple on its way through, two pixels as the crown is
