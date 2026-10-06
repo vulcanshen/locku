@@ -25,7 +25,7 @@ func litIn(sc Scene, x0, y0, x1, y1 int) int {
 	n := 0
 	for y := max(0, y0); y < min(sc.H, y1); y++ {
 		for x := max(0, x0); x < min(sc.W, x1); x++ {
-			if sc.Pix[y*sc.W+x] {
+			if sc.Pix[y*sc.W+x] != 0 {
 				n++
 			}
 		}
@@ -65,7 +65,7 @@ func TestDinoNeverHitsAnything(t *testing.T) {
 				// The ground line runs the whole width, two rows up from
 				// the bottom, and every runner stands on it.
 				for x := 0; x < sz[0]; x++ {
-					if !sc.Pix[(sz[1]-groundH)*sz[0]+x] {
+					if sc.Pix[(sz[1]-groundH)*sz[0]+x] == 0 {
 						t.Fatalf("%dx%d: no ground at %d", sz[0], sz[1], x)
 					}
 				}

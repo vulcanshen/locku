@@ -179,7 +179,7 @@ func clear(b board, x1, y1, x2, y2 int) board {
 	c := b.clone()
 	for y := y1; y < y2; y++ {
 		for x := x1; x < x2; x++ {
-			c.lit[y*c.w+x] = false
+			c.ink[y*c.w+x] = inkOff
 		}
 	}
 	return c
@@ -254,7 +254,7 @@ func TestSceneFitsAndPaints(t *testing.T) {
 		{1, 300, 90, 1, 150, 90},
 		{2, 40, 12, 1, 20, 12}, // too small at any scale: 1, and the game clips
 	} {
-		if k, w, h := fitScene(c.size, c.cols, c.rows); k != c.k || w != c.w || h != c.h {
+		if k, w, h := fitScene(saver.Room{W: 40, H: 28, Most: c.size}, c.cols, c.rows); k != c.k || w != c.w || h != c.h {
 			t.Errorf("size %d on %dx%d: k %d scene %dx%d, want k %d %dx%d", c.size, c.cols, c.rows, k, w, h, c.k, c.w, c.h)
 		}
 	}
@@ -276,7 +276,7 @@ func TestSceneFitsAndPaints(t *testing.T) {
 	// pixels, each four cells.
 	lit := 0
 	for _, p := range sc.Pix {
-		if p {
+		if p != 0 {
 			lit++
 		}
 	}
@@ -296,7 +296,7 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 			l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
 			var out []string
 			if len(l.blocks) > 0 {
-				out = boardRows(paint(faceTall, l, cols, rows), bg, fg, fg, cols)
+				out = boardRows(paint(faceTall, l, cols, rows), []lipgloss.Color{bg, fg}, cols)
 			} else {
 				out = plainRows(plain, bg, fg, cols, rows)
 			}
