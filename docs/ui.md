@@ -43,7 +43,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
-複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、dino、bounce、custom），它們沒有名字、名字就是自己，不能新增刪除；
+複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、dino、bounce、snake、custom），它們沒有名字、名字就是自己，不能新增刪除；
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
@@ -57,18 +57,18 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 
 | 列 | 值 |
 |---|---|
-| saver | `clock` / `dino` / `bounce` / `custom` |
-| what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；custom 是 your own program, on a terminal of its own, as the saver |
+| saver | `clock` / `dino` / `bounce` / `snake` / `custom` |
+| what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；dino：runner / scene；這兩種再 bg / fg 各一色票列加 R G B；custom：只有 command，沒有顏色列；bounce：什麼都沒有，沒有顏色列（2026-10-06） |
+| （預設值） | clock：layout / size / font / time / date；dino：runner / scene；這兩種再 bg / fg 各一色票列加 R G B；custom：只有 command，沒有顏色列；bounce：什麼都沒有，沒有顏色列；snake：只有 bg / fg（2026-10-06） |
 
 `[2]` 在 profile 上：
 
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
-| saver | `clock` / `dino` / `bounce` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
+| saver | `clock` / `dino` / `bounce` / `snake` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；dino 沒有 size，畫布自己取最大） |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |

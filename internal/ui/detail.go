@@ -90,6 +90,7 @@ var about = map[string]string{
 	saver.KindClock:  "the time and the date, on the LED board",
 	saver.KindDino:   "the offline dino run, jumping by itself, for ever",
 	saver.KindBounce: "the time in a box, bouncing, changing colour",
+	saver.KindSnake:  "the Nokia snake, playing itself till the board is full",
 	saver.KindCustom: "your own program, on a terminal of its own, as the saver",
 }
 
@@ -192,10 +193,10 @@ func (m AppModel) anyDirty() bool {
 
 // fieldRows is a saver's own settings for p: the clock's shapes and
 // size, the run's runner and scene, the custom saver's command — or
-// none, the bouncing box's (user, 2026-10-06).
+// none, the bouncing box's and the snake's (2026-10-06).
 func fieldRows(p config.Profile) []row {
 	value := valueColor
-	if p.Saver == saver.KindBounce {
+	if p.Saver == saver.KindBounce || p.Saver == saver.KindSnake {
 		return nil
 	}
 	if p.Saver == saver.KindCustom {

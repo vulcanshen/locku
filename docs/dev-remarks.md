@@ -28,7 +28,7 @@ locku/
 │   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN、pin_hash 重讀、NewPIN、data 目錄
 │   ├── custom/         custom saver：程式在 pty 上、輸出經 screen writer 直通、PIN 框疊在畫面上、按鍵留給 locku、結束的字（2026-09-25）
 │   ├── login/          `locku pin reset` 的登入密碼驗證：su 在 pty 上（2026-09-25）
-│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；會動的 saver 共用的 Game 介面與場景（game.go）；dino 的跑者、場景、障礙與自動跳躍；custom 結束的 Word
+│   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；會動的 saver 共用的 Game 介面與場景（game.go）；dino 的跑者、場景、障礙與自動跳躍；bounce 的框；snake 的環與近路；custom 結束的 Word
 │   ├── setup/          受管區塊寫入：tmux.conf（跑著的 server 整塊 source-file）、screenrc、shell rc
 │   ├── termreply/      鎖定時從讀到的輸入拿掉終端機的回答（OSC、DCS、CSI 回報），只留按鍵；鎖開始時清空已在等的輸入（2026-09-28）
 │   ├── tmux/           鎖定中對 tmux 立 / 清 @locked 旗
@@ -42,9 +42,10 @@ locku/
 
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。攔不到的東西（function.md §0.1、§2.3）：ssh 的 `~.`、Linux VT 切換、另一條 SSH 的 `tmux attach -d` / `kill -9`、終端機模擬器自身的快捷鍵。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
-- **saver 是 class、profile 是 object（2026-09-24 定案）。** 四種 saver：clock、dino、bounce（2026-10-06），與 custom——你自己的程式（2026-09-25）；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（big / small 一隻大或小暴龍，big-big / small-small / small-big / big-small 兩隻一前一後、名字就是畫面由左到右的順序、各自跳各自的；2026-09-25 定案，舊的 trex / two-trex 自動轉）、scene（grassland 仙人掌，或 desert 金字塔）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
+- **saver 是 class、profile 是 object（2026-09-24 定案）。** 五種 saver：clock、dino、bounce、snake（2026-10-06），與 custom——你自己的程式（2026-09-25）；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（big / small 一隻大或小暴龍，big-big / small-small / small-big / big-small 兩隻一前一後、名字就是畫面由左到右的順序、各自跳各自的；2026-09-25 定案，舊的 trex / two-trex 自動轉）、scene（grassland 仙人掌，或 desert 金字塔）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
 - **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿用該通道自己的顏色畫（R 列 `#RR0000`），改的是草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。custom 沒有顏色；bounce 的顏色是它自己的，也沒有（2026-10-06，`saver.Coloured`）。
 - **bounce：反彈框（2026-10-06）。** `internal/saver/bounce.go`。框 23 × 11 px：`HH MM` 的 3x5 字加 2 px 留白加框線；點陣字留在 ui，`NewBounce` 收一個 `spell`（ui 的 `spell(faceShort, …)`，跟 clock 畫在板子上的逐像素相同，有測試）與取時間的函式，所以 `Game` 介面不用帶時間。每軸 `bounceAxis`：走 1 px，到 0 或 span 就反向並回報碰到；兩軸同一幀都碰到是角落，開始閃（`flash` 幀數 = 顏色數 × 2，每幀下一色），只有一軸是換一個不同的隨機色。場景比框小的那一軸 span ≤ 0 就不動、不算碰到，否則窄終端會每幀換色。resize 時框留在原處、塞不下就靠邊。
+- **snake：貪食蛇（2026-10-06）。** `internal/saver/snake.go`。`hamilton(cw, ch)` 造環：列數偶數就從第二欄起來回走、最後沿第一欄回去；列數奇數就轉 90 度；兩邊都奇數就丟最後一欄（測試掃過 1–12 × 1–12）。不撞自己只靠一個不變量：沿著環，身體依序在頭後面，頭前面到尾巴之間全空；抄近路距離 < 到尾巴的距離就維持得住（測試每一步驗：尾巴往前經過每一節到頭、再到尾巴，剛好一圈）。近路的上限 `min(到尾巴 − 蛇長 − 3, 到果子)`，蛇過半盤時這個值自然小於 0，所以參考作法裡「過半不抄」與「果子後空間大時少抄」兩條拿掉。退路是環上的下一格：空的，或尾巴（同一步會讓開）。果子在剩下的空格隨機。預設色原本是 Nokia 的淡綠當底、深綠當點，vhs 實拍整面亮成一道牆，同日改成深綠當底；沒寫或寫錯的顏色拿那種 saver 自己的預設（`tidy` 的 `d.BG` / `d.FG`，原本一律 `DefaultBG` / `DefaultFG`）。
 - **設定畫面的細節**：`[1]` 的 `P` 無效（`p` 才是游標那列），profile 列 `a` 直接設為啟用（決定 41，2026-09-25）；每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊——`[2]` 名字（草稿未存接黃色 `unsaved`，只有 focus 時亮）、`[1] locku`，沒有種類 tag、沒有底部 hint；`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改；`activate` 是「區塊在不在檔案裡」，Enter 後 confirm 才寫，路徑沒填就 disabled 並說明；區塊只碰 `# >>> locku >>>` … `# <<< locku <<<`，每行尾巴 `# locku`，冪等；preview 不驗 PIN。
 - **Enter = 進 `[2]` / 編輯 / 送出，Esc 只做取消，`X` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。
 - **環境變數照家族的 `LOCKU__NAME`（2026-09-29，tdp D6）。** app 名後兩個底線：`LOCKU__CONFIG`（設定目錄）、`LOCKU__DATA`（資料目錄）、`LOCKU__ICON_WIDTH`、測試用的 `LOCKU__DUMP`。舊名 `LOCKU_CONFIG`、`LOCKU_DATA`（v0.1.3 已發佈）不再讀、不留相容（user 裁定），CHANGELOG 寫了新舊對照；`uninstall.sh` 與三個 e2e 腳本一起改。
@@ -68,7 +69,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 - **未做：更多 saver 的點子**（2026-09-27 與使用者發想，沒有要動手）。前提是畫面全部自己跑（任何鍵就離開）；貴的不是像素多，而是每幀變動的像素多——只重畫有變的，所以稀疏的便宜、整面變的貴，後者要壓更新頻率。
   - **dino 的時段配色**：跟本機時間走日出、白晝、黃昏、黑夜、凌晨，每個時段有恐龍、地板、障礙物、天空、雲、日、月各自的顏色，時段之間用約兩分鐘漸層；漸層在 OKLCH 內插（RGB 內插黃昏會發灰），天空幾秒換一階；日月走弧線，夜裡稀疏的暗星。做成選項（如 `palette: auto`）而不拿掉 `bg` / `fg`；256 色終端機上漸層會跳階。
   - **dino 換角色**：貓、兔子、馬、太空船躲隕石、小精靈的鬼；限制在角色高度，要留地板與障礙物的空間。
-  - **Nokia 風格**：自己玩的貪食蛇（走一條遍歷全格的路線，保證填滿再重來，每幀只動頭尾）、Conway 生命遊戲、Langton 螞蟻、自己打的 Pong / 打磚塊 / 俄羅斯方塊。
+  - **Nokia 風格**：貪食蛇做了（2026-10-06）；還有 Conway 生命遊戲、Langton 螞蟻、自己打的 Pong / 打磚塊 / 俄羅斯方塊。
   - **其他**：便宜的有星空飛行、雨 / 雪、煙火、迷宮生成與走迷宮、2D 水管、排序視覺化；貴的有 Doom 火焰、plasma、熔岩燈。
   - **貴的效果照做，告訴使用者**（2026-09-27，使用者）：不因耗電而不做，在該 saver 的說明寫「比較耗電」，讓使用者自己選。但幀率仍要有上限：輸出塞滿時 PIN 框的按鍵回應會變慢，經 SSH 更明顯，那是功能問題，不只是耗電。
   - **底層**：這些共用同一套——像素各有顏色、定時更新、只重畫有變的。2026-10-06 動手前定案：板子的每格是一種**墨**（`board.ink`，0 是暗、其他是亮，各一個顏色），場景也是（`saver.Scene.Pix`）；顏色由畫板子的人給（`boardRows(b, inks, cols)`）。會動的 saver 共用 `saver.Game`（`Room` / `Step` / `Draw` / `Next`），場景要多大、最多放大幾倍是各自的 `Room`，dino 是第一個搬上去的。顏色（使用者定案）：**多色的 saver 自帶配色，沒有 bg / fg**，跟 custom 一樣不給設定（實作 `saver.Inked`）；只用兩色的照舊是 profile 的 bg / fg。搬的時候拿改之前後各種 clock、EXIT、dino 的鎖定畫面逐位元組比過，一樣。

@@ -158,7 +158,7 @@ custom saver（5.5）是同一張圖：saver 是程式自己的畫面，prompt �
 
 已決（2026-09-24）：saver 只決定「顯示什麼」，畫布只有一種畫法。
 
-- **saver** 是種類——class：clock、dino、bounce、custom。它決定怎麼產生內容，輸出不帶任何樣式：clock 是幾行 ASCII 文字；dino 是一張自己像素座標的點陣圖（2026-09-24 加入第二種），bounce 也是（2026-10-06）；custom 不產內容，程式自己畫在 locku 給它的 pty 上，畫布只在它結束時接手（2026-09-25 加入第三種，5.5）。
+- **saver** 是種類——class：clock、dino、bounce、snake、custom。它決定怎麼產生內容，輸出不帶任何樣式：clock 是幾行 ASCII 文字；dino 是一張自己像素座標的點陣圖（2026-09-24 加入第二種），bounce 與 snake 也是（2026-10-06）；custom 不產內容，程式自己畫在 locku 給它的 pty 上，畫布只在它結束時接手（2026-09-25 加入第三種，5.5）。
 - **profile** 是具名實例——object：一種 saver 加上它的參數與顏色，有名字；config 裡 `profile` 指向的、鎖定畫面顯示的，都是 profile（2026-09-24 定案，使用者以 OOP 分：class 不用取名、object 才有名字，能新增的是 profile、新增時先選 saver）。
 - **畫布**把文字用 terminu family splash 的像素風格畫出來、把點陣圖依 size 放大鋪滿，依終端機格數自動選縮放，見 5.3。saver 碰不到顏色、字形、位置——自帶配色的 saver 例外：它說出自己的顏色、沒有 bg / fg（2026-10-06，使用者定案；目前是 bounce）。custom 不經畫布。
 
@@ -169,6 +169,7 @@ custom saver（5.5）是同一張圖：saver 是程式自己的畫面，prompt �
 | clock | `layout` row / column；`size` small / medium / large；`font` 3x7 / 3x5；`time` `HH MM` / `HH MM SS`；`date` off 或四選一；`bg` / `fg` 兩個顏色 | row：一列時間，date 不是 off 時第二列日期；column：依分隔符拆行，`HH` / `MM` / `SS`，日期再拆 `YYYY` / `MM` / `DD` | time 含秒為 1 秒，否則對齊整分每 60 秒 |
 | dino（2026-09-24） | `runner` 跑者（2026-09-25 修訂，六選一）：`big`（一隻大暴龍 12 × 14）、`small`（一隻小暴龍 8 × 10）、`big-big` / `small-small` / `small-big` / `big-small`（兩隻一前一後，名字就是畫面由左到右的順序——左邊在後、右邊在前，各自跳各自的）；舊值 `trex` / `two-trex` 讀成 `big` / `big-small`，下次存檔寫新名；`scene` 場景：`grassland`（草原，障礙物是仙人掌）、`desert`（沙漠，障礙物是金字塔，沙地斑點較疏）；`bg` / `fg` 兩個顏色。沒有 size（使用者：dino 也沒有 size 的選項），畫布自己取塞得下的最大倍率 | Chrome 離線小恐龍遊戲當螢幕保護：地面與障礙物向左捲、跑者自己跳過去，無限循環沒有人玩、不會死。障礙物隨機，分小 / 中 / 大三個等級（2026-09-25 修訂，使用者：原本只有小和中）：草原是小仙人掌 1 / 2 / 3 株（5 高）、中的高仙人掌（7 高）、大仙人掌（6 × 10，粗幹兩臂）；沙漠是小金字塔（3 或 4 高）、中金字塔（5 高）、大金字塔（13 × 7）、小加小；間距隨機 44 到 100 px；兩隻跑者各自看自己前面的障礙物、各自在自己的視窗裡隨機起跳，後面那隻的步伐差半步；跳躍在「跳得過」的那段視窗裡隨機挑一幀起跳，跳多高看前面那個障礙物的等級（2026-09-25 再修訂，使用者：現在高度都一樣）：小的低跳、中的中跳、大的高跳；前面沒東西時偶爾也無故跳一下，高度隨機三選一；雲以三分之一速度飄。不記分、不畫時間，畫面上只有場景（使用者 2026-09-24：dino 上面不需要計算時間和分數）。場景像素：跑者 12 × 14、跳躍弧三條、都是 16 幀，最高 6 / 8 / 11 px 對應小 / 中 / 大，各比該等級在兩個場景裡最高的障礙物（5 / 7 / 10）高一格，沙漠的金字塔較矮、同一條弧跳過去多留幾格（2026-09-25 再修訂，原本一條 11 px 跳所有東西；再之前 8 px，加高三格才跳得過大仙人掌）、每幀走 2 px，最小場景 40 × 28（同日修訂，原本 40 × 25：跑者 14 加跳 11 加地面 2 加一列天空） | 每 70 ms 一幀（14 fps），整張換、不做 reveal |
 | bounce（2026-10-06） | 沒有參數，也沒有 `bg` / `fg`：顏色是它自己的（使用者：多色的 saver 自帶配色、不給設定） | 舊錄影機的螢幕保護：一個框斜著飄，每幀各方向走 1 px，碰到邊就反彈、換一個跟現在不同的隨機顏色；剛好同時碰到兩個邊（撞進角落）就把所有顏色快速閃兩輪，一幀換一色。框裡是 `HH MM`（3x5 字型、跟 clock 同樣的字距），跟框同色，框線與字之間空 2 px，框 23 × 11 px（使用者：框裡放時間）。暗格 surface0 `#313244`，框的顏色是 splash gold 與 catppuccin-mocha 的 red、peach、yellow、green、teal、sky、blue、mauve、pink 十色。場景要三個框寬、三個框高（69 × 33 px），k 從 4 往下取，都不夠就 1、框照樣在裡面飄；比框還小的那個方向不動 | 每 100 ms 一幀（10 fps），整張換、不做 reveal |
+| snake（2026-10-06） | 沒有參數，只有 `bg` / `fg` 兩個顏色，預設是 Nokia 螢幕的兩種綠：暗格 `#43523d`、亮格 `#c7f0d8`（原本反過來、淡綠當底，整面亮成一道牆，同日改） | 老 Nokia 的貪食蛇，自己玩、不會輸：場景每 2 px 一格（一個節點、一格連線），格子沿一條走遍全格的環（Hamiltonian cycle：從第二欄起一列一列來回走，最後沿第一欄回到起點；列數是奇數就把盤面轉 90 度，兩邊都是奇數就留下最後一欄不走）。蛇在環上，頭前面到尾巴之間永遠是空的；抄近路只抄到頭前面那段、不超過果子、離尾巴留蛇長加 3 格，所以蛇超過半個盤面就只照環走——保證填滿。每節一個點，相連的兩節之間亮一格，並排但不相連的中間留暗（Nokia 6110 的樣子）；果子 4 幀亮 4 幀暗。開局 3 節、隨機位置；填滿停 3 秒再開新局；場景換尺寸也是新局。場景最少 31 × 19 px（16 × 10 格），k 最多 3；格子置中 | 每 80 ms 一步（12.5 fps），每步只動頭、尾與果子；整張換、不做 reveal |
 | custom（2026-09-25） | `command`：使用者自己的指令，`sh -c` 跑，畫面由它畫；沒有 `bg` / `fg`（使用者）——結束時的板子用預設色 | 不經畫布：程式在 locku 開的 pty 上跑，輸出經 locku 的 `screen` writer 原樣到終端機；PIN 框疊在它還在動的畫面上；程式結束（它不該結束）就換成 locku 的板子照實寫 `EXIT <code>`（`EXIT` 金字，數字 0 綠、其他 peach；沒跑起來是紅色的 `NONE`），見 5.5 | 無，由程式自己 |
 
 修訂（2026-09-24，第四輪）：`font` 新增，3x7 之外多一套 3x5（同樣直角、同樣 3 格寬，只有 5 列高），使用者要試；原本「第二套 3 × 5 字型」是在 5 × 7 時代否決的，那時它會是第二種畫法，現在字形已經是七段式，5 列只是把直線縮短，兩套並列讓使用者比，決定後留一套或都留。
@@ -189,7 +190,7 @@ profile 規則：
 - 預設一個 profile `clock`，就是 clock saver 的預設值生的。config 缺 `profiles` 時用它。
 - 新增（`[1]` 的 Savers 區塊在一種 saver 上按 `n`：要名字，預填 saver 自己的名字、用了就加號碼；以那種 saver 的預設值生出來）、duplicate（複製參數、要求新 name）、rename（連動 `profile` 指向）、delete。啟用中的不可刪，最後一個不可刪。
 - profile 的 saver 建立後不可改：class 就是 class，要換就新增一個 profile（2026-09-24 定案；同一天曾短暫讓 type 可在 `[2]` 改，那是 dino 剛加進來、還沒有 New 時的權宜）。
-- 四種 saver：clock、dino、bounce、custom（2026-09-25；bounce 2026-10-06）。前三種只是多一個產內容的函式，不動畫布；custom 不經畫布——程式自己畫，見 5.5。使用者自由輸入的 text saver 已移除（2026-09-24），內容不可控。
+- 五種 saver：clock、dino、bounce、snake、custom（2026-09-25；bounce、snake 2026-10-06）。前四種只是多一個產內容的函式，不動畫布；custom 不經畫布——程式自己畫，見 5.5。使用者自由輸入的 text saver 已移除（2026-09-24），內容不可控。
 
 saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 `savers` 有一組預設值，欄位跟它的 profile 一樣、只是沒有名字。它決定**之後**用這種 saver 新增的 profile 長什麼樣，改它不影響任何已存在的 profile；cursor 在 saver 上時 `[p]` 就用預設值跑一個臨時 profile 預覽。內建值（config 沒寫時）：
 
@@ -198,6 +199,7 @@ saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 
 | clock | layout row、size large、font 3x5、time `HH MM SS`、date `YYYY-MM-DD`、bg `#313244`、fg `#f2b753` |
 | dino | runner big、scene grassland、bg / fg 同上 |
 | bounce | 沒有預設值：沒有參數、沒有 bg / fg（2026-10-06） |
+| snake | bg `#43523d`、fg `#c7f0d8`（2026-10-06） |
 | custom | command 空；沒有 bg / fg（2026-09-25） |
 
 `[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`）。
@@ -240,7 +242,7 @@ resize 重算 k 整張重畫。動畫：第一幀直接出現不動畫；之後�
 
 dino 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一個讓場景（40 × 28 px；2026-09-25 修訂，跳躍弧加高前是 40 × 25）塞得下的，都塞不下就 1；沒有 size 設定；場景 w × h = 板的格數 ÷ k，地面因此貼滿整寬，右邊 / 下面除不盡的格留暗。每幀整張換掉、不做 reveal——世界在移動，不是內容在變。14 fps 不是閒置，CPU 會比時鐘高，這是遊戲 saver 的代價。
 
-會動的 saver 共用同一套（2026-10-06）：每種說出自己要的場景（最小幾 × 幾 px、最多放大幾倍），畫布照 dino 的作法取倍率；每格是一種墨，0 是暗格、其他是亮的，各一個顏色——兩色的 saver 用 profile 的 bg / fg，自帶配色的用它自己的。bounce 的場景是三個框寬、三個框高，k 最多 4。
+會動的 saver 共用同一套（2026-10-06）：每種說出自己要的場景（最小幾 × 幾 px、最多放大幾倍），畫布照 dino 的作法取倍率；每格是一種墨，0 是暗格、其他是亮的，各一個顏色——兩色的 saver 用 profile 的 bg / fg，自帶配色的用它自己的。bounce 的場景是三個框寬、三個框高，k 最多 4；snake 最少 31 × 19 px，k 最多 3。沒寫顏色或寫錯的 profile 拿它那種 saver 自己的預設色（snake 的綠，不是 clock 的 gold）。
 
 ### 5.4 狀態列
 
@@ -282,7 +284,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`（不帶 `-S` / `-t`）。原�
 - 設定或更改 PIN：輸入兩次確認，已有 PIN 時先驗舊的。
 - 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24）。
 - saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
-- profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，dino 的 runner、scene，custom 的 command，bounce 沒有參數；clock 與 dino 再有 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。custom 與 bounce 沒有顏色，也就沒有草稿與 `S` / `R`。
+- profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，dino 的 runner、scene，custom 的 command，bounce 與 snake 沒有參數；clock 與 dino 再有 bg / fg 兩個顏色，各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。custom 與 bounce 沒有顏色，也就沒有草稿與 `S` / `R`。
 - preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，或側欄 profile 列按 `a`（2026-09-25，使用者：不必每次到 preference 切）。
 - Integration（2026-09-25，使用者定案）：側欄第三個區塊，`tmux` 與 `screen` 各一項，`[2]` 的列：
   - **`activate`**（`on` / `off`）：區塊在不在 `config file path` 那個檔案裡，每次畫都讀檔。Enter → confirm → 執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 進去；screen 連 shell rc 一起寫、跑著的 session 即時 `screen -X`），off 拿掉（tmux server 上的、跑著的 screen session 上的一併拿掉）；路徑沒填時 disabled（2026-09-26 起只變暗，tdp M6）。
@@ -342,7 +344,7 @@ pin_hash: "$2a$10$..."   # 空或缺欄位 = 未設定 PIN，見 4.3
 profile: clock         # 啟用的 profile name，必須存在於 profiles
 profiles:
   - name: clock
-    saver: clock          # clock / dino / bounce / custom：這個 profile 是哪一種 saver，建立後不改
+    saver: clock          # clock / dino / bounce / snake / custom：這個 profile 是哪一種 saver，建立後不改
     layout: row           # row / column（依分隔符拆行）
     size: medium          # small / medium / large：一個字型像素佔 1 / 2 / 3 格見方
     font: 3x7             # 3x7 / 3x5：字型高 7 列或 5 列，都是 3 格寬
@@ -358,6 +360,10 @@ profiles:
     fg: "#f2b753"
   - name: box
     saver: bounce         # bounce（2026-10-06）：沒有任何參數，也沒有 bg / fg，顏色是它自己的
+  - name: nokia
+    saver: snake          # snake（2026-10-06）：沒有參數，只有兩個顏色
+    bg: "#43523d"
+    fg: "#c7f0d8"
   - name: matrix
     saver: custom         # custom（2026-09-25）：使用者自己的程式，見 5.5；沒有 bg / fg
     command: "cmatrix -b" # custom 才有：sh -c 跑的指令；空 = 未設，鎖定畫面的板子寫 NONE
@@ -379,6 +385,10 @@ savers:                # 每種 saver 的預設值：之後新增的 profile 長
     fg: "#f2b753"
   bounce:
     saver: bounce
+  snake:
+    saver: snake
+    bg: "#43523d"
+    fg: "#c7f0d8"
   custom:
     saver: custom
     command: ""
@@ -513,6 +523,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 41. （2026-09-25，使用者定案）側欄 profile 列多一個熱鍵 **`a` Activate**：鎖定畫面改用這個 profile，`●` 移過去、立刻寫檔；已啟用的 disabled。preference › profile 那列照舊，是同一個設定的另一個入口；Enter 維持進 `[2]`（9/24 否決的是用 Enter 設啟用，不是熱鍵）。用 `a`：`p` 是預覽、`D` / `r` / `X` 已用、`u` / `d` / `g` / `G` 是導覽，`a` 跟 `●` 的語意對上。
 
 42. （2026-10-06，使用者定案）第四種 saver **bounce**：舊錄影機那種螢幕保護，一個框在板子上飄，撞到邊就反彈、換色，撞進角落把所有顏色閃一輪；框裡放 `HH MM`（使用者三選一：時間、只有框、LOCKU 字樣）。多色的 saver **自帶配色、沒有 bg / fg**，跟 custom 一樣不給設定（使用者三選一：自帶配色；否決「墨＋可選的調色盤」與「只用 bg / fg 取漸層」）；bounce 因此沒有任何參數。畫布為此改成每格一種墨、會動的 saver 共用 `saver.Game`，見 5.3。同一批定的還有貪食蛇與 dino 換角色（`character` 新參數，`runner` 照舊是隊形）。
+
+43. （2026-10-06）第五種 saver **snake**：Nokia 的貪食蛇自己玩到填滿再重來（使用者 2026-09-27 的點子，同日選進第一批）。我的判斷（已告知使用者、可推翻）：沒有參數只有 bg / fg；預設色用 Nokia 的兩種綠，深的當底（淡綠當底實機看是一整面亮牆）；每格畫成節點加連線、果子會閃。走法是 Hamiltonian cycle 加安全的近路（只抄到頭前面那段空格、不越過果子、離尾巴留蛇長加 3 格），不會撞到自己，也一定填得滿；參考的作法（John Tapsell 的 Nokia snake AI）另有兩條規則——蛇超過半盤不抄、果子後面空間大時少抄——前者是多出來的（上面那條已經讓它抄不了），後者只影響快慢，都拿掉，240 格填滿從 9550 步變 9628 步。
 
 ## 11. 待決清單
 

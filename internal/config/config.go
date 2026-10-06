@@ -25,6 +25,11 @@ const (
 	// cell: the family splash's gold (ui.md §4).
 	DefaultBG = "#313244"
 	DefaultFG = "#f2b753"
+	// The snake's own defaults (2026-10-06): the Nokia screen's two
+	// greens, the dark one the ground as on every board — the pale one
+	// as the ground was a wall of light.
+	SnakeBG = "#43523d"
+	SnakeFG = "#c7f0d8"
 
 	// AuthPIN is the one auth method v1 knows. The key is in the file so a
 	// later `auth: pam` changes nothing about its shape (function.md §4.1).
@@ -187,6 +192,9 @@ func NewProfile(name, kind string) Profile {
 		// Nothing to set: no settings, and colours of its own (user,
 		// 2026-10-06).
 		return Profile{Name: name, Saver: kind}
+	case saver.KindSnake:
+		// Nothing to set but its two colours (2026-10-06).
+		return Profile{Name: name, Saver: kind, BG: SnakeBG, FG: SnakeFG}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -460,6 +468,8 @@ func tidy(p Profile, kind string) Profile {
 		return p
 	case kind == saver.KindBounce:
 		return Profile{Name: p.Name, Saver: kind}
+	case kind == saver.KindSnake:
+		p = Profile{Name: p.Name, Saver: kind, BG: p.BG, FG: p.FG}
 	case kind == saver.KindDino:
 		p.Command = ""
 		if p.Runner == "" {
@@ -492,10 +502,10 @@ func tidy(p Profile, kind string) Profile {
 		p.Runner, p.Scene = "", ""
 	}
 	if !ValidHex(p.BG) {
-		p.BG = DefaultBG
+		p.BG = d.BG
 	}
 	if !ValidHex(p.FG) {
-		p.FG = DefaultFG
+		p.FG = d.FG
 	}
 	p.BG, p.FG = strings.ToLower(p.BG), strings.ToLower(p.FG)
 	return p
