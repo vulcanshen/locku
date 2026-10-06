@@ -112,7 +112,7 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 | ── 分隔線 | Surface2 一條線，不可停：上面是 locku 的設定，下面是寫進工具設定檔的 key | 無 |
 | lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | options popup，兩個值；on 時改了立刻重寫區塊、server 換旗 |
 | lock-after-time（tmux）/ idle（screen） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱，activate on 時原樣寫進去、一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
-| bind-key（tmux）/ bind（screen） | 鍵照工具自己的寫法——tmux `l`、`C-l`、`F12`，screen `l`、`^L`；空顯示 `none`：prefix / C-a 之後按它就鎖，寫成 `bind-key <鍵> <lock>` / `bind <鍵> lockscreen`；screen 的 `C-a x` 內建就鎖，`?` 說明會講 | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → ` · one key, e.g. l or C-l`（screen：`l or ^L`）框留著 |
+| bind-key（tmux）/ bind（screen） | 鍵照工具自己的寫法——tmux `l`、`C-l`、`F12`，screen `l`、`^L`；空顯示 `none`：prefix / C-a 之後按它就鎖，寫成 `bind-key <鍵> <lock>` / `bind <鍵> lockscreen`；screen 的 `C-a x` 內建就鎖，`?` 說明會講 | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著 |
 
 **開一次，之後隨設即得**（2026-09-25，使用者定案）：`activate` on 時任何一列改動就直接重寫區塊、tmux 整塊套到 server、screen 即時送進跑著的 session，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完 toast 一行結果；off 就只寫 config.yaml，activate 仍由使用者開。
 `?` help 的鍵清單說 Enter 在 activate 上做什麼；focus 在這個 `[2]` 時 `?` 只有 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，screen 再多一條 `LOCKPRG`：鎖本體不是一列、住在 shell rc、新開 shell 才有。
@@ -207,14 +207,14 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
 | `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
-| input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；每個框都留，`command` 也是（2026-10-06：值裡有換行或 Tab 每個框都不收；之前 `command` 送出不會被拒，不留）；目前值當提議；清空 = 預設值；new profile 的 `name` 提議 saver 自己的名字、被用了就加號碼 |
+| input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；每個框都留，`command` 也是（2026-10-06：值裡有換行或 Tab 每個框都不收；之前 `command` 送出不會被拒，不留）；預填目前值——值直接在框裡、游標在尾端、可以接著改，不是 dim 的提議（提議只有 config file path，`ux.md` §2.1）；清空 = 預設值；new profile 的 `name` 預填 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / runner / scene / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
 | toast | toast | 寫檔失敗、`PIN set`、`PIN removed`（disabled 的列不跳 toast，2026-09-26，tdp M6；PIN 不一致 2026-09-28 起寫在 `confirm PIN` 的錯誤列，不再跳 toast） |
 
-new 與 duplicate 都是 `name` input popup：new 提議 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
-profile；duplicate 提議原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
+new 與 duplicate 都是 `name` input popup：new 預填 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
+profile；duplicate 預填原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
 PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`）：
 每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
 一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
