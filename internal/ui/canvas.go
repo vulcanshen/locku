@@ -376,7 +376,7 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // rightmost column blank (function.md §5.3). Under the PIN prompt the
 // lock fades whole, as drawn (LockModel.View). inks are the colours, one
 // an ink, the ground first; an ink past the end wears the last.
-func boardRows(b board, inks []lipgloss.Color, cols int) []string {
+func boardRows(b board, inks, ground []lipgloss.Color, cols int) []string {
 	styles := make([]lipgloss.Style, len(inks))
 	for i, c := range inks {
 		styles[i] = lipgloss.NewStyle().Foreground(c)
@@ -392,7 +392,11 @@ func boardRows(b board, inks []lipgloss.Color, cols int) []string {
 				run++
 			}
 			cells := strings.Repeat(pixelCell(), run-x)
-			sb.WriteString(styles[min(int(ink), len(styles)-1)].Render(cells))
+			style := styles[min(int(ink), len(styles)-1)]
+			if ink == inkOff && y < len(ground) {
+				style = lipgloss.NewStyle().Foreground(ground[y])
+			}
+			sb.WriteString(style.Render(cells))
 			x = run
 		}
 		sb.WriteString(tail)

@@ -4,7 +4,11 @@
 ### Added
 - A fourth saver, `bounce`: a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. It has nothing to set, not even colours: they are its own.
 - A fifth saver, `snake`: the Nokia game playing itself until the board is full, then again from the start. It never runs into itself; it has a head that reaches the apple, closes its jaws round it and swallows, each segment is a dot and each link between two is lit, and the apple blinks in a colour of its own and keeps it as it goes down the body at its own pace, a segment a second; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Its one setting is its `speed`: `slow`, `normal` (to begin with), `fast`, `very-fast` or `super-fast`; its colours are its own.
-- The dino has a `character`: the T-Rex as before, or a cat, a rabbit, a horse, or Pac-Man's ghost, in any of the six runners.
+- The runner has a `character`: the T-Rex as before, or a cat, a rabbit, a giraffe, or Pac-Man's ghost, in any of the six ways it runs.
+- The runner has a `background` of its own, shading down the screen: `day`, `night`, or `time-shifting` — the default — a day every three minutes by the clock, a minute each of day, dusk and night.
+
+### Changed
+- The `dino` saver is now `runner`, and its `runner` setting `participants`, with the same values; a config file that says `dino` or `runner` is read as before. It no longer has `bg` / `fg`: its colours come with its `background`.
 
 ## [0.2.0] - 2026-10-06
 ### Changed

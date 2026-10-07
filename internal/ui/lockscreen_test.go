@@ -221,11 +221,11 @@ func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 // A dino saver is the run: a frame every DinoFrame, the board replaced
 // whole with no reveal, the world moved on.
 func TestDinoLockRunsFrameByFrame(t *testing.T) {
-	m := testLock(t, "", func(c *config.Config) { c.Profiles[0].Saver = saver.KindDino })
+	m := testLock(t, "", func(c *config.Config) { c.Profiles[0].Saver = saver.KindRunner })
 	if m.game == nil {
 		t.Fatal("a dino saver must run the game")
 	}
-	m.game = saver.NewDino(7, saver.RunnerBig, saver.CharacterTRex, saver.SceneGrass)
+	m.game = saver.NewDino(7, saver.RunnerBig, saver.CharacterTRex, saver.SceneGrass, saver.BackgroundNight, time.Now)
 	m, _ = m.step(tea.WindowSizeMsg{Width: 152, Height: 32})
 	if m.shown.w != 76 || m.shown.h != 31 || m.shown.count() == 0 {
 		t.Fatalf("board %dx%d, %d lit", m.shown.w, m.shown.h, m.shown.count())
@@ -387,5 +387,35 @@ func TestLockReadsTheFilesPINAtEveryKey(t *testing.T) {
 	}
 	if _, cmd := open.step(keyRunes("x")); !quits(cmd) {
 		t.Fatal("a file with no PIN opens at any key")
+	}
+}
+
+// The runner's sky is drawn down the whole board (user, 2026-10-07): the
+// ground a gradient, the top row the sky's top, the bottom row its
+// bottom, each row its own shade, and the runner in its colour; a clock
+// keeps its one ground.
+func TestTheLockDrawsTheRunnersSky(t *testing.T) {
+	colours(t)
+	m := testLock(t, "", func(c *config.Config) {
+		p := config.NewProfile("r", saver.KindRunner)
+		p.Background = saver.BackgroundDay
+		c.Profiles, c.Profile = []config.Profile{p}, "r"
+	})
+	m, _ = m.step(tea.WindowSizeMsg{Width: 152, Height: 32})
+	ground := m.ground(m.shown.h)
+	if len(ground) != 31 || ground[0] == ground[15] || ground[15] == ground[30] {
+		t.Fatalf("the ground %v", ground)
+	}
+	lines := strings.Split(m.View(), "\n")
+	for _, y := range []int{0, 15, 30} {
+		if !has(lines[y], ground[y]) {
+			t.Errorf("row %d is not %s: %q", y, ground[y], lines[y])
+		}
+	}
+	if !has(strings.Join(lines[:31], "\n"), "#313244") {
+		t.Error("the runner is not in its colour by day")
+	}
+	if c := testLock(t, "", nil); c.ground(31) != nil {
+		t.Errorf("a clock's ground %v", c.ground(31))
 	}
 }

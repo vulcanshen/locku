@@ -22,7 +22,7 @@ func TestCustomSaverHasACommand(t *testing.T) {
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindCustom {
 		t.Fatalf("the custom saver sits above the tools, not %+v", it)
 	}
-	if v := m.View(); !strings.Contains(v, "your own program") || !strings.Contains(v, "command") || !strings.Contains(v, "not set") || strings.Contains(v, "layout") || strings.Contains(v, "runner") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") {
+	if v := m.View(); !strings.Contains(v, "your own program") || !strings.Contains(v, "command") || !strings.Contains(v, "not set") || strings.Contains(v, "layout") || strings.Contains(v, "participants") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") {
 		t.Errorf("the custom saver's [2]:\n%s", v)
 	}
 	m = m.press("2")

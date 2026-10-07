@@ -56,7 +56,7 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 5 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("dino").Runner != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
+	if len(cfg.Savers) != 5 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
 		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
@@ -72,11 +72,11 @@ func TestSaverDefaultsAreTheFilesOwn(t *testing.T) {
 		t.Errorf("note %q", note)
 	}
 	c := cfg.Saver("clock")
-	if c.Size != "medium" || c.FG != "#ffffff" || c.Font != "3x5" || c.Runner != "" || c.Name != "" || c.Saver != "clock" {
+	if c.Size != "medium" || c.FG != "#ffffff" || c.Font != "3x5" || c.Participants != "" || c.Name != "" || c.Saver != "clock" {
 		t.Errorf("clock defaults %+v", c)
 	}
-	if cfg.Saver("dino").Scene != "grassland" {
-		t.Errorf("dino defaults %+v", cfg.Saver("dino"))
+	if cfg.Saver("runner").Scene != "grassland" {
+		t.Errorf("runner defaults %+v", cfg.Saver("runner"))
 	}
 	if n := cfg.NewProfile("x", "clock"); n.Name != "x" || n.Size != "medium" || n.FG != "#ffffff" {
 		t.Errorf("new profile %+v", n)
@@ -85,7 +85,7 @@ func TestSaverDefaultsAreTheFilesOwn(t *testing.T) {
 		t.Fatal(err)
 	}
 	body, _ := os.ReadFile(p)
-	if s := string(body); !strings.Contains(s, "savers:\n") || !strings.Contains(s, "\n    clock:\n        saver: clock\n") || !strings.Contains(s, "        size: medium") || !strings.Contains(s, "    dino:") {
+	if s := string(body); !strings.Contains(s, "savers:\n") || !strings.Contains(s, "\n    clock:\n        saver: clock\n") || !strings.Contains(s, "        size: medium") || !strings.Contains(s, "    runner:") {
 		t.Errorf("saved:\n%s", s)
 	}
 	back, _ := LoadFile(p)
@@ -146,7 +146,7 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "dino" || cfg.Profiles[0].Runner != "big" || cfg.Profiles[1].Saver != "clock" {
+	if cfg.Profile != "run" || len(cfg.Profiles) != 2 || cfg.Profiles[0].Saver != "runner" || cfg.Profiles[0].Participants != "big" || cfg.Profiles[1].Saver != "clock" {
 		t.Errorf("%+v", cfg)
 	}
 	if cfg.PINPromptTimeout != 5 || cfg.WrongPINAttempts != 3 || cfg.WrongPINCooldown != 9 {
@@ -159,14 +159,14 @@ func TestOldKeysAreCarriedOver(t *testing.T) {
 	}
 	// Each saver's keys are its own: a dino has no size or shapes, a
 	// clock no runner.
-	if d, c := cfg.Profiles[0], cfg.Profiles[1]; d.Size != "" || d.Layout != "" || c.Runner != "" || c.Size != "large" {
+	if d, c := cfg.Profiles[0], cfg.Profiles[1]; d.Size != "" || d.Layout != "" || c.Participants != "" || c.Size != "large" {
 		t.Errorf("dino %+v clock %+v", d, c)
 	}
 	if err := SaveFile(p, cfg); err != nil {
 		t.Fatal(err)
 	}
 	body, _ := os.ReadFile(p)
-	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: dino") ||
+	if s := string(body); !strings.Contains(s, "profile: run") || !strings.Contains(s, "profiles:") || !strings.Contains(s, "saver: runner") ||
 		!strings.Contains(s, "\n    clock:\n        saver: clock\n") || strings.Contains(s, "type:") || strings.Contains(s, "old_savers") ||
 		!strings.Contains(s, "wrong_pin_attempts: 3") || strings.Contains(s, "lockout_") || strings.Contains(s, "\nprompt_timeout") ||
 		!strings.Contains(s, "tmux:\n    conf: ~/.tmux.conf\n    lock-after-time: 45") || !strings.Contains(s, "screen:\n    conf: \"\"\n    idle: 45") ||
@@ -185,22 +185,24 @@ func TestAToolsIdleLockIsCarriedOver(t *testing.T) {
 }
 
 // The runner names before 2026-09-25 — trex, two-trex — are read as
-// big and big-small, in a profile and in the dino's defaults alike,
-// and the next save writes only the new names.
+// big and big-small, in a profile and in the dino's defaults alike, as
+// the runner's participants since 2026-10-07; and the next save writes
+// only the new names.
 func TestOldRunnerNamesAreCarriedOver(t *testing.T) {
 	p := write(t, "profile: one\nprofiles:\n  - name: one\n    saver: dino\n    runner: trex\n  - name: two\n    saver: dino\n    runner: two-trex\nsavers:\n  dino:\n    runner: two-trex\n")
 	cfg, note := LoadFile(p)
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if cfg.Profiles[0].Runner != "big" || cfg.Profiles[1].Runner != "big-small" || cfg.Saver("dino").Runner != "big-small" {
-		t.Errorf("profiles %+v, dino defaults %+v", cfg.Profiles, cfg.Saver("dino"))
+	if cfg.Profiles[0].Participants != "big" || cfg.Profiles[1].Participants != "big-small" || cfg.Saver("runner").Participants != "big-small" || cfg.Profiles[0].Saver != "runner" {
+		t.Errorf("profiles %+v, runner defaults %+v", cfg.Profiles, cfg.Saver("runner"))
 	}
 	if err := SaveFile(p, cfg); err != nil {
 		t.Fatal(err)
 	}
 	body, _ := os.ReadFile(p)
-	if s := string(body); strings.Contains(s, "trex") || !strings.Contains(s, "runner: big\n") || !strings.Contains(s, "runner: big-small\n") {
+	if s := string(body); strings.Contains(s, "trex") || strings.Contains(s, "dino") || !strings.Contains(s, "participants: big\n") || !strings.Contains(s, "participants: big-small\n") ||
+		!strings.Contains(s, "    runner:\n        saver: runner\n") {
 		t.Errorf("saved with the old names:\n%s", s)
 	}
 }
@@ -428,7 +430,26 @@ func TestADinoHasACharacter(t *testing.T) {
 	if cfg.Profiles[2].Character != "" || cfg.Profiles[3].Character != "" {
 		t.Errorf("not a dino: %+v %+v", cfg.Profiles[2], cfg.Profiles[3])
 	}
-	if cfg.Saver("dino").Character != "t-rex" || NewProfile("x", "dino").Character != "t-rex" {
-		t.Errorf("the dino's defaults %+v", cfg.Saver("dino"))
+	if cfg.Saver("runner").Character != "t-rex" || NewProfile("x", "runner").Character != "t-rex" {
+		t.Errorf("the runner's defaults %+v", cfg.Saver("runner"))
+	}
+}
+
+// The runner's background (user, 2026-10-07): day, night or
+// time-shifting, time-shifting unless it says — or says one it does not
+// have; its bg / fg go, as the others' have, and no other saver keeps a
+// background.
+func TestARunnerHasABackground(t *testing.T) {
+	p := write(t, "profile: r\nprofiles:\n  - name: r\n    saver: runner\n    background: day\n    bg: \"#000000\"\n    fg: \"#ffffff\"\n"+
+		"  - name: n\n    saver: runner\n  - name: x\n    saver: runner\n    background: noon\n  - name: c\n    saver: clock\n    background: day\n")
+	cfg, _ := LoadFile(p)
+	if r := cfg.Profiles[0]; r.Background != "day" || r.BG != "" || r.FG != "" {
+		t.Errorf("a runner by day %+v", r)
+	}
+	if cfg.Profiles[1].Background != "time-shifting" || cfg.Profiles[2].Background != "time-shifting" || cfg.Profiles[3].Background != "" {
+		t.Errorf("backgrounds %+v", cfg.Profiles)
+	}
+	if d := cfg.Saver("runner"); d.Background != "time-shifting" || d.BG != "" || d.FG != "" {
+		t.Errorf("the runner's defaults %+v", d)
 	}
 }

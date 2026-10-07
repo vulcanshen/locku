@@ -44,7 +44,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 | cursor 在 | item operation |
 |---|---|
-| saver（class：clock、dino、bounce、snake、custom） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，預填 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
+| saver（class：clock、runner、bounce、snake、custom） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，預填 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
 | profile | `[Enter] Edit`（焦點送到 `[2]`）、`[a] Activate`（鎖定畫面改用這個 profile：`●` 移過去、立刻寫檔；已啟用的 disabled；2026-09-25，使用者：不必每次到 preference 切）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，預填原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled） |
 | tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：activate、config file path，分隔線下工具自己的 key） |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
@@ -56,7 +56,7 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | saver 的說明列 | 唯讀，不可停 | saver 上：`[n] New`、`[P] Preview`（用預設值）、`[S] Save`、`[R] Reset`（預設值的顏色草稿） |
 | name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
-| layout / size / font / time / date / runner / character / scene | `[Enter] Choose`（dino 的列只有 runner / character / scene；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
+| layout / size / font / time / date / participants / character / scene / background | `[Enter] Choose`（runner 的列只有 participants / character / scene / background；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
 | command（custom） | `[Enter] Edit`（2026-09-25） | custom 上只有 `[P] Preview`（把終端機交給程式，任意鍵回來）：沒有顏色就沒有 Save / Reset |
 | bg / fg 色票列 | 唯讀，不可停 | 同上 |
 | R / G / B | `[Enter] Pick`（進草稿） | 同上 |
@@ -140,7 +140,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 |---|---|
 | name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 錯誤列 `name is empty` 框留著、重複 → `name is taken` 框留著、否則寫檔；Esc 不動 |
 | command（custom；2026-09-25） | 一行 input popup，邊框 `command`，預填目前值；Enter 照打的存（前後空白去掉），空 = 未設；Esc 不動 |
-| layout / size / font / time / date / runner / character / scene / speed（snake）/ profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / size / font / time / date / participants / character / scene / background / speed（snake）/ profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
 | show_status | Enter 翻轉並寫檔，不開框 |
 | pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → 錯誤列 `a whole number, 0 or more` 框留著 |
 | bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |

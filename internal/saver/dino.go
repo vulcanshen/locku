@@ -8,15 +8,18 @@ import (
 
 // The dino run (function.md §5.2): the offline game as a screensaver. The
 // runner runs, the ground and the obstacles scroll past, and it jumps
-// them by itself, for ever. Nobody plays it: a jump is timed to clear
+// them by itself, for ever (user, 2026-10-07: the runner, as a kind of
+// saver; it was the dino). Nobody plays it: a jump is timed to clear
 // what is coming, at a random moment inside the window that clears it,
 // and now and then there is a jump for nothing when the way is clear
 // (user, 2026-09-24: endless, random obstacles, random jumps). Three
-// of its settings pick the art — the runner, the character and the
-// scene. Runners: a big one, a small one, or two of either size one
-// behind the other, each jumping on its own (user, 2026-09-25: the six
-// ways). Characters: the T-Rex, a cat, a rabbit, a horse, Pac-Man's
-// ghost (user, 2026-10-06), any of them in any of the six. Scenes:
+// of its settings pick the art — the participants, the character and
+// the scene. Participants: a big one, a small one, or two of either size
+// one behind the other, each jumping on its own (user, 2026-09-25: the
+// six ways; they were the runner till 2026-10-07). Characters: the
+// T-Rex, a cat, a rabbit, a giraffe, Pac-Man's ghost (user, 2026-10-06;
+// the giraffe was a horse till the day after), any of them in any of
+// the six. Scenes:
 // grassland, with cacti; the desert, with pyramids — either's in three
 // sizes, small, medium and large (user, 2026-09-25: there had been
 // only small and medium), and the jump is as high as the size asks
@@ -25,13 +28,13 @@ import (
 // Everything here is in the scene's own pixels; the canvas scales them.
 
 // The kinds of saver there are — the classes, in the user's word (2026-09-24);
-// a profile is one of them set up under a name — and the dino's runners
-// and scenes.
+// a profile is one of them set up under a name — and the runner's
+// participants and scenes.
 const (
-	KindClock = "clock"
-	KindDino  = "dino"
+	KindClock  = "clock"
+	KindRunner = "runner"
 
-	// A runner's name reads its figures back to front — left to right
+	// Participants' names read their figures back to front — left to right
 	// on the screen (user, 2026-09-25): small-big is the small one
 	// behind and the big one in front. Before that day there were two,
 	// trex and two-trex; config reads them as big and big-small.
@@ -46,18 +49,18 @@ const (
 
 	// Who runs (user, 2026-10-06): the T-Rex, as it always was, or
 	// another, in either size.
-	CharacterTRex   = "t-rex"
-	CharacterCat    = "cat"
-	CharacterRabbit = "rabbit"
-	CharacterHorse  = "horse"
-	CharacterGhost  = "ghost"
+	CharacterTRex    = "t-rex"
+	CharacterCat     = "cat"
+	CharacterRabbit  = "rabbit"
+	CharacterGiraffe = "giraffe"
+	CharacterGhost   = "ghost"
 )
 
 var (
-	Kinds      = []string{KindClock, KindDino, KindBounce, KindSnake, KindCustom}
-	Runners    = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
-	Characters = []string{CharacterTRex, CharacterCat, CharacterRabbit, CharacterHorse, CharacterGhost}
-	Scenes     = []string{SceneGrass, SceneDesert}
+	Kinds        = []string{KindClock, KindRunner, KindBounce, KindSnake, KindCustom}
+	Participants = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
+	Characters   = []string{CharacterTRex, CharacterCat, CharacterRabbit, CharacterGiraffe, CharacterGhost}
+	Scenes       = []string{SceneGrass, SceneDesert}
 )
 
 // DinoFrame is the time between two frames: fourteen a second.
@@ -312,9 +315,10 @@ var smallRabbit = figure{
 	air: append(append(sprite{}, smallRabbitBody...), ".#....#.", "#......#"),
 }
 
-// A horse at a gallop, its neck reaching forward, its tail streaming:
+// A giraffe at a gallop, its neck reaching forward, its tail streaming
+// (drawn as a horse; user, 2026-10-07: it is more like a giraffe):
 // twelve wide and twelve tall.
-var horseBody = sprite{
+var giraffeBody = sprite{
 	"..........#.",
 	".........###",
 	"........##.#",
@@ -326,16 +330,16 @@ var horseBody = sprite{
 	".#########..",
 }
 
-var horse = figure{
+var giraffe = figure{
 	run: [2]sprite{
-		append(append(sprite{}, horseBody...), "..#.....#...", ".#.......#..", "#.........#."),
-		append(append(sprite{}, horseBody...), "..#.....#...", "...#...#....", "...#...#...."),
+		append(append(sprite{}, giraffeBody...), "..#.....#...", ".#.......#..", "#.........#."),
+		append(append(sprite{}, giraffeBody...), "..#.....#...", "...#...#....", "...#...#...."),
 	},
-	air: append(append(sprite{}, horseBody...), ".#.......#..", "#.........#.", "............"),
+	air: append(append(sprite{}, giraffeBody...), ".#.......#..", "#.........#.", "............"),
 }
 
-// A small horse, eight wide and nine tall.
-var smallHorseBody = sprite{
+// A small giraffe, eight wide and nine tall.
+var smallGiraffeBody = sprite{
 	"......#.",
 	".....###",
 	"....#.##",
@@ -345,12 +349,12 @@ var smallHorseBody = sprite{
 	".#####..",
 }
 
-var smallHorse = figure{
+var smallGiraffe = figure{
 	run: [2]sprite{
-		append(append(sprite{}, smallHorseBody...), ".#...#..", "#.....#."),
-		append(append(sprite{}, smallHorseBody...), "..#.#...", "..#.#..."),
+		append(append(sprite{}, smallGiraffeBody...), ".#...#..", "#.....#."),
+		append(append(sprite{}, smallGiraffeBody...), "..#.#...", "..#.#..."),
 	},
-	air: append(append(sprite{}, smallHorseBody...), "#.....#.", "........"),
+	air: append(append(sprite{}, smallGiraffeBody...), "#.....#.", "........"),
 }
 
 // Pac-Man's ghost, looking the way it goes: no legs, its skirt swaying
@@ -406,11 +410,11 @@ var formations = map[string][]bool{
 
 // cast is each character, big and small.
 var cast = map[string][2]figure{
-	CharacterTRex:   {trex, smallTRex},
-	CharacterCat:    {cat, smallCat},
-	CharacterRabbit: {rabbit, smallRabbit},
-	CharacterHorse:  {horse, smallHorse},
-	CharacterGhost:  {ghost, smallGhost},
+	CharacterTRex:    {trex, smallTRex},
+	CharacterCat:     {cat, smallCat},
+	CharacterRabbit:  {rabbit, smallRabbit},
+	CharacterGiraffe: {giraffe, smallGiraffe},
+	CharacterGhost:   {ghost, smallGhost},
 }
 
 var (
@@ -509,7 +513,7 @@ var (
 func runnerOf(name, character string) runnerArt {
 	sizes, ok := formations[name]
 	if !ok {
-		sizes = formations[Runners[0]]
+		sizes = formations[Participants[0]]
 	}
 	who, ok := cast[character]
 	if !ok {
@@ -546,19 +550,25 @@ type Dino struct {
 	obs    []obstacle
 	gap    int // pixels until the next obstacle
 	clouds []cloud
+
+	background string           // one of Backgrounds
+	now        func() time.Time // the clock time-shifting goes by
 }
 
 type obstacle struct{ x, kind int }
 type cloud struct{ x, y int }
 
-// NewDino is a run from its first frame, with the art runner, character
-// and scene name. The same seed is the same run.
-func NewDino(seed uint64, runner, character, scene string) *Dino {
+// NewDino is a run from its first frame, with the art participants,
+// character and scene name, on a background out of Backgrounds — any
+// other is time-shifting, by now. The same seed is the same run.
+func NewDino(seed uint64, participants, character, scene, background string, now func() time.Time) *Dino {
 	d := &Dino{
-		rng:    rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
-		runner: runnerOf(runner, character),
-		scene:  sceneOf(scene),
-		gap:    firstGap,
+		rng:        rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
+		runner:     runnerOf(participants, character),
+		scene:      sceneOf(scene),
+		gap:        firstGap,
+		background: background,
+		now:        now,
 	}
 	d.air = make([]int, d.runner.count())
 	d.jump = make([]tier, d.runner.count())

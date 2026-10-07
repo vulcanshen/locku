@@ -61,7 +61,7 @@ func TestSnakeHasItsSpeed(t *testing.T) {
 		t.Fatalf("the snake sits above the custom saver, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "runner") {
+	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "participants") {
 		t.Errorf("the snake's [2]:\n%s", v)
 	}
 	m = m.press("n", "enter")
