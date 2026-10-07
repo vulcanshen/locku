@@ -132,6 +132,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	case rowSpeed:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how fast it goes", run: (*AppModel).chooseSpeed})
+	case rowCount:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how many cats", run: (*AppModel).chooseCount})
 	case rowConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
 	case rowIdle:
@@ -504,6 +506,14 @@ func (m *AppModel) chooseSpeed() tea.Cmd {
 	return m.choose("speed", saver.Speeds, func(p config.Profile) string { return p.Speed })
 }
 
+func (m *AppModel) chooseCount() tea.Cmd {
+	counts := make([]string, len(saver.PetCounts))
+	for i, n := range saver.PetCounts {
+		counts[i] = itoa(n)
+	}
+	return m.choose("count", counts, func(p config.Profile) string { return itoa(p.Count) })
+}
+
 // chooseLock is Enter on tmux's lock: lock-server, or lock-session.
 func (m *AppModel) chooseLock() tea.Cmd {
 	return m.openOptions("lock", config.TmuxLocks, m.cfg.Tmux.Lock, 0)
@@ -591,6 +601,9 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.edit(func(p *config.Profile) { p.Character = v })
 	case rowSpeed:
 		m.edit(func(p *config.Profile) { p.Speed = v })
+	case rowCount:
+		n, _ := strconv.Atoi(v)
+		m.edit(func(p *config.Profile) { p.Count = n })
 	case rowScene:
 		m.edit(func(p *config.Profile) { p.Scene = v })
 	case rowBackground:

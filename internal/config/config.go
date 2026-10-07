@@ -80,6 +80,9 @@ type Profile struct {
 	// 2026-10-06, 2026-10-07): how fast it goes, by name, one of
 	// saver.Speeds (2026-10-07; it was the snake's cells a second).
 	Speed string `yaml:"speed,omitempty"`
+	// The pets' (user, 2026-10-07): how many cats, one of
+	// saver.PetCounts.
+	Count int `yaml:"count,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -210,6 +213,9 @@ func NewProfile(name, kind string) Profile {
 		// Its speed alone: colours of its own (user, 2026-10-06; the
 		// falling blocks the same, 2026-10-07).
 		return Profile{Name: name, Saver: kind, Speed: saver.SpeedNormal}
+	case saver.KindPets:
+		// How many cats alone: colours of their own (user, 2026-10-07).
+		return Profile{Name: name, Saver: kind, Count: saver.PetsDefault}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -532,7 +538,7 @@ func tidy(p Profile, kind string) Profile {
 	switch {
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Participants, p.Character, p.Scene, p.Background = "", "", "", "", "", "", "", "", ""
-		p.BG, p.FG, p.Speed = "", "", ""
+		p.BG, p.FG, p.Speed, p.Count = "", "", "", 0
 		return p
 	case kind == saver.KindBounce:
 		// A speed or a time it does not have is quietly the default —
@@ -552,8 +558,14 @@ func tidy(p Profile, kind string) Profile {
 			p.Speed = d.Speed
 		}
 		return Profile{Name: p.Name, Saver: kind, Speed: p.Speed}
+	case kind == saver.KindPets:
+		// A count it does not have is quietly the default.
+		if !slices.Contains(saver.PetCounts, p.Count) {
+			p.Count = d.Count
+		}
+		return Profile{Name: p.Name, Saver: kind, Count: p.Count}
 	case kind == saver.KindRunner:
-		p.Command, p.Speed = "", ""
+		p.Command, p.Speed, p.Count = "", "", 0
 		if p.Participants == "" {
 			p.Participants = d.Participants
 		}
@@ -575,7 +587,7 @@ func tidy(p Profile, kind string) Profile {
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
 		return p
 	default:
-		p.Command, p.Speed, p.Background = "", "", ""
+		p.Command, p.Speed, p.Background, p.Count = "", "", "", 0
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}

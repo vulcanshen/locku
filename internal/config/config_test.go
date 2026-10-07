@@ -56,8 +56,9 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 6 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
-		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") || cfg.Saver("tetromino") != NewProfile("", "tetromino") {
+	if len(cfg.Savers) != 7 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
+		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") || cfg.Saver("tetromino") != NewProfile("", "tetromino") ||
+		cfg.Saver("pets") != NewProfile("", "pets") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -435,6 +436,28 @@ func TestATetrominoProfileIsItsSpeed(t *testing.T) {
 		t.Errorf("speeds %+v", cfg.Profiles)
 	}
 	if n := cfg.NewProfile("n", "tetromino"); n != (Profile{Name: "n", Saver: "tetromino", Speed: "normal"}) {
+		t.Errorf("a new one %+v", n)
+	}
+}
+
+// The pets have how many cats and nothing else (user, 2026-10-07): one
+// to five, three unless it says — or says one it does not have; no
+// other saver keeps a count.
+func TestAPetsProfileIsItsCount(t *testing.T) {
+	p := write(t, "profile: p\nprofiles:\n  - name: p\n    saver: pets\n    count: 5\n    speed: fast\n    bg: \"#43523d\"\n"+
+		"  - name: odd\n    saver: pets\n    count: 9\n  - name: none\n    saver: pets\n"+
+		"  - name: c\n    saver: clock\n    count: 2\n  - name: s\n    saver: snake\n    count: 2\n  - name: r\n    saver: runner\n    count: 2\n")
+	cfg, _ := LoadFile(p)
+	if s, _ := cfg.Active(); s != (Profile{Name: "p", Saver: "pets", Count: 5}) {
+		t.Errorf("the profile %+v", s)
+	}
+	if cfg.Profiles[1].Count != 3 || cfg.Profiles[2].Count != 3 {
+		t.Errorf("counts %+v", cfg.Profiles)
+	}
+	if cfg.Profiles[3].Count != 0 || cfg.Profiles[4].Count != 0 || cfg.Profiles[5].Count != 0 {
+		t.Errorf("not the pets: %+v", cfg.Profiles[3:])
+	}
+	if n := cfg.NewProfile("n", "pets"); n != (Profile{Name: "n", Saver: "pets", Count: 3}) {
 		t.Errorf("a new one %+v", n)
 	}
 }

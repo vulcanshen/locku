@@ -58,9 +58,9 @@ func TestTetrominoLockWearsItsOwnColours(t *testing.T) {
 // nothing else, as the snake (user, 2026-10-07): from the five by name,
 // normal to begin with, written at once.
 func TestTetrominoHasItsSpeed(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k") // above the custom saver
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // above the pets
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindTetromino {
-		t.Fatalf("the falling blocks sit above the custom saver, not %+v", it)
+		t.Fatalf("the falling blocks sit above the pets, not %+v", it)
 	}
 	v := m.View()
 	if !strings.Contains(v, "falling blocks") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "Tetris") {
