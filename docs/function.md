@@ -339,6 +339,7 @@ TUI 的版面與按鍵放 ui.md / ux.md。
 只有一個檔：`~/.config/locku/config.yaml`
 
 ```yaml
+version: 1             # 檔案格式的版本（2026-10-07）：沒有就是 0，讀到時轉成 1 並寫回
 auth: pin              # v1 只有 pin，保留給 pam 擴充
 pin_hash: "$2a$10$..."   # 空或缺欄位 = 未設定 PIN，見 4.3
 profile: clock         # 啟用的 profile name，必須存在於 profiles
@@ -406,6 +407,8 @@ screen:                         # Integration › screen，各自一份，不跟
 ```
 
 修訂（2026-09-24）：頂層 `style` 拿掉，顏色是每個 profile 自己的 `bg` / `fg`。同日 key 改名：`saver` → `profile`、`savers` → `profiles`、每個 profile 的 `type` → `saver`（saver 是 class、profile 是 object）；舊 key 讀進來自動轉（讀檔先解析成樹、改名再 decode），下一次寫檔就只剩新 key。`savers` 這個 key 隨後給了 saver 預設值：它是清單就是舊的 profiles，是對照表就是預設值，兩種寫法都認。
+
+版本（2026-10-07，使用者）：檔案的第一個 key 是 `version`，現在是 1。沒有 `version` 的檔是 0——在這之前的每一個檔——讀的時候先套 0 → 1 的轉換（上面 2026-09-24、09-25 的改名，與 2026-10-07 的 dino → runner），讀完立刻整份寫回、標上 `version: 1`；寫不回去（例如唯讀）就照讀到的跑，下次再試。是 1 的檔不再套舊名的轉換。比自己新的版本照讀、不寫回，免得蓋掉新版才有的資料；之後在設定畫面存檔，就寫成 1。寫回的是完整的設定：原本省略的欄位補上預設值、手寫的註解不會留著，跟在設定畫面存檔一樣。
 
 - 無 history、無 cache、無 session。
 - config 是 profile 的唯一來源，命令列不提供覆蓋。
@@ -557,6 +560,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 59. （2026-10-07，使用者定案）snake 的 `speed` 改成從清單選五段：`slow` / `normal` / `fast` / `very-fast` / `super-fast`（使用者：讓使用者選就好，輸入數字不太直觀），48 的 number 框作廢。使用者原本給 5 / 7 / 9 / 11 / 13，我提每級加 2 越往上越看不出差別（slow 到 normal 快 40%，very fast 到 super fast 只快 18%），建議每級約乘 1.4；使用者同意，但 normal 要是 7、當預設，所以是 5 / 7 / 10 / 14 / 20 格／秒。設定檔存名稱（使用者採用我的建議，跟 `big-small`、`t-rex` 同樣的寫法）；snake 還沒發布過，檔案裡舊的數字或任何不認得的值都靜靜當 `normal`。預設從 12 變成 7，預設的蛇因此慢了一些。
 
 60. （2026-10-07，使用者定案）dino 改名、拿掉 bg / fg：saver `dino` 改叫 **`runner`**，它的 `runner` 改叫 **`participants`**（值不變），角色 `horse` 改叫 **`giraffe`**（使用者：其實比較像長頸鹿；圖不變）。舊檔的 `saver: dino`、`savers` 底下的 `dino:` 與它們的 `runner:` 照樣讀進來，下次存檔寫新名；`horse` 沒發布過，不做舊名對應。runner 拿掉 `bg` / `fg`，改成內建的 **`background`**（使用者定的名字，否決我提的 `palette`）：`day`（背景白、前景 `#313244`）、`night`（原本的預設：背景 `#313244`、前景 `#f2b753`）、`time-shifting`（預設，使用者定）——三分鐘一天，白天、黃昏、夜晚各一分鐘。使用者另外要背景都有漸層、不要單一顏色，所以每種都是一道從畫面頂端到底端的漸層、鋪滿整個板子，time-shifting 到點直接換（使用者：漸層辦得到的話就直接換）。我的判斷：週期照牆上時鐘的分鐘除以 3（使用者同意），預覽與鎖定畫面因此一致；漸層一列一個顏色、在 sRGB 內插；顏色是我提的，等使用者看過再調——day 頂端淡藍 `#cfe8ff` 到白，night `#1e1e2e` → `#313244` → `#45475a`，黃昏是 mauve → red → peach → yellow 的夕陽、前景同白天。
+
+61. （2026-10-07，使用者定案）config 加 **`version`**，這次是 1；讀到沒有 `version` 的檔就是 0，自動轉換、寫回並標上版本（使用者：這樣就可以做 config migration）。原本「讀到舊名當新名讀、下次存檔才寫新名」的轉換（`carryOver`）成了 0 → 1 這一步，只對 0 的檔做。我的判斷：轉換完立刻寫回，不等下次存檔——所以只是跑 `locku lock` 也會改寫檔案；寫不回去就照讀到的跑、下次再試，不在狀態列報錯；比自己新的版本照讀、不寫回，免得降版執行時蓋掉新版的資料；讀不了的檔（YAML 錯、PIN hash 不對）不寫回，維持原狀。
 
 ## 11. 待決清單
 

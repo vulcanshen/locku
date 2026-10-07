@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -157,8 +158,17 @@ func (c *Config) SetTool(name string, t Tool) {
 	c.Tmux.Conf, c.Tmux.LockAfterTime = t.Conf, t.Idle
 }
 
+// ConfigVersion is the shape of config.yaml this locku reads and writes
+// (user, 2026-10-07): 1 since the dino became the runner. A file with no
+// version is 0 — every file before that day — and is brought to this
+// one as it is read, then written over saying so; one from a later
+// locku is read as it is and left alone.
+const ConfigVersion = 1
+
 // Config is config.yaml, one field per key.
 type Config struct {
+	// Version is the file's shape: ConfigVersion when locku writes it.
+	Version  int       `yaml:"version"`
 	Auth     string    `yaml:"auth"`
 	PINHash  string    `yaml:"pin_hash"`
 	Profile  string    `yaml:"profile"`
@@ -218,6 +228,7 @@ func builtinSavers() map[string]Profile {
 // Default is the file as it would be with every key left out.
 func Default() Config {
 	return Config{
+		Version:          ConfigVersion,
 		Auth:             AuthPIN,
 		Profile:          "clock",
 		Profiles:         []Profile{DefaultProfile()},
@@ -301,8 +312,11 @@ func LoadFile(path string) (Config, string) {
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return Default(), "config.yaml: " + firstLine(err.Error())
 	}
-	carryOver(&doc)
-	cfg.Profile, cfg.Profiles, cfg.Savers = "", nil, nil
+	version := versionOf(&doc)
+	if version < 1 {
+		carryOver(&doc)
+	}
+	cfg.Version, cfg.Profile, cfg.Profiles, cfg.Savers = version, "", nil, nil
 	if doc.Kind != 0 {
 		if err := doc.Decode(&cfg); err != nil {
 			return Default(), "config.yaml: " + firstLine(err.Error())
@@ -321,7 +335,37 @@ func LoadFile(path string) (Config, string) {
 	if cfg.Profile == "" {
 		cfg.Profile = Default().Profile
 	}
-	return cfg.sanitized()
+	cfg, note := cfg.sanitized()
+	if version < ConfigVersion {
+		// Brought to this version, the file is written over in its shape
+		// and says so (user, 2026-10-07: a config migration). One that
+		// cannot be written is read the same way again the next time.
+		cfg.Version = ConfigVersion
+		_ = SaveFile(path, cfg)
+	}
+	return cfg, note
+}
+
+// versionOf is the version a parsed file says it is: 0 when it says
+// none, and when what it says is no number, which the decode then
+// refuses.
+func versionOf(doc *yaml.Node) int {
+	root := doc
+	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
+		root = root.Content[0]
+	}
+	if root.Kind != yaml.MappingNode {
+		return 0
+	}
+	v := valueOf(root, "version")
+	if v == nil {
+		return 0
+	}
+	n, err := strconv.Atoi(v.Value)
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 // renamed is every top-level key that changed its name on 2026-09-24,
@@ -360,7 +404,8 @@ var nestedRenamed = []struct{ parent, old, new string }{
 	{"screen", "idle_lock", "idle"},
 }
 
-// carryOver rewrites the keys from before in the parsed document: the
+// carryOver is the move from version 0 to 1: it rewrites the keys from
+// before in the parsed document — the
 // renamed ones, the nested ones, a `savers` LIST to `profiles` (a
 // `savers` map is the savers' defaults and stays), each profile's
 // `type` to `saver`, and the dino (user, 2026-10-07): a profile of it,
@@ -754,6 +799,7 @@ func Save(cfg Config) error { return SaveFile(Path(), cfg) }
 // rename — with mode 0600, since the file carries the PIN's hash (ui.md
 // §6). The directory is made when it is not there.
 func SaveFile(path string, cfg Config) error {
+	cfg.Version = ConfigVersion
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err

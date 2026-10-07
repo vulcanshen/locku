@@ -453,3 +453,61 @@ func TestARunnerHasABackground(t *testing.T) {
 		t.Errorf("the runner's defaults %+v", d)
 	}
 }
+
+// The file says its version (user, 2026-10-07). One that says none —
+// every one from before — is version 0: read with its old names, then
+// written over in version 1's and saying so, and read again it is left
+// as it is. One at version 1 is read as it is, a name from before 1 no
+// longer read as the new, and is not written over; one from a later
+// locku neither — saved, it says 1. A file that cannot be honoured is
+// not written over.
+func TestTheConfigHasAVersion(t *testing.T) {
+	p := write(t, "profile: d\nprofiles:\n  - name: d\n    saver: dino\n    runner: small\n    bg: \"#000000\"\n")
+	cfg, note := LoadFile(p)
+	if note != "" || cfg.Version != 1 || cfg.Profiles[0].Saver != "runner" || cfg.Profiles[0].Participants != "small" {
+		t.Errorf("version 0: note %q, %+v", note, cfg)
+	}
+	body, _ := os.ReadFile(p)
+	if s := string(body); !strings.HasPrefix(s, "version: 1\n") || strings.Contains(s, "dino") || strings.Contains(s, "#000000") ||
+		!strings.Contains(s, "participants: small\n") || !strings.Contains(s, "background: time-shifting\n") {
+		t.Errorf("version 0, written over:\n%s", s)
+	}
+	if again, _ := LoadFile(p); again.Version != 1 || again.Profiles[0].Participants != "small" {
+		t.Errorf("read again %+v", again)
+	}
+	if after, _ := os.ReadFile(p); string(after) != string(body) {
+		t.Errorf("version 1 written over:\n%s", after)
+	}
+
+	one := "version: 1\nprompt_timeout: 5\nprofile: d\nprofiles:\n  - name: d\n    saver: runner\n    runner: small\n"
+	p = write(t, one)
+	if cfg, _ := LoadFile(p); cfg.Version != 1 || cfg.Profiles[0].Participants != "big" || cfg.PINPromptTimeout != 30 {
+		t.Errorf("version 1 with names from before: %+v", cfg)
+	}
+	if after, _ := os.ReadFile(p); string(after) != one {
+		t.Errorf("version 1 written over:\n%s", after)
+	}
+
+	later := "version: 2\nprofile: c\nprofiles:\n  - name: c\n    saver: clock\n    shade: blue\n"
+	p = write(t, later)
+	cfg, note = LoadFile(p)
+	if after, _ := os.ReadFile(p); note != "" || cfg.Version != 2 || cfg.Profile != "c" || string(after) != later {
+		t.Errorf("version 2: note %q, %+v, the file:\n%s", note, cfg, after)
+	}
+	if err := SaveFile(p, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if after, _ := os.ReadFile(p); !strings.HasPrefix(string(after), "version: 1\n") {
+		t.Errorf("saved by this locku:\n%s", after)
+	}
+
+	for _, bad := range []string{"profile: [\n", "pin_hash: nope\nprofile: c\n", "version: x\nprofile: c\n"} {
+		p = write(t, bad)
+		if _, note := LoadFile(p); note == "" {
+			t.Errorf("%q: no note", bad)
+		}
+		if after, _ := os.ReadFile(p); string(after) != bad {
+			t.Errorf("%q written over:\n%s", bad, after)
+		}
+	}
+}

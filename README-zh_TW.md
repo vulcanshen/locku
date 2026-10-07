@@ -223,9 +223,10 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | 設定 | `config.yaml`——PIN 的 hash、profile、各 saver 的預設值、整合設定 | `~/.config/locku`（有設 `$XDG_CONFIG_HOME` 就是 `$XDG_CONFIG_HOME/locku`；`$LOCKU__CONFIG` 直接指定） |
 | 資料 | `pin-resets.log`——每次 `locku pin reset`，不含 PIN | `~/.locku/data`（`$LOCKU__DATA`） |
 
-無 history、無 cache、無 session。`config.yaml` 原子寫入、mode 0600，可以手改：
+無 history、無 cache、無 session。`config.yaml` 原子寫入、mode 0600，可以手改。檔案會標明自己的 `version`：舊版 locku 的檔第一次被讀到時就轉成新格式，整份寫回並標上新的版本。
 
 ```yaml
+version: 1                # 檔案格式的版本，locku 自己寫
 auth: pin                 # 唯一的驗證；pam 保留
 pin_hash: "$2a$10$..."    # bcrypt；空或缺欄位 = 無 PIN，任何鍵解鎖
 profile: clock            # 啟用中的 profile
