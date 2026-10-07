@@ -182,6 +182,8 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		m.game = saver.NewSnake(seed, s.Speed)
 	case saver.KindTetromino:
 		m.game = saver.NewTetromino(seed, s.Speed, func(l string) []string { return spell(faceShort, l) })
+	case saver.KindPets:
+		m.game = saver.NewPets(seed, s.Count)
 	}
 	if !saver.Coloured(s.Saver) {
 		// No colours of its own: what the lock draws in the profile's

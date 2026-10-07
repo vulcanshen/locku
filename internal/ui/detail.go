@@ -52,6 +52,7 @@ const (
 	rowBackground // the runner's sky
 	rowCommand    // a custom saver's program
 	rowSpeed      // the snake's, the bouncing box's, the falling blocks': slow to super-fast
+	rowCount      // the pets': how many cats
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -95,6 +96,7 @@ var about = map[string]string{
 	saver.KindBounce:    "the time in a box, bouncing, changing colour",
 	saver.KindSnake:     "the Nokia snake, playing itself till the board is full",
 	saver.KindTetromino: "falling blocks, playing themselves, full rows going",
+	saver.KindPets:      "cats about a room, climbing, jumping, napping",
 	saver.KindCustom:    "your own program, on a terminal of its own, as the saver",
 }
 
@@ -198,7 +200,8 @@ func (m AppModel) anyDirty() bool {
 // fieldRows is a saver's own settings for p: the clock's shapes and
 // size, the run's runner and scene, the custom saver's command, the
 // snake's speed (user, 2026-10-06), the bouncing box's speed and time
-// (user, 2026-10-07), the falling blocks' speed (user, the same day).
+// (user, 2026-10-07), the falling blocks' speed (user, the same day), the
+// pets' count (user, the same day).
 func fieldRows(p config.Profile) []row {
 	value := valueColor
 	if p.Saver == saver.KindBounce {
@@ -209,6 +212,9 @@ func fieldRows(p config.Profile) []row {
 	}
 	if p.Saver == saver.KindSnake || p.Saver == saver.KindTetromino {
 		return []row{{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true}}
+	}
+	if p.Saver == saver.KindPets {
+		return []row{{kind: rowCount, label: "count", value: itoa(p.Count), color: value, stop: true}}
 	}
 	if p.Saver == saver.KindCustom {
 		// The program, as sh -c runs it; none yet is said in yellow, as

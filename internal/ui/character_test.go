@@ -11,7 +11,7 @@ import (
 // A dino's character is chosen on [2] as its runner is (user,
 // 2026-10-06): the five, the cursor on the one it is, written at once.
 func TestDinoCharacterIsChosen(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "k", "n", "enter") // a profile of the dino
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "k", "k", "n", "enter") // a profile of the dino
 	it := m.sideAt()
 	if it.kind != sideProfile || m.cfg.Profiles[it.ref].Saver != saver.KindRunner || m.cfg.Profiles[it.ref].Character != saver.CharacterTRex {
 		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
@@ -64,7 +64,7 @@ func TestTheLockRunsTheCharacter(t *testing.T) {
 // with, written at once; it has no bg / fg, so no swatches and no
 // channels.
 func TestRunnerBackgroundIsChosen(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "k", "n", "enter") // a profile of the runner
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "k", "k", "n", "enter") // a profile of the runner
 	it := m.sideAt()
 	if p := m.cfg.Profiles[it.ref]; it.kind != sideProfile || p.Saver != saver.KindRunner || p.Background != saver.BackgroundTimeShifting || p.BG != "" || p.FG != "" {
 		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
