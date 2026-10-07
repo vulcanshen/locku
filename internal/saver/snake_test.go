@@ -78,10 +78,10 @@ func check(t *testing.T, s *Snake, step int, enough bool) {
 		}
 	}
 	for _, l := range s.lumps {
-		if (l.at < 0 && l.at != snakeBitten) || l.at >= len(s.body) {
+		if (l.at < 0 && l.at != snakeBitten) || l.at >= len(s.body) || (l.gone && l.at < 0) {
 			t.Fatalf("step %d: a lump at %d, off a body %d long", step, l.at, len(s.body))
 		}
-		if enough && (l.colour == s.colour || (s.apple >= 0 && l.colour == s.next)) {
+		if enough && !l.gone && (l.colour == s.colour || (s.apple >= 0 && l.colour == s.next)) {
 			t.Fatalf("step %d: a lump in the colour of the snake (%d) or the apple (%d): %v", step, s.colour, s.next, s.lumps)
 		}
 	}
@@ -115,25 +115,33 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 		if len(s.body) != snakeStart || n == 0 {
 			t.Fatalf("%v: start %d long on %d cells", sz, len(s.body), n)
 		}
-		steps, enough := 0, true
+		steps, eats, enough := 0, 0, true
 		for s.apple >= 0 {
-			long, colour, next, before := len(s.body), s.colour, s.next, slices.Clone(s.lumps)
+			long, colour, next, apple, before := len(s.body), s.colour, s.next, s.apple, slices.Clone(s.lumps)
 			s.Step()
 			steps++
 			if len(s.lumps) >= len(ownColours)-1 {
 				enough = false
 			}
 			check(t, s, steps, enough)
-			if l, ok := s.lumpAt(snakeBitten); (len(s.body) > long) != (ok && l.colour == next) {
-				t.Fatalf("%v step %d: %d long, then %d; in the jaws %v, the apple was %d", sz, steps, long, len(s.body), s.lumps, next)
-			}
-			if len(s.body) == long && s.next != next {
+			ate := s.body[0] == apple
+			if ate {
+				eats++
+				if l, ok := s.lumpAt(snakeBitten); !ok || l.colour != next {
+					t.Fatalf("%v step %d: ate, and in the jaws %v; the apple was %d", sz, steps, s.lumps, next)
+				}
+			} else if s.next != next {
 				t.Fatalf("%v step %d: the apple changed colour with nothing eaten", sz, steps)
 			}
-			if want := gone(before, len(s.body), colour); s.colour != want {
+			// Every apple eaten is on its way down, or a segment the tail
+			// has to grow, or has grown one; a segment a move at most.
+			if len(s.body)+s.grow+len(s.lumps) != snakeStart+eats || s.grow < 0 || len(s.body)-long > 1 || len(s.body) < long {
+				t.Fatalf("%v step %d: %d long (was %d), %d to grow, %d on the way down, %d eaten", sz, steps, len(s.body), long, s.grow, len(s.lumps), eats)
+			}
+			if want := turned(before, s.lumps, colour); s.colour != want {
 				t.Fatalf("%v step %d: the snake is %d, the lumps were %v and are %v", sz, steps, s.colour, before, s.lumps)
 			}
-			if steps > n*n {
+			if steps > 4*n*n {
 				t.Fatalf("%v: %d long after %d steps", sz, len(s.body), steps)
 			}
 		}
@@ -158,21 +166,9 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 			if len(s.body) != n {
 				t.Fatalf("%v: the full board went after %d frames", sz, j+1)
 			}
-			// The body is still; the lumps run on, a place a frame, and the
-			// apple in the jaws is swallowed.
-			var want []lump
-			for _, l := range before {
-				if l.at < 0 {
-					l.at = 0
-				} else {
-					l.at++
-				}
-				if l.at < n {
-					want = append(want, l)
-				}
-			}
-			if !slices.Equal(s.lumps, want) {
-				t.Fatalf("%v: the lumps %v on a full board, then %v", sz, before, s.lumps)
+			// The body is still; the apples go on down at their pace.
+			if len(s.lumps) > len(before) {
+				t.Fatalf("%v: on a full board, the lumps %v then %v", sz, before, s.lumps)
 			}
 		}
 		s.Step()
@@ -183,13 +179,19 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 	}
 }
 
-// gone is the snake's colour after a move that left it long: the last
-// lump of before two places on — an apple in the jaws at the head — and
-// so past the tail, or the colour it was.
-func gone(before []lump, long, colour int) int {
-	for _, l := range before {
-		if at := max(l.at+2, 0); l.at >= 0 && at >= long {
-			colour = l.colour
+// turned is the snake's colour after a move: that of the last lump to be
+// the body now, past the tail — or the colour it was. The lumps keep
+// their order, the oldest first: the move drops some from the front
+// that were the body, and an apple eaten is a new one at the back.
+func turned(before, after []lump, colour int) int {
+	added := 0
+	if len(after) > 0 && after[len(after)-1].at == snakeBitten {
+		added = 1
+	}
+	dropped := len(before) + added - len(after)
+	for i := 0; i < len(after)-added; i++ {
+		if !before[i+dropped].gone && after[i].gone {
+			colour = after[i].colour
 		}
 	}
 	return colour
@@ -289,7 +291,7 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	}
 	// A lump a few segments down, wherever the last apple is.
 	bean := otherColour(s.rng, s.colour)
-	s.lumps = []lump{{2, bean}}
+	s.lumps = []lump{{at: 2, colour: bean}}
 	ink := uint8(1 + s.colour)
 	at := func(sc Scene, x, y int) uint8 { return sc.Pix[y*sc.W+x] }
 	lit := map[bool]bool{}
@@ -373,51 +375,61 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 	}
 }
 
-// An apple eaten is a lump that runs down the body to the tail (user,
-// 2026-10-06): the body carries it a place a move, and it runs a place
-// more, so it is two further from the head each move, and gone past the
-// tail.
-func TestSnakeLumpRunsToTheTail(t *testing.T) {
+// An apple eaten goes down the body to the tail at its own pace (user,
+// 2026-10-06), whatever the snake does: in the throat the move after,
+// then a segment a second — twelve moves at twelve a second; at the tail
+// it is the body a second later, the snake its colour, and a second after
+// that it is gone and the tail has a segment to grow.
+func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
-	for i := 0; len(s.lumps) == 0; i++ {
-		if i > 1000 {
-			t.Fatal("no lump in a thousand moves")
-		}
+	for i := 0; i < 40; i++ {
 		s.Step()
 	}
-	if len(s.lumps) != 1 || s.lumps[0].at != snakeBitten {
-		t.Fatalf("just eaten: lumps %v", s.lumps)
+	s.lumps, s.grow = []lump{{at: snakeBitten, colour: s.next}}, 0
+	colour, bean, long := s.colour, s.next, len(s.body)
+	second := s.frames(snakeDigest)
+	if second != 12 || long < 3 {
+		t.Fatalf("a second is %d moves, the snake %d long", second, long)
 	}
-	colour, bean := s.colour, s.lumps[0].colour
-	at, moves := snakeBitten, 0
-	for {
+	s.digest()
+	for at := 0; at < long; at++ {
+		for k := 0; k < second; k++ {
+			if len(s.lumps) != 1 || s.lumps[0].at != at || s.lumps[0].gone || s.colour != colour {
+				t.Fatalf("segment %d, move %d: lumps %v, the snake %d", at, k, s.lumps, s.colour)
+			}
+			s.digest()
+		}
+	}
+	for k := 0; k < second; k++ {
+		if len(s.lumps) != 1 || !s.lumps[0].gone || s.colour != bean || s.grow != 0 {
+			t.Fatalf("the body, move %d: lumps %v, the snake %d (the apple %d), %d to grow", k, s.lumps, s.colour, bean, s.grow)
+		}
+		s.digest()
+	}
+	if len(s.lumps) != 0 || s.grow != 1 {
+		t.Errorf("gone: lumps %v, %d to grow", s.lumps, s.grow)
+	}
+	// And the tail grows it, the next move the head is not going where
+	// the tail is.
+	s.Step()
+	if len(s.body) != long+1 && !(len(s.body) == long && s.grow == 1) {
+		t.Errorf("%d long (was %d), %d to grow", len(s.body), long, s.grow)
+	}
+}
+
+// One apple a segment: one swallowed while the one before is still in
+// the throat pushes it on, down the line.
+func TestSnakeApplesQueue(t *testing.T) {
+	s := NewSnake(3, SnakeSpeedDefault)
+	s.Draw(76, 31)
+	for i := 0; i < 40; i++ {
 		s.Step()
-		moves++
-		if at+2 >= len(s.body) {
-			if len(s.lumps) > 0 && s.lumps[0].at >= at {
-				t.Fatalf("past the tail, %d long: lumps %v", len(s.body), s.lumps)
-			}
-			if s.colour != bean {
-				t.Fatalf("past the tail, the snake is %d, the apple was %d", s.colour, bean)
-			}
-			break
-		}
-		if s.lumps[0].at != at+2 || s.lumps[0].colour != bean {
-			t.Fatalf("move %d: the lump at %d, then %v", moves, at, s.lumps)
-		}
-		// Others ahead of it may go past the tail, and turn the snake;
-		// never its own colour while it is on its way down.
-		if s.colour == bean {
-			t.Fatalf("move %d: the snake is the apple's colour, the lump not yet at the tail", moves)
-		}
-		if s.colour != colour {
-			t.Fatalf("move %d: the snake turned %d with no lump past the tail", moves, s.colour)
-		}
-		at += 2
 	}
-	if moves < 2 {
-		t.Errorf("gone in %d moves", moves)
+	s.lumps = []lump{{at: 1, colour: 1, wait: 5}, {at: 0, colour: 2, wait: 9}, {at: snakeBitten, colour: 3}}
+	s.digest()
+	if got := []int{s.lumps[0].at, s.lumps[1].at, s.lumps[2].at}; !slices.Equal(got, []int{2, 1, 0}) {
+		t.Errorf("after a swallow, the apples at %v", got)
 	}
 }
 
@@ -465,7 +477,8 @@ func TestSnakeEatsInThreeMoves(t *testing.T) {
 		}
 		sc := s.Draw(76, 31)
 		body := uint8(1 + s.colour)
-		if bitten && (px(sc, [2]int{0, 0}) != uint8(1+jaws.colour) || px(sc, [2]int{0, 1}) != body || px(sc, [2]int{0, -1}) != body || px(sc, [2]int{3, 0}) != body) {
+		_, behind := s.lumpAt(1) // an apple on its way down, just behind the head
+		if bitten && (px(sc, [2]int{0, 0}) != uint8(1+jaws.colour) || px(sc, [2]int{0, 1}) != body || px(sc, [2]int{0, -1}) != body || (!behind && px(sc, [2]int{3, 0}) != body)) {
 			t.Fatalf("move %d: the apple %d in jaws %d, %d, the body %d; the apple is %d, the snake %d",
 				i, px(sc, [2]int{0, 0}), px(sc, [2]int{0, -1}), px(sc, [2]int{0, 1}), px(sc, [2]int{3, 0}), jaws.colour, s.colour)
 		}
@@ -484,9 +497,8 @@ func TestSnakeEatsInThreeMoves(t *testing.T) {
 				t.Fatalf("move %d: the snout does not touch the apple", i)
 			}
 		}
-		long := len(s.body)
 		s.Step()
-		if len(s.body) > long {
+		if s.bitten() {
 			eats++
 		}
 	}
@@ -558,7 +570,7 @@ func roundEverySegment(t *testing.T, s *Snake, corners, straights int) (int, int
 	bean := otherColour(s.rng, s.colour)
 	ink := uint8(1 + s.colour)
 	for i := 1; i < len(s.body)-1; i++ {
-		s.lumps = []lump{{i, bean}}
+		s.lumps = []lump{{at: i, colour: bean}}
 		sc := s.Draw(76, 31)
 		x, y := s.cellAt(s.body[i])
 		at := func(p [2]int) uint8 { return sc.Pix[(y+p[1])*sc.W+x+p[0]] }
@@ -604,4 +616,74 @@ func roundEverySegment(t *testing.T, s *Snake, corners, straights int) (int, int
 		}
 	}
 	return corners, straights
+}
+
+// The end of an apple, as the user drew it (2026-10-06): at the tail, the
+// apple in the line and the body two pixels over it, nothing past the
+// end; then it is the body, and a pixel of the swelling is left.
+func TestSnakeAppleAtTheTail(t *testing.T) {
+	s := NewSnake(3, SnakeSpeedDefault)
+	s.Draw(76, 31)
+	for i := 0; i < 40; i++ {
+		s.Step()
+	}
+	last := len(s.body) - 1
+	bean := otherColour(s.rng, s.colour)
+	ink := uint8(1 + s.colour)
+	x, y := s.cellAt(s.body[last])
+	dx, dy := s.way(s.body[last], s.body[last-1])
+	at := func(sc Scene, p [2]int) uint8 {
+		px, py := turn(p, dx, dy)
+		return sc.Pix[(y+py)*sc.W+x+px]
+	}
+	s.lumps = []lump{{at: last, colour: bean, wait: 5}}
+	sc := s.Draw(76, 31)
+	if at(sc, [2]int{0, 0}) != uint8(1+bean) || at(sc, [2]int{-1, -1}) != ink || at(sc, [2]int{0, -1}) != ink || at(sc, [2]int{1, -1}) != 0 {
+		t.Errorf("at the tail: the apple %d, over it %d %d, past the end %d", at(sc, [2]int{0, 0}), at(sc, [2]int{-1, -1}), at(sc, [2]int{0, -1}), at(sc, [2]int{1, -1}))
+	}
+	s.lumps = []lump{{at: last, colour: bean, wait: 5, gone: true}}
+	sc = s.Draw(76, 31)
+	if at(sc, [2]int{0, 0}) != ink || at(sc, [2]int{0, -1}) != ink || at(sc, [2]int{-1, -1}) != 0 {
+		t.Errorf("the body: the node %d, the swelling %d and %d", at(sc, [2]int{0, 0}), at(sc, [2]int{0, -1}), at(sc, [2]int{-1, -1}))
+	}
+}
+
+// A segment to grow where the head is going into the tail: the tail
+// moves on, and grows once the head goes elsewhere, or the head would
+// run into it. On a
+// board of four cells by two, the cycle along the top from the second
+// column, back along the bottom and up the first: a snake from (1,0)
+// round the right to (2,0), with (0,0) and (0,1) behind its head, has
+// its tail next.
+func TestSnakeGrowsAMoveLaterWhereTheHeadGoesIntoItsTail(t *testing.T) {
+	s := NewSnake(1, SnakeSpeedDefault)
+	s.Draw(12, 6)
+	if s.cw != 4 || s.ch != 2 {
+		t.Fatalf("a board %dx%d", s.cw, s.ch)
+	}
+	cell := func(x, y int) int { return y*s.cw + x }
+	s.body = []int{cell(1, 0), cell(1, 1), cell(2, 1), cell(3, 1), cell(3, 0), cell(2, 0)}
+	s.taken = make([]bool, s.cw*s.ch)
+	for _, c := range s.body {
+		s.taken[c] = true
+	}
+	s.apple, s.lumps, s.grow = cell(0, 1), nil, 1
+	if s.move() != cell(2, 0) {
+		t.Fatalf("the head goes to %d, not its tail", s.move())
+	}
+	s.Step()
+	check(t, s, 1, true)
+	if len(s.body) != 6 || s.grow != 1 || s.body[0] != cell(2, 0) {
+		t.Fatalf("into the tail: %v, %d to grow", s.body, s.grow)
+	}
+	for step := 2; s.grow > 0; step++ {
+		if step > 20 {
+			t.Fatalf("never grew: %v", s.body)
+		}
+		s.Step()
+		check(t, s, step, true)
+	}
+	if len(s.body) != 7 {
+		t.Errorf("grown: %v", s.body)
+	}
 }
