@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.2.1] - 2026-10-07
 ### Added
 - A fourth saver, `bounce`: a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. Its settings are its `speed`, as the snake's — `slow`, `normal` (to begin with), `fast`, `very-fast` or `super-fast` — and its `time`, `HH:MM` (to begin with) or `HH:MM:SS`, colons and all; its colours are its own.
 - A fifth saver, `snake`: the Nokia game playing itself until the board is full, then again from the start. It never runs into itself; it has a head that reaches the apple, closes its jaws round it and swallows, each segment is a dot and each link between two is lit, and the apple blinks in a colour of its own and keeps it as it goes down the body at its own pace, a segment a second; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Its one setting is its `speed`: `slow`, `normal` (to begin with), `fast`, `very-fast` or `super-fast`; its colours are its own.
