@@ -14,7 +14,9 @@ import (
 // the bottom (user, the same day: never one colour), with a colour for
 // the runner and its world that stands out on it. By day the sun is in
 // it, by night the moon (user, the same day), up to the right where the
-// clouds go by in front of them; dusk has neither. Time-shifting fades
+// clouds go by in front of them; at dusk the sun is setting, half of it
+// on the horizon under where it was by day, the obstacles going by in
+// front of it (user, the same day). Time-shifting fades
 // each part of the day in from the one before over its first twenty
 // seconds — the sky, the runner, the sun and the moon (user, the same
 // day: they changed at once, and night to day was sudden).
@@ -32,19 +34,20 @@ var Backgrounds = []string{BackgroundDay, BackgroundNight, BackgroundTimeShiftin
 const skyFade = 20 * time.Second
 
 // The inks of the runner's scene past the ground and the runner's: the
-// sun and the moon.
+// sun, the moon and the setting sun.
 const (
-	inkSun  uint8 = 2
-	inkMoon uint8 = 3
+	inkSun    uint8 = 2
+	inkMoon   uint8 = 3
+	inkSunset uint8 = 4
 )
 
 // sky is a background: the colours its gradient passes through, top to
 // bottom and evenly apart, the colour the runner is drawn in, and
-// whether the sun or the moon is in it.
+// whether the sun, the moon or the setting sun is in it.
 type sky struct {
-	stops     []string
-	fg        string
-	sun, moon bool
+	stops             []string
+	fg                string
+	sun, moon, sunset bool
 }
 
 var (
@@ -52,18 +55,21 @@ var (
 	// in surface0, the night's ground; the sun.
 	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", sun: true}
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
-	// runner as by day.
-	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244"}
+	// runner as by day; the setting sun.
+	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", sunset: true}
 	// Night: the ground and gold the runner had (user: as now), the
 	// ground darker above it and lighter below; the moon.
 	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", moon: true}
 )
 
 // The sun, catppuccin-latte's yellow so it shows on the pale sky, and
-// the moon, rosewater, a crescent: each seven pixels square.
+// the moon, rosewater, a crescent: each seven pixels square. The setting
+// sun is the top of the sun, latte's peach so it shows on the yellow low
+// in the dusk.
 const (
-	sunColour  = "#df8e1d"
-	moonColour = "#f5e0dc"
+	sunColour    = "#df8e1d"
+	moonColour   = "#f5e0dc"
+	sunsetColour = "#fe640b"
 )
 
 var (
@@ -85,6 +91,7 @@ var (
 		".##....",
 		"..###..",
 	}
+	sunsetArt = sunArt[:4]
 )
 
 // at is the sky's colour p of the way down, 0 the top and 1 the bottom:
@@ -131,8 +138,9 @@ func shows(from, to sky, f float64, in func(sky) bool) float64 {
 	return w
 }
 
-func hasSun(s sky) bool  { return s.sun }
-func hasMoon(s sky) bool { return s.moon }
+func hasSun(s sky) bool    { return s.sun }
+func hasMoon(s sky) bool   { return s.moon }
+func hasSunset(s sky) bool { return s.sunset }
 
 // sunAt and moonAt are where the sun and the moon sit, their top-left
 // pixels: up to the right, the moon a little left of the sun, so as one
@@ -140,21 +148,30 @@ func hasMoon(s sky) bool { return s.moon }
 func (d *Dino) sunAt() (int, int)  { return d.w - d.w/6 - sunArt.w(), 1 }
 func (d *Dino) moonAt() (int, int) { return d.w - d.w/3 - moonArt.w(), 1 }
 
-// down is how far down the scene a row is, 0 the top and 1 the bottom.
-func (d *Dino) down(y int) float64 { return float64(y) / float64(max(1, d.h-1)) }
+// sunsetAt is where the setting sun sits: under the sun, on the ground.
+func (d *Dino) sunsetAt() (int, int) {
+	x, _ := d.sunAt()
+	return x, d.groundY() - sunsetArt.h()
+}
+
+// down is how far down the scene a row is, 0 the top and 1 the bottom —
+// and before the first frame, with no scene yet, the top.
+func (d *Dino) down(y int) float64 { return min(1, max(0, float64(y)/float64(max(1, d.h-1)))) }
 
 // Inks are the ground — the top of the sky — the runner's colour, the
-// sun's and the moon's: each of the two in its colour as much as it
-// shows, the rest the sky behind it.
+// sun's, the moon's and the setting sun's: each of the three in its
+// colour as much as it shows, the rest the sky behind it.
 func (d *Dino) Inks() []string {
 	from, to, f := d.skies()
 	_, sy := d.sunAt()
 	_, my := d.moonAt()
+	_, ty := d.sunsetAt()
 	return []string{
 		skyAt(from, to, f, 0),
 		mix(from.fg, to.fg, f),
 		mix(skyAt(from, to, f, d.down(sy+sunArt.h()/2)), sunColour, shows(from, to, f, hasSun)),
 		mix(skyAt(from, to, f, d.down(my+moonArt.h()/2)), moonColour, shows(from, to, f, hasMoon)),
+		mix(skyAt(from, to, f, d.down(ty+sunsetArt.h()/2)), sunsetColour, shows(from, to, f, hasSunset)),
 	}
 }
 
@@ -172,7 +189,8 @@ func (d *Dino) Ground(rows int) []string {
 	return out
 }
 
-// drawLights draws the sun and the moon where they show at all.
+// drawLights draws the sun, the moon and the setting sun where they
+// show at all.
 func (d *Dino) drawLights(sc *Scene) {
 	from, to, f := d.skies()
 	if shows(from, to, f, hasSun) > 0 {
@@ -182,6 +200,10 @@ func (d *Dino) drawLights(sc *Scene) {
 	if shows(from, to, f, hasMoon) > 0 {
 		x, y := d.moonAt()
 		sc.blitIn(moonArt, x, y, inkMoon)
+	}
+	if shows(from, to, f, hasSunset) > 0 {
+		x, y := d.sunsetAt()
+		sc.blitIn(sunsetArt, x, y, inkSunset)
 	}
 }
 

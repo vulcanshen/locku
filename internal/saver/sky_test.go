@@ -41,7 +41,7 @@ func TestRunnerBackgrounds(t *testing.T) {
 		d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, c.background, at(c.minute))
 		inks, ground := d.Inks(), d.Ground(31)
 		top, bottom := c.want.stops[0], c.want.stops[len(c.want.stops)-1]
-		if len(inks) != 4 || inks[0] != top || inks[1] != c.want.fg || len(ground) != 31 || ground[0] != top || ground[30] != bottom {
+		if len(inks) != 5 || inks[0] != top || inks[1] != c.want.fg || len(ground) != 31 || ground[0] != top || ground[30] != bottom {
 			t.Errorf("%q at minute %d: inks %v, the ground %v", c.background, c.minute, inks, ground)
 			continue
 		}
@@ -61,22 +61,23 @@ func TestRunnerBackgrounds(t *testing.T) {
 }
 
 // The sun by day and the moon by night (user, 2026-10-07), up to the
-// right, the clouds in front of them; dusk has neither. Each is in its
-// colour while its sky is there; out of it, it is not drawn at all.
+// right, the clouds in front of them; at dusk the setting sun, half of
+// it on the ground under where the sun was. Each is in its colour while
+// its sky is there; out of it, it is not drawn at all.
 func TestRunnerSunAndMoon(t *testing.T) {
 	at := func(minute int) func() time.Time {
 		return func() time.Time { return time.Date(2026, time.October, 7, 14, minute, 59, 0, time.Local) }
 	}
 	for _, c := range []struct {
-		background string
-		minute     int
-		sun, moon  bool
+		background        string
+		minute            int
+		sun, moon, sunset bool
 	}{
-		{BackgroundDay, 1, true, false},
-		{BackgroundNight, 0, false, true},
-		{BackgroundTimeShifting, 0, true, false},
-		{BackgroundTimeShifting, 1, false, false},
-		{BackgroundTimeShifting, 2, false, true},
+		{BackgroundDay, 1, true, false, false},
+		{BackgroundNight, 0, false, true, false},
+		{BackgroundTimeShifting, 0, true, false, false},
+		{BackgroundTimeShifting, 1, false, false, true},
+		{BackgroundTimeShifting, 2, false, true, false},
 	} {
 		d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, c.background, at(c.minute))
 		sc := d.Draw(76, 31)
@@ -84,12 +85,16 @@ func TestRunnerSunAndMoon(t *testing.T) {
 		for _, k := range sc.Pix {
 			count[k]++
 		}
-		if sun, moon := count[inkSun] > 0, count[inkMoon] > 0; sun != c.sun || moon != c.moon {
-			t.Errorf("%q at minute %d: the sun %v, the moon %v", c.background, c.minute, sun, moon)
+		if sun, moon, sunset := count[inkSun] > 0, count[inkMoon] > 0, count[inkSunset] > 0; sun != c.sun || moon != c.moon || sunset != c.sunset {
+			t.Errorf("%q at minute %d: the sun %v, the moon %v, the setting sun %v", c.background, c.minute, sun, moon, sunset)
 		}
 		inks := d.Inks()
-		if (inks[2] == sunColour) != c.sun || (inks[3] == moonColour) != c.moon {
-			t.Errorf("%q at minute %d: the sun %s, the moon %s", c.background, c.minute, inks[2], inks[3])
+		if (inks[2] == sunColour) != c.sun || (inks[3] == moonColour) != c.moon || (inks[4] == sunsetColour) != c.sunset {
+			t.Errorf("%q at minute %d: the sun %s, the moon %s, the setting sun %s", c.background, c.minute, inks[2], inks[3], inks[4])
+		}
+		// The setting sun under the sun, its flat side on the ground.
+		if tx, ty := d.sunsetAt(); tx != d.w-d.w/6-sunArt.w() || ty+sunsetArt.h() != d.groundY() || sunsetArt.h() != 4 || sunsetArt.w() != 7 {
+			t.Errorf("the setting sun at %d,%d", tx, ty)
 		}
 		// Each where it sits, up to the right, the moon left of the sun.
 		sx, sy := d.sunAt()
@@ -103,7 +108,8 @@ func TestRunnerSunAndMoon(t *testing.T) {
 	}
 }
 
-// A cloud going by the sun is in front of it.
+// A cloud going by the sun is in front of it, and an obstacle going by
+// the setting sun.
 func TestRunnerCloudsPassInFrontOfTheSun(t *testing.T) {
 	d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundDay, time.Now)
 	d.Draw(76, 31)
@@ -111,6 +117,14 @@ func TestRunnerCloudsPassInFrontOfTheSun(t *testing.T) {
 	d.clouds = []cloud{{x: sx, y: sy}}
 	if sc := d.Draw(76, 31); sc.Pix[(sy+1)*76+sx+3] != 1 {
 		t.Errorf("the cloud over the sun is ink %d", sc.Pix[(sy+1)*76+sx+3])
+	}
+	dusk := func() time.Time { return time.Date(2026, time.October, 7, 14, 1, 59, 0, time.Local) }
+	d = NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundTimeShifting, dusk)
+	d.Draw(76, 31)
+	tx, _ := d.sunsetAt()
+	d.obs = []obstacle{{x: tx, kind: 4}} // the big cactus, ten tall
+	if sc := d.Draw(76, 31); sc.Pix[(d.groundY()-2)*76+tx+2] != 1 && sc.Pix[(d.groundY()-2)*76+tx+3] != 1 {
+		t.Errorf("the cactus over the setting sun: %d %d", sc.Pix[(d.groundY()-2)*76+tx+2], sc.Pix[(d.groundY()-2)*76+tx+3])
 	}
 }
 
@@ -135,8 +149,19 @@ func TestRunnerSkyFades(t *testing.T) {
 	for _, k := range sc.Pix {
 		count[k]++
 	}
-	if count[inkSun] == 0 || count[inkMoon] == 0 {
-		t.Errorf("half way, the sun and the moon both: %v", count)
+	if count[inkSun] == 0 || count[inkMoon] == 0 || count[inkSunset] != 0 {
+		t.Errorf("half way, the sun and the moon both, and no setting sun: %v", count)
+	}
+	// From day to dusk, the sun going and the setting sun coming.
+	moment = time.Date(2026, time.October, 7, 14, 1, 10, 0, time.Local)
+	sc = d.Draw(76, 31)
+	count = map[uint8]int{}
+	for _, k := range sc.Pix {
+		count[k]++
+	}
+	inks = d.Inks()
+	if count[inkSun] == 0 || count[inkSunset] == 0 || count[inkMoon] != 0 || inks[2] == sunColour || inks[4] == sunsetColour {
+		t.Errorf("half way from day to dusk: %v, the sun %s, the setting sun %s", count, inks[2], inks[4])
 	}
 	step := func(a, b string) int {
 		ca, cb := channels(a), channels(b)
