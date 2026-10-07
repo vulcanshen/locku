@@ -131,7 +131,7 @@ func TestTetrominoFrameAndBoxes(t *testing.T) {
 		"#....................#......#.",
 		"#....................#......#.",
 		"#....................########.",
-		"######################........",
+		"#############################.",
 		"..............................",
 	}
 	var got []string
@@ -210,10 +210,17 @@ func TestTetrominoQueue(t *testing.T) {
 				}
 			}
 		}
-		// Under the sixth box, nothing: the column ends there.
+		// Under the sixth box, down to the foot of the frame, the frame's
+		// grey, the column's width; past the column and under the frame,
+		// nothing.
+		_, fh := g.size()
 		for y := 6*(tetroBoxH+tetroEdge) + 1; y < 35; y++ {
 			for x := fw; x < 65; x++ {
-				if sc.Pix[y*65+x] != 0 {
+				want := uint8(0)
+				if y < fh && x <= fw+tetroBoxW {
+					want = inkTetroFrame
+				}
+				if sc.Pix[y*65+x] != want {
 					t.Fatalf("seed %d: pixel %d,%d under the column is %d", seed, x, y, sc.Pix[y*65+x])
 				}
 			}

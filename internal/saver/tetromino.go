@@ -22,8 +22,9 @@ import (
 // two, and in the field's top corners at its own size, the field what
 // the boxes left; then the next two at the right). The boxes are framed
 // as the field is, a pixel thick, the side by the field the field's own
-// and the line between two boxes the one; the column ends with the last
-// box whole, the little left under it the ground. Nothing is lettered:
+// and the line between two boxes the one; under the last box whole, what
+// is left down to the foot of the frame is the frame's grey (user,
+// 2026-10-07; it was the ground). Nothing is lettered:
 // which is which is where it is.
 //
 // It plays as a player would, a piece at a time: of every spot the piece
@@ -599,7 +600,8 @@ func (g *Tetromino) Draw(w, h int) Scene {
 	}
 	// The column of boxes at the field's right, its side theirs: the
 	// line over each box and under the last, and their far side; a piece
-	// in each.
+	// in each. What is left under the last box, down to the foot of the
+	// frame, is the frame's grey (user, 2026-10-07: no gap there).
 	bx, bw, bh := fw-1, tetroBoxW+tetroEdge, tetroBoxH+tetroEdge
 	for i := 0; i <= len(g.queue); i++ {
 		for x := 0; x <= bw; x++ {
@@ -608,6 +610,11 @@ func (g *Tetromino) Draw(w, h int) Scene {
 	}
 	for y := 0; y <= len(g.queue)*bh; y++ {
 		sc.put(bx+bw, y, inkTetroFrame)
+	}
+	for y := len(g.queue)*bh + 1; y < fh; y++ {
+		for x := 0; x <= bw; x++ {
+			sc.put(bx+x, y, inkTetroFrame)
+		}
 	}
 	for i, p := range g.queue {
 		g.preview(&sc, p, fw, tetroEdge+i*bh)
