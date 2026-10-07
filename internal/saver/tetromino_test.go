@@ -98,11 +98,12 @@ func TestTetrominoBagOfSeven(t *testing.T) {
 
 // The frame is grey round the whole field, a pixel thick at the top and
 // the sides and two at the foot, the floor (user, 2026-10-07; it was two
-// all round); the two boxes for the next pieces are at its right, at the
-// top, one over the other, framed a pixel thick, the field's side theirs
-// and one line between them (user, the same day; they were in the
-// field's top corners). A pixel a character, on the least scene and a
-// pixel over each way, which is dark.
+// all round); the boxes for the pieces to come are a column at its
+// right, framed a pixel thick, the field's side theirs and one line
+// between two boxes, as many as the frame's height holds whole, the
+// rest under them dark (user, the same day; they were in the field's top
+// corners, then the next two). A pixel a character, on the least scene
+// and a pixel over each way, which is dark.
 func TestTetrominoFrameAndBoxes(t *testing.T) {
 	g := tetroGame(1, 30, 24)
 	sc := g.Draw(30, 24)
@@ -121,16 +122,16 @@ func TestTetrominoFrameAndBoxes(t *testing.T) {
 		"#....................#......#.",
 		"#....................#......#.",
 		"#....................########.",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
-		"#....................#........",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................########.",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................#......#.",
+		"#....................########.",
 		"######################........",
 		"######################........",
 		"..............................",
@@ -160,15 +161,20 @@ func TestTetrominoFrameAndBoxes(t *testing.T) {
 	}
 }
 
-// The next piece is in the top box and the one after in the box under
-// it, each as it will come in, a pixel a block, in its colour, in the
-// middle of its box as near as it halves.
-func TestTetrominoBoxesHoldTheNextTwo(t *testing.T) {
+// The pieces to come are in the column of boxes, the next at the top,
+// each as it will come in, a pixel a block, in its colour, in the middle
+// of its box as near as it halves; as many as the boxes, six on 120 x 36
+// cells. The next comes in next, the others move up a box, and a new one
+// is at the foot.
+func TestTetrominoQueue(t *testing.T) {
 	for seed := uint64(1); seed <= 7; seed++ {
 		g := tetroGame(seed, 65, 35)
 		sc := g.Draw(65, 35)
+		if len(g.queue) != 6 {
+			t.Fatalf("seed %d: %d to come", seed, len(g.queue))
+		}
 		fw, _ := g.size()
-		for i, piece := range []int{g.next, g.then} {
+		for i, piece := range g.queue {
 			px, py := fw, tetroEdge+i*(tetroBoxH+tetroEdge)
 			var lit [][2]int
 			for y := 0; y < tetroBoxH; y++ {
@@ -206,11 +212,24 @@ func TestTetrominoBoxesHoldTheNextTwo(t *testing.T) {
 				}
 			}
 		}
-		// The next piece comes in next, and the one after moves up.
-		next, then := g.next, g.then
+		// Under the sixth box, nothing: the column ends there.
+		for y := 6*(tetroBoxH+tetroEdge) + 1; y < 35; y++ {
+			for x := fw; x < 65; x++ {
+				if sc.Pix[y*65+x] != 0 {
+					t.Fatalf("seed %d: pixel %d,%d under the column is %d", seed, x, y, sc.Pix[y*65+x])
+				}
+			}
+		}
+		before := slices.Clone(g.queue)
 		g.come()
-		if g.cur != next || g.next != then {
-			t.Errorf("seed %d: came %d, next %d; want %d, %d", seed, g.cur, g.next, next, then)
+		if g.cur != before[0] || !slices.Equal(g.queue[:5], before[1:]) || len(g.queue) != 6 {
+			t.Errorf("seed %d: came %d, queue %v; was %v", seed, g.cur, g.queue, before)
+		}
+	}
+	// As many boxes as the height holds: four on 80 x 24, nine on 200 x 50.
+	for _, c := range []struct{ w, h, n int }{{40, 23, 4}, {100, 49, 9}} {
+		if g := tetroGame(1, c.w, c.h); len(g.queue) != c.n {
+			t.Errorf("%dx%d: %d boxes, want %d", c.w, c.h, len(g.queue), c.n)
 		}
 	}
 }
