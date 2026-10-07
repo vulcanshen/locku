@@ -461,11 +461,11 @@ func TestTetrominoKeepsOffTheTop(t *testing.T) {
 }
 
 // A stack that reaches the top is the end (user, 2026-10-07): every
-// piece there is dims into the frame's grey, all together, over five
-// seconds — the scene the same, the colours going; then END in red in
-// the middle of the screen, a block a pixel of the lock's letters, on a
-// plate of the ground, for two seconds; then a new game in the colours
-// again. It is at the clear's pace.
+// piece there is turns the frame's grey from the top down, a row of
+// pixels at a time, over five seconds, all else as it was; then END in
+// red in the middle of the screen, a block a pixel of the lock's
+// letters, over it, for two seconds; then a new game. It is at the
+// clear's pace, and the inks stay as they are.
 func TestTetrominoEnds(t *testing.T) {
 	g := tetroGame(6, 65, 35)
 	// Full but for a hole a row, none beside another: nowhere for a piece.
@@ -486,61 +486,55 @@ func TestTetrominoEnds(t *testing.T) {
 	if g.Next(time.Unix(0, 0)) != time.Unix(0, 0).Add(40*time.Millisecond) {
 		t.Errorf("the end's next frame at %v", g.Next(time.Unix(0, 0)))
 	}
-	fade, end := g.frames(tetroFade), g.frames(tetroEnd)
-	if fade != 125 || end != 50 {
-		t.Fatalf("fade %d frames, END %d", fade, end)
+	curtain, end := g.frames(tetroCurtain), g.frames(tetroEnd)
+	if curtain != 125 || end != 50 {
+		t.Fatalf("curtain %d frames, END %d", curtain, end)
 	}
-	// pieces are the pieces' inks now; the rest stay as they are.
-	pieces := func() []string {
-		inks := g.Inks()
-		if inks[0] != ownGround || inks[8] != tetroWhite || inks[9] != tetroGrey || inks[10] != tetroRed {
-			t.Fatalf("inks %v", inks)
+	inks := NewTetromino(1, "", tetroSpell).Inks()
+	// plain is the scene as it would be with no end; grey is it with the
+	// pieces grey down to row k.
+	g.over = false
+	plain := g.Draw(65, 35)
+	g.over = true
+	grey := func(k int) []uint8 {
+		out := slices.Clone(plain.Pix)
+		for i := range 65 * k {
+			if out[i] != 0 && out[i] < inkTetroWhite {
+				out[i] = inkTetroFrame
+			}
 		}
-		return inks[1:8]
+		return out
 	}
-	first := g.Draw(65, 35)
-	for i, c := range pieces() {
-		if want := mix(tetroColours[i], tetroGrey, 1.0/125); c != want {
-			t.Fatalf("the frame it ends, piece %d is %s, want %s", i, c, want)
+	if !slices.ContainsFunc(plain.Pix[:65*10], func(c uint8) bool { return c != 0 && c < inkTetroWhite }) {
+		t.Fatal("no pieces at the top to go grey")
+	}
+	// Thirty-four rows of the frame in a hundred and twenty-five frames:
+	// the frame it ends, one; four frames in, two; eleven, three; fifty,
+	// fourteen; then all.
+	for _, c := range []struct{ fx, k int }{{0, 1}, {3, 2}, {10, 3}, {49, 14}, {124, 34}} {
+		for g.fx < c.fx {
+			g.Step()
 		}
-	}
-	for i := 0; i < 62; i++ {
-		g.Step()
-	}
-	// Half way, half way into the grey, all alike; the scene as it was.
-	for i, c := range pieces() {
-		if want := mix(tetroColours[i], tetroGrey, 63.0/125); c != want {
-			t.Fatalf("half way, piece %d is %s, want %s", i, c, want)
+		if got := g.Draw(65, 35).Pix; !slices.Equal(got, grey(c.k)) {
+			t.Fatalf("%d frames in, not grey down to row %d and no further", c.fx+1, c.k)
 		}
-	}
-	if sc := g.Draw(65, 35); !slices.Equal(sc.Pix, first.Pix) {
-		t.Fatal("the scene changed while the pieces dimmed")
-	}
-	for g.fx < fade-1 {
-		g.Step()
-	}
-	for i, c := range pieces() {
-		if c != tetroGrey {
-			t.Fatalf("dimmed, piece %d is %s", i, c)
+		if !slices.Equal(g.Inks(), inks) {
+			t.Fatalf("%d frames in, the inks are %v", c.fx+1, g.Inks())
 		}
-	}
-	if slices.Contains(g.Draw(65, 35).Pix, inkTetroRed) {
-		t.Fatal("END before the pieces have dimmed")
 	}
 	g.Step()
 	// END, eleven pixels by five of the letters, twenty-two by ten in
-	// the scene, in the middle of its sixty-five by thirty-five, on the
-	// ground two pixels round; the rest as it was.
+	// the scene, in the middle of its sixty-five by thirty-five, over the
+	// grey; nothing else changes.
 	sc := g.Draw(65, 35)
+	all := grey(34)
 	art := tetroSpell("END")
 	for y := 0; y < 35; y++ {
 		for x := 0; x < 65; x++ {
 			ax, ay := (x-21)/2, (y-12)/2
 			lit := x >= 21 && y >= 12 && ax < len(art[0]) && ay < len(art) && art[ay][ax] == '#'
-			plate := x >= 19 && x < 45 && y >= 10 && y < 24
 			got := sc.Pix[y*65+x]
-			switch {
-			case lit && got != inkTetroRed, !lit && plate && got != 0, !plate && got != first.Pix[y*65+x]:
+			if lit && got != inkTetroRed || !lit && got != all[y*65+x] {
 				t.Fatalf("END at pixel %d,%d: %d", x, y, got)
 			}
 		}
@@ -555,8 +549,8 @@ func TestTetrominoEnds(t *testing.T) {
 	if g.over || slices.ContainsFunc(g.cells, func(c uint8) bool { return c != 0 }) || g.at.y >= 0 {
 		t.Fatalf("no new game: over %v, at %+v", g.over, g.at)
 	}
-	if !slices.Equal(pieces(), tetroColours) || slices.Contains(g.Draw(65, 35).Pix, inkTetroRed) {
-		t.Error("the new game is not in its colours")
+	if slices.Contains(g.Draw(65, 35).Pix, inkTetroRed) {
+		t.Error("END in the new game")
 	}
 }
 
