@@ -38,8 +38,8 @@ import (
 //
 // Its colours are its own (user, 2026-10-06: a saver of many colours
 // brings them): the pieces in the colours they usually have, in
-// catppuccin's, the frame in grey, the end in catppuccin's darkest,
-// crust, and its red. Its one setting is its speed, by name as the
+// catppuccin's, the frame in grey, the end in catppuccin's base and its
+// red. Its one setting is its speed, by name as the
 // snake's.
 
 const KindTetromino = "tetromino"
@@ -68,9 +68,9 @@ const (
 	tetroFx    = 40 * time.Millisecond
 	tetroFlash = 280 * time.Millisecond
 	tetroWipe  = 400 * time.Millisecond
-	// The end at the same pace: the field going black in a second, then
-	// END for two (user, 2026-10-07).
-	tetroCurtain = time.Second
+	// The end at the same pace: all going black in five seconds (user,
+	// 2026-10-07: too fast in one), then END for two (user, the same day).
+	tetroCurtain = 5 * time.Second
 	tetroEnd     = 2 * time.Second
 	tetroHide    = 4 // rows over the field a piece may be in, behind the frame
 )
@@ -100,7 +100,10 @@ var tetroColours = []string{"#89dceb", "#f9e2af", "#cba6f7", "#a6e3a1", "#f38ba8
 const (
 	tetroWhite = "#ffffff" // a row going
 	tetroGrey  = "#7f849c" // the frame: catppuccin's overlay1
-	tetroBlack = "#11111b" // the end: catppuccin's crust
+	// The end's black: catppuccin's base, the dark the runner is by night.
+	// Crust, darker, is the terminal's own ground, and the squares went
+	// into it (user, 2026-10-07: the squares were gone).
+	tetroBlack = "#1e1e2e"
 	tetroRed   = "#f38ba8" // END: catppuccin's red
 )
 

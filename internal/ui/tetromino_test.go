@@ -23,7 +23,7 @@ func TestTetrominoLockWearsItsOwnColours(t *testing.T) {
 	if _, ok := m.game.(*saver.Tetromino); !ok {
 		t.Fatalf("the game is %T", m.game)
 	}
-	if inks := m.inks(); len(inks) != 12 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#89dceb") || inks[8] != lipgloss.Color("#ffffff") || inks[9] != lipgloss.Color("#7f849c") || inks[10] != lipgloss.Color("#11111b") || inks[11] != lipgloss.Color("#f38ba8") {
+	if inks := m.inks(); len(inks) != 12 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#89dceb") || inks[8] != lipgloss.Color("#ffffff") || inks[9] != lipgloss.Color("#7f849c") || inks[10] != lipgloss.Color("#1e1e2e") || inks[11] != lipgloss.Color("#f38ba8") {
 		t.Fatalf("inks %v", inks)
 	}
 	grey := 0
