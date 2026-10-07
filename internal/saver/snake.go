@@ -21,17 +21,18 @@ import (
 // them: the move before, the apple the next cell, its head reaches the
 // apple, the snout touching it; the move it eats, the jaws are round the
 // apple — the upper three pixels over it and on behind, the lower two
-// under it; the move after, the mouth is shut and a pixel of lump stands
-// behind the head. (The jaws opened short of the apple at first, and the
-// snake looked broken.) The apple blinks in a colour of its own, at
-// random, and keeps it all the way through: an apple eaten is a lump
-// that runs down the body to the tail, a segment a move, its node and
-// its bulge in the apple's colour, so it is seen going through; past the
-// tail it is gone and the snake is its colour (it turned the moment it
-// ate, at first; the lump stayed where it was swallowed before that, as
-// on the Nokia). An apple is never the snake's colour nor any lump's on
-// its way down, so it stands out the whole way. The snake is the longer
-// for it at once,
+// under it; the move after, the mouth is shut, the apple in its throat
+// and a pixel of the body swelling behind the head. (The jaws opened
+// short of the apple at first, and the snake looked broken.) The apple
+// blinks in a colour of its own, at random, and keeps it all the way
+// through: an apple eaten runs down the body to the tail, a segment a
+// move, in the line of the body in its colour, and the body goes round
+// it — three pixels over it, in the snake's — so it is seen going
+// through the gut (user, the same day); past the tail it is gone and
+// the snake is its colour (it turned the moment it ate, at first; the
+// lump stayed where it was swallowed before that, as on the Nokia). An
+// apple is never the snake's colour nor any lump's on its way down, so
+// it stands out the whole way. The snake is the longer for it at once,
 // not when the lump reaches the tail: a tail held back then could be
 // the cell the head was going into. The head and the lump stand out on
 // one side of the body: above it along a row, to the right of it up or
@@ -85,11 +86,13 @@ var (
 	// it and two on, the lower under it and one on, the link behind. The
 	// node is the apple's to draw.
 	snakeOpen = shape{{1, 0}, {2, 0}, {0, -1}, {1, -1}, {2, -1}, {0, 1}, {1, 1}}
-	// Swallowing, the head shut: the apple a pixel behind the crown.
+	// Swallowing, the head shut and the apple at its node: the body
+	// swelling, a pixel behind the crown.
 	snakeGulp = shape{{4, -1}}
-	// A lump: an apple on its way through, at a node, and two pixels
-	// beside it as the crown is (user, 2026-10-06: it was three).
-	snakeLump = shape{{0, 0}, {0, -1}, {1, -1}}
+	// A lump: the body round an apple on its way through, which is at the
+	// node — three pixels over it (user, 2026-10-06: they were the
+	// apple's, two, beside the node, before the body went round it).
+	snakeLump = shape{{-1, -1}, {0, -1}, {1, -1}}
 )
 
 // turn is a pixel of a shape for a snake going dx, dy: going right the
@@ -427,9 +430,10 @@ func (s *Snake) stamp(sc *Scene, sh shape, c, dx, dy int, ink uint8) {
 }
 
 // Draw is the frame at w × h pixels, in the snake's colour: every cell
-// of the body and the link between each two, and the head; in theirs,
-// the apples on their way down — in the jaws, just swallowed, a lump —
-// and the apple, when it is lit. A scene of a new size is a new game.
+// of the body and the link between each two, the head, and the body
+// swelling round the apples on their way down; in theirs, those apples —
+// in the jaws, in the throat, in the body — and the apple, when it is
+// lit. A scene of a new size is a new game.
 func (s *Snake) Draw(w, h int) Scene {
 	if w != s.w || h != s.h {
 		s.reset(w, h)
@@ -453,18 +457,17 @@ func (s *Snake) Draw(w, h int) Scene {
 	head, dx, dy := s.head()
 	s.stamp(&sc, head, s.body[0], dx, dy, ink)
 	for _, l := range s.lumps {
-		bean := uint8(1 + l.colour)
+		at := max(l.at, 0) // in the jaws, it is at the head too
+		c := s.body[at]
 		switch {
-		case l.at == snakeBitten:
-			x, y := s.cellAt(s.body[0])
-			sc.put(x, y, bean)
 		case l.at == 0:
-			s.stamp(&sc, snakeGulp, s.body[0], dx, dy, bean)
-		default:
-			c := s.body[l.at]
-			ldx, ldy := s.way(c, s.body[l.at-1])
-			s.stamp(&sc, snakeLump, c, ldx, ldy, bean)
+			s.stamp(&sc, snakeGulp, c, dx, dy, ink)
+		case l.at > 0:
+			ldx, ldy := s.way(c, s.body[at-1])
+			s.stamp(&sc, snakeLump, c, ldx, ldy, ink)
 		}
+		x, y := s.cellAt(c)
+		sc.put(x, y, uint8(1+l.colour))
 	}
 	if s.apple >= 0 && (s.t/s.frames(snakeBlink))%2 == 0 {
 		x, y := s.cellAt(s.apple)
