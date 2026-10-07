@@ -12,8 +12,8 @@ import (
 )
 
 // The snake is a game on the board in colours of its own (user,
-// 2026-10-06), the bouncing box's: it changes them at every apple; every
-// frame it moves.
+// 2026-10-06), the bouncing box's: it takes an apple's colour when the
+// apple has gone down its body; every frame it moves.
 func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 	m := testLock(t, "1234", func(c *config.Config) {
 		c.Profiles = []config.Profile{config.NewProfile("s", saver.KindSnake)}
