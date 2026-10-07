@@ -103,15 +103,15 @@ func TestRunnerSunAndMoon(t *testing.T) {
 		if (inks[2] == sunColour) != c.sun || (inks[3] == moonColour) != c.moon || (inks[4] == sunsetColour) != c.sunset {
 			t.Errorf("%q at minute %d: the sun %s, the moon %s, the setting sun %s", c.background, c.minute, inks[2], inks[3], inks[4])
 		}
-		// The setting sun under the sun, its flat side on the ground.
-		if tx, ty := d.sunsetAt(); tx != d.w-d.w/6-sunArt.w() || ty+sunsetArt.h() != d.groundY() || sunsetArt.h() != 4 || sunsetArt.w() != 7 {
-			t.Errorf("the setting sun at %d,%d", tx, ty)
-		}
-		// Each where it sits, up to the right, the moon left of the sun.
+		// Each where it sits, up to the right, the sun left of the moon.
 		sx, sy := d.sunAt()
 		mx, my := d.moonAt()
-		if sy != 1 || my != 1 || mx+moonArt.w() > sx || sx+sunArt.w() > 76 || mx < 76/2 {
+		if sy != 1 || my != 1 || sx+sunArt.w() > mx || mx+moonArt.w() > 76 || sx < 76/2 {
 			t.Errorf("the sun at %d,%d, the moon at %d,%d", sx, sy, mx, my)
+		}
+		// The setting sun under the sun, its flat side on the ground.
+		if tx, ty := d.sunsetAt(); tx != sx || ty+sunsetArt.h() != d.groundY() || sunsetArt.h() != 4 || sunsetArt.w() != 7 {
+			t.Errorf("the setting sun at %d,%d", tx, ty)
 		}
 		if c.sun && sc.Pix[(sy+3)*76+sx+3] != inkSun && sc.Pix[(sy+3)*76+sx+3] != 1 {
 			t.Errorf("%q at minute %d: no sun at its middle", c.background, c.minute)
@@ -335,7 +335,7 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		}
 	}
 	night, dusk, day := nightSky.look(1), duskSky.look(1), daySky.look(1)
-	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != moonColour || night.Inks[inkEye] != "#f2b753" ||
+	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != "#cdd6f4" || night.Inks[inkEye] != "#f2b753" ||
 		dusk.Inks[inkRunner] != night.Inks[inkRunner] || day.Inks[inkRunner] != night.Inks[inkRunner] ||
 		dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" || dusk.Inks[inkEye] != "" || day.Inks[inkEye] != "" {
 		t.Errorf("the runner by night %v, at dusk %v, by day %v", night.Inks, dusk.Inks, day.Inks)
@@ -370,5 +370,25 @@ func TestRunnerEyes(t *testing.T) {
 	edge, eyes := rim(trex.run[1])
 	if !slices.Contains(edge, [2]int{5, 12}) || slices.Contains(eyes, [2]int{5, 12}) {
 		t.Errorf("between the legs: outline %v, eye %v", slices.Contains(edge, [2]int{5, 12}), slices.Contains(eyes, [2]int{5, 12}))
+	}
+}
+
+// The moon keeps clear of the runner (user, 2026-10-07: at the top of a
+// jump they ran together): on every scene from the narrowest, the big
+// runner's outline is five pixels or more short of it; and the outline
+// is a white of its own, a cool one beside the moon's warm, so one that
+// does come by it is told from it.
+func TestRunnerKeepsClearOfTheMoon(t *testing.T) {
+	for w := dinoRoom.W; w <= 3*dinoRoom.W; w++ {
+		d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundNight, time.Now)
+		d.Draw(w, dinoRoom.H)
+		mx, _ := d.moonAt()
+		if edge := d.runnerX(0) + d.runner.figures[0].air.w(); mx-edge < 5 {
+			t.Errorf("%d wide: the outline to %d, the moon from %d", w, edge, mx)
+		}
+	}
+	out, moon := channels(nightSky.outline), channels(moonColour)
+	if nightSky.outline == moonColour || out[2] <= out[0] || moon[2] >= moon[0] {
+		t.Errorf("the outline %s, the moon %s", nightSky.outline, moonColour)
 	}
 }
