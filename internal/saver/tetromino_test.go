@@ -483,7 +483,7 @@ func TestTetrominoKeepsOffTheTop(t *testing.T) {
 }
 
 // A stack that reaches the top is the end (user, 2026-10-07): all of it
-// goes black, a row at a time from the top in a second, the frame and
+// goes black, a row at a time from the top in five seconds, the frame and
 // the boxes too; then END in red in the middle, a block a
 // pixel of the lock's letters, for two seconds; then a new game. It is
 // at the clear's pace.
@@ -511,7 +511,7 @@ func TestTetrominoEnds(t *testing.T) {
 		t.Errorf("the end's next frame at %v", g.Next(time.Unix(0, 0)))
 	}
 	curtain, end := g.frames(tetroCurtain), g.frames(tetroEnd)
-	if curtain != 25 || end != 50 {
+	if curtain != 125 || end != 50 {
 		t.Fatalf("curtain %d frames, END %d", curtain, end)
 	}
 	// dark is how many pixel rows from the top are black, all across the
@@ -530,17 +530,17 @@ func TestTetrominoEnds(t *testing.T) {
 		}
 		return n
 	}
-	// Thirty-five rows, in twenty-five frames: the frame it ends, two;
-	// ten frames in, fourteen.
-	if n := dark(g.Draw(58, 35)); n != 2 {
+	// Thirty-five rows, in a hundred and twenty-five frames: the frame it
+	// ends, one; fifty frames in, fourteen.
+	if n := dark(g.Draw(58, 35)); n != 1 {
 		t.Fatalf("the first frame of the end: %d pixel rows black", n)
 	}
-	for i := 0; i < 9; i++ {
+	for i := 0; i < 49; i++ {
 		g.Step()
 	}
 	sc := g.Draw(58, 35)
 	if n := dark(sc); n != 14 || slices.Contains(sc.Pix, inkTetroRed) {
-		t.Fatalf("ten frames in: %d pixel rows black", n)
+		t.Fatalf("fifty frames in: %d pixel rows black", n)
 	}
 	for g.fx < curtain-1 {
 		g.Step()
@@ -621,7 +621,7 @@ func TestTetrominoIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 // Its colours: the ground, the pieces' as they usually are, white for a
 // row going, grey for the frame, and the end's black and red.
 func TestTetrominoInks(t *testing.T) {
-	want := []string{"#313244", "#89dceb", "#f9e2af", "#cba6f7", "#a6e3a1", "#f38ba8", "#89b4fa", "#fab387", "#ffffff", "#7f849c", "#11111b", "#f38ba8"}
+	want := []string{"#313244", "#89dceb", "#f9e2af", "#cba6f7", "#a6e3a1", "#f38ba8", "#89b4fa", "#fab387", "#ffffff", "#7f849c", "#1e1e2e", "#f38ba8"}
 	if got := NewTetromino(1, "", tetroSpell).Inks(); !slices.Equal(got, want) {
 		t.Errorf("inks %v", got)
 	}
