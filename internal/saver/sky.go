@@ -23,7 +23,10 @@ import (
 // is the one sky or the other, the runner and the sun or the moon in it
 // too, never a mix of the two (user, the same day: it changed all at
 // once and night to day was sudden; then a fade of the whole board was
-// smooth, but not what they had in mind).
+// smooth, but not what they had in mind). The runner is the same dark
+// in every sky; by night it has an outline round it, none under its
+// feet, and its eyes, in the night's gold — not gold all over, which
+// came in all at once from dusk (user, the same day).
 const (
 	BackgroundDay          = "day"
 	BackgroundNight        = "night"
@@ -41,33 +44,41 @@ const (
 	skyScatter = 0.3
 )
 
-// The inks of the runner's scene past the ground and the runner's: the
-// sun, the moon and the setting sun.
+// The inks of the runner's scene past the ground and the world's: the
+// sun, the moon and the setting sun; the runner, and its outline and
+// eyes.
 const (
-	inkSun    uint8 = 2
-	inkMoon   uint8 = 3
-	inkSunset uint8 = 4
+	inkSun     uint8 = 2
+	inkMoon    uint8 = 3
+	inkSunset  uint8 = 4
+	inkRunner  uint8 = 5
+	inkOutline uint8 = 6
 )
 
 // sky is a background: the colours its gradient passes through, top to
-// bottom and evenly apart, the colour the runner is drawn in, and
-// whether the sun, the moon or the setting sun is in it.
+// bottom and evenly apart, the colour the world is drawn in — the
+// ground line, the obstacles, the clouds — the runner's, its outline's
+// ("" for none), and whether the sun, the moon or the setting sun is in
+// it.
 type sky struct {
 	stops             []string
 	fg                string
+	runner, outline   string
 	sun, moon, sunset bool
 }
 
 var (
-	// Day: white, as the user asked, a pale blue at the top; the runner
-	// in surface0, the night's ground; the sun.
-	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", sun: true}
+	// Day: white, as the user asked, a pale blue at the top; the world
+	// and the runner in surface0, the night's ground; the sun.
+	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", runner: "#313244", sun: true}
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
-	// runner as by day; the setting sun.
-	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", sunset: true}
+	// world and the runner as by day; the setting sun.
+	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", runner: "#313244", sunset: true}
 	// Night: the ground and gold the runner had (user: as now), the
-	// ground darker above it and lighter below; the moon.
-	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", moon: true}
+	// ground darker above it and lighter below; the world in the gold,
+	// the runner as by day, with its outline and eyes in the gold; the
+	// moon.
+	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#313244", outline: "#f2b753", moon: true}
 )
 
 // The sun, a yellow deep enough to show on the pale sky — catppuccin's
@@ -91,18 +102,18 @@ var (
 		".#####.",
 		"..###..",
 	}
-	// The moon is the sun's disc with a disc like it taken out, three
-	// pixels to the right and one up: what is left keeps the round of
-	// the disc along its left and its bottom, thin at the top, full at
-	// the bottom (user, 2026-10-07: a C as thick all the way round
-	// looked an oval).
+	// The moon is the sun with a small disc, five across, taken out of
+	// its top right corner: the round of the sun all along its left and
+	// its bottom, its horns a pixel each, as wide as the sun (user,
+	// 2026-10-07: a C as thick all the way round looked an oval; then,
+	// with a disc like the sun taken out, its horns were blunt).
 	moonArt = sprite{
-		"..##...",
+		"..#....",
 		".##....",
 		"###....",
-		"###....",
 		"####...",
-		".####..",
+		"#######",
+		".#####.",
 		"..###..",
 	}
 	sunsetArt = sunArt[:4]
@@ -120,7 +131,7 @@ func (s sky) at(p float64) string {
 // the runner's, and the sun's, the moon's and the setting sun's, each
 // "" when it is not in this sky, the ground there.
 func (s sky) look(rows int) Look {
-	l := Look{Ground: make([]string, rows), Inks: []string{s.stops[0], s.fg, "", "", ""}}
+	l := Look{Ground: make([]string, rows), Inks: []string{s.stops[0], s.fg, "", "", "", s.runner, s.outline}}
 	for y := range l.Ground {
 		p := 0.0
 		if rows > 1 {
@@ -210,9 +221,32 @@ func shows(from, to sky, f float64, in func(sky) bool) bool {
 	return in(from) && f < 1 || in(to) && f > 0
 }
 
-func hasSun(s sky) bool    { return s.sun }
-func hasMoon(s sky) bool   { return s.moon }
-func hasSunset(s sky) bool { return s.sunset }
+func hasSun(s sky) bool     { return s.sun }
+func hasMoon(s sky) bool    { return s.moon }
+func hasSunset(s sky) bool  { return s.sunset }
+func hasOutline(s sky) bool { return s.outline != "" }
+
+// rim is the outline round a sprite: every pixel about it, corners too,
+// that is not of it — the eyes, which it closes round, among them — but
+// none under its last row, its feet.
+func rim(sp sprite) [][2]int {
+	in := func(x, y int) bool { return y >= 0 && y < len(sp) && x >= 0 && x < len(sp[y]) && sp[y][x] == '#' }
+	var out [][2]int
+	for y := -1; y < len(sp); y++ {
+		for x := -1; x <= sp.w(); x++ {
+			if in(x, y) {
+				continue
+			}
+			for _, d := range [8][2]int{{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}} {
+				if in(x+d[0], y+d[1]) {
+					out = append(out, [2]int{x, y})
+					break
+				}
+			}
+		}
+	}
+	return out
+}
 
 // sunAt and moonAt are where the sun and the moon sit, their top-left
 // pixels: up to the right, the moon a little left of the sun, so as one
