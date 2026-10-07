@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- The PIN box has its dots in its middle row, the lock's and the settings screen's alike: two rows of air above them, one below, and the row kept for why an Enter was refused (`wrong PIN`, `try again in 27 s`) against the bottom border. The dots used to sit a row above the middle.
 
 ## [0.2.2] - 2026-10-07
 ### Changed
