@@ -10,8 +10,9 @@ import (
 var bounceAt = time.Date(2026, time.October, 6, 21, 5, 9, 0, time.UTC)
 
 // fakeSpell sets a line as the board's 3x5 face would be wide — three
-// pixels a glyph, one between glyphs, one for a space — lighting every
-// column of a glyph, so a test can find the line in a frame.
+// pixels a glyph, one between glyphs, one for a space or a colon —
+// lighting every column of a glyph, so a test can find the line in a
+// frame.
 func fakeSpell(said *string) func(string) []string {
 	return func(line string) []string {
 		*said = line
@@ -20,9 +21,12 @@ func fakeSpell(said *string) func(string) []string {
 			if i > 0 {
 				row.WriteByte('.')
 			}
-			if r == ' ' {
+			switch r {
+			case ' ':
 				row.WriteByte('.')
-			} else {
+			case ':':
+				row.WriteByte('#')
+			default:
 				row.WriteString("###")
 			}
 		}
@@ -36,7 +40,7 @@ func fakeSpell(said *string) func(string) []string {
 
 func newTestBounce(seed uint64) (*Bounce, *string) {
 	said := new(string)
-	return NewBounce(seed, func() time.Time { return bounceAt }, fakeSpell(said)), said
+	return NewBounce(seed, func() time.Time { return bounceAt }, fakeSpell(said), SpeedNormal, BounceTimeHM), said
 }
 
 // litBox is the lit pixels' bounding box and their one ink; ok is false
@@ -59,12 +63,12 @@ func litBox(sc Scene) (x0, y0, x1, y1 int, ink uint8, ok bool) {
 	return
 }
 
-// The box is the frame, 23 × 11 around the time, in one ink; it never
+// The box is the frame, 25 × 13 around the time, in one ink; it never
 // leaves the scene, and an edge reached turns it back in another colour.
 func TestBounceTurnsAtEveryEdgeInAnotherColour(t *testing.T) {
-	for _, sz := range [][2]int{{76, 31}, {40, 23}, {50, 29}, {100, 59}, {24, 12}} {
+	for _, sz := range [][2]int{{76, 31}, {40, 23}, {50, 29}, {100, 59}, {26, 14}} {
 		b, _ := newTestBounce(3)
-		if b.bw != 23 || b.bh != 11 {
+		if b.bw != 25 || b.bh != 13 {
 			t.Fatalf("box %dx%d", b.bw, b.bh)
 		}
 		turns := 0
@@ -118,15 +122,15 @@ func TestBounceCornerFlashes(t *testing.T) {
 	}
 }
 
-// The time in the box is HH MM, centred across, under the frame and two
-// dark pixels.
+// The time in the box is HH:MM, centred across, under the two pixels of
+// the frame and two dark ones.
 func TestBounceShowsTheTime(t *testing.T) {
 	b, said := newTestBounce(5)
 	sc := b.Draw(76, 31)
-	if *said != "21 05" {
+	if *said != "21:05" {
 		t.Fatalf("spelled %q", *said)
 	}
-	ox, oy := b.x+3, b.y+3
+	ox, oy := b.x+4, b.y+4
 	for y := 0; y < 5; y++ {
 		var row strings.Builder
 		for x := 0; x < 17; x++ {
@@ -136,7 +140,7 @@ func TestBounceShowsTheTime(t *testing.T) {
 				row.WriteByte('.')
 			}
 		}
-		if got := row.String(); got != "###.###...###.###" {
+		if got := row.String(); got != "###.###.#.###.###" {
 			t.Fatalf("time row %d: %s", y, got)
 		}
 	}
@@ -156,7 +160,7 @@ func TestBounceIsTheSeedsAndKeepsItsPlace(t *testing.T) {
 	}
 	a.x, a.y = 50, 18
 	a.Draw(40, 23)
-	if a.x != 40-23 || a.y != 23-11 {
+	if a.x != 40-25 || a.y != 23-13 {
 		t.Errorf("after a resize the box is at %d,%d", a.x, a.y)
 	}
 }
@@ -186,5 +190,64 @@ func TestBounceInATinyScene(t *testing.T) {
 	}
 	if turns > 20 {
 		t.Errorf("%d colours in 100 frames: the narrow way is turning it", turns)
+	}
+}
+
+// The box's speed is picked by name as the snake's is (user, 2026-10-07):
+// seven, ten, fourteen, twenty and twenty-eight pixels a second, normal
+// the ten it always went, any other normal; its time is HH:MM or
+// HH:MM:SS, with colons, any other HH:MM, the box as wide as the time.
+func TestBounceSpeedsAndTimes(t *testing.T) {
+	now := time.Date(2026, time.October, 7, 11, 5, 0, 0, time.UTC)
+	for _, c := range []struct {
+		speed string
+		moves int
+	}{
+		{SpeedSlow, 7}, {SpeedNormal, 10}, {SpeedFast, 14}, {SpeedVeryFast, 20}, {SpeedSuperFast, 28}, {"", 10}, {"12", 10},
+	} {
+		b := NewBounce(1, func() time.Time { return bounceAt }, fakeSpell(new(string)), c.speed, BounceTimeHM)
+		if got := b.Next(now).Sub(now); got != time.Second/time.Duration(c.moves) {
+			t.Errorf("speed %q: a move every %v", c.speed, got)
+		}
+	}
+	if !reflect.DeepEqual(BounceTimes, []string{"HH:MM", "HH:MM:SS"}) {
+		t.Errorf("times %v", BounceTimes)
+	}
+	for _, c := range []struct {
+		times, said string
+		w           int
+	}{
+		{BounceTimeHM, "21:05", 25}, {BounceTimeHMS, "21:05:09", 35}, {"HH MM", "21:05", 25}, {"", "21:05", 25},
+	} {
+		said := new(string)
+		b := NewBounce(1, func() time.Time { return bounceAt }, fakeSpell(said), SpeedNormal, c.times)
+		b.Draw(76, 31)
+		if *said != c.said || b.bw != c.w || b.bh != 13 {
+			t.Errorf("time %q: spelled %q, the box %dx%d", c.times, *said, b.bw, b.bh)
+		}
+	}
+}
+
+// The frame is two pixels thick (user, 2026-10-07: it was one), the two
+// dark ones inside it all round the time.
+func TestBounceFrameIsTwoThick(t *testing.T) {
+	b, _ := newTestBounce(4)
+	sc := b.Draw(76, 31)
+	at := func(x, y int) bool { return sc.Pix[(b.y+y)*sc.W+b.x+x] != 0 }
+	for k := 0; k < 4; k++ {
+		for i := k; i < b.bw-k; i++ {
+			for _, y := range []int{k, b.bh - 1 - k} {
+				if at(i, y) != (k < 2) {
+					t.Fatalf("ring %d, %d,%d lit %v", k, i, y, at(i, y))
+				}
+			}
+		}
+		for j := k; j < b.bh-k; j++ {
+			for _, x := range []int{k, b.bw - 1 - k} {
+				if at(x, j) != (k < 2) {
+					t.Fatalf("ring %d, %d,%d lit %v", k, x, j, at(x, j))
+				}
+			}
+		}
 	}
 }

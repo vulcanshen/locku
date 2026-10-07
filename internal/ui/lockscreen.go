@@ -177,7 +177,7 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	case saver.KindRunner:
 		m.game = saver.NewDino(seed, s.Participants, s.Character, s.Scene, s.Background, time.Now)
 	case saver.KindBounce:
-		m.game = saver.NewBounce(seed, time.Now, func(l string) []string { return spell(faceShort, l) })
+		m.game = saver.NewBounce(seed, time.Now, func(l string) []string { return spell(faceShort, l) }, s.Speed, s.Time)
 	case saver.KindSnake:
 		m.game = saver.NewSnake(seed, s.Speed)
 	}

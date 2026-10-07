@@ -76,8 +76,9 @@ type Profile struct {
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
-	// The snake's own (user, 2026-10-06): how fast it goes, by name, one
-	// of saver.Speeds (2026-10-07; it was cells a second).
+	// The snake's and the bouncing box's (user, 2026-10-06, 2026-10-07):
+	// how fast it goes, by name, one of saver.Speeds (2026-10-07; it was
+	// the snake's cells a second).
 	Speed string `yaml:"speed,omitempty"`
 }
 
@@ -202,9 +203,9 @@ func NewProfile(name, kind string) Profile {
 		// picture is the program's (user, 2026-09-25).
 		return Profile{Name: name, Saver: kind}
 	case saver.KindBounce:
-		// Nothing to set: no settings, and colours of its own (user,
-		// 2026-10-06).
-		return Profile{Name: name, Saver: kind}
+		// Its speed and its time (user, 2026-10-07), and colours of its
+		// own (user, 2026-10-06).
+		return Profile{Name: name, Saver: kind, Time: saver.BounceTimeHM, Speed: saver.SpeedNormal}
 	case saver.KindSnake:
 		// Its speed alone: colours of its own (user, 2026-10-06).
 		return Profile{Name: name, Saver: kind, Speed: saver.SpeedNormal}
@@ -533,7 +534,15 @@ func tidy(p Profile, kind string) Profile {
 		p.BG, p.FG, p.Speed = "", "", ""
 		return p
 	case kind == saver.KindBounce:
-		return Profile{Name: p.Name, Saver: kind}
+		// A speed or a time it does not have is quietly the default —
+		// the clock's HH MM among them.
+		if !slices.Contains(saver.Speeds, p.Speed) {
+			p.Speed = d.Speed
+		}
+		if !slices.Contains(saver.BounceTimes, p.Time) {
+			p.Time = d.Time
+		}
+		return Profile{Name: p.Name, Saver: kind, Time: p.Time, Speed: p.Speed}
 	case kind == saver.KindSnake:
 		// A speed it does not have is quietly the default, as a colour
 		// that is not one is — cells a second too, as it was before the
