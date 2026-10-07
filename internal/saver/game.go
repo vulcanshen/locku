@@ -96,11 +96,14 @@ func (s *Scene) put(x, y int, ink uint8) {
 func (s *Scene) set(x, y int) { s.put(x, y, 1) }
 
 // blit lights a sprite with its top-left pixel at x, y, clipped.
-func (s *Scene) blit(sp sprite, x, y int) {
+func (s *Scene) blit(sp sprite, x, y int) { s.blitIn(sp, x, y, 1) }
+
+// blitIn is blit in ink.
+func (s *Scene) blitIn(sp sprite, x, y int, ink uint8) {
 	for dy, row := range sp {
 		for dx := 0; dx < len(row); dx++ {
 			if row[dx] == '#' {
-				s.set(x+dx, y+dy)
+				s.put(x+dx, y+dy, ink)
 			}
 		}
 	}

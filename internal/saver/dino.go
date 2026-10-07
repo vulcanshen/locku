@@ -724,7 +724,8 @@ func tuft(x int, every uint32) bool {
 }
 
 // Draw is the current frame at w × h pixels: the ground along the
-// bottom, the clouds, the obstacles, and the runners where their jumps
+// bottom, the sun or the moon, the clouds in front of them, the
+// obstacles, and the runners where their jumps
 // have them, each in the pose its stride is at — the one behind half a
 // stride off the one in front. Nothing else — no score, no clock (user,
 // 2026-09-24): it is a screensaver, not a game being played.
@@ -740,6 +741,7 @@ func (d *Dino) Draw(w, h int) Scene {
 			sc.set(x, gy+1)
 		}
 	}
+	d.drawLights(&sc)
 	for _, c := range d.clouds {
 		sc.blit(d.scene.cloud, c.x, c.y)
 	}
