@@ -3,6 +3,7 @@ package saver
 import (
 	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -43,7 +44,7 @@ func TestRunnerBackgrounds(t *testing.T) {
 		sh, inks := d.Shade(60, 31), d.Inks()
 		ground := sh.Looks[1].Ground
 		top, bottom := c.want.stops[0], c.want.stops[len(c.want.stops)-1]
-		if len(inks) != 5 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
+		if len(inks) != 7 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
 			len(ground) != 31 || ground[0] != top || ground[30] != bottom {
 			t.Errorf("%q at minute %d: inks %v, the ground %v", c.background, c.minute, inks, ground)
 			continue
@@ -239,11 +240,94 @@ func TestRunnerSunYellowAndMoonRound(t *testing.T) {
 	in := func(sp sprite, x, y int) bool {
 		return y >= 0 && y < len(sp) && x >= 0 && x < len(sp[y]) && sp[y][x] == '#'
 	}
+	bite := sprite{".###.", "#####", "#####", "#####", ".###."}
 	for y := range moonArt {
 		for x := range moonArt[y] {
-			if want := in(sunArt, x, y) && !in(sunArt, x-3, y+1); in(moonArt, x, y) != want {
+			if want := in(sunArt, x, y) && !in(bite, x-3, y+1); in(moonArt, x, y) != want {
 				t.Errorf("the moon at %d,%d: %v", x, y, in(moonArt, x, y))
 			}
 		}
+	}
+}
+
+// By night the runner keeps its dark (user, 2026-10-07): an outline round
+// it in the night's gold — corners too, its eyes too, none under its
+// feet — and nothing the outline passes drawn over; by day and at dusk
+// there is none. The runner is the same dark in every sky, so from dusk
+// to night only the outline comes in.
+func TestRunnerOutlinedByNight(t *testing.T) {
+	for _, c := range []struct {
+		background string
+		lined      bool
+	}{{BackgroundNight, true}, {BackgroundDay, false}} {
+		d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, c.background, time.Now)
+		d.Draw(76, 31)
+		d.obs, d.clouds = nil, nil
+		pose := d.runner.figures[0].run[(d.t/3)%2]
+		x, y := d.runnerX(0), d.groundY()-pose.h()
+		// A cloud just left of the tail: the outline leaves it be.
+		d.clouds = []cloud{{x: x - 10, y: y + 5}}
+		sc := d.Draw(76, 31)
+		at := func(px, py int) uint8 { return sc.Pix[py*sc.W+px] }
+		body := func(px, py int) bool {
+			return py >= 0 && py < pose.h() && px >= 0 && px < pose.w() && pose[py][px] == '#'
+		}
+		// The outline: not the body, beside it or at a corner of it, and
+		// not under the feet.
+		ring := map[[2]int]bool{}
+		for py := -1; py < pose.h(); py++ {
+			for px := -1; px <= pose.w(); px++ {
+				for _, d := range [8][2]int{{-1, -1}, {0, -1}, {1, -1}, {-1, 0}, {1, 0}, {-1, 1}, {0, 1}, {1, 1}} {
+					if !body(px, py) && body(px+d[0], py+d[1]) {
+						ring[[2]int{px, py}] = true
+					}
+				}
+			}
+		}
+		for py := -1; py <= pose.h(); py++ {
+			for px := -1; px <= pose.w(); px++ {
+				want := uint8(0)
+				switch {
+				case body(px, py):
+					want = inkRunner
+				case px == -1 && py == 6:
+					want = 1 // the cloud
+				case ring[[2]int{px, py}] && c.lined:
+					want = inkOutline
+				case py == pose.h():
+					want = at(x+px, y+py) // the ground under its feet
+				}
+				if got := at(x+px, y+py); got != want || (py == pose.h() && got == inkOutline) {
+					t.Fatalf("%s: the pixel %d,%d of the runner is ink %d, want %d", c.background, px, py, got, want)
+				}
+			}
+		}
+		if c.lined && at(x+8, y+1) != inkOutline { // the eye
+			t.Errorf("%s: the eye is ink %d", c.background, at(x+8, y+1))
+		}
+		// In the air too: under its feet the sky, beside them the outline.
+		if c.lined {
+			d.air[0], d.jump[0] = 4, small
+			air := d.runner.figures[0].air
+			y := d.groundY() - air.h() - d.lift(0)
+			sc := d.Draw(76, 31)
+			under := 0
+			for px := -1; px <= air.w(); px++ {
+				if k := sc.Pix[(y+air.h())*76+x+px]; k == inkOutline {
+					t.Errorf("in the air, an outline under the feet at %d", px)
+				} else if k == 0 {
+					under++
+				}
+			}
+			foot := strings.Index(air[air.h()-1], "#")
+			if d.lift(0) < 2 || under == 0 || foot < 1 || sc.Pix[(y+air.h()-1)*76+x+foot-1] != inkOutline {
+				t.Errorf("in the air, %d up: %d of the sky under its feet, no outline beside them", d.lift(0), under)
+			}
+		}
+	}
+	night, dusk, day := nightSky.look(1), duskSky.look(1), daySky.look(1)
+	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != "#f2b753" || dusk.Inks[inkRunner] != night.Inks[inkRunner] ||
+		day.Inks[inkRunner] != night.Inks[inkRunner] || dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" {
+		t.Errorf("the runner by night %v, at dusk %v, by day %v", night.Inks, dusk.Inks, day.Inks)
 	}
 }

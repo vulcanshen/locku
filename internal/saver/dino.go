@@ -749,12 +749,37 @@ func (d *Dino) Draw(w, h int) Scene {
 		s := d.scene.obstacles[o.kind]
 		sc.blit(s.sprite, o.x, gy-s.h())
 	}
+	d.drawRunners(&sc, gy)
+	return sc
+}
+
+// drawRunners draws the runners where their jumps have them, each in the
+// pose its stride is at; and while the night is in the sky, the outline
+// round each — on the sky alone, so nothing it passes is drawn over —
+// first, so the runners are on top of one another's.
+func (d *Dino) drawRunners(sc *Scene, gy int) {
+	type placed struct {
+		pose sprite
+		x, y int
+	}
+	var on []placed
 	for i, f := range d.runner.figures {
 		pose := f.air
 		if d.air[i] < 0 {
 			pose = f.run[(d.t/3+i)%2]
 		}
-		sc.blit(pose, d.runnerX(i), gy-pose.h()-d.lift(i))
+		on = append(on, placed{pose, d.runnerX(i), gy - pose.h() - d.lift(i)})
 	}
-	return sc
+	if from, to, f := d.skies(); shows(from, to, f, hasOutline) {
+		for _, p := range on {
+			for _, q := range rim(p.pose) {
+				if x, y := p.x+q[0], p.y+q[1]; x >= 0 && x < sc.W && y >= 0 && y < sc.H && sc.Pix[y*sc.W+x] == 0 {
+					sc.put(x, y, inkOutline)
+				}
+			}
+		}
+	}
+	for _, p := range on {
+		sc.blitIn(p.pose, p.x, p.y, inkRunner)
+	}
 }
