@@ -96,7 +96,7 @@ var about = map[string]string{
 	saver.KindBounce:    "the time in a box, bouncing, changing colour",
 	saver.KindSnake:     "the Nokia snake, playing itself till the board is full",
 	saver.KindTetromino: "falling blocks, playing themselves, full rows going",
-	saver.KindPets:      "cats about a room, climbing, jumping, napping",
+	saver.KindPets:      "cats outdoors, up the trees, jumping, napping",
 	saver.KindCustom:    "your own program, on a terminal of its own, as the saver",
 }
 
