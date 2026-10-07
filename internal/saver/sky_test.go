@@ -44,7 +44,7 @@ func TestRunnerBackgrounds(t *testing.T) {
 		sh, inks := d.Shade(60, 31), d.Inks()
 		ground := sh.Looks[1].Ground
 		top, bottom := c.want.stops[0], c.want.stops[len(c.want.stops)-1]
-		if len(inks) != 7 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
+		if len(inks) != 8 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
 			len(ground) != 31 || ground[0] != top || ground[30] != bottom {
 			t.Errorf("%q at minute %d: inks %v, the ground %v", c.background, c.minute, inks, ground)
 			continue
@@ -224,10 +224,9 @@ func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
 }
 
 // The sun is yellow, not orange (user, 2026-10-07): its hue between 45
-// and 60 degrees, and it stands out on the day sky. The moon is round
-// (user, the same day): the sun's disc with a disc like it taken out to
-// the right and up — every pixel of it in the disc, its left and bottom
-// edges the disc's.
+// and 60 degrees, and it stands out on the day sky. The moon is as the
+// user drew it (the same day), the sun's round along its left and its
+// bottom.
 func TestRunnerSunYellowAndMoonRound(t *testing.T) {
 	c := channels(sunColour)
 	hue := 60 * float64(c[1]-c[2]) / float64(c[0]-c[2])
@@ -237,23 +236,31 @@ func TestRunnerSunYellowAndMoonRound(t *testing.T) {
 	if sky := channels(daySky.stops[0]); sky[2]-c[2] < 150 {
 		t.Errorf("the sun %s on the day sky %s", sunColour, daySky.stops[0])
 	}
-	in := func(sp sprite, x, y int) bool {
-		return y >= 0 && y < len(sp) && x >= 0 && x < len(sp[y]) && sp[y][x] == '#'
+	drawn := sprite{
+		"..##...",
+		".##....",
+		"##.....",
+		"###...#",
+		"####.##",
+		".#####.",
+		"..###..",
 	}
-	bite := sprite{".###.", "#####", "#####", "#####", ".###."}
+	if !slices.Equal(moonArt, drawn) {
+		t.Errorf("the moon\n%s", strings.Join(moonArt, "\n"))
+	}
 	for y := range moonArt {
 		for x := range moonArt[y] {
-			if want := in(sunArt, x, y) && !in(bite, x-3, y+1); in(moonArt, x, y) != want {
-				t.Errorf("the moon at %d,%d: %v", x, y, in(moonArt, x, y))
+			if moonArt[y][x] == '#' && sunArt[y][x] != '#' {
+				t.Errorf("the moon at %d,%d is off the sun", x, y)
 			}
 		}
 	}
 }
 
 // By night the runner keeps its dark (user, 2026-10-07): an outline round
-// it in the night's gold — corners too, its eyes too, none under its
-// feet — and nothing the outline passes drawn over; by day and at dusk
-// there is none. The runner is the same dark in every sky, so from dusk
+// it, white as the moon — corners too, none under its feet — and its
+// eyes in the night's gold, and nothing they pass drawn over; by day and
+// at dusk there are none. The runner is the same dark in every sky, so from dusk
 // to night only the outline comes in.
 func TestRunnerOutlinedByNight(t *testing.T) {
 	for _, c := range []struct {
@@ -292,6 +299,8 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 					want = inkRunner
 				case px == -1 && py == 6:
 					want = 1 // the cloud
+				case px == 8 && py == 1 && c.lined:
+					want = inkEye
 				case ring[[2]int{px, py}] && c.lined:
 					want = inkOutline
 				case py == pose.h():
@@ -302,7 +311,7 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 				}
 			}
 		}
-		if c.lined && at(x+8, y+1) != inkOutline { // the eye
+		if c.lined && at(x+8, y+1) != inkEye { // the eye
 			t.Errorf("%s: the eye is ink %d", c.background, at(x+8, y+1))
 		}
 		// In the air too: under its feet the sky, beside them the outline.
@@ -326,8 +335,40 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		}
 	}
 	night, dusk, day := nightSky.look(1), duskSky.look(1), daySky.look(1)
-	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != "#f2b753" || dusk.Inks[inkRunner] != night.Inks[inkRunner] ||
-		day.Inks[inkRunner] != night.Inks[inkRunner] || dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" {
+	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != moonColour || night.Inks[inkEye] != "#f2b753" ||
+		dusk.Inks[inkRunner] != night.Inks[inkRunner] || day.Inks[inkRunner] != night.Inks[inkRunner] ||
+		dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" || dusk.Inks[inkEye] != "" || day.Inks[inkEye] != "" {
 		t.Errorf("the runner by night %v, at dusk %v, by day %v", night.Inks, dusk.Inks, day.Inks)
+	}
+}
+
+// The eyes are the ones drawn, marked 'e' (user, 2026-10-07: lit by
+// night): the T-Rex, the cat, the rabbit and the giraffe one each — the
+// small cat none — the ghost two of four pixels, the small ghost two of
+// two; each closed round by the body. The gap between the T-Rex's legs
+// mid stride is closed round too, and is no eye but outline.
+func TestRunnerEyes(t *testing.T) {
+	for name, want := range map[string][2]int{
+		CharacterTRex: {1, 1}, CharacterCat: {1, 0}, CharacterRabbit: {1, 1}, CharacterGiraffe: {1, 1}, CharacterGhost: {8, 4},
+	} {
+		for size, f := range cast[name] {
+			for _, pose := range append(f.run[:], f.air) {
+				_, eyes := rim(pose)
+				if len(eyes) != want[size] {
+					t.Errorf("%s, size %d: %d eye pixels", name, size, len(eyes))
+				}
+				for _, e := range eyes {
+					for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+						if c := pose[e[1]+d[1]][e[0]+d[0]]; c != '#' && c != 'e' {
+							t.Errorf("%s, size %d: the eye at %v open at %v", name, size, e, d)
+						}
+					}
+				}
+			}
+		}
+	}
+	edge, eyes := rim(trex.run[1])
+	if !slices.Contains(edge, [2]int{5, 12}) || slices.Contains(eyes, [2]int{5, 12}) {
+		t.Errorf("between the legs: outline %v, eye %v", slices.Contains(edge, [2]int{5, 12}), slices.Contains(eyes, [2]int{5, 12}))
 	}
 }
