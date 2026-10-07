@@ -389,27 +389,27 @@ func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
 
 // The snake changes colour at every apple, so its colours are its own
 // (user, 2026-10-06), as the bouncing box's; its one setting is its
-// speed, cells a second, one to thirty, twelve unless it says — or says
-// one it cannot run at. Whatever else the file has goes, and no other
-// saver keeps a speed.
+// speed, by name (2026-10-07), normal unless it says — or says one it
+// does not have, cells a second as it was among them. Whatever else the
+// file has goes, and no other saver keeps a speed.
 func TestASnakeProfileIsItsSpeed(t *testing.T) {
-	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    speed: 20\n    size: large\n    runner: big\n    command: cmatrix\n    bg: \"#43523d\"\n    fg: \"#ABCDEF\"\n"+
-		"  - name: fast\n    saver: snake\n    speed: 99\n  - name: none\n    saver: snake\n  - name: c\n    saver: clock\n    speed: 20\n  - name: d\n    saver: dino\n    speed: 20\n")
+	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    speed: very-fast\n    size: large\n    runner: big\n    command: cmatrix\n    bg: \"#43523d\"\n    fg: \"#ABCDEF\"\n"+
+		"  - name: fast\n    saver: snake\n    speed: 12\n  - name: none\n    saver: snake\n  - name: c\n    saver: clock\n    speed: fast\n  - name: d\n    saver: dino\n    speed: fast\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake", Speed: 20}) {
+	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake", Speed: "very-fast"}) {
 		t.Errorf("the snake profile %+v", s)
 	}
-	if cfg.Profiles[1].Speed != 12 || cfg.Profiles[2].Speed != 12 || cfg.Profiles[3].Speed != 0 || cfg.Profiles[4].Speed != 0 {
+	if cfg.Profiles[1].Speed != "normal" || cfg.Profiles[2].Speed != "normal" || cfg.Profiles[3].Speed != "" || cfg.Profiles[4].Speed != "" {
 		t.Errorf("speeds %+v", cfg.Profiles)
 	}
-	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake", Speed: 12}) {
+	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake", Speed: "normal"}) {
 		t.Errorf("a new one %+v", n)
 	}
 	if err := SaveFile(p, cfg); err != nil {
 		t.Fatal(err)
 	}
 	body, _ := os.ReadFile(p)
-	if s := string(body); !strings.Contains(s, "  - name: s\n      saver: snake\n      speed: 20\n") || !strings.Contains(s, "    snake:\n        saver: snake\n        speed: 12\n") {
+	if s := string(body); !strings.Contains(s, "  - name: s\n      saver: snake\n      speed: very-fast\n") || !strings.Contains(s, "    snake:\n        saver: snake\n        speed: normal\n") {
 		t.Errorf("saved:\n%s", s)
 	}
 }

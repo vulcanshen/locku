@@ -74,7 +74,7 @@ func TestDump(t *testing.T) {
 	show("big-small in the desert, 152x32 after 90 frames", ascii(paintScene(two.Draw(76, 31), 1, 152, 31)))
 	box := saver.NewBounce(5, func() time.Time { return at }, func(l string) []string { return spell(faceShort, l) })
 	show("the bouncing box, 152x32", ascii(paintScene(box.Draw(76, 31), 1, 152, 31)))
-	snake := saver.NewSnake(5, saver.SnakeSpeedDefault)
+	snake := saver.NewSnake(5, saver.SpeedNormal)
 	snake.Draw(76, 31)
 	for i := 0; i < 400; i++ {
 		snake.Step()

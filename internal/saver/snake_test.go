@@ -115,7 +115,7 @@ func check(t *testing.T, s *Snake, step int, enough bool) {
 // colour when the lump is at the tail and goes, and only then.
 func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 	for i, sz := range [][2]int{{15, 11}, {21, 13}, {40, 23}, {31, 19}, {16, 9}, {76, 31}, {50, 29}, {49, 31}, {11, 7}, {100, 59}} {
-		s := NewSnake(uint64(4+i), SnakeSpeedDefault)
+		s := NewSnake(uint64(4+i), SpeedNormal)
 		s.Draw(sz[0], sz[1])
 		n := len(s.tour)
 		if len(s.body) != snakeStart || n == 0 || s.colour != len(ownColours) {
@@ -213,7 +213,7 @@ func turned(before, after []lump, colour int) int {
 // Short cuts while the board is mostly empty: a game takes fewer steps
 // than following the cycle for every apple would.
 func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
-	s := NewSnake(11, SnakeSpeedDefault)
+	s := NewSnake(11, SpeedNormal)
 	s.Draw(76, 31)
 	n := len(s.tour)
 	steps := 0
@@ -288,7 +288,7 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 // every link, its head — and in their own an apple on its way down at
 // its node, and the apple every other few frames.
 func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
-	s := NewSnake(6, SnakeSpeedDefault)
+	s := NewSnake(6, SpeedNormal)
 	s.Draw(76, 31)
 	for i := 0; i < 200; i++ {
 		s.Step()
@@ -349,7 +349,7 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 // The same seed is the same game; a new size is a new one, and a scene
 // too small has none and draws nothing.
 func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
-	a, b := NewSnake(9, SnakeSpeedDefault), NewSnake(9, SnakeSpeedDefault)
+	a, b := NewSnake(9, SpeedNormal), NewSnake(9, SpeedNormal)
 	for i := 0; i < 300; i++ {
 		if !reflect.DeepEqual(a.Draw(40, 23), b.Draw(40, 23)) {
 			t.Fatalf("frame %d differs", i)
@@ -361,7 +361,7 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 	if a.cw != 16 || a.ch != 9 || len(a.body) != snakeStart {
 		t.Errorf("after a resize: %dx%d, %d long", a.cw, a.ch, len(a.body))
 	}
-	tiny := NewSnake(1, SnakeSpeedDefault)
+	tiny := NewSnake(1, SpeedNormal)
 	sc := tiny.Draw(4, 7)
 	tiny.Step()
 	for _, k := range sc.Pix {
@@ -373,11 +373,11 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 
 // An apple eaten goes down the body to the tail at its own pace (user,
 // 2026-10-06), whatever the snake does: in the throat the move after,
-// then a segment a second — twelve moves at twelve a second; a second at
+// then a segment a second — seven moves at normal speed; a second at
 // the tail and it is the body: the snake its colour and the tail a
 // segment to grow, both at once (user, 2026-10-07).
 func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
-	s := NewSnake(3, SnakeSpeedDefault)
+	s := NewSnake(3, SpeedNormal)
 	s.Draw(76, 31)
 	for i := 0; i < 40; i++ {
 		s.Step()
@@ -385,7 +385,7 @@ func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 	s.lumps, s.grow = []lump{{at: snakeBitten, colour: s.next}}, 0
 	colour, bean, long := s.colour, s.next, len(s.body)
 	second := s.frames(snakeDigest)
-	if second != 12 || long < 3 {
+	if second != 7 || long < 3 {
 		t.Fatalf("a second is %d moves, the snake %d long", second, long)
 	}
 	s.digest()
@@ -415,7 +415,7 @@ func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 // colour and the tail a segment longer, at once. One whose second is up
 // while the apple ahead still holds the next segment waits for it.
 func TestSnakeApplesQueue(t *testing.T) {
-	s := NewSnake(3, SnakeSpeedDefault)
+	s := NewSnake(3, SpeedNormal)
 	s.Draw(76, 31)
 	for i := 0; i < 40; i++ {
 		s.Step()
@@ -475,7 +475,7 @@ func TestSnakeApplesQueue(t *testing.T) {
 // still its own — and the body behind the crown is dark, open or shut.
 // Shut the rest of the time; and drawn so.
 func TestSnakeEatsInThreeMoves(t *testing.T) {
-	s := NewSnake(8, SnakeSpeedDefault)
+	s := NewSnake(8, SpeedNormal)
 	s.Draw(76, 31)
 	px := func(sc Scene, p [2]int) uint8 {
 		x, y := s.cellAt(s.body[0])
@@ -550,7 +550,7 @@ func TestSnakeEatsInThreeMoves(t *testing.T) {
 // head — a pixel of the body swelled behind it, open and shut, and meant
 // nothing. 'x' the snake, 'o' the apple.
 func TestSnakeHeadRoundTheAppleIsAsDrawn(t *testing.T) {
-	s := NewSnake(1, SnakeSpeedDefault)
+	s := NewSnake(1, SpeedNormal)
 	s.Draw(snakeRoom.W, snakeRoom.H)
 	s.body, s.apple = nil, -1
 	for i := 0; i < 5; i++ {
@@ -601,37 +601,45 @@ xoxxxxxxxxxxxx`},
 	}
 }
 
-// The speed is cells a second (user, 2026-10-06): a move every second
-// over it, from one to thirty, twelve for any other; a full board stays
-// three seconds, and the apple blinks a third of a second, at any speed.
+// The speed is picked by name (user, 2026-10-07): slow, normal, fast,
+// very fast and super fast — five, seven, ten, fourteen and twenty cells
+// a second, each about 1.4 times the one before — and normal for any
+// other, a number among them; a full board stays three seconds, and the
+// apple blinks a third of a second, at any speed.
 func TestSnakeSpeed(t *testing.T) {
-	now := time.Date(2026, time.October, 6, 21, 5, 0, 0, time.UTC)
+	if !slices.Equal(Speeds, []string{"slow", "normal", "fast", "very-fast", "super-fast"}) {
+		t.Errorf("speeds %v", Speeds)
+	}
+	now := time.Date(2026, time.October, 7, 11, 5, 0, 0, time.UTC)
 	for _, c := range []struct {
-		speed, moves, hold, blink int
+		speed              string
+		moves, hold, blink int
 	}{
-		{1, 1, 3, 1},
-		{12, 12, 36, 3},
-		{30, 30, 90, 9},
-		{0, 12, 36, 3},
-		{31, 12, 36, 3},
-		{-5, 12, 36, 3},
+		{SpeedSlow, 5, 15, 1},
+		{SpeedNormal, 7, 21, 2},
+		{SpeedFast, 10, 30, 3},
+		{SpeedVeryFast, 14, 42, 4},
+		{SpeedSuperFast, 20, 60, 6},
+		{"", 7, 21, 2},
+		{"12", 7, 21, 2},
+		{"Fast", 7, 21, 2},
 	} {
 		s := NewSnake(1, c.speed)
 		if got := s.Next(now).Sub(now); got != time.Second/time.Duration(c.moves) {
-			t.Errorf("speed %d: a move every %v", c.speed, got)
+			t.Errorf("speed %q: a move every %v", c.speed, got)
 		}
 		if h, b := s.frames(snakeHold), s.frames(snakeBlink); h != c.hold || b != c.blink {
-			t.Errorf("speed %d: holds %d moves, blinks every %d", c.speed, h, b)
+			t.Errorf("speed %q: holds %d moves, blinks every %d", c.speed, h, b)
 		}
 	}
-	// At thirty a second the apple is lit nine moves, then dark nine.
-	s := NewSnake(1, 30)
+	// Super fast, the apple is lit six moves, then dark six.
+	s := NewSnake(1, SpeedSuperFast)
 	s.Draw(76, 31)
 	x, y := s.cellAt(s.apple)
-	for f := 0; f < 36; f++ {
+	for f := 0; f < 24; f++ {
 		s.t = f
 		sc := s.Draw(76, 31)
-		if lit := sc.Pix[y*sc.W+x] != 0; lit != ((f/9)%2 == 0) {
+		if lit := sc.Pix[y*sc.W+x] != 0; lit != ((f/6)%2 == 0) {
 			t.Fatalf("move %d: the apple lit %v", f, lit)
 		}
 	}
@@ -643,7 +651,7 @@ func TestSnakeSpeed(t *testing.T) {
 // tail — there is nothing about it but the links to the segments either
 // side.
 func TestSnakeAppleInTheBodyIsANode(t *testing.T) {
-	s := NewSnake(6, SnakeSpeedDefault)
+	s := NewSnake(6, SpeedNormal)
 	s.Draw(76, 31)
 	corners, straights := 0, 0
 	for moment := 0; moment < 20; moment++ {
@@ -702,7 +710,7 @@ func appleInEverySegment(t *testing.T, s *Snake, corners, straights int) (int, i
 // The end of an apple (user, 2026-10-06; nothing about it, 2026-10-07):
 // at the tail, the apple at the node and the one link, and nothing else.
 func TestSnakeAppleAtTheTail(t *testing.T) {
-	s := NewSnake(3, SnakeSpeedDefault)
+	s := NewSnake(3, SpeedNormal)
 	s.Draw(76, 31)
 	for i := 0; i < 40; i++ {
 		s.Step()
@@ -738,7 +746,7 @@ func TestSnakeAppleAtTheTail(t *testing.T) {
 // round the right to (2,0), with (0,0) and (0,1) behind its head, has
 // its tail next.
 func TestSnakeGrowsAMoveLaterWhereTheHeadGoesIntoItsTail(t *testing.T) {
-	s := NewSnake(1, SnakeSpeedDefault)
+	s := NewSnake(1, SpeedNormal)
 	s.Draw(12, 6)
 	if s.cw != 4 || s.ch != 2 {
 		t.Fatalf("a board %dx%d", s.cw, s.ch)

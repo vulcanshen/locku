@@ -125,7 +125,7 @@ func (m AppModel) actions() []action {
 	case rowWrongPINCooldown:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	case rowSpeed:
-		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "how fast it runs: cells a second, 1 to 30", run: (*AppModel).editNumber})
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how fast it runs", run: (*AppModel).chooseSpeed})
 	case rowConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
 	case rowIdle:
@@ -494,6 +494,10 @@ func (m *AppModel) chooseCharacter() tea.Cmd {
 	return m.choose("character", saver.Characters, func(p config.Profile) string { return p.Character })
 }
 
+func (m *AppModel) chooseSpeed() tea.Cmd {
+	return m.choose("speed", saver.Speeds, func(p config.Profile) string { return p.Speed })
+}
+
 // chooseLock is Enter on tmux's lock: lock-server, or lock-session.
 func (m *AppModel) chooseLock() tea.Cmd {
 	return m.openOptions("lock", config.TmuxLocks, m.cfg.Tmux.Lock, 0)
@@ -571,6 +575,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.edit(func(p *config.Profile) { p.Runner = v })
 	case rowCharacter:
 		m.edit(func(p *config.Profile) { p.Character = v })
+	case rowSpeed:
+		m.edit(func(p *config.Profile) { p.Speed = v })
 	case rowScene:
 		m.edit(func(p *config.Profile) { p.Scene = v })
 	case rowLayout:
@@ -660,9 +666,6 @@ func (m *AppModel) editNumber() tea.Cmd {
 		cur = itoa(m.cfg.WrongPINAttempts)
 	case rowWrongPINCooldown:
 		cur = itoa(m.cfg.WrongPINCooldown)
-	case rowSpeed:
-		p, _, _ := m.subject()
-		cur = itoa(p.Speed)
 	case rowIdle:
 		_, t := m.tool()
 		cur = itoa(t.Idle)
@@ -840,21 +843,6 @@ func (m *AppModel) commitInput(box *inputPopup) tea.Cmd {
 		v = strings.TrimSpace(v)
 		def := config.Default()
 		n := 0
-		if m.editKind == rowSpeed {
-			// The snake's speed (user, 2026-10-06): cells a second, in
-			// the saver's range; empty for the default.
-			n = saver.SnakeSpeedDefault
-			if v != "" {
-				var err error
-				if n, err = strconv.Atoi(v); err != nil || n < saver.SnakeSpeedMin || n > saver.SnakeSpeedMax {
-					m.input.err = "a whole number, " + itoa(saver.SnakeSpeedMin) + " to " + itoa(saver.SnakeSpeedMax)
-					return nil
-				}
-			}
-			before := m.snapshot()
-			m.edit(func(p *config.Profile) { p.Speed = n })
-			return tea.Batch(m.input.close(), m.save(before))
-		}
 		if v != "" {
 			var err error
 			if n, err = strconv.Atoi(v); err != nil || n < 0 {

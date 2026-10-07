@@ -52,21 +52,21 @@ func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 }
 
 // On the settings screen the snake has its speed to set and nothing
-// else, not even colours (user, 2026-10-06): cells a second, typed in a
-// number box — one to thirty, empty for twelve, anything else refused in
-// its error row.
+// else, not even colours (user, 2026-10-06): chosen from the five by
+// name (2026-10-07; it was cells a second, typed), the cursor on the one
+// it is, normal to begin with, written at once.
 func TestSnakeHasItsSpeed(t *testing.T) {
 	m := newTestApp(t).press("G", "k", "k", "k", "k") // the snake, above the custom saver
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindSnake {
 		t.Fatalf("the snake sits above the custom saver, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "12 cells a second") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "runner") {
+	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "runner") {
 		t.Errorf("the snake's [2]:\n%s", v)
 	}
 	m = m.press("n", "enter")
 	it := m.sideAt()
-	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "snake", Saver: saver.KindSnake, Speed: 12}) {
+	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "snake", Saver: saver.KindSnake, Speed: saver.SpeedNormal}) {
 		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
 	}
 	keys := m.press("2", " ").menu.menuKeys()
@@ -74,38 +74,32 @@ func TestSnakeHasItsSpeed(t *testing.T) {
 		t.Errorf("its menu: %v", keys)
 	}
 	m = m.press("2", "j")
-	if r := m.rowAt(); r.kind != rowSpeed {
+	if r := m.rowAt(); r.kind != rowSpeed || r.label != "speed" || r.value != "normal" {
 		t.Fatalf("the row under the name: %+v", r)
 	}
 	m = m.press("enter")
-	if !m.input.isInteractive() || m.input.title != "number" || m.input.value != "12" {
-		t.Fatalf("the box %+v", m.input)
+	if !m.options.isInteractive() || len(m.options.items) != len(saver.Speeds) || m.options.items[m.options.cursor].label != "normal" {
+		t.Fatalf("options %+v", m.options.items)
 	}
-	for _, bad := range []string{"0", "31", "-3", "fast"} {
-		m = m.press("ctrl+u").typed(bad).press("enter")
-		if m.input.err != "a whole number, 1 to 30" || m.cfg.Profiles[it.ref].Speed != 12 {
-			t.Fatalf("%q: error %q, speed %d", bad, m.input.err, m.cfg.Profiles[it.ref].Speed)
-		}
+	m = m.press("j", "j", "enter")
+	if got := m.cfg.Profiles[it.ref].Speed; got != saver.SpeedVeryFast || saved(t).Profiles[it.ref].Speed != saver.SpeedVeryFast {
+		t.Errorf("chose %q", got)
 	}
-	m = m.press("ctrl+u").typed("20").press("enter")
-	if m.cfg.Profiles[it.ref].Speed != 20 || saved(t).Profiles[it.ref].Speed != 20 || !strings.Contains(m.View(), "20 cells a second") {
-		t.Errorf("20: speed %d", m.cfg.Profiles[it.ref].Speed)
-	}
-	m = m.press("enter", "ctrl+u", "enter")
-	if m.cfg.Profiles[it.ref].Speed != 12 {
-		t.Errorf("empty: speed %d", m.cfg.Profiles[it.ref].Speed)
+	if r := m.rowAt(); r.value != "very-fast" {
+		t.Errorf("the row %+v", r)
 	}
 }
 
-// The lock runs the snake at the profile speed (user, 2026-10-06).
+// The lock runs the snake at the profile speed (user, 2026-10-06):
+// super fast is twenty cells a second.
 func TestSnakeLockRunsAtTheProfileSpeed(t *testing.T) {
 	m := testLock(t, "1234", func(c *config.Config) {
 		p := config.NewProfile("s", saver.KindSnake)
-		p.Speed = 20
+		p.Speed = saver.SpeedSuperFast
 		c.Profiles = []config.Profile{p}
 		c.Profile = "s"
 	})
 	if d := m.game.Next(at).Sub(at); d != 50*time.Millisecond {
-		t.Errorf("a move every %v at 20 cells a second", d)
+		t.Errorf("a move every %v super fast", d)
 	}
 }

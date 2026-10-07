@@ -45,19 +45,30 @@ import (
 // Its colours are its own (user, 2026-10-06: a saver of many colours
 // brings them, and has no bg / fg); it starts white, as it has eaten
 // nothing (user, 2026-10-07; it was a colour at random). Its one setting
-// is its speed, in cells a second (user, 2026-10-06).
+// is its speed, slow to super fast (user, 2026-10-06; a number of cells a
+// second to type at first).
 
 const KindSnake = "snake"
 
-// The snake's speed, cells a second (user, 2026-10-06): the user's
-// number, from one to thirty — thirty frames a second is as many as the
-// lock draws, or a key in the PIN box would wait on the output — and
-// twelve when none is given, near the twelve and a half it ran at.
+// The snake's speeds (user, 2026-10-07): picked by name — a number of
+// cells a second to type was not plain — normal unless one is picked.
 const (
-	SnakeSpeedMin     = 1
-	SnakeSpeedMax     = 30
-	SnakeSpeedDefault = 12
+	SpeedSlow      = "slow"
+	SpeedNormal    = "normal"
+	SpeedFast      = "fast"
+	SpeedVeryFast  = "very-fast"
+	SpeedSuperFast = "super-fast"
 )
+
+// Speeds are the snake's speeds, the slowest first.
+var Speeds = []string{SpeedSlow, SpeedNormal, SpeedFast, SpeedVeryFast, SpeedSuperFast}
+
+// snakeSpeeds are the speeds in cells a second, normal seven (user,
+// 2026-10-07) and each about 1.4 times the one before, so each looks as
+// much faster as the last; twenty at most, short of the thirty frames a
+// second the lock draws at most — past that a key in the PIN box would
+// wait on the output.
+var snakeSpeeds = map[string]int{SpeedSlow: 5, SpeedNormal: 7, SpeedFast: 10, SpeedVeryFast: 14, SpeedSuperFast: 20}
 
 const (
 	snakeStart  = 3                      // cells long at the start
@@ -140,14 +151,14 @@ type Snake struct {
 	frame  time.Duration
 }
 
-// NewSnake is a game from its first frame, speed cells a second — out
-// of SnakeSpeedMin … SnakeSpeedMax, SnakeSpeedDefault. The same seed is
-// the same game.
-func NewSnake(seed uint64, speed int) *Snake {
-	if speed < SnakeSpeedMin || speed > SnakeSpeedMax {
-		speed = SnakeSpeedDefault
+// NewSnake is a game from its first frame, at a speed out of Speeds —
+// normal for any other. The same seed is the same game.
+func NewSnake(seed uint64, speed string) *Snake {
+	n, ok := snakeSpeeds[speed]
+	if !ok {
+		n = snakeSpeeds[SpeedNormal]
 	}
-	return &Snake{rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)), frame: time.Second / time.Duration(speed)}
+	return &Snake{rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)), frame: time.Second / time.Duration(n)}
 }
 
 // frames is how many moves d is at the snake's speed; one at least.
