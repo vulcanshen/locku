@@ -50,7 +50,7 @@ const (
 	rowCharacter
 	rowScene
 	rowCommand // a custom saver's program
-	rowSpeed   // the snake's, cells a second
+	rowSpeed   // the snake's, slow to super-fast
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -202,7 +202,7 @@ func fieldRows(p config.Profile) []row {
 		return nil
 	}
 	if p.Saver == saver.KindSnake {
-		return []row{{kind: rowSpeed, label: "speed", value: itoa(p.Speed) + " cells a second", color: value, stop: true}}
+		return []row{{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true}}
 	}
 	if p.Saver == saver.KindCustom {
 		// The program, as sh -c runs it; none yet is said in yellow, as

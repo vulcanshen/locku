@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -71,8 +72,9 @@ type Profile struct {
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
-	// The snake's own (user, 2026-10-06): cells a second.
-	Speed int `yaml:"speed,omitempty"`
+	// The snake's own (user, 2026-10-06): how fast it goes, by name, one
+	// of saver.Speeds (2026-10-07; it was cells a second).
+	Speed string `yaml:"speed,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -192,7 +194,7 @@ func NewProfile(name, kind string) Profile {
 		return Profile{Name: name, Saver: kind}
 	case saver.KindSnake:
 		// Its speed alone: colours of its own (user, 2026-10-06).
-		return Profile{Name: name, Saver: kind, Speed: saver.SnakeSpeedDefault}
+		return Profile{Name: name, Saver: kind, Speed: saver.SpeedNormal}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -462,19 +464,20 @@ func tidy(p Profile, kind string) Profile {
 	switch {
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Character, p.Scene = "", "", "", "", "", "", "", ""
-		p.BG, p.FG, p.Speed = "", "", 0
+		p.BG, p.FG, p.Speed = "", "", ""
 		return p
 	case kind == saver.KindBounce:
 		return Profile{Name: p.Name, Saver: kind}
 	case kind == saver.KindSnake:
-		// A speed it cannot run at is quietly the default, as a colour
-		// that is not one is.
-		if p.Speed < saver.SnakeSpeedMin || p.Speed > saver.SnakeSpeedMax {
+		// A speed it does not have is quietly the default, as a colour
+		// that is not one is — cells a second too, as it was before the
+		// speeds had names.
+		if !slices.Contains(saver.Speeds, p.Speed) {
 			p.Speed = d.Speed
 		}
 		return Profile{Name: p.Name, Saver: kind, Speed: p.Speed}
 	case kind == saver.KindDino:
-		p.Command, p.Speed = "", 0
+		p.Command, p.Speed = "", ""
 		if p.Runner == "" {
 			p.Runner = d.Runner
 		}
@@ -489,7 +492,7 @@ func tidy(p Profile, kind string) Profile {
 		}
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
 	default:
-		p.Command, p.Speed = "", 0
+		p.Command, p.Speed = "", ""
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}
