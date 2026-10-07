@@ -25,8 +25,10 @@ import (
 // once and night to day was sudden; then a fade of the whole board was
 // smooth, but not what they had in mind). The runner is the same dark
 // in every sky; by night it has an outline round it, none under its
-// feet, white as the moon, and its eyes in the night's gold — not gold
-// all over, which came in all at once from dusk (user, the same day).
+// feet, a cooler white than the moon's, and its eyes in the night's
+// gold — not gold all over, which came in all at once from dusk (user,
+// the same day; the outline was the moon's own white, and the runner at
+// the top of a jump ran into it).
 const (
 	BackgroundDay          = "day"
 	BackgroundNight        = "night"
@@ -77,9 +79,10 @@ var (
 	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", runner: "#313244", sunset: true}
 	// Night: the ground and gold the runner had (user: as now), the
 	// ground darker above it and lighter below; the world in the gold,
-	// the runner as by day, with its outline white as the moon (user,
-	// 2026-10-07: it was the gold) and its eyes in the gold; the moon.
-	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#313244", outline: moonColour, eye: "#f2b753", moon: true}
+	// the runner as by day, with its outline white (user, 2026-10-07: it
+	// was the gold) — catppuccin's text, a cool white, the moon's warm —
+	// and its eyes in the gold; the moon.
+	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#313244", outline: "#cdd6f4", eye: "#f2b753", moon: true}
 )
 
 // The sun, a yellow deep enough to show on the pale sky — catppuccin's
@@ -259,10 +262,14 @@ func rim(sp sprite) (edge, eyes [][2]int) {
 }
 
 // sunAt and moonAt are where the sun and the moon sit, their top-left
-// pixels: up to the right, the moon a little left of the sun, so as one
-// goes and the other comes, both are seen.
-func (d *Dino) sunAt() (int, int)  { return d.w - d.w/6 - sunArt.w(), 1 }
-func (d *Dino) moonAt() (int, int) { return d.w - d.w/3 - moonArt.w(), 1 }
+// pixels: up to the right, the sun a little left of the moon, so as one
+// goes and the other comes, both are seen. The moon is the further from
+// the runner — on the narrowest scene eight pixels from its outline at
+// the top of a jump — so the two do not run together (user,
+// 2026-10-07: it was a pixel off); the sun, by day, has no outline to
+// run into.
+func (d *Dino) sunAt() (int, int)  { return d.w - d.w/3 - sunArt.w(), 1 }
+func (d *Dino) moonAt() (int, int) { return d.w - d.w/6 - moonArt.w(), 1 }
 
 // sunsetAt is where the setting sun sits: under the sun, on the ground.
 func (d *Dino) sunsetAt() (int, int) {
