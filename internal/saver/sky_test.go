@@ -1,6 +1,7 @@
 package saver
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -10,9 +11,9 @@ import (
 // blue above it and the runner in surface0; night, the ground and gold
 // it had; or time-shifting, a day in three minutes by the clock — day at
 // the hour and every third minute, dusk the minute after, night the one
-// after that, each at once; anything else is time-shifting. Each is a
-// gradient down the board, through every one of its colours, a row its
-// own shade — never one colour.
+// after that; anything else is time-shifting. Each is a gradient down
+// the board, through every one of its colours, a row its own shade —
+// never one colour — and once a sky is there, every square is in it.
 func TestRunnerBackgrounds(t *testing.T) {
 	if !slices.Equal(Backgrounds, []string{"day", "night", "time-shifting"}) {
 		t.Errorf("backgrounds %v", Backgrounds)
@@ -39,11 +40,20 @@ func TestRunnerBackgrounds(t *testing.T) {
 		{"noon", 30, daySky},
 	} {
 		d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, c.background, at(c.minute))
-		inks, ground := d.Inks(), d.Ground(31)
+		sh, inks := d.Shade(60, 31), d.Inks()
+		ground := sh.Looks[1].Ground
 		top, bottom := c.want.stops[0], c.want.stops[len(c.want.stops)-1]
-		if len(inks) != 5 || inks[0] != top || inks[1] != c.want.fg || len(ground) != 31 || ground[0] != top || ground[30] != bottom {
+		if len(inks) != 5 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
+			len(ground) != 31 || ground[0] != top || ground[30] != bottom {
 			t.Errorf("%q at minute %d: inks %v, the ground %v", c.background, c.minute, inks, ground)
 			continue
+		}
+		for x := 0; x < 60; x++ {
+			for y := 0; y < 31; y++ {
+				if sh.Look(x, y) != 1 {
+					t.Fatalf("%q at minute %d: square %d,%d not in the sky", c.background, c.minute, x, y)
+				}
+			}
 		}
 		seen := map[string]bool{}
 		for _, g := range ground {
@@ -128,22 +138,44 @@ func TestRunnerCloudsPassInFrontOfTheSun(t *testing.T) {
 	}
 }
 
-// Time-shifting fades each part of the day in from the one before over
-// its first twenty seconds (user, 2026-10-07: night to day was sudden):
-// the sky, the runner's colour, and the sun and the moon, both drawn
-// while one fades out and the other in. Second by second round the
-// whole day no colour moves by more than a little.
-func TestRunnerSkyFades(t *testing.T) {
-	moment := time.Date(2026, time.October, 7, 14, 3, 10, 0, time.Local) // ten seconds into day, from night
+// Time-shifting turns from one part of the day to the next square by
+// square (user, 2026-10-07: not a fade of the whole board): from right
+// to left over twenty seconds, the squares of a column at random; each
+// square is the one sky or the other — its ground, the runner and the
+// lights in it — never a mix, and a square turns once and stays. Half
+// way from night to day the right edge is day, the left night, and in
+// between are columns of both; the sun and the moon are both drawn, each
+// seen in its own sky's squares.
+func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
+	var moment time.Time
 	d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundTimeShifting, func() time.Time { return moment })
-	sc := d.Draw(76, 31)
-	inks, ground := d.Inks(), d.Ground(31)
-	if ground[0] != mix(nightSky.stops[0], daySky.stops[0], 0.5) || ground[30] != mix("#45475a", "#ffffff", 0.5) || inks[1] != mix(nightSky.fg, daySky.fg, 0.5) {
-		t.Errorf("half way from night to day: the ground %s … %s, the runner %s", ground[0], ground[30], inks[1])
+	turn := time.Date(2026, time.October, 7, 14, 3, 0, 0, time.Local) // night to day
+	moment = turn.Add(10 * time.Second)
+	sc, sh := d.Draw(76, 31), d.Shade(60, 31)
+	night, day := nightSky.look(31), daySky.look(31)
+	if !reflect.DeepEqual(sh.Looks, [2]Look{night, day}) {
+		t.Errorf("half way, the looks %+v", sh.Looks)
 	}
-	_, sy := d.sunAt()
-	if inks[2] != mix(skyAt(nightSky, daySky, 0.5, d.down(sy+3)), sunColour, 0.5) || inks[2] == sunColour || inks[3] == moonColour {
-		t.Errorf("half way: the sun %s, the moon %s", inks[2], inks[3])
+	if night.Inks[inkSun] != "" || night.Inks[inkMoon] != moonColour || day.Inks[inkSun] != sunColour || day.Inks[inkMoon] != "" || day.Inks[1] != daySky.fg {
+		t.Errorf("night %v, day %v", night.Inks, day.Inks)
+	}
+	mixed := 0
+	for x := 0; x < 60; x++ {
+		n := 0
+		for y := 0; y < 31; y++ {
+			n += sh.Look(x, y)
+		}
+		switch {
+		case x == 59 && n != 31:
+			t.Errorf("half way, the right edge: %d of 31 squares day", n)
+		case x == 0 && n != 0:
+			t.Errorf("half way, the left edge: %d of 31 squares day", n)
+		case n > 0 && n < 31:
+			mixed++
+		}
+	}
+	if mixed < 5 {
+		t.Errorf("half way, %d columns part day, part night", mixed)
 	}
 	count := map[uint8]int{}
 	for _, k := range sc.Pix {
@@ -152,6 +184,32 @@ func TestRunnerSkyFades(t *testing.T) {
 	if count[inkSun] == 0 || count[inkMoon] == 0 || count[inkSunset] != 0 {
 		t.Errorf("half way, the sun and the moon both, and no setting sun: %v", count)
 	}
+	// Second by second through the turn: none turned at its start, all
+	// by twenty seconds, the right half ahead of the left, and none
+	// turning back.
+	turned := map[[2]int]bool{}
+	for s := 0; s <= 22; s++ {
+		moment = turn.Add(time.Duration(s) * time.Second)
+		sh := d.Shade(60, 31)
+		right, left := 0, 0
+		for x := 0; x < 60; x++ {
+			for y := 0; y < 31; y++ {
+				k := [2]int{x, y}
+				switch {
+				case sh.Look(x, y) == 1 && x >= 30:
+					right, turned[k] = right+1, true
+				case sh.Look(x, y) == 1:
+					left, turned[k] = left+1, true
+				case turned[k]:
+					t.Fatalf("second %d: square %d,%d turned back", s, x, y)
+				}
+			}
+		}
+		switch {
+		case s == 0 && right+left != 0, s >= 20 && right+left != 60*31, right < left:
+			t.Errorf("second %d: %d squares turned on the right, %d on the left", s, right, left)
+		}
+	}
 	// From day to dusk, the sun going and the setting sun coming.
 	moment = time.Date(2026, time.October, 7, 14, 1, 10, 0, time.Local)
 	sc = d.Draw(76, 31)
@@ -159,27 +217,7 @@ func TestRunnerSkyFades(t *testing.T) {
 	for _, k := range sc.Pix {
 		count[k]++
 	}
-	inks = d.Inks()
-	if count[inkSun] == 0 || count[inkSunset] == 0 || count[inkMoon] != 0 || inks[2] == sunColour || inks[4] == sunsetColour {
-		t.Errorf("half way from day to dusk: %v, the sun %s, the setting sun %s", count, inks[2], inks[4])
-	}
-	step := func(a, b string) int {
-		ca, cb := channels(a), channels(b)
-		most := 0
-		for k := range ca {
-			most = max(most, ca[k]-cb[k], cb[k]-ca[k])
-		}
-		return most
-	}
-	var last []string
-	for s := 0; s <= 3*60; s++ {
-		moment = time.Date(2026, time.October, 7, 14, 0, 0, 0, time.Local).Add(time.Duration(s) * time.Second)
-		now := append(d.Ground(31), d.Inks()[:2]...)
-		for i := range last {
-			if step(last[i], now[i]) > 12 {
-				t.Fatalf("second %d: %s to %s", s, last[i], now[i])
-			}
-		}
-		last = now
+	if count[inkSun] == 0 || count[inkSunset] == 0 || count[inkMoon] != 0 {
+		t.Errorf("half way from day to dusk: %v", count)
 	}
 }

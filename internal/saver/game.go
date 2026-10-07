@@ -36,11 +36,25 @@ type Inked interface {
 	Inks() []string
 }
 
-// Graded is an Inked game whose ground is no one colour but a gradient
-// down the board (user, 2026-10-07: the runner's sky): Ground is its
-// colour a row, rows of them, the whole board's top to bottom.
+// Graded is an Inked game whose board is in no one set of colours
+// (user, 2026-10-07: the runner's sky): Shade is a board cols × rows of
+// it, square by square.
 type Graded interface {
-	Ground(rows int) []string
+	Shade(cols, rows int) Shading
+}
+
+// Shading is a board's colours square by square: two looks, and which
+// of them a square x, y is in.
+type Shading struct {
+	Looks [2]Look
+	Look  func(x, y int) int
+}
+
+// Look is a set of a board's colours: its ground a row, top to bottom —
+// a gradient — and its inks; an ink that is "" is the ground there.
+type Look struct {
+	Ground []string
+	Inks   []string
 }
 
 // The colours a saver with colours of its own draws in (user,

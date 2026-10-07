@@ -376,27 +376,41 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // rightmost column blank (function.md §5.3). Under the PIN prompt the
 // lock fades whole, as drawn (LockModel.View). inks are the colours, one
 // an ink, the ground first; an ink past the end wears the last.
-func boardRows(b board, inks, ground []lipgloss.Color, cols int) []string {
-	styles := make([]lipgloss.Style, len(inks))
-	for i, c := range inks {
-		styles[i] = lipgloss.NewStyle().Foreground(c)
+func boardRows(b board, inks []lipgloss.Color, shade *saver.Shading, cols int) []string {
+	// A square's colour: its ink's — or, on a shaded board (user,
+	// 2026-10-07: the runner's sky), its look's, the ground's for the
+	// ground and for an ink the look has not.
+	colour := func(x, y int) lipgloss.Color {
+		ink := b.ink[y*b.w+x]
+		if shade == nil {
+			return inks[min(int(ink), len(inks)-1)]
+		}
+		l := shade.Looks[shade.Look(x, y)]
+		if ink == inkOff || int(ink) >= len(l.Inks) || l.Inks[ink] == "" {
+			return lipgloss.Color(l.Ground[y])
+		}
+		return lipgloss.Color(l.Inks[ink])
+	}
+	// A run is the squares of one ink, in one look.
+	key := func(x, y int) int {
+		k := int(b.ink[y*b.w+x])
+		if shade != nil {
+			k += 256 * shade.Look(x, y)
+		}
+		return k
 	}
 	tail := spaces(cols - b.w*2)
 	rows := make([]string, b.h)
 	for y := 0; y < b.h; y++ {
 		var sb strings.Builder
 		for x := 0; x < b.w; {
-			ink := b.ink[y*b.w+x]
+			k := key(x, y)
 			run := x
-			for run < b.w && b.ink[y*b.w+run] == ink {
+			for run < b.w && key(run, y) == k {
 				run++
 			}
 			cells := strings.Repeat(pixelCell(), run-x)
-			style := styles[min(int(ink), len(styles)-1)]
-			if ink == inkOff && y < len(ground) {
-				style = lipgloss.NewStyle().Foreground(ground[y])
-			}
-			sb.WriteString(style.Render(cells))
+			sb.WriteString(lipgloss.NewStyle().Foreground(colour(x, y)).Render(cells))
 			x = run
 		}
 		sb.WriteString(tail)
