@@ -27,20 +27,19 @@ import (
 // nothing). (The jaws opened short of the apple at first, and the snake
 // looked broken.) The apple
 // blinks in a colour of its own, at random, and keeps it all the way
-// through: an apple eaten goes down the body to the tail in the line of
-// the body, in its colour, and the body goes round it — three pixels
-// over it, in the snake's — so it is seen going through the gut (user,
-// the same day). It goes at its own pace, a segment a second whatever
-// the snake's speed, carried along as the snake moves (it went two
-// segments a move at first, and the eye could not follow it). At the
-// tail it is the body: the snake turns its colour, the swelling goes a
-// pixel at a time, and the tail grows a segment — the snake is the
-// longer for the apple only then, as on the Nokia; a tail that would
-// hold still where the head is going grows a move later. An apple is
-// never the snake's colour nor any lump's on its way down, so it stands
-// out the whole way. The head and the lump stand out on
-// one side of the body: above it along a row, to the right of it up or
-// down a column.
+// through: an apple eaten goes down the body to the tail, a node of the
+// body in the apple's colour, so it is seen going through the gut (user,
+// the same day; the body swelled round it at first, until the user took
+// that away, 2026-10-07). It goes at its own pace, a segment a second
+// whatever the snake's speed, carried along as the snake moves (it went
+// two segments a move at first, and the eye could not follow it). At
+// the tail it is the body: the snake turns its colour, and a second on
+// the tail grows a segment — the snake is the longer for the apple only
+// then, as on the Nokia; a tail that would hold still where the head is
+// going grows a move later. An apple is never the snake's colour nor any
+// lump's on its way down, so it stands out the whole way. The head
+// stands out on one side of the body: above it along a row, to the right
+// of it up or down a column.
 //
 // Its colours are its own (user, 2026-10-06: a saver of many colours
 // brings them, and has no bg / fg). Its one setting is its speed, in
@@ -65,8 +64,8 @@ const (
 	snakeDigest = time.Second            // an apple from one segment to the next, at any speed
 	// snakePitch is a cell: its node and the two pixels of a link. The
 	// two dark rows between two runs of the body side by side hold the
-	// head or a lump, a pixel proud of the line, and keep a dark row
-	// between it and the run beside.
+	// head, a pixel proud of the line, and keep a dark row between it and
+	// the run beside.
 	snakePitch = 3
 )
 
@@ -91,14 +90,6 @@ var (
 	// it and two on, the lower under it and one on, the link behind. The
 	// node is the apple's to draw.
 	snakeOpen = shape{{1, 0}, {2, 0}, {0, -1}, {1, -1}, {2, -1}, {0, 1}, {1, 1}}
-	// A lump: the body round an apple on its way through, which is at the
-	// node — three pixels over it (user, 2026-10-06: they were the
-	// apple's, two, beside the node, before the body went round it).
-	snakeLump = shape{{-1, -1}, {0, -1}, {1, -1}}
-	// At the tail, there is nothing beyond the node to go round.
-	snakeEnd = shape{{-1, -1}, {0, -1}}
-	// The apple is the body: the last of the swelling.
-	snakeFade = shape{{0, -1}}
 )
 
 // turn is a pixel of a shape for a snake going dx, dy: going right the
@@ -118,8 +109,8 @@ func turn(p [2]int, dx, dy int) (int, int) {
 
 // lump is an apple on its way down: its place in the body, the head 0
 // — snakeBitten in the jaws — its colour, the moves till it goes a
-// segment on, and whether it is past the tail: the body, the last of the
-// swelling about to go.
+// segment on, and whether it is past the tail: the body, the tail about
+// to grow.
 type lump struct {
 	at, colour, wait int
 	gone             bool
@@ -404,8 +395,8 @@ func (s *Snake) head() (shape, int, int) {
 // digest moves the apples down the body, each on its own clock, a
 // segment every snakeDigest (user, 2026-10-06: a segment a second): an
 // apple in the jaws is in the throat the move after; one at the tail is
-// the body next — the snake its colour, a pixel of the swelling left —
-// and then the swelling is gone and the tail has a segment to grow.
+// the body next — the snake its colour — and then the tail has a segment
+// to grow.
 func (s *Snake) digest() {
 	keep := s.lumps[:0]
 	for _, l := range s.lumps {
@@ -441,37 +432,6 @@ func (s *Snake) cellAt(c int) (int, int) {
 	return s.ox + snakePitch*(c%s.cw), s.oy + snakePitch*(c/s.cw)
 }
 
-// round is where the body goes round an apple at segment i's node, as
-// pixels about it. Along a straight, the lump, on the head's side as the
-// head stands up; at a corner, every pixel about the node but the two
-// links and the inner corner between them — round the outside, so the
-// body is whole from one link to the other (user, 2026-10-06: at a
-// corner the lump stood off the link it turned to).
-func (s *Snake) round(i int) [][2]int {
-	c := s.body[i]
-	adx, ady := s.way(c, s.body[i-1])
-	if i+1 < len(s.body) {
-		if bdx, bdy := s.way(c, s.body[i+1]); adx != -bdx || ady != -bdy {
-			var out [][2]int
-			for y := -1; y <= 1; y++ {
-				for x := -1; x <= 1; x++ {
-					switch [2]int{x, y} {
-					case [2]int{0, 0}, [2]int{adx, ady}, [2]int{bdx, bdy}, [2]int{adx + bdx, ady + bdy}:
-					default:
-						out = append(out, [2]int{x, y})
-					}
-				}
-			}
-			return out
-		}
-	}
-	out := make([][2]int, len(snakeLump))
-	for k, p := range snakeLump {
-		out[k][0], out[k][1] = turn(p, adx, ady)
-	}
-	return out
-}
-
 // way is the step from cell from to the cell beside it, to.
 func (s *Snake) way(from, to int) (int, int) { return to%s.cw - from%s.cw, to/s.cw - from/s.cw }
 
@@ -485,10 +445,10 @@ func (s *Snake) stamp(sc *Scene, sh shape, c, dx, dy int, ink uint8) {
 }
 
 // Draw is the frame at w × h pixels, in the snake's colour: every cell
-// of the body and the link between each two, the head, and the body
-// swelling round the apples on their way down; in theirs, those apples —
-// in the jaws, in the throat, in the body — and the apple, when it is
-// lit. A scene of a new size is a new game.
+// of the body and the link between each two, and the head; in theirs,
+// the apples on their way down — in the jaws, in the throat, at a node of
+// the body — and the apple, when it is lit. A scene of a new size is a
+// new game.
 func (s *Snake) Draw(w, h int) Scene {
 	if w != s.w || h != s.h {
 		s.reset(w, h)
@@ -513,24 +473,10 @@ func (s *Snake) Draw(w, h int) Scene {
 	s.stamp(&sc, head, s.body[0], dx, dy, ink)
 	last := len(s.body) - 1
 	for _, l := range s.lumps {
-		at := min(max(l.at, 0), last) // in the jaws, it is at the head too
-		c := s.body[at]
-		x, y := s.cellAt(c)
-		switch {
-		case l.gone:
-			tdx, tdy := s.way(s.body[last], s.body[last-1])
-			s.stamp(&sc, snakeFade, s.body[last], tdx, tdy, ink)
+		if l.gone {
 			continue // the apple is the body now
-		case at == 0:
-			// in the jaws or the throat: the head is all there is about it
-		case at == last:
-			tdx, tdy := s.way(c, s.body[at-1])
-			s.stamp(&sc, snakeEnd, c, tdx, tdy, ink)
-		default:
-			for _, p := range s.round(at) {
-				sc.put(x+p[0], y+p[1], ink)
-			}
 		}
+		x, y := s.cellAt(s.body[min(max(l.at, 0), last)]) // in the jaws, it is at the head too
 		sc.put(x, y, uint8(1+l.colour))
 	}
 	if s.apple >= 0 && (s.t/s.frames(snakeBlink))%2 == 0 {
