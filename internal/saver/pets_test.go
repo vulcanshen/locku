@@ -7,31 +7,24 @@ import (
 	"time"
 )
 
-// emptyRoom is a room w × h with nothing in it yet, for the furniture to
-// be put in by hand.
+// emptyRoom is the outdoors w × h with nothing in it yet, for the trees
+// and the stumps — and the ground's ledge, if a test wants it — to be
+// put in by hand.
 func emptyRoom(w, h int) *Pets {
 	g := NewPets(1, 1)
 	g.w, g.h, g.room = w, h, make([]uint8, w*h)
 	return g
 }
 
-// roomArt is the furniture from x0 to x1, rows y0 to y1: '#' the wood,
-// 'D' the dark wood.
+// roomArt is what is put in, from x0 to x1, rows y0 to y1: 'g' the
+// grass, 'B' the bark, 'L' the leaves, 'l' their shade, 'c' a stump's
+// cut top.
 func roomArt(g *Pets, x0, x1, y0, y1 int) []string {
 	var out []string
 	for y := y0; y <= y1; y++ {
 		var b strings.Builder
 		for x := x0; x <= x1; x++ {
-			switch g.room[y*g.w+x] {
-			case 0:
-				b.WriteByte('.')
-			case inkPetDark:
-				b.WriteByte('D')
-			case inkPetWood:
-				b.WriteByte('#')
-			default:
-				b.WriteByte('?')
-			}
+			b.WriteByte(".gBLlc?"[min(int(g.room[y*g.w+x]), 6)])
 		}
 		out = append(out, b.String())
 	}
@@ -45,84 +38,89 @@ func sameArt(t *testing.T, what string, got, want []string) {
 	}
 }
 
-// The boxes: two side by side and one on one of them, a step and a
-// step, nine pixels high and fourteen across, outlined, the top one's
-// foot the other's top; a ledge on each top a cat can stand on, two
-// pixels over each end for a cat's middle.
-func TestPetsHeapOfBoxes(t *testing.T) {
-	g := emptyRoom(60, 35)
-	g.putBoxes(2, petHeap)
-	sameArt(t, "the heap", roomArt(g, 2, 29, 17, 33), []string{
-		"..............##############",
-		"..............#............#",
-		"..............#............#",
-		"..............#............#",
-		"..............#............#",
-		"..............#............#",
-		"..............#............#",
-		"..............#............#",
-		"############################",
-		"#............##............#",
-		"#............##............#",
-		"#............##............#",
-		"#............##............#",
-		"#............##............#",
-		"#............##............#",
-		"#............##............#",
-		"############################",
+// A stump: its sides bark, filled, its top the wood cut, its roots spread
+// a pixel either side at the foot; its top a ledge, two pixels over each
+// end for a cat's middle.
+func TestPetsStump(t *testing.T) {
+	g := emptyRoom(40, 35)
+	g.putStump(3, [2]int{12, 6})
+	sameArt(t, "the stump", roomArt(g, 1, 16, 27, 34), []string{
+		"................",
+		"..cccccccccccc..",
+		"..BBBBBBBBBBBB..",
+		"..BBBBBBBBBBBB..",
+		"..BBBBBBBBBBBB..",
+		"..BBBBBBBBBBBB..",
+		".BBBBBBBBBBBBBB.",
+		"................",
 	})
-	want := []petPlace{
-		{at: 24, x0: 2, x1: 15, lo: 6, hi: 12},
-		{at: 16, x0: 16, x1: 29, lo: 20, hi: 26},
-	}
-	if !slices.Equal(g.places, want) {
+	if want := []petPlace{{at: 27, x0: 3, x1: 14, lo: 7, hi: 11}}; !slices.Equal(g.places, want) {
 		t.Errorf("ledges %+v", g.places)
 	}
 }
 
-// The cat tree: a board fourteen across in wood on a post two thick,
-// with its feet, in the dark wood, a step higher each; the outer side of
-// the posts at the ends a climb, from the floor to the board's height.
-func TestPetsCatTree(t *testing.T) {
-	g := emptyRoom(60, 35)
-	g.ledge(34, 0, 59)
-	g.putTree(2, []int{12, 20})
-	sameArt(t, "the tree", roomArt(g, 2, 29, 14, 33), []string{
-		"..............##############",
-		"....................DD......",
-		"....................DD......",
-		"....................DD......",
-		"....................DD......",
-		"....................DD......",
-		"....................DD......",
-		"....................DD......",
-		"##############......DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		"......DD............DD......",
-		".....DDDD..........DDDD.....",
+// A tree: its trunk three across, from the middle of its crown to the
+// ground, its roots spread at the foot; the crown an oval of leaves in a
+// speckle of shade, over the trunk's top; its branches either side, each
+// a ledge; the trunk's sides to climb, from the ground and the spot by it
+// up to the highest branch that side — or, with none, to under the crown.
+func TestPetsTree(t *testing.T) {
+	g := emptyRoom(40, 35)
+	g.ledge(34, 0, 39)
+	g.putTree(2, &petTree{top: 2, crownH: 7, crownW: 12, branches: []petBranch{{23, -1, 10}, {17, 1, 12}}, left: 10, right: 12})
+	sameArt(t, "the tree", roomArt(g, 2, 28, 2, 34), []string{
+		"........LLLlLLL............",
+		".......lLLLLLLlL...........",
+		"......LLLLlLLLLLL..........",
+		".....LlLLLLLLlLLLL.........",
+		"......LLLlLLLLLLl..........",
+		".......LLLLLlLLL...........",
+		"........lLLLLLL............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBBBBBBBBBBBBBB..",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"BBBBBBBBBBBBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		"..........BBB..............",
+		".........BBBBB.............",
+		"...........................",
 	})
-	var climbs []petPlace
-	for _, p := range g.places {
-		if p.climb {
-			climbs = append(climbs, p)
-		}
+	want := []petPlace{
+		{at: 33, x0: 0, x1: 39, lo: 6, hi: 34},
+		{at: 22, x0: 2, x1: 11, lo: 6, hi: 8},
+		{at: 16, x0: 15, x1: 26, lo: 19, hi: 23},
+		{climb: true, trunk: true, at: 11, lo: 22, hi: 33, side: 1},
+		{climb: true, trunk: true, at: 15, lo: 16, hi: 33, side: -1},
 	}
-	if want := []petPlace{{climb: true, at: 7, side: 1, lo: 21, hi: 33}, {climb: true, at: 24, side: -1, lo: 13, hi: 33}}; !slices.Equal(climbs, want) {
-		t.Errorf("climbs %+v", climbs)
+	if !slices.Equal(g.places, want) {
+		t.Errorf("places %+v", g.places)
 	}
-	// Each climb's foot to the floor, its top to its board, there and
-	// back: the first climb's from its middle, three over from its paws.
-	if len(g.links) != 8 || g.links[0] != (petLink{petPoint{0, 6}, petPoint{2, 33}}) || g.links[2] != (petLink{petPoint{2, 21}, petPoint{1, 6}}) ||
-		g.links[4] != (petLink{petPoint{0, 27}, petPoint{4, 33}}) || g.links[6] != (petLink{petPoint{4, 13}, petPoint{3, 26}}) {
+	if want := []petLink{{petPoint{0, 8}, petPoint{3, 33}}, {petPoint{3, 33}, petPoint{0, 8}}, {petPoint{0, 18}, petPoint{4, 33}}, {petPoint{4, 33}, petPoint{0, 18}}}; !slices.Equal(g.links, want) {
 		t.Errorf("links %+v", g.links)
+	}
+	g = emptyRoom(40, 35)
+	g.ledge(34, 0, 39)
+	g.putTree(2, &petTree{top: 8, crownH: 7, crownW: 12, branches: []petBranch{{23, -1, 10}}, left: 10, right: 6})
+	if c := g.places[3]; !c.climb || c.side != -1 || c.lo != 14 {
+		t.Errorf("the side with no branch: %+v", c)
 	}
 }
 
@@ -133,7 +131,7 @@ func TestPetsCatTree(t *testing.T) {
 func TestPetsCatFacesBothWays(t *testing.T) {
 	right, left := newScene(14, 11), newScene(14, 11)
 	for i := range right.Pix {
-		right.Pix[i], left.Pix[i] = inkPetWood, inkPetWood
+		right.Pix[i], left.Pix[i] = inkPetBark, inkPetBark
 	}
 	inks := [5]uint8{20, 21, 22, 23, 24}
 	petStand(&right, petSit[0], 7, 10, 1, inks)
@@ -204,12 +202,14 @@ func TestPetsCoats(t *testing.T) {
 	}
 }
 
-// Every room, whatever its size, narrow or wide, low or high, has its
-// floor from wall to wall, a pole up each wall and shelves on it, a cat
-// tree where it is high and wide enough, the floor by the poles clear,
-// and every place in it is one a cat can get to from the floor; a cat's
-// middle has room on each ledge, a cat sitting there fits under the top,
-// and a shelf has its bracket, and room for a cat sitting under it.
+// Every outdoors, whatever its size, narrow or wide, low or high, has its
+// ground a line of grass from side to side, and a tree at the least (user,
+// 2026-10-07: a narrow pane too); every place in it is one a cat can get
+// to from the ground. A cat's middle has room on each ledge, and a cat
+// sitting there fits under the top; a ledge over another has room for a
+// cat sitting between them, but for a stump on the ground; a trunk is
+// climbed either side, by the bark, from the ground up to a cat's height
+// under the top at the most.
 func TestPetsRoomsAreWhole(t *testing.T) {
 	for _, size := range [][2]int{{30, 22}, {30, 26}, {30, 60}, {31, 24}, {37, 32}, {40, 23}, {60, 35}, {65, 30}, {80, 22}, {80, 26}, {100, 49}} {
 		for seed := range uint64(30) {
@@ -218,114 +218,36 @@ func TestPetsRoomsAreWhole(t *testing.T) {
 			w, h := size[0], size[1]
 			floor := h - 1
 			for x := range w {
-				if g.room[floor*w+x] != inkPetDark {
-					t.Fatalf("%v seed %d: the floor is not whole at %d", size, seed, x)
+				if g.room[floor*w+x] != inkPetGrass {
+					t.Fatalf("%v seed %d: the ground is not whole at %d", size, seed, x)
 				}
 			}
-			climbs := 0
-			var shelves []petPlace
-			brace := map[[2]int]bool{}
-			for _, p := range g.places {
+			trunks := 0
+			for i, p := range g.places {
 				if p.climb {
-					climbs++
-				} else if p.lo > p.hi || p.at-(petTall-1) < 0 {
-					t.Fatalf("%v seed %d: a ledge %+v", size, seed, p)
-				}
-				if p.climb || p.at == floor-1 || p.x0 != 0 && p.x1 != w-1 {
+					trunks++
+					if !p.trunk || p.lo > p.hi || p.lo < petTop-1 || p.hi != floor-1 || g.room[(floor-2)*w+p.at+p.side] != inkPetBark {
+						t.Fatalf("%v seed %d: a climb %+v", size, seed, p)
+					}
 					continue
 				}
-				// A shelf: as long as the shortest to the longest; its
-				// bracket under it, a brace from its pole out to under it,
-				// aslant, half the shelf past the pole; past that, dark under
-				// it for a cat sitting.
-				shelves = append(shelves, p)
-				long := p.x1 - p.x0 + 1
-				if long < petShort || long > g.sw {
-					t.Fatalf("%v seed %d: a shelf %+v of %d", size, seed, p, long)
+				if p.lo > p.hi || p.at-(petTall-1) < 0 {
+					t.Fatalf("%v seed %d: a ledge %+v", size, seed, p)
 				}
-				n := (long - petPole) / 2
-				for i := 1; i <= n; i++ {
-					bx := petPole + n - i
-					if p.x0 != 0 {
-						bx = w - 1 - bx
+				for j, q := range g.places {
+					if j == i || q.climb || q.at <= p.at || q.x1 < p.x0 || q.x0 > p.x1 || j == 0 && g.room[(p.at+1)*w+p.x0] == inkPetCut {
+						continue
 					}
-					brace[[2]int{bx, p.at + 1 + i}] = true
-					if g.room[(p.at+1+i)*w+bx] != inkPetDark {
-						t.Fatalf("%v seed %d: no brace under %+v at %d, %d", size, seed, p, bx, p.at+1+i)
-					}
-				}
-				for y := p.at + 2; y <= p.at+1+petTall; y++ {
-					for x := max(p.x0, petPole); x <= min(p.x1, w-1-petPole); x++ {
-						if g.room[y*w+x] != 0 && !brace[[2]int{x, y}] {
-							t.Fatalf("%v seed %d: %d, %d under the shelf %+v is lit", size, seed, x, y, p)
-						}
+					if q.at-p.at < petTall+1 {
+						t.Fatalf("%v seed %d: %+v over %+v", size, seed, p, q)
 					}
 				}
 			}
-			if climbs < 3 && h >= 26 && w-2*g.sw >= petBoard {
-				t.Errorf("%v seed %d: no cat tree", size, seed)
-			}
-			// Shelves on both walls, one at the least, two on a high
-			// room; and the floor under them clear but for them.
-			for side, x0 := range []int{petPole, w - g.sw} {
-				n := 0
-				for _, p := range shelves {
-					if p.x0 == 0 == (side == 0) {
-						n++
-					}
-				}
-				if n == 0 || n < 2 && h >= 46 {
-					t.Errorf("%v seed %d: %d shelves on wall %d", size, seed, n, side)
-				}
-				for y := range floor {
-					for x := x0; x < x0+g.sw-petPole; x++ {
-						k := g.room[y*w+x]
-						if k != 0 && !brace[[2]int{x, y}] && !slices.ContainsFunc(shelves, func(p petPlace) bool { return p.at+1 == y && p.x0 <= x && x <= p.x1 }) {
-							t.Fatalf("%v seed %d: %d, %d under the shelves is lit", size, seed, x, y)
-						}
-					}
-				}
+			if trunks < 2 {
+				t.Errorf("%v seed %d: no tree", size, seed)
 			}
 			if len(g.reach) != len(g.places)+1 {
 				t.Errorf("%v seed %d: %d places, %d reached", size, seed, len(g.places), len(g.reach)-1)
-			}
-			// The poles: sisal, its rope aslant, a dark pixel a column on
-			// down, every third row, but where its wall's shelves go
-			// across; a cat climbs each by it.
-			for _, x := range []int{0, 1, w - 2, w - 1} {
-				rope, across := 0, 0
-				for y := range floor {
-					k := g.room[y*w+x]
-					if k == inkPetRope || k == inkPetRopeDark {
-						rope++
-						lx := x
-						if x >= petPole {
-							lx = x - (w - petPole)
-						}
-						if dark := (y-lx+3)%3 == 0; dark != (k == inkPetRopeDark) {
-							t.Fatalf("%v seed %d: the rope at %d, %d", size, seed, x, y)
-						}
-					}
-				}
-				for _, p := range g.places {
-					if !p.climb && p.at != floor-1 && p.x0 <= x && x <= p.x1 {
-						across++
-					}
-				}
-				if rope != floor-across {
-					t.Fatalf("%v seed %d: the pole at %d is %d of sisal, %d shelves across", size, seed, x, rope, across)
-				}
-			}
-			if l, r := g.places[1], g.places[2]; !l.wall || l.at != petPole || l.side != -1 || !r.wall || r.at != w-1-petPole || r.side != 1 {
-				t.Fatalf("%v seed %d: the walls' climbs %+v %+v", size, seed, l, r)
-			}
-			for y := range floor {
-				for x := range w {
-					pole := x < petPole || x >= w-petPole
-					if !pole && !brace[[2]int{x, y}] && (x < petWall || x >= w-petWall) && y >= floor-6 && g.room[y*w+x] != 0 {
-						t.Fatalf("%v seed %d: %d, %d by a wall is lit", size, seed, x, y)
-					}
-				}
 			}
 		}
 	}
@@ -474,8 +396,8 @@ func TestPetsIsTheSeeds(t *testing.T) {
 }
 
 // A count it has is as many cats, the first of the coats in order;
-// another is three. Too small a scene is dark, the least room has its
-// floor, and a scene of a new size is a new room.
+// another is three. Too small a scene is dark, the least outdoors has its
+// ground, and a scene of a new size is laid out anew.
 func TestPetsCountAndSize(t *testing.T) {
 	for _, n := range []int{0, 1, 2, 3, 4, 5, 6} {
 		g := NewPets(2, n)
@@ -499,8 +421,8 @@ func TestPetsCountAndSize(t *testing.T) {
 		}
 		g.Step()
 	}
-	if sc := g.Draw(30, 22); sc.Pix[21*30] != inkPetDark {
-		t.Error("the least room has no floor")
+	if sc := g.Draw(30, 22); sc.Pix[21*30] != inkPetGrass {
+		t.Error("the least outdoors has no ground")
 	}
 	g.Draw(70, 30)
 	if g.places[0].at != 28 || g.places[0].hi != 64 {
@@ -508,9 +430,9 @@ func TestPetsCountAndSize(t *testing.T) {
 	}
 }
 
-// Its room, its pace and its colours (user, 2026-10-07): a room's, the
-// ground a dark umber, the furniture two woods, the poles sisal and its
-// rope's lay, the z yellow, then the coats.
+// Its room, its pace and its colours (user, 2026-10-07): the outdoors' —
+// the sky's at the top, the grass, the bark, the leaves and their shade,
+// a stump's cut — the z yellow, then the coats.
 func TestPetsRoomPaceAndInks(t *testing.T) {
 	g := NewPets(1, 3)
 	if g.Room() != (Room{W: 30, H: 22, Most: 1}) {
@@ -521,7 +443,7 @@ func TestPetsRoomPaceAndInks(t *testing.T) {
 		t.Errorf("a frame every %v", d)
 	}
 	inks := g.Inks()
-	if len(inks) != 31 || inks[0] != "#2b231e" || inks[inkPetDark] != "#6e6052" || inks[inkPetWood] != "#a39484" || inks[inkPetRope] != "#d6bc8a" || inks[inkPetRopeDark] != "#9c8158" || inks[inkPetZ] != "#ffff00" || inks[inkPetCoats] != "#f6b06a" {
+	if len(inks) != 32 || inks[0] != "#1d2745" || inks[inkPetGrass] != "#4f7d36" || inks[inkPetBark] != "#847260" || inks[inkPetLeaf] != "#5e9140" || inks[inkPetLeafDark] != "#3f6c2c" || inks[inkPetCut] != "#b39b78" || inks[inkPetZ] != "#ffff00" || inks[inkPetCoats] != "#f6b06a" {
 		t.Errorf("inks %v", inks)
 	}
 }
@@ -548,8 +470,8 @@ func TestPetsJumps(t *testing.T) {
 					t.Fatalf("%v seed %d: the jump %+v is %v", size, seed, l, arc)
 				}
 				if A.climb || B.climb {
-					// A wall's: as far across as a jump, and as high.
-					if (A.wall || B.wall) && (abs(x1-x0) > 16 || abs(y1-y0) > 13) {
+					// A trunk's: as far across as a jump, and as high.
+					if (A.trunk || B.trunk) && (abs(x1-x0) > 16 || abs(y1-y0) > 13) {
 						t.Fatalf("%v seed %d: %+v is too far a jump", size, seed, l)
 					}
 					continue
@@ -568,29 +490,28 @@ func TestPetsJumps(t *testing.T) {
 	}
 }
 
-// The way to somewhere is the quickest: from the floor by the cat tree
-// to the top of it, up the post by the floor, onto the low board, along
-// it and up onto the high one — not along the floor to jump up from it.
+// The way to somewhere is the quickest: from the ground by a tree to its
+// high branch, up the near side of the trunk to the low branch's height
+// and across onto the high one — not round to climb the far side.
 func TestPetsWayIsTheQuickest(t *testing.T) {
-	g := emptyRoom(60, 35)
-	g.ledge(34, 0, 59)
-	g.putTree(2, []int{12, 20})
+	g := emptyRoom(40, 35)
+	g.ledge(34, 0, 39)
+	g.putTree(2, &petTree{top: 2, crownH: 7, crownW: 12, branches: []petBranch{{23, -1, 10}, {17, 1, 12}}, left: 10, right: 12})
 	g.join()
-	plan, ok := g.way(petPoint{0, 6}, petPoint{3, 26})
+	plan, ok := g.way(petPoint{0, 6}, petPoint{2, 23})
 	var hops []petLink
 	for _, l := range plan {
 		hops = append(hops, g.links[l])
 	}
 	want := []petLink{
-		{petPoint{0, 6}, petPoint{2, 33}},  // onto the post
-		{petPoint{2, 21}, petPoint{1, 6}},  // off it onto the low board
-		{petPoint{1, 10}, petPoint{3, 20}}, // up onto the high one
+		{petPoint{0, 8}, petPoint{3, 33}},  // onto the trunk, by the near side
+		{petPoint{3, 22}, petPoint{2, 19}}, // across onto the high branch
 	}
 	if !ok || !slices.Equal(hops, want) {
 		t.Errorf("the way: %+v", hops)
 	}
 	if plan, ok := g.way(petPoint{0, 30}, petPoint{0, 10}); !ok || len(plan) != 0 {
-		t.Errorf("along the floor: %v", plan)
+		t.Errorf("along the ground: %v", plan)
 	}
 }
 
@@ -669,34 +590,53 @@ func TestPetsSpread(t *testing.T) {
 	}
 }
 
-// A wall's shelves are high and low, long and short, at random (user,
-// 2026-10-07): from room to room the top one is at more than a few
-// heights, the shelves of more than a few lengths, and the two walls are
-// not the one wall twice.
-func TestPetsShelvesVary(t *testing.T) {
-	tops, lengths := map[int]bool{}, map[int]bool{}
-	alike := 0
+// The outdoors is laid out anew, at random (user, 2026-10-07): from one
+// to the next the trees are more or fewer, their tops as high as they
+// are, their branches as long as they are, and a stump is there some of
+// the time.
+func TestPetsTreesVary(t *testing.T) {
+	trees, tops, lengths, stumps := map[int]bool{}, map[int]bool{}, map[int]bool{}, 0
 	for seed := range uint64(30) {
 		g := NewPets(seed, 1)
 		g.Draw(100, 49)
-		var walls [2][]int
+		n := 0
 		for _, p := range g.places {
-			if p.climb || p.at == 47 || p.x0 != 0 && p.x1 != 99 {
-				continue
+			switch {
+			case p.climb && p.side == 1:
+				// A tree: its top, the highest leaf over its trunk.
+				n++
+				y := 0
+				for g.room[y*100+p.at+1] == 0 {
+					y++
+				}
+				tops[y] = true
+			case p.climb || p.at == 47:
+			case g.room[(p.at+1)*100+p.x0] == inkPetCut:
+				stumps++
+			default:
+				lengths[p.x1-p.x0+1] = true
 			}
-			side := 0
-			if p.x0 != 0 {
-				side = 1
-			}
-			walls[side] = append(walls[side], p.at)
-			lengths[p.x1-p.x0+1] = true
 		}
-		tops[slices.Min(walls[0])] = true
-		if slices.Equal(walls[0], walls[1]) {
-			alike++
-		}
+		trees[n] = true
 	}
-	if len(tops) < 4 || len(lengths) < 4 || alike > 5 {
-		t.Errorf("tops %v, lengths %v, %d of 30 the walls alike", tops, lengths, alike)
+	if len(trees) < 2 || len(tops) < 4 || len(lengths) < 4 || stumps == 0 {
+		t.Errorf("trees %v, tops %v, branches %v, %d stumps", trees, tops, lengths, stumps)
+	}
+}
+
+// The backdrop is a gradient a row at a time, the way the runner's dusk
+// goes down the screen (user, 2026-10-07): the sky dark blue high and
+// lighter low, over a green field lighter far and darker near; the one
+// look all over, its inks the game's.
+func TestPetsBackdrop(t *testing.T) {
+	g := NewPets(1, 1)
+	var _ Graded = g
+	s := g.Shade(10, 51)
+	l := s.Looks[0]
+	if len(l.Ground) != 51 || l.Ground[0] != "#1d2745" || l.Ground[13] != "#2f4262" || l.Ground[25] != "#3f5a7c" || l.Ground[26] != "#4e6e46" || l.Ground[50] != "#1c2f1a" {
+		t.Errorf("the backdrop %v", l.Ground)
+	}
+	if !slices.Equal(l.Inks, g.Inks()) || !slices.Equal(s.Looks[1].Ground, l.Ground) || s.Look(3, 7) != 0 {
+		t.Errorf("the looks %+v", s.Looks)
 	}
 }

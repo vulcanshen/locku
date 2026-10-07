@@ -13,9 +13,9 @@ import (
 )
 
 // The pets are a game on the board in colours of their own (user,
-// 2026-10-07): a room's — a dark umber, the woods, the floor lit from
-// the first frame in the dark one — the z's, and the cats' coats; a frame
-// every 80 ms, and the cats go about.
+// 2026-10-07): the outdoors' — the sky over a green field a row at a
+// time, the ground's grass lit from the first frame, the trees' — the
+// z's, and the cats' coats; a frame every 80 ms, and the cats go about.
 func TestPetsLockWearsItsOwnColours(t *testing.T) {
 	m := testLock(t, "1234", func(c *config.Config) {
 		c.Profiles = []config.Profile{config.NewProfile("p", saver.KindPets)}
@@ -24,17 +24,20 @@ func TestPetsLockWearsItsOwnColours(t *testing.T) {
 	if _, ok := m.game.(*saver.Pets); !ok {
 		t.Fatalf("the game is %T", m.game)
 	}
-	if inks := m.inks(); len(inks) != 31 || inks[0] != lipgloss.Color("#2b231e") || inks[1] != lipgloss.Color("#6e6052") || inks[2] != lipgloss.Color("#a39484") || inks[6] != lipgloss.Color("#f6b06a") {
+	if inks := m.inks(); len(inks) != 32 || inks[0] != lipgloss.Color("#1d2745") || inks[1] != lipgloss.Color("#4f7d36") || inks[2] != lipgloss.Color("#847260") || inks[7] != lipgloss.Color("#f6b06a") {
 		t.Fatalf("inks %v", inks)
 	}
-	wood := 0
+	if s := m.shading(); s == nil || s.Looks[0].Ground[0] != "#1d2745" || s.Looks[0].Ground[len(s.Looks[0].Ground)-1] != "#1c2f1a" {
+		t.Fatalf("no backdrop: %+v", s)
+	}
+	grass := 0
 	for _, k := range m.shown.ink {
 		if k == 1 {
-			wood++
+			grass++
 		}
 	}
-	if wood < m.shown.w {
-		t.Fatalf("%d lit dark wood at the start: not even the floor", wood)
+	if grass < m.shown.w {
+		t.Fatalf("%d lit grass at the start: not even the ground", grass)
 	}
 	if d := m.game.Next(at).Sub(at); d != 80*time.Millisecond {
 		t.Errorf("a frame every %v", d)
@@ -67,7 +70,7 @@ func TestPetsHaveTheirCount(t *testing.T) {
 		t.Fatalf("the pets sit above the custom saver, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "cats about a room") || !strings.Contains(v, "count") || strings.Contains(v, " bg ") || strings.Contains(v, "speed") {
+	if !strings.Contains(v, "cats outdoors") || !strings.Contains(v, "count") || strings.Contains(v, " bg ") || strings.Contains(v, "speed") {
 		t.Errorf("the pets' [2]:\n%s", v)
 	}
 	m = m.press("n", "enter")

@@ -8,31 +8,29 @@ import (
 	"time"
 )
 
-// The pets (user, 2026-10-07): cats about a room, after vscode-pets but
-// drawn our own. Each goes somewhere at random — along the floor, onto
-// a board of the cat tree, a box, a shelf, up a wall — walking there, or
-// running when it is far, jumping up and down and climbing as the way
-// asks; and there it sits a while, or curls up and sleeps, a z rising
-// over it, or, up a wall or a post, holds on; then it goes on. The
-// furniture is behind them: a cat goes in front of a box, and of a board
-// as it climbs past it.
+// The pets (user, 2026-10-07): cats outdoors, after vscode-pets but drawn
+// our own. Each goes somewhere at random — along the grass, onto a stump,
+// up a tree and out along a branch — walking there, or running when it
+// is far, jumping up and down and climbing as the way asks; and there it
+// sits a while, or curls up and sleeps, a z rising over it, or, up a
+// trunk, holds on; then it goes on. The trees and the stumps are behind
+// them: a cat goes in front of a stump, and of a branch as it climbs past
+// it.
 //
 // The cats are five, the first as many as there are of them (user, the
 // same day: cats come in a few colours, not any), each of two colours
 // (user, the same day): an orange tabby, light orange striped dark; an
-// amber, dark yellow striped dark grey; a white striped light grey; a
-// grey-blue striped darker; and a black-and-white. The room is a room's
-// colours (user, the same day): the ground a dark umber — it was a soft
-// sand, until the cats were lost on it — the furniture wood.
+// amber, dark coffee striped yellow; a white striped grey; a grey-blue
+// striped darker; and a black-and-white.
 //
-// The room is laid out anew for each scene: a floor from wall to wall
-// and on it, clear of the walls, a cat tree — a post or more, a board on
-// each, stepping up — and boxes, one, two side by side, or three in a
-// heap, as many as the width holds. Up each wall, the scene's sides, is
-// a pole of sisal, floor to top, and on it shelves, one over the other,
-// as many as the height holds; a cat climbs the pole, and steps off it
-// onto a shelf. A cat jumps up as high as the tree's steps, and down from
-// anywhere.
+// Outdoors (user, the same day: they were in a room, with a cat tree,
+// boxes, and shelves up the walls): the sky over a green field, a
+// gradient down the screen as the runner's dusk is, dark enough for the
+// cats to show; the ground a line of grass, and on it trees and stumps,
+// laid out anew for each scene — a tree at the least, as many as the
+// width holds. A tree is a trunk to climb either side of, branches from
+// it either side by turns, a step up each, and a crown of leaves on top.
+// A cat jumps up as high as a tree's step, and down from anywhere.
 //
 // Its one setting is how many cats (user, the same day).
 
@@ -44,21 +42,17 @@ var PetCounts = []int{1, 2, 3, 4, 5}
 const PetsDefault = 3
 
 const (
-	petFrame = 80 * time.Millisecond
-	petW     = 12 // a cat walking, across; its middle six from its left
-	petTall  = 10 // a cat sitting, high: the room it needs over where it sits
-	petJump  = 13 // the highest a cat jumps, in pixels
-	petReach = 16 // the farthest it jumps across
-	petPole  = 2  // a wall's pole, across
-	petWall  = 8  // the floor kept clear by each wall: its pole and the climb's
-	petGap   = 6  // the least between two things on the floor
-	petBoard = 14 // a board of the cat tree, across
-	petBox   = 14 // a box, across
-	petBoxH  = 9  // and high
-	petShelf = 14 // the longest shelf, across from its wall
-	petShort = 10 // the shortest: a cat stands on it, in the one place
-	petTwist = 3  // the rows from one turn of a pole's rope to the next
-	petTop   = 12 // the highest a board or a shelf is: a cat climbing to it fits under the top
+	petFrame  = 80 * time.Millisecond
+	petW      = 12 // a cat walking, across; its middle six from its left
+	petTall   = 10 // a cat sitting, high: the room it needs over where it sits
+	petJump   = 13 // the highest a cat jumps, in pixels
+	petReach  = 16 // the farthest it jumps across
+	petGap    = 6  // the least between two things on the ground
+	petTrunk  = 3  // a tree's trunk, across
+	petShort  = 10 // the shortest branch: a cat stands on it, in the one place
+	petLong   = 14 // the longest
+	petClimbW = 6  // a cat climbing, across: the room either side of a trunk
+	petTop    = 12 // the highest a cat climbs to: its head at the top
 )
 
 // The room a cat is to the left of its middle, and to the right.
@@ -67,12 +61,12 @@ const (
 	petRight = petW - 1 - petLeft
 )
 
-// petsRoom is the least room: the walls, a shelf on each with a cat
-// sitting on it and one under it, and the floor between them (user,
-// 2026-10-07: a narrow pane too). A larger screen is a larger room — a
-// cat tree, more boxes, a shelf — never a larger cat (user, the same
+// petsRoom is the least outdoors: a tree, a branch either side, and the
+// grass round it, a cat sitting on a branch and one under it (user,
+// 2026-10-07: a narrow pane too). A larger screen is more of the
+// outdoors — more trees, stumps — never a larger cat (user, the same
 // day: a larger cat than it was, for its eye to be where an eye is).
-var petsRoom = Room{W: 2*petWall + petBox, H: 2 + 2*petTall, Most: 1}
+var petsRoom = Room{W: 30, H: 2 + 2*petTall, Most: 1}
 
 // The cat, facing right; a cat facing left is drawn the other way about.
 // '#' is its fur, 's' its stripes, 'w' its chest and paws, 'x' the more
@@ -143,7 +137,7 @@ var (
 		".##s#s#s##ww",
 		"x#xxxxxxx#ww",
 	}
-	// Climbing, the wall at its left: its paws are the left column.
+	// Climbing, the trunk at its left: its paws are the left column.
 	petClimb = [2]sprite{
 		{
 			"..#..#",
@@ -193,25 +187,42 @@ var petCoats = [][5]string{
 	{"#55504c", "#55504c", "#f4f1ea", "#f4f1ea", "#7ed957"}, // a black-and-white, green-eyed
 }
 
-// The room's colours (user, 2026-10-07: a room's, the ground earthy and
-// dark, the furniture wood — a greyish walnut, the orange tabby's orange
-// and the amber's coffee neither of them).
+// The outdoors' colours (user, 2026-10-07: the cats go out). The
+// backdrop is a gradient a row at a time, as the runner's dusk is: the
+// sky, dark blue high and lighter low, over a green field, lighter far
+// and darker near — dark enough for the cats to show on it, a light one
+// having lost them. Then the grass of the ground, the trees' bark, their
+// leaves and the leaves' shade, a stump's cut top, and the z.
+var petBackdrop = []petStop{
+	{0, "#1d2745"},
+	{0.5, "#3f5a7c"},
+	{0.52, "#4e6e46"},
+	{1, "#1c2f1a"},
+}
+
+// A petStop is a colour of the backdrop's, and how far down the screen.
+type petStop struct {
+	at     float64
+	colour string
+}
+
 const (
-	petGround   = "#2b231e" // a dark umber
-	petDarkWood = "#6e6052" // the floor, the posts, the braces
-	petWood     = "#a39484" // the boards, the shelves, the boxes
-	petRope     = "#d6bc8a" // the poles on the walls: sisal
-	petRopeDark = "#9c8158" // and the lay of its rope, across it
+	petGrass    = "#4f7d36"
+	petBark     = "#847260"
+	petLeaf     = "#5e9140"
+	petLeafDark = "#3f6c2c"
+	petCut      = "#b39b78"
 	petYellow   = "#ffff00" // a sleeping cat's z (user, the same day)
 )
 
-// The inks past the ground: the woods, the rope's two, the z, and each
-// coat's five, coat c's from petCoat(c).
+// The inks past the ground: the grass, the bark, the leaves' two, the
+// cut, the z, and each coat's five, coat c's from petCoat(c).
 const (
-	inkPetDark uint8 = 1 + iota
-	inkPetWood
-	inkPetRope
-	inkPetRopeDark
+	inkPetGrass uint8 = 1 + iota
+	inkPetBark
+	inkPetLeaf
+	inkPetLeafDark
+	inkPetCut
 	inkPetZ
 	inkPetCoats
 )
@@ -226,12 +237,12 @@ func petCoat(c int) [5]uint8 {
 // A petPlace is somewhere a cat is. A ledge is a line it stands on, from
 // x0 to x1: at is the row its feet are in, over the line, and its middle
 // goes from lo to hi — a cat may stand two pixels over an edge. A climb
-// is a wall or a post it holds on to: at is its paws' column, side where
-// the wall is, -1 at its left or 1 at its right, and its feet go from
-// lo, the top, to hi.
+// is a trunk it holds on to: at is its paws' column, side where the
+// trunk is, -1 at its left or 1 at its right, and its feet go from lo,
+// the top, to hi.
 type petPlace struct {
 	climb  bool
-	wall   bool // a climb up a wall's pole
+	trunk  bool // a climb up a tree's trunk
 	at     int
 	x0, x1 int
 	lo, hi int
@@ -272,8 +283,7 @@ type Pets struct {
 	rng    *rand.Rand
 	n      int
 	w, h   int
-	room   []uint8    // the furniture, in its woods; nil when the scene is too small
-	sw     int        // the longest a wall's shelf is, and the floor kept clear under it
+	room   []uint8    // the grass, the trees, the stumps; nil when the scene is too small
 	places []petPlace // the floor first
 	links  []petLink
 	cost   []int // a link's frames
@@ -296,13 +306,38 @@ func (g *Pets) Room() Room { return petsRoom }
 // Next is when the next frame is due.
 func (g *Pets) Next(now time.Time) time.Time { return now.Add(petFrame) }
 
-// Inks are the ground, the woods, the z's, and the coats'.
+// Inks are the sky at the top, the grass, the bark, the leaves', the cut,
+// the z's, and the coats'.
 func (g *Pets) Inks() []string {
-	inks := []string{petGround, petDarkWood, petWood, petRope, petRopeDark, petYellow}
+	inks := []string{petBackdrop[0].colour, petGrass, petBark, petLeaf, petLeafDark, petCut, petYellow}
 	for _, c := range petCoats {
 		inks = append(inks, c[:]...)
 	}
 	return inks
+}
+
+// Shade is the backdrop a row at a time, the sky over the field, under
+// the inks: the one look all over.
+func (g *Pets) Shade(cols, rows int) Shading {
+	l := Look{Ground: make([]string, rows), Inks: g.Inks()}
+	for y := range l.Ground {
+		l.Ground[y] = petBackdropAt(y, rows)
+	}
+	return Shading{Looks: [2]Look{l, l}, Look: func(x, y int) int { return 0 }}
+}
+
+// petBackdropAt is the backdrop's colour in row y of rows.
+func petBackdropAt(y, rows int) string {
+	p := 0.0
+	if rows > 1 {
+		p = float64(y) / float64(rows-1)
+	}
+	for i := 1; i < len(petBackdrop); i++ {
+		if a, b := petBackdrop[i-1], petBackdrop[i]; p <= b.at {
+			return mix(a.colour, b.colour, (p-a.at)/(b.at-a.at))
+		}
+	}
+	return petBackdrop[len(petBackdrop)-1].colour
 }
 
 // reset is a new room on a w × h scene, and the cats in it.
@@ -343,8 +378,8 @@ func (g *Pets) ledge(y, x0, x1 int) int {
 	return len(g.places) - 1
 }
 
-// climb adds a climb, the paws in column x and the wall at side, from
-// row top to the floor.
+// climb adds a climb, the paws in column x and the trunk at side, from
+// row top to the ground.
 func (g *Pets) climb(x, side, top int) int {
 	g.places = append(g.places, petPlace{climb: true, at: x, side: side, lo: top, hi: g.h - 2})
 	return len(g.places) - 1
@@ -364,95 +399,76 @@ func (g *Pets) near(l, x int) petPoint {
 	return petPoint{l, min(max(x, p.lo), p.hi)}
 }
 
-// mount links climb c's foot to the floor and the spot by it, and the
-// spot on ledge l at its row, if there is one, to the ledge.
-func (g *Pets) mount(c, l int) {
+// mount links climb c's foot to the ground and the spot by it.
+func (g *Pets) mount(c int) {
 	p := g.places[c]
 	g.both(g.near(0, g.middle(p)), petPoint{c, p.hi})
-	if l >= 0 {
-		g.both(petPoint{c, g.places[l].at}, g.near(l, g.middle(p)))
-	}
 }
 
-// A petPiece is something on the floor, before it is put there: a cat
-// tree — its boards' heights over the floor, left to right — or boxes,
-// heap one of petHeaps; and how wide it is.
+// A petPiece is something on the ground, before it is put there: a tree,
+// or a stump — its width and height; and how wide it is.
 type petPiece struct {
-	heights []int
-	heap    int
-	w       int
+	tree  *petTree
+	stump [2]int
+	w     int
 }
 
-// The heaps of boxes: one, two side by side, and those two and one on
-// one of them, a step and a step.
-const (
-	petOne = iota
-	petTwo
-	petHeap
-	petHeaps
-)
+// A petTree is a tree before it is put there: its crown's top row, how
+// high and how wide the crown is, its branches, and how far it reaches to
+// the left of its trunk and to the right, branches and crown.
+type petTree struct {
+	top, crownH, crownW int
+	branches            []petBranch
+	left, right         int
+}
 
-// furnish lays the room out: the floor; on it, clear of the walls, a cat
-// tree and boxes, as many as the floor holds six pixels apart, in some
-// order and spread out; and shelves up both walls.
+// A petBranch is a branch: its row, the side of the trunk it grows from,
+// -1 the left, and how long it is.
+type petBranch struct{ y, side, long int }
+
+// furnish lays the outdoors out (user, 2026-10-07: the cats go out): the
+// ground, a line of grass with tufts on it; on it a tree at the least
+// (user, the same day: a narrow pane too), then trees and stumps, as many
+// as the width holds six pixels apart, a tree twice as often as a stump,
+// in some order and spread out.
 func (g *Pets) furnish() {
 	floor := g.h - 1
-	g.hline(0, g.w-1, floor, inkPetDark)
-	g.ledge(floor, 0, g.w-1)
-	// A pole of sisal up each wall, floor to top (user, 2026-10-07: a
-	// wall has something to climb); a cat climbs it. Its rope lies
-	// across it aslant, a pixel lower a column on, a turn every three
-	// rows (user, the same day).
-	for x := range petPole {
-		for y := range floor {
-			ink := inkPetRope
-			if (y-x+petTwist)%petTwist == 0 {
-				ink = inkPetRopeDark
-			}
-			g.light(x, y, ink)
-			g.light(g.w-petPole+x, y, ink)
+	g.hline(0, g.w-1, floor, inkPetGrass)
+	for x := range g.w {
+		if g.rng.IntN(4) == 0 {
+			g.light(x, floor-1, inkPetGrass)
 		}
 	}
-	walls := [2]int{g.climb(petPole, -1, petTop-1), g.climb(g.w-1-petPole, 1, petTop-1)}
-	for _, c := range walls {
-		g.places[c].wall = true
-	}
-	// The walls' shelves as long as they are, or shorter for a box on the
-	// floor between them, or the shortest (user, 2026-10-07: a narrow pane
-	// has them too); the floor under them clear.
-	g.sw = min(petShelf, max(petShort, (g.w-petBox)/2))
-	room := g.w - 2*g.sw
+	g.ledge(floor, 0, g.w-1)
+	room := g.w
 	var pieces []petPiece
-	if t := g.tree(room); t.w > 0 {
-		pieces, room = append(pieces, t), room-t.w-petGap
-	}
 	for {
-		b := g.boxes(room)
-		if b.w == 0 {
+		var p petPiece
+		if len(pieces) == 0 || g.rng.IntN(3) > 0 {
+			p = g.tree(room)
+		}
+		if p.w == 0 && len(pieces) > 0 {
+			p = g.stump(room)
+		}
+		if p.w == 0 {
 			break
 		}
-		pieces, room = append(pieces, b), room-b.w-petGap
+		pieces, room = append(pieces, p), room-p.w-petGap
 	}
 	g.rng.Shuffle(len(pieces), func(i, j int) { pieces[i], pieces[j] = pieces[j], pieces[i] })
 	gaps := g.spread(len(pieces), room+petGap)
-	x := g.sw + gaps[0]
+	x := gaps[0]
 	for i, p := range pieces {
-		if p.heights != nil {
-			g.putTree(x, p.heights)
+		if p.tree != nil {
+			g.putTree(x, p.tree)
 		} else {
-			g.putBoxes(x, p.heap)
+			g.putStump(x, p.stump)
 		}
 		x += p.w + petGap + gaps[i+1]
 	}
-	// The walls from the floor; onto a shelf, as onto anything by them, a
-	// cat jumps from where it holds on (join).
-	g.mount(walls[0], -1)
-	g.mount(walls[1], -1)
-	g.shelves(0)
-	g.shelves(1)
 }
 
-// spread is the gaps at the ends of n things on the floor and between
+// spread is the gaps at the ends of n things on the ground and between
 // them, spare pixels in all past the least, at random.
 func (g *Pets) spread(n, spare int) []int {
 	gaps := make([]int, n+1)
@@ -462,146 +478,131 @@ func (g *Pets) spread(n, spare int) []int {
 	return gaps
 }
 
-// tree is a cat tree no wider than room: two posts to four, as many as
-// the height holds — one at the least — a board on each, a step higher
-// each to the left or to the right; none when the room is too low or
-// too narrow for one.
+// tree is a tree no wider than room, at random: a crown of leaves high
+// up, its top as high as a quarter down the sky; under it branches either
+// side of the trunk by turns, a step up each — a cat sitting under each,
+// on the ground or the branch under it on its side — up to the crown,
+// each as long as it is at random; room either side of the trunk for a
+// cat to climb it. None when the room is too narrow.
 func (g *Pets) tree(room int) petPiece {
 	floor := g.h - 1
-	n := 2 + g.rng.IntN(3)
-	var hs []int
-	for ht := 11 + g.rng.IntN(3); ht <= floor-petTop && len(hs) < n && (len(hs)+1)*petBoard <= room; ht += 6 + g.rng.IntN(4) {
-		hs = append(hs, ht)
-	}
-	if g.rng.IntN(2) == 0 {
-		slices.Reverse(hs)
-	}
-	return petPiece{heights: hs, w: len(hs) * petBoard}
-}
-
-// putTree puts the cat tree with its left at x.
-func (g *Pets) putTree(x int, heights []int) {
-	floor := g.h - 1
-	for i, ht := range heights {
-		bx, y := x+i*petBoard, floor-ht
-		post := bx + petBoard/2 - 1
-		g.hline(bx, bx+petBoard-1, y, inkPetWood)
-		g.vline(post, y+1, floor-1, inkPetDark)
-		g.vline(post+1, y+1, floor-1, inkPetDark)
-		g.light(post-1, floor-1, inkPetDark)
-		g.light(post+2, floor-1, inkPetDark)
-		l := g.ledge(y, bx, bx+petBoard-1)
-		// The outer sides of the posts at the ends are clear to climb.
-		if i == 0 {
-			g.mount(g.climb(post-1, 1, y-1), l)
-		}
-		if i == len(heights)-1 {
-			g.mount(g.climb(post+2, -1, y-1), l)
-		}
-	}
-}
-
-// boxes is a heap of boxes no wider than room, at random; none when none
-// fits.
-func (g *Pets) boxes(room int) petPiece {
-	var heaps []int
-	for k := range petHeaps {
-		// The heap's top no higher than a board.
-		if petHeapW(k) <= room && (k != petHeap || g.h-1-2*petBoxH+1 >= petTop) {
-			heaps = append(heaps, k)
-		}
-	}
-	if len(heaps) == 0 {
+	half := (room - petTrunk) / 2
+	if half < petClimbW {
 		return petPiece{}
 	}
-	k := heaps[g.rng.IntN(len(heaps))]
-	return petPiece{heap: k, w: petHeapW(k)}
-}
-
-func petHeapW(k int) int {
-	if k == petOne {
-		return petBox
-	}
-	return 2 * petBox
-}
-
-// putBoxes puts heap k with its left at x.
-func (g *Pets) putBoxes(x, k int) {
-	top := g.h - 1 - petBoxH
-	box := func(bx, by int) {
-		g.hline(bx, bx+petBox-1, by, inkPetWood)
-		g.hline(bx, bx+petBox-1, by+petBoxH-1, inkPetWood)
-		g.vline(bx, by, by+petBoxH-1, inkPetWood)
-		g.vline(bx+petBox-1, by, by+petBoxH-1, inkPetWood)
-	}
-	switch k {
-	case petOne:
-		box(x, top)
-		g.ledge(top, x, x+petBox-1)
-	case petTwo:
-		box(x, top)
-		box(x+petBox, top)
-		g.ledge(top, x, x+2*petBox-1)
-	default:
-		box(x, top)
-		box(x+petBox, top)
-		lx, hx, hy := x, x+petBox, top-petBoxH+1
-		if g.rng.IntN(2) == 0 {
-			lx, hx = hx, lx
+	t := &petTree{crownH: 7 + g.rng.IntN(4), crownW: min(12+g.rng.IntN(7), room)}
+	t.top = 1 + g.rng.IntN(max(1, floor/4))
+	side := 1 - 2*g.rng.IntN(2)
+	for y := floor - petTall - 1 - g.rng.IntN(3); y >= max(petTall, t.top+t.crownH-3); y -= 6 + g.rng.IntN(3) {
+		if long := min(petShort+g.rng.IntN(petLong-petShort+1), half); long >= petShort {
+			t.branches = append(t.branches, petBranch{y, side, long})
 		}
-		box(hx, hy)
-		g.ledge(top, lx, lx+petBox-1)
-		g.ledge(hy, hx, hx+petBox-1)
+		side = -side
 	}
+	t.left = max(petClimbW, (t.crownW-petTrunk+1)/2)
+	t.right = t.left
+	for _, b := range t.branches {
+		if b.side < 0 {
+			t.left = max(t.left, b.long)
+		} else {
+			t.right = max(t.right, b.long)
+		}
+	}
+	w := t.left + petTrunk + t.right
+	if w > room {
+		return petPiece{}
+	}
+	return petPiece{tree: t, w: w}
 }
 
-// shelves puts shelves up the wall at side, 0 the left and 1 the right,
-// on its pole, each on a bracket, the triangle of the pole, the shelf and
-// a brace from one to the other (user, 2026-10-07: a wall has platforms
-// to climb, and a shelf stands on a bracket): as many as there is room
-// for, a cat sitting on each under the one over it or the top, and under
-// the lowest — sometimes one fewer — at heights at random, high and low
-// (user, the same day), and each as long as it is at random, the
-// shortest to the longest (user, the same day).
-func (g *Pets) shelves(side int) {
-	lo, hi := petTall, g.h-2-petTall
-	if hi < lo {
-		return
+// putTree puts tree t with the left of its reach at x: its trunk, from the
+// middle of its crown down, its roots spread at the foot; the crown over
+// it, an oval of leaves in a speckle of shade; its branches, each a
+// ledge; and the trunk's sides to climb, each up to its highest branch,
+// or under the crown.
+func (g *Pets) putTree(x int, t *petTree) {
+	floor := g.h - 1
+	tx := x + t.left
+	for i := range petTrunk {
+		g.vline(tx+i, t.top+t.crownH/2, floor-1, inkPetBark)
 	}
-	n := max(1, (hi-lo)/(petTall+1)+1-g.rng.IntN(2))
-	gaps := g.spread(n, hi-lo-(n-1)*(petTall+1))
-	y := lo + gaps[0]
-	for i := range n {
-		sw := petShort + g.rng.IntN(g.sw-petShort+1)
-		x0 := 0
-		if side == 1 {
-			x0 = g.w - sw
+	g.light(tx-1, floor-1, inkPetBark)
+	g.light(tx+petTrunk, floor-1, inkPetBark)
+	cx, cy := float64(tx)+float64(petTrunk-1)/2, float64(t.top)+float64(t.crownH-1)/2
+	rx, ry := float64(t.crownW)/2, float64(t.crownH)/2
+	for y := t.top; y < t.top+t.crownH; y++ {
+		for lx := tx - t.crownW; lx <= tx+t.crownW; lx++ {
+			if dx, dy := (float64(lx)-cx)/rx, (float64(y)-cy)/ry; dx*dx+dy*dy > 1 {
+				continue
+			}
+			ink := inkPetLeaf
+			if (3*lx+5*y)%7 == 0 {
+				ink = inkPetLeafDark
+			}
+			g.light(lx, y, ink)
 		}
-		g.hline(x0, x0+sw-1, y, inkPetWood)
-		// The brace, half the shelf past the pole out, as far down.
-		brace := (sw - petPole) / 2
-		for j := 1; j <= brace; j++ {
-			if side == 0 {
-				g.light(petPole+brace-j, y+j, inkPetDark)
-			} else {
-				g.light(g.w-1-petPole-brace+j, y+j, inkPetDark)
+	}
+	for _, b := range t.branches {
+		x0 := tx + petTrunk
+		if b.side < 0 {
+			x0 = tx - b.long
+		}
+		g.hline(x0, x0+b.long-1, b.y, inkPetBark)
+		g.ledge(b.y, x0, x0+b.long-1)
+	}
+	for _, side := range []int{-1, 1} {
+		top := -1
+		for _, b := range t.branches {
+			if b.side == side && (top < 0 || b.y < top) {
+				top = b.y
 			}
 		}
-		g.ledge(y, x0, x0+sw-1)
-		y += petTall + 1 + gaps[i+1]
+		if top < 0 {
+			top = t.top + t.crownH
+		}
+		paws, holds := tx-1, 1
+		if side > 0 {
+			paws, holds = tx+petTrunk, -1
+		}
+		c := g.climb(paws, holds, max(petTop-1, top-1))
+		g.places[c].trunk = true
+		g.mount(c)
 	}
+}
+
+// stump is a stump no wider than room, at random; none when none fits.
+func (g *Pets) stump(room int) petPiece {
+	w := 12 + g.rng.IntN(3)
+	if w > room {
+		return petPiece{}
+	}
+	return petPiece{stump: [2]int{w, 5 + g.rng.IntN(3)}, w: w}
+}
+
+// putStump puts stump s with its left at x: its sides bark, its top the
+// wood cut, its roots spread at the foot; its top a ledge.
+func (g *Pets) putStump(x int, s [2]int) {
+	floor := g.h - 1
+	top := floor - s[1]
+	for y := top + 1; y < floor; y++ {
+		g.hline(x, x+s[0]-1, y, inkPetBark)
+	}
+	g.hline(x, x+s[0]-1, top, inkPetCut)
+	g.light(x-1, floor-1, inkPetBark)
+	g.light(x+s[0], floor-1, inkPetBark)
+	g.ledge(top, x, x+s[0]-1)
 }
 
 // join links every two ledges a cat can jump between: up onto one no
 // more than a jump higher, from beside it, to its nearer end; down — or
 // across — off the end of one, onto another clear of it; neither
-// farther across than a jump. And a wall to every ledge no farther
+// farther across than a jump. And a trunk to every ledge no farther
 // across: from where a cat holds on, level with it — or as high as it
 // holds on, a pixel or two under the highest — to its nearer end, and
-// back (user, 2026-10-07: a narrow room's box, a wall's shelf).
+// back: its branches, and a stump by it.
 func (g *Pets) join() {
 	for c, C := range g.places {
-		if !C.wall {
+		if !C.trunk {
 			continue
 		}
 		for l, L := range g.places {

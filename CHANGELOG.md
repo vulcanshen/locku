@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 ### Changed
+- The pets go outdoors: a sky over a green field shading down the screen, the ground a line of grass, and on it trees and stumps where the room had its cat tree, boxes and shelves. A tree has a trunk the cats climb either side of, branches either side by turns to sit and sleep on, and a crown of leaves; there is one at the least, in a narrow pane too, and as many trees and stumps as the width holds, laid out anew each time.
 - The falling blocks' column of pieces to come reaches the foot of the frame: what is left under its last box is the frame's grey, where it was the ground.
 
 ## [0.2.1] - 2026-10-07

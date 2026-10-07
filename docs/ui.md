@@ -58,7 +58,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | 列 | 值 |
 |---|---|
 | saver | `clock` / `runner` / `bounce` / `snake` / `tetromino` / `pets` / `custom` |
-| what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；tetromino 是 falling blocks, playing themselves, full rows going（2026-10-07）；pets 是 cats about a room, climbing, jumping, napping（2026-10-07）；custom 是 your own program, on a terminal of its own, as the saver |
+| what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；tetromino 是 falling blocks, playing themselves, full rows going（2026-10-07）；pets 是 cats outdoors, up the trees, jumping, napping（2026-10-07）；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
 | （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；tetromino：只有 speed（2026-10-07）；pets：只有 count（2026-10-07）；這四種也沒有顏色列 |
