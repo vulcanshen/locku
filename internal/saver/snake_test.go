@@ -78,9 +78,14 @@ func check(t *testing.T, s *Snake, step int, enough bool) {
 			t.Fatalf("step %d: cell %d taken %v, body %v", step, c, k, on[c])
 		}
 	}
-	for _, l := range s.lumps {
+	for i, l := range s.lumps {
 		if (l.at < 0 && l.at != snakeBitten) || l.at >= len(s.body) || l.colour >= len(ownColours) {
 			t.Fatalf("step %d: a lump at %d, off a body %d long", step, l.at, len(s.body))
+		}
+		// One apple a segment, the oldest the furthest down; the one in
+		// the jaws is at the head.
+		if i > 0 && s.lumps[i-1].at <= max(l.at, 0) {
+			t.Fatalf("step %d: two apples in a segment: %v", step, s.lumps)
 		}
 		if enough && (l.colour == s.colour || (s.apple >= 0 && l.colour == s.next)) {
 			t.Fatalf("step %d: a lump in the colour of the snake (%d) or the apple (%d): %v", step, s.colour, s.next, s.lumps)
@@ -140,7 +145,7 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 			if len(s.body)+s.grow+len(s.lumps) != snakeStart+eats || s.grow < 0 || len(s.body)-long > 1 || len(s.body) < long {
 				t.Fatalf("%v step %d: %d long (was %d), %d to grow, %d on the way down, %d eaten", sz, steps, len(s.body), long, s.grow, len(s.lumps), eats)
 			}
-			if want := turned(before, long, colour); s.colour != want {
+			if want := turned(before, s.lumps, colour); s.colour != want {
 				t.Fatalf("%v step %d: the snake is %d, the lumps were %v and are %v", sz, steps, s.colour, before, s.lumps)
 			}
 			// The move a lump is the body, the tail grows with it — but
@@ -190,15 +195,17 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 	}
 }
 
-// turned is the snake's colour after a move: that of the last lump, the
-// oldest first, whose second at the tail of a body long segments was up
-// — the body now — or the colour it was. On a small board a few apples
-// eaten close together wait at the tail at once, each on its own clock.
-func turned(before []lump, long, colour int) int {
-	for _, l := range before {
-		if l.at != snakeBitten && l.at >= long-1 && l.wait <= 1 {
-			colour = l.colour
-		}
+// turned is the snake's colour after a move: that of the last lump to be
+// the body now — or the colour it was. One apple a segment, the oldest
+// the furthest down: the move drops from the front those that are the
+// body, and an apple eaten is a new one at the back.
+func turned(before, after []lump, colour int) int {
+	added := 0
+	if len(after) > 0 && after[len(after)-1].at == snakeBitten {
+		added = 1
+	}
+	if dropped := len(before) + added - len(after); dropped > 0 {
+		colour = before[dropped-1].colour
 	}
 	return colour
 }
@@ -401,18 +408,63 @@ func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 	}
 }
 
-// One apple a segment: one swallowed while the one before is still in
-// the throat pushes it on, down the line.
+// One apple a segment (user, 2026-10-06; at the tail too, 2026-10-07):
+// the move an apple is in the jaws, the one still in the throat goes on
+// a segment, and the next, down the line; with an apple in every
+// segment, the one at the tail is pushed into the body — the snake its
+// colour and the tail a segment longer, at once. One whose second is up
+// while the apple ahead still holds the next segment waits for it.
 func TestSnakeApplesQueue(t *testing.T) {
 	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
 	for i := 0; i < 40; i++ {
 		s.Step()
 	}
-	s.lumps = []lump{{at: 1, colour: 1, wait: 5}, {at: 0, colour: 2, wait: 9}, {at: snakeBitten, colour: 3}}
+	bite := func(lumps []lump) {
+		s.lumps, s.grow = lumps, 0
+		s.apple = s.tour[(s.pos[s.body[0]]+1)%len(s.tour)]
+		s.Step()
+		if !s.bitten() {
+			t.Fatalf("no apple in the jaws: %v", s.lumps)
+		}
+	}
+	bite([]lump{{at: 1, colour: 1, wait: 5}, {at: 0, colour: 2, wait: 9}})
+	if got := []int{s.lumps[0].at, s.lumps[1].at, s.lumps[2].at}; !slices.Equal(got, []int{2, 1, snakeBitten}) {
+		t.Errorf("after a bite, the apples at %v", got)
+	}
+	long := len(s.body)
+	if long < 3 || long >= len(ownColours) {
+		t.Fatalf("the snake %d long", long)
+	}
+	var full []lump
+	for at := long - 1; at >= 0; at-- {
+		full = append(full, lump{at: at, colour: (s.colour + 1 + at) % len(ownColours), wait: 5})
+	}
+	oldest := full[0].colour
+	bite(full)
+	var at []int
+	for _, l := range s.lumps {
+		at = append(at, l.at)
+	}
+	want := []int{snakeBitten}
+	for a := 1; a < long; a++ {
+		want = append([]int{a}, want...)
+	}
+	if !slices.Equal(at, want) || s.colour != oldest || len(s.body) != long+1 || s.grow != 0 {
+		t.Errorf("a bite with an apple in every segment: the apples at %v, the snake %d (the oldest %d), %d long (was %d), %d to grow",
+			at, s.colour, oldest, len(s.body), long, s.grow)
+	}
+	last := len(s.body) - 1
+	s.lumps = []lump{{at: last, colour: 1, wait: 3}, {at: last - 1, colour: 2, wait: 1}}
+	for k := 0; k < 2; k++ {
+		s.digest()
+		if s.lumps[1].at != last-1 {
+			t.Fatalf("move %d: the apple behind went on to %d, the one ahead at %d", k, s.lumps[1].at, s.lumps[0].at)
+		}
+	}
 	s.digest()
-	if got := []int{s.lumps[0].at, s.lumps[1].at, s.lumps[2].at}; !slices.Equal(got, []int{2, 1, 0}) {
-		t.Errorf("after a swallow, the apples at %v", got)
+	if len(s.lumps) != 1 || s.lumps[0].at != last {
+		t.Errorf("the one ahead is the body, and the one behind at %v", s.lumps)
 	}
 }
 
