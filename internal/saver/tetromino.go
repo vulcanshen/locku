@@ -16,13 +16,15 @@ import (
 // piece is four of them, a 2 × 2 square each. The pieces come in from
 // behind the top of the frame, in the middle.
 //
-// The next piece and the one after are at the field's right, at the top,
-// in two boxes one over the other, a pixel a block (user, the same day:
-// they were in the field's top corners at its own size, and the field
-// was what the boxes left); the boxes are framed as the field is, a
-// pixel thick, the side by the field the field's own and the line
-// between the two the one. Nothing is lettered: which is which is where
-// it is, the next on top.
+// The pieces to come are in a column at the field's right, a box each,
+// the next at the top, the one after under it and so on, as many as the
+// column holds, a pixel a block (user, the same day: they were the next
+// two, and in the field's top corners at its own size, the field what
+// the boxes left; then the next two at the right). The boxes are framed
+// as the field is, a pixel thick, the side by the field the field's own
+// and the line between two boxes the one; the column ends with the last
+// box whole, the little left under it the ground. Nothing is lettered:
+// which is which is where it is.
 //
 // It plays as a player would, a piece at a time: of every spot the piece
 // can get to — round what is in the way, as it can move — it
@@ -165,7 +167,7 @@ type Tetromino struct {
 	cells      []uint8 // the stack: a block's ink, 0 none
 	bag        []int   // the pieces still to come from this bag
 	cur        int     // the piece falling
-	next, then int     // the next, in the top box, and the one after, under it
+	queue      []int   // the pieces to come, the next first, a box each
 	at, goal   spot    // where the piece is, and where it is going
 	dist       []int32 // steps from a spot to the goal; -1 none
 	going      []int   // the rows going, the clear under way
@@ -221,7 +223,13 @@ func (g *Tetromino) reset(w, h int) {
 	}
 	g.cells = make([]uint8, g.cols*g.rows)
 	g.bag, g.going, g.over, g.fx = nil, nil, false, 0
-	g.next, g.then = g.deal(), g.deal()
+	// As many as there are boxes, which are as many as the frame's height
+	// holds whole.
+	_, fh := g.size()
+	g.queue = nil
+	for range (fh - 1) / (tetroBoxH + tetroEdge) {
+		g.queue = append(g.queue, g.deal())
+	}
 	g.come()
 }
 
@@ -302,7 +310,7 @@ func (g *Tetromino) step(s spot, m move, down bool) (spot, bool) {
 // where it goes, and the way there. A piece that can come to rest only
 // over the field, the stack at the top, is the end (Step).
 func (g *Tetromino) come() {
-	g.cur, g.next, g.then = g.next, g.then, g.deal()
+	g.cur, g.queue = g.queue[0], append(g.queue[1:], g.deal())
 	blocks := tetroTurns[g.cur][0]
 	lo, hi, foot := blocks[0][0], blocks[0][0], 0
 	for _, b := range blocks {
@@ -570,8 +578,8 @@ func (g *Tetromino) preview(sc *Scene, p, x, y int) {
 	}
 }
 
-// Draw is the frame at w × h pixels: the frames in grey, the next two
-// pieces in the boxes, the stack — the rows going
+// Draw is the frame at w × h pixels: the frames in grey, the pieces to
+// come in the boxes, the stack — the rows going
 // white, as far as they have not gone — and the piece falling, what of
 // it is in the field; or, the game over, as much of all that as is not
 // black yet, and END. A scene of a new size is a new game.
@@ -591,19 +599,21 @@ func (g *Tetromino) Draw(w, h int) Scene {
 			}
 		}
 	}
-	// The boxes at the field's right, its side theirs: their top, the
-	// line between them and their foot, and their far side.
+	// The column of boxes at the field's right, its side theirs: the
+	// line over each box and under the last, and their far side; a piece
+	// in each.
 	bx, bw, bh := fw-1, tetroBoxW+tetroEdge, tetroBoxH+tetroEdge
-	for i := 0; i <= 2; i++ {
+	for i := 0; i <= len(g.queue); i++ {
 		for x := 0; x <= bw; x++ {
 			sc.put(bx+x, i*bh, inkTetroFrame)
 		}
 	}
-	for y := 0; y <= 2*bh; y++ {
+	for y := 0; y <= len(g.queue)*bh; y++ {
 		sc.put(bx+bw, y, inkTetroFrame)
 	}
-	g.preview(&sc, g.next, fw, tetroEdge)
-	g.preview(&sc, g.then, fw, tetroEdge+bh)
+	for i, p := range g.queue {
+		g.preview(&sc, p, fw, tetroEdge+i*bh)
+	}
 	for y := 0; y < g.rows; y++ {
 		going := slices.Contains(g.going, y)
 		for x := 0; x < g.cols; x++ {
