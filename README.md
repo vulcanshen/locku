@@ -16,7 +16,7 @@
 
 ![demo](docs/demo.gif)
 
-`locku lock` turns the terminal into the clock board; a key brings up the PIN prompt, a wrong PIN turns it red, the right one gives the terminal back. Then the settings screen: a profile's settings in `[2]`, the runner and a program of your own (cmatrix) previewed with `p`, `Space` listing what can be done on the row, and tmux under Integration.
+`locku lock` turns the terminal into the runner at dusk; a key brings up the PIN prompt over it, a wrong PIN turns it red, the right one gives the terminal back. Then the settings screen: the runner's profile in `[2]`, the other savers previewed with `p` one after another — pets, tetromino, snake, bounce and the clock — `Space` listing what can be done on the row, and tmux under Integration.
 
 ## What you see
 
