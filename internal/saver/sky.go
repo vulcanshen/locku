@@ -18,7 +18,8 @@ import (
 // on the horizon under where it was by day, the obstacles going by in
 // front of it (user, the same day). Time-shifting turns from one part of
 // the day to the next square by square, from right to left, the squares
-// of a stretch in an order at random, over twenty seconds: each square
+// of a stretch in an order at random, over ten seconds (user, the same
+// day: twenty was long): each square
 // is the one sky or the other, the runner and the sun or the moon in it
 // too, never a mix of the two (user, the same day: it changed all at
 // once and night to day was sudden; then a fade of the whole board was
@@ -36,7 +37,7 @@ var Backgrounds = []string{BackgroundDay, BackgroundNight, BackgroundTimeShiftin
 // the next; skyScatter is how much of it the squares of one column
 // spread over, at random.
 const (
-	skyTurn    = 20 * time.Second
+	skyTurn    = 10 * time.Second
 	skyScatter = 0.3
 )
 
@@ -69,12 +70,13 @@ var (
 	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", moon: true}
 )
 
-// The sun, catppuccin-latte's yellow so it shows on the pale sky, and
-// the moon, rosewater, a crescent: each seven pixels square. The setting
-// sun is the top of the sun, latte's peach so it shows on the yellow low
-// in the dusk.
+// The sun, a yellow deep enough to show on the pale sky — catppuccin's
+// are pale, and latte's was orange (user, 2026-10-07: a little more
+// yellow) — and the moon, rosewater, a crescent: each seven pixels
+// square. The setting sun is the top of the sun, latte's peach so it
+// shows on the yellow low in the dusk.
 const (
-	sunColour    = "#df8e1d"
+	sunColour    = "#f5c211"
 	moonColour   = "#f5e0dc"
 	sunsetColour = "#fe640b"
 )
@@ -89,13 +91,18 @@ var (
 		".#####.",
 		"..###..",
 	}
+	// The moon is the sun's disc with a disc like it taken out, three
+	// pixels to the right and one up: what is left keeps the round of
+	// the disc along its left and its bottom, thin at the top, full at
+	// the bottom (user, 2026-10-07: a C as thick all the way round
+	// looked an oval).
 	moonArt = sprite{
-		"..###..",
+		"..##...",
 		".##....",
-		"##.....",
-		"##.....",
-		"##.....",
-		".##....",
+		"###....",
+		"###....",
+		"####...",
+		".####..",
 		"..###..",
 	}
 	sunsetArt = sunArt[:4]

@@ -140,7 +140,7 @@ func TestRunnerCloudsPassInFrontOfTheSun(t *testing.T) {
 
 // Time-shifting turns from one part of the day to the next square by
 // square (user, 2026-10-07: not a fade of the whole board): from right
-// to left over twenty seconds, the squares of a column at random; each
+// to left over ten seconds, the squares of a column at random; each
 // square is the one sky or the other — its ground, the runner and the
 // lights in it — never a mix, and a square turns once and stays. Half
 // way from night to day the right edge is day, the left night, and in
@@ -150,7 +150,7 @@ func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
 	var moment time.Time
 	d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundTimeShifting, func() time.Time { return moment })
 	turn := time.Date(2026, time.October, 7, 14, 3, 0, 0, time.Local) // night to day
-	moment = turn.Add(10 * time.Second)
+	moment = turn.Add(5 * time.Second)
 	sc, sh := d.Draw(76, 31), d.Shade(60, 31)
 	night, day := nightSky.look(31), daySky.look(31)
 	if !reflect.DeepEqual(sh.Looks, [2]Look{night, day}) {
@@ -184,12 +184,12 @@ func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
 	if count[inkSun] == 0 || count[inkMoon] == 0 || count[inkSunset] != 0 {
 		t.Errorf("half way, the sun and the moon both, and no setting sun: %v", count)
 	}
-	// Second by second through the turn: none turned at its start, all
-	// by twenty seconds, the right half ahead of the left, and none
+	// A half second at a time through the turn: none turned at its start,
+	// all by ten seconds, the right half ahead of the left, and none
 	// turning back.
 	turned := map[[2]int]bool{}
-	for s := 0; s <= 22; s++ {
-		moment = turn.Add(time.Duration(s) * time.Second)
+	for s := 0; s <= 24; s++ {
+		moment = turn.Add(time.Duration(s) * time.Second / 2)
 		sh := d.Shade(60, 31)
 		right, left := 0, 0
 		for x := 0; x < 60; x++ {
@@ -207,11 +207,11 @@ func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
 		}
 		switch {
 		case s == 0 && right+left != 0, s >= 20 && right+left != 60*31, right < left:
-			t.Errorf("second %d: %d squares turned on the right, %d on the left", s, right, left)
+			t.Errorf("half second %d: %d squares turned on the right, %d on the left", s, right, left)
 		}
 	}
 	// From day to dusk, the sun going and the setting sun coming.
-	moment = time.Date(2026, time.October, 7, 14, 1, 10, 0, time.Local)
+	moment = time.Date(2026, time.October, 7, 14, 1, 5, 0, time.Local)
 	sc = d.Draw(76, 31)
 	count = map[uint8]int{}
 	for _, k := range sc.Pix {
@@ -219,5 +219,31 @@ func TestRunnerSkyTurnsSquareBySquare(t *testing.T) {
 	}
 	if count[inkSun] == 0 || count[inkSunset] == 0 || count[inkMoon] != 0 {
 		t.Errorf("half way from day to dusk: %v", count)
+	}
+}
+
+// The sun is yellow, not orange (user, 2026-10-07): its hue between 45
+// and 60 degrees, and it stands out on the day sky. The moon is round
+// (user, the same day): the sun's disc with a disc like it taken out to
+// the right and up — every pixel of it in the disc, its left and bottom
+// edges the disc's.
+func TestRunnerSunYellowAndMoonRound(t *testing.T) {
+	c := channels(sunColour)
+	hue := 60 * float64(c[1]-c[2]) / float64(c[0]-c[2])
+	if c[0] < c[1] || c[1] < c[2] || hue < 45 || hue > 60 {
+		t.Errorf("the sun %s, hue %.0f", sunColour, hue)
+	}
+	if sky := channels(daySky.stops[0]); sky[2]-c[2] < 150 {
+		t.Errorf("the sun %s on the day sky %s", sunColour, daySky.stops[0])
+	}
+	in := func(sp sprite, x, y int) bool {
+		return y >= 0 && y < len(sp) && x >= 0 && x < len(sp[y]) && sp[y][x] == '#'
+	}
+	for y := range moonArt {
+		for x := range moonArt[y] {
+			if want := in(sunArt, x, y) && !in(sunArt, x-3, y+1); in(moonArt, x, y) != want {
+				t.Errorf("the moon at %d,%d: %v", x, y, in(moonArt, x, y))
+			}
+		}
 	}
 }
