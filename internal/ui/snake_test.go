@@ -12,8 +12,9 @@ import (
 )
 
 // The snake is a game on the board in colours of its own (user,
-// 2026-10-06), the bouncing box's: it takes an apple's colour when the
-// apple has gone down its body; every frame it moves.
+// 2026-10-06), the bouncing box's and white: it is white at the start
+// (user, 2026-10-07), and takes an apple's colour when the apple has gone
+// down its body; every frame it moves.
 func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 	m := testLock(t, "1234", func(c *config.Config) {
 		c.Profiles = []config.Profile{config.NewProfile("s", saver.KindSnake)}
@@ -22,11 +23,17 @@ func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 	if _, ok := m.game.(*saver.Snake); !ok {
 		t.Fatalf("the game is %T", m.game)
 	}
-	if inks := m.inks(); len(inks) != 11 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#f2b753") {
+	if inks := m.inks(); len(inks) != 12 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#f2b753") || inks[11] != lipgloss.Color("#ffffff") {
 		t.Fatalf("inks %v", inks)
 	}
-	if m.shown.count() == 0 {
-		t.Fatal("nothing lit")
+	white := 0
+	for _, k := range m.shown.ink {
+		if k == 11 {
+			white++
+		}
+	}
+	if white < 7*m.shown.count()/10 {
+		t.Fatalf("%d of %d lit white at the start", white, m.shown.count())
 	}
 	before := m.shown.clone()
 	m, cmd := m.step(clockTickMsg{gen: m.tickGen})
