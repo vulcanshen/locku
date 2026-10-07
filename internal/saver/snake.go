@@ -306,10 +306,11 @@ func (s *Snake) move() int {
 }
 
 // Step is a move: the apples on their way down go on, each at its own
-// pace; the head on, and the tail after it — but where it is to grow,
-// unless the head is going where the tail is; an apple eaten is a lump
-// in the jaws, and a new apple is put in a fresh colour. A full board
-// stays a while, its apples still going down, then a new game.
+// pace; an apple eaten is a lump in the jaws, the others queueing behind
+// it; the head on, and the tail after it — but where it is to grow,
+// unless the head is going where the tail is; and a new apple is put in
+// a fresh colour. A full board stays a while, its apples still going
+// down, then a new game.
 func (s *Snake) Step() {
 	if s.w == 0 || s.tour == nil {
 		return
@@ -323,6 +324,11 @@ func (s *Snake) Step() {
 		return
 	}
 	next := s.move()
+	eat := next == s.apple
+	if eat {
+		s.lumps = append(s.lumps, lump{at: snakeBitten, colour: s.next})
+		s.queue()
+	}
 	if tail := s.body[len(s.body)-1]; s.grow > 0 && next != tail {
 		s.grow--
 	} else {
@@ -331,8 +337,7 @@ func (s *Snake) Step() {
 	}
 	s.body = append([]int{next}, s.body...)
 	s.taken[next] = true
-	if next == s.apple {
-		s.lumps = append(s.lumps, lump{at: snakeBitten, colour: s.next})
+	if eat {
 		s.next = s.fresh()
 		if s.place(); s.apple < 0 {
 			s.hold = s.frames(snakeHold)
@@ -399,7 +404,10 @@ func (s *Snake) head() (shape, int, int) {
 // digest moves the apples down the body, each on its own clock, a
 // segment every snakeDigest (user, 2026-10-06: a segment a second): an
 // apple in the jaws is in the throat the move after; one at the tail is
-// the body next, the snake its colour and the tail a segment to grow.
+// the body next, the snake its colour and the tail a segment to grow;
+// one with the next segment still taken by the apple ahead waits there
+// till it has gone on (user, 2026-10-07: one apple a segment — one
+// pushed on ahead of its time may be waiting at the tail).
 func (s *Snake) digest() {
 	keep := s.lumps[:0]
 	for _, l := range s.lumps {
@@ -412,19 +420,31 @@ func (s *Snake) digest() {
 			s.colour = l.colour
 			s.grow++
 			continue
+		case len(keep) > 0 && keep[len(keep)-1].at == l.at+1:
 		default:
 			l.at, l.wait = l.at+1, s.frames(snakeDigest)
 		}
 		keep = append(keep, l)
 	}
 	s.lumps = keep
-	// One apple a segment: one swallowed while the one before is still in
-	// the throat pushes it on, and that the next, down the line — or they
-	// would lie on each other, the older out of sight.
+}
+
+// queue keeps one apple a segment, the move an apple is in the jaws — at
+// the head, as the one in the throat is: one in the way of the one
+// behind it goes on a segment, and that the next, down the line, or they
+// would lie on each other, the older out of sight; one pushed past the
+// tail is the body at once, the snake its colour and the tail a segment
+// to grow (user, 2026-10-07: they piled up at the tail).
+func (s *Snake) queue() {
 	for i := len(s.lumps) - 2; i >= 0; i-- {
-		if a, b := &s.lumps[i], s.lumps[i+1]; b.at >= 0 && a.at <= b.at {
-			a.at = min(b.at+1, len(s.body)-1)
+		if a, b := &s.lumps[i], max(s.lumps[i+1].at, 0); a.at <= b {
+			a.at = b + 1
 		}
+	}
+	if len(s.lumps) > 0 && s.lumps[0].at > len(s.body)-1 {
+		s.colour = s.lumps[0].colour
+		s.grow++
+		s.lumps = s.lumps[1:]
 	}
 }
 
