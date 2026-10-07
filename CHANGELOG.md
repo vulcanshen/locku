@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- The falling blocks' column of pieces to come reaches the foot of the frame: what is left under its last box is the frame's grey, where it was the ground.
 
 ## [0.2.1] - 2026-10-07
 ### Added
