@@ -34,16 +34,18 @@ import (
 // one of each in some order, so none is long in coming.
 //
 // A stack that reaches the top is the end (user, the same day): every
-// piece there is, the stack and the column's, dims into the frame's
-// grey, all together, over five seconds — it went black, a row at a time
-// from the top, the frames too, until the user said not so — and END is
-// lettered in red in the middle of the screen, on a plate of the ground,
-// in the lock's own pixel letters, a block a pixel; two seconds, and a
-// new game.
+// piece there is, the stack's and the column's, turns the frame's grey,
+// a row of pixels at a time from the top, over five seconds, the ground
+// and the frame as they are (it went black, the frames too, then the
+// pieces dimmed all together, until the user said not so); then END is
+// lettered in red in the middle of the screen, in the lock's own pixel
+// letters, a block a pixel, over what is there; two seconds, and a new
+// game.
 //
 // Its colours are its own (user, 2026-10-06: a saver of many colours
 // brings them): the pieces in the colours they usually have, in
-// catppuccin's, the frame in grey, END in catppuccin's red. Its one setting is its speed, by name as the
+// catppuccin's, the frame in grey, END in catppuccin's red. Its one
+// setting is its speed, by name as the
 // snake's.
 
 const KindTetromino = "tetromino"
@@ -66,12 +68,12 @@ const (
 	tetroFx    = 40 * time.Millisecond
 	tetroFlash = 280 * time.Millisecond
 	tetroWipe  = 400 * time.Millisecond
-	// The end at the same pace: the pieces dimming in five seconds
-	// (user, 2026-10-07: too fast in one), then END for two (user, the
-	// same day).
-	tetroFade = 5 * time.Second
-	tetroEnd  = 2 * time.Second
-	tetroHide = 4 // rows over the field a piece may be in, behind the frame
+	// The end at the same pace: the pieces going grey from the top in
+	// five seconds (user, 2026-10-07: too fast in one), then END for two
+	// (user, the same day).
+	tetroCurtain = 5 * time.Second
+	tetroEnd     = 2 * time.Second
+	tetroHide    = 4 // rows over the field a piece may be in, behind the frame
 )
 
 // tetroRoom is the least field, its frame and the boxes beside it,
@@ -201,18 +203,9 @@ func (g *Tetromino) Next(now time.Time) time.Time {
 }
 
 // Inks are the ground, the pieces' colours, white, the frame's grey and
-// END's red. At the end the pieces' are as far into the grey as the
-// fade has gone; all of a piece's ink, so all the pieces dim together.
+// END's red.
 func (g *Tetromino) Inks() []string {
-	pieces := tetroColours
-	if g.over {
-		f := min(1, float64(g.fx+1)/float64(g.frames(tetroFade)))
-		pieces = make([]string, len(tetroColours))
-		for i, c := range tetroColours {
-			pieces[i] = mix(c, tetroGrey, f)
-		}
-	}
-	return append(append([]string{ownGround}, pieces...), tetroWhite, tetroGrey, tetroRed)
+	return append(append([]string{ownGround}, tetroColours...), tetroWhite, tetroGrey, tetroRed)
 }
 
 // reset is a new game on a w × h scene: the field as wide and as high
@@ -503,7 +496,7 @@ func (g *Tetromino) Step() {
 		return
 	}
 	if g.over {
-		if g.fx++; g.fx >= g.frames(tetroFade)+g.frames(tetroEnd) {
+		if g.fx++; g.fx >= g.frames(tetroCurtain)+g.frames(tetroEnd) {
 			g.reset(g.w, g.h)
 		}
 		return
@@ -586,8 +579,8 @@ func (g *Tetromino) preview(sc *Scene, p, x, y int) {
 // Draw is the frame at w × h pixels: the frames in grey, the pieces to
 // come in the boxes, the stack — the rows going
 // white, as far as they have not gone — and the piece falling, what of
-// it is in the field; and, the game over and the pieces dimmed, END. A
-// scene of a new size is a new game.
+// it is in the field; the game over, the pieces grey as far down as the
+// end has gone, and then END. A scene of a new size is a new game.
 func (g *Tetromino) Draw(w, h int) Scene {
 	if w != g.w || h != g.h {
 		g.reset(w, h)
@@ -645,21 +638,26 @@ func (g *Tetromino) Draw(w, h int) Scene {
 	return sc
 }
 
-// drawEnd letters END in red in the middle of the screen once the
-// pieces have dimmed (user, 2026-10-07: the screen's middle, not the
-// field's), on a plate of the ground a letter's pixel round it, so the
-// grey stack behind is not in the letters.
+// drawEnd turns the pieces the frame's grey from the top down, a row of
+// pixels at a time as far as the end has gone — five seconds for the
+// frame's height — the ground and the frame as they are; and, that done,
+// letters END in red in the middle of the screen (user, 2026-10-07: the
+// screen's middle, not the field's), over what is there — red, it needs
+// nothing under it (user, the same day).
 func (g *Tetromino) drawEnd(sc *Scene) {
-	if g.fx < g.frames(tetroFade) {
+	_, fh := g.size()
+	n := g.frames(tetroCurtain)
+	grey := min(fh, (fh*(g.fx+1)+n-1)/n)
+	for i := range sc.W * grey {
+		if sc.Pix[i] != 0 { // the pieces: all else lit is the frame
+			sc.Pix[i] = inkTetroFrame
+		}
+	}
+	if g.fx < n {
 		return
 	}
 	w, h := tetroBlock*len(g.end[0]), tetroBlock*len(g.end)
 	px, py := (sc.W-w)/2, (sc.H-h)/2
-	for y := py - tetroBlock; y < py+h+tetroBlock; y++ {
-		for x := px - tetroBlock; x < px+w+tetroBlock; x++ {
-			sc.put(x, y, 0)
-		}
-	}
 	for dy, row := range g.end {
 		for dx := 0; dx < len(row); dx++ {
 			if row[dx] != '#' {
