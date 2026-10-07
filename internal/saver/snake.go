@@ -25,16 +25,18 @@ import (
 // and a pixel of the body swelling behind the head. (The jaws opened
 // short of the apple at first, and the snake looked broken.) The apple
 // blinks in a colour of its own, at random, and keeps it all the way
-// through: an apple eaten runs down the body to the tail, a segment a
-// move, in the line of the body in its colour, and the body goes round
-// it — three pixels over it, in the snake's — so it is seen going
-// through the gut (user, the same day); past the tail it is gone and
-// the snake is its colour (it turned the moment it ate, at first; the
-// lump stayed where it was swallowed before that, as on the Nokia). An
-// apple is never the snake's colour nor any lump's on its way down, so
-// it stands out the whole way. The snake is the longer for it at once,
-// not when the lump reaches the tail: a tail held back then could be
-// the cell the head was going into. The head and the lump stand out on
+// through: an apple eaten goes down the body to the tail in the line of
+// the body, in its colour, and the body goes round it — three pixels
+// over it, in the snake's — so it is seen going through the gut (user,
+// the same day). It goes at its own pace, a segment a second whatever
+// the snake's speed, carried along as the snake moves (it went two
+// segments a move at first, and the eye could not follow it). At the
+// tail it is the body: the snake turns its colour, the swelling goes a
+// pixel at a time, and the tail grows a segment — the snake is the
+// longer for the apple only then, as on the Nokia; a tail that would
+// hold still where the head is going grows a move later. An apple is
+// never the snake's colour nor any lump's on its way down, so it stands
+// out the whole way. The head and the lump stand out on
 // one side of the body: above it along a row, to the right of it up or
 // down a column.
 //
@@ -55,9 +57,10 @@ const (
 )
 
 const (
-	snakeStart = 3                      // cells long at the start
-	snakeHold  = 3 * time.Second        // a full board stays
-	snakeBlink = 320 * time.Millisecond // the apple is lit, then dark, at any speed
+	snakeStart  = 3                      // cells long at the start
+	snakeHold   = 3 * time.Second        // a full board stays
+	snakeBlink  = 320 * time.Millisecond // the apple is lit, then dark, at any speed
+	snakeDigest = time.Second            // an apple from one segment to the next, at any speed
 	// snakePitch is a cell: its node and the two pixels of a link. The
 	// two dark rows between two runs of the body side by side hold the
 	// head or a lump, a pixel proud of the line, and keep a dark row
@@ -93,6 +96,10 @@ var (
 	// node — three pixels over it (user, 2026-10-06: they were the
 	// apple's, two, beside the node, before the body went round it).
 	snakeLump = shape{{-1, -1}, {0, -1}, {1, -1}}
+	// At the tail, there is nothing beyond the node to go round.
+	snakeEnd = shape{{-1, -1}, {0, -1}}
+	// The apple is the body: the last of the swelling.
+	snakeFade = shape{{0, -1}}
 )
 
 // turn is a pixel of a shape for a snake going dx, dy: going right the
@@ -110,9 +117,14 @@ func turn(p [2]int, dx, dy int) (int, int) {
 	return p[0], p[1]
 }
 
-// lump is an apple on its way down: its place in the body, and its
-// colour.
-type lump struct{ at, colour int }
+// lump is an apple on its way down: its place in the body, the head 0
+// — snakeBitten in the jaws — its colour, the moves till it goes a
+// segment on, and whether it is past the tail: the body, the last of the
+// swelling about to go.
+type lump struct {
+	at, colour, wait int
+	gone             bool
+}
 
 // Snake is one game in progress.
 type Snake struct {
@@ -130,6 +142,7 @@ type Snake struct {
 	next   int    // the apple's: the snake's when it has gone down
 	t      int    // frames played
 	hold   int    // frames a full board has still to stay
+	grow   int    // segments the tail has still to grow
 	frame  time.Duration
 }
 
@@ -210,7 +223,7 @@ func (s *Snake) reset(w, h int) {
 	for i, c := range s.tour {
 		s.pos[c] = i
 	}
-	s.body, s.taken, s.lumps, s.apple, s.hold = nil, make([]bool, s.cw*s.ch), nil, -1, 0
+	s.body, s.taken, s.lumps, s.apple, s.hold, s.grow = nil, make([]bool, s.cw*s.ch), nil, -1, 0, 0
 	n := len(s.tour)
 	if n < snakeStart+1 {
 		s.tour = nil
@@ -298,37 +311,34 @@ func (s *Snake) move() int {
 	return best
 }
 
-// Step is a move: the head on, the tail after it unless the apple is
-// eaten, and every lump a segment further down — one past the tail
-// turning the snake its colour; an apple eaten is a lump in the jaws,
-// and a new apple is put in a fresh colour. A full board stays a while,
-// its lumps still running, then a new game.
+// Step is a move: the apples on their way down go on, each at its own
+// pace; the head on, and the tail after it — but where it is to grow,
+// unless the head is going where the tail is; an apple eaten is a lump
+// in the jaws, and a new apple is put in a fresh colour. A full board
+// stays a while, its apples still going down, then a new game.
 func (s *Snake) Step() {
 	if s.w == 0 || s.tour == nil {
 		return
 	}
 	s.t++
+	s.digest()
 	if s.apple < 0 {
-		s.digest(1)
 		if s.hold--; s.hold <= 0 {
 			s.reset(s.w, s.h)
 		}
 		return
 	}
 	next := s.move()
-	ate := next == s.apple
-	if !ate {
-		tail := s.body[len(s.body)-1]
+	if tail := s.body[len(s.body)-1]; s.grow > 0 && next != tail {
+		s.grow--
+	} else {
 		s.body = s.body[:len(s.body)-1]
 		s.taken[tail] = false
 	}
 	s.body = append([]int{next}, s.body...)
 	s.taken[next] = true
-	// The body has a new segment at the front: every lump is a place
-	// further from the head for it, and one more for its run.
-	s.digest(2)
-	if ate {
-		s.lumps = append(s.lumps, lump{snakeBitten, s.next})
+	if next == s.apple {
+		s.lumps = append(s.lumps, lump{at: snakeBitten, colour: s.next})
 		s.next = s.fresh()
 		if s.place(); s.apple < 0 {
 			s.hold = s.frames(snakeHold)
@@ -392,24 +402,39 @@ func (s *Snake) head() (shape, int, int) {
 	return snakeHead, dx, dy
 }
 
-// digest moves every lump by places towards the tail; one past it is
-// gone, and the snake is its colour. An apple in the jaws is at the
-// head the move after, whatever the body does.
-func (s *Snake) digest(by int) {
+// digest moves the apples down the body, each on its own clock, a
+// segment every snakeDigest (user, 2026-10-06: a segment a second): an
+// apple in the jaws is in the throat the move after; one at the tail is
+// the body next — the snake its colour, a pixel of the swelling left —
+// and then the swelling is gone and the tail has a segment to grow.
+func (s *Snake) digest() {
 	keep := s.lumps[:0]
 	for _, l := range s.lumps {
-		if l.at < 0 {
-			l.at += -snakeBitten
-		} else {
-			l.at += by
-		}
-		if l.at < len(s.body) {
-			keep = append(keep, l)
-		} else {
+		switch {
+		case l.at == snakeBitten:
+			l.at, l.wait = 0, s.frames(snakeDigest)
+		case l.wait > 1:
+			l.wait--
+		case l.gone:
+			s.grow++
+			continue
+		case l.at >= len(s.body)-1:
+			l.gone, l.wait = true, s.frames(snakeDigest)
 			s.colour = l.colour
+		default:
+			l.at, l.wait = l.at+1, s.frames(snakeDigest)
 		}
+		keep = append(keep, l)
 	}
 	s.lumps = keep
+	// One apple a segment: one swallowed while the one before is still in
+	// the throat pushes it on, and that the next, down the line — or they
+	// would lie on each other, the older out of sight.
+	for i := len(s.lumps) - 2; i >= 0; i-- {
+		if a, b := &s.lumps[i], s.lumps[i+1]; !a.gone && b.at >= 0 && a.at <= b.at {
+			a.at = min(b.at+1, len(s.body)-1)
+		}
+	}
 }
 
 // cellAt is where cell c's node is in the scene.
@@ -487,19 +512,26 @@ func (s *Snake) Draw(w, h int) Scene {
 	}
 	head, dx, dy := s.head()
 	s.stamp(&sc, head, s.body[0], dx, dy, ink)
+	last := len(s.body) - 1
 	for _, l := range s.lumps {
-		at := max(l.at, 0) // in the jaws, it is at the head too
+		at := min(max(l.at, 0), last) // in the jaws, it is at the head too
 		c := s.body[at]
+		x, y := s.cellAt(c)
 		switch {
-		case l.at == 0:
+		case l.gone:
+			tdx, tdy := s.way(s.body[last], s.body[last-1])
+			s.stamp(&sc, snakeFade, s.body[last], tdx, tdy, ink)
+			continue // the apple is the body now
+		case at == 0:
 			s.stamp(&sc, snakeGulp, c, dx, dy, ink)
-		case l.at > 0:
-			x, y := s.cellAt(c)
-			for _, p := range s.round(l.at) {
+		case at == last:
+			tdx, tdy := s.way(c, s.body[at-1])
+			s.stamp(&sc, snakeEnd, c, tdx, tdy, ink)
+		default:
+			for _, p := range s.round(at) {
 				sc.put(x+p[0], y+p[1], ink)
 			}
 		}
-		x, y := s.cellAt(c)
 		sc.put(x, y, uint8(1+l.colour))
 	}
 	if s.apple >= 0 && (s.t/s.frames(snakeBlink))%2 == 0 {
