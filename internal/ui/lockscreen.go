@@ -509,19 +509,16 @@ func (m LockModel) inks() []lipgloss.Color {
 	return []lipgloss.Color{lipgloss.Color(m.style.BG), lipgloss.Color(m.style.FG), m.accent}
 }
 
-// ground is the board's ground a row, rows of them, when the game's is
-// a gradient (user, 2026-10-07: the runner's sky); else nil, the ground
-// all the one ink.
-func (m LockModel) ground(rows int) []lipgloss.Color {
+// shading is the board's colours square by square, when the game's
+// are not one set (user, 2026-10-07: the runner's sky); else nil, every
+// square in its ink.
+func (m LockModel) shading() *saver.Shading {
 	g, ok := m.game.(saver.Graded)
 	if !ok {
 		return nil
 	}
-	var out []lipgloss.Color
-	for _, c := range g.Ground(rows) {
-		out = append(out, lipgloss.Color(c))
-	}
-	return out
+	s := g.Shade(m.shown.w, m.shown.h)
+	return &s
 }
 
 func (m LockModel) View() string {
@@ -539,7 +536,7 @@ func (m LockModel) View() string {
 			// profile's ground alone.
 			out = plainRows(nil, bg, fg, m.width, rows)
 		case len(m.layout.blocks) > 0 || m.game != nil:
-			out = boardRows(m.shown, m.inks(), m.ground(m.shown.h), m.width)
+			out = boardRows(m.shown, m.inks(), m.shading(), m.width)
 		default:
 			out = plainRows(m.plain, bg, fg, m.width, rows)
 		}

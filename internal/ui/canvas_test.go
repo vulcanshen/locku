@@ -369,3 +369,35 @@ func TestPaintSceneKeepsTheInks(t *testing.T) {
 		}
 	}
 }
+
+// On a shaded board (user, 2026-10-07: the runner's sky) each square is
+// in its look's colours: the look's ground on its row, an ink the look
+// has, and the ground for an ink it has not.
+func TestShadedBoardSquaresWearTheirLooks(t *testing.T) {
+	colours(t)
+	b := newBoard(4, 2)
+	b.put(1, 0, 1)
+	b.put(3, 0, 2)
+	b.put(1, 1, 2)
+	b.put(3, 1, 1)
+	sh := saver.Shading{
+		Looks: [2]saver.Look{
+			{Ground: []string{"#100000", "#200000"}, Inks: []string{"", "#300000", ""}},
+			{Ground: []string{"#000010", "#000020"}, Inks: []string{"", "#000030", "#000040"}},
+		},
+		Look: func(x, y int) int { return x / 2 },
+	}
+	rows := boardRows(b, nil, &sh, 8)
+	for y, want := range [][]string{
+		{"16;0;0", "48;0;0", "0;0;16", "0;0;64"},
+		{"32;0;0", "32;0;0", "0;0;32", "0;0;48"},
+	} {
+		var got []string
+		for _, m := range fgRe.FindAllStringSubmatch(rows[y], -1) {
+			got = append(got, m[1]+";"+m[2]+";"+m[3])
+		}
+		if strings.Join(got, " ") != strings.Join(want, " ") {
+			t.Errorf("row %d: %v, want %v", y, got, want)
+		}
+	}
+}

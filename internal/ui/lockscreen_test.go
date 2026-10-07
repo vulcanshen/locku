@@ -402,20 +402,24 @@ func TestTheLockDrawsTheRunnersSky(t *testing.T) {
 		c.Profiles, c.Profile = []config.Profile{p}, "r"
 	})
 	m, _ = m.step(tea.WindowSizeMsg{Width: 152, Height: 32})
-	ground := m.ground(m.shown.h)
+	sh := m.shading()
+	if sh == nil {
+		t.Fatal("no shading")
+	}
+	ground := sh.Looks[1].Ground
 	if len(ground) != 31 || ground[0] == ground[15] || ground[15] == ground[30] {
 		t.Fatalf("the ground %v", ground)
 	}
 	lines := strings.Split(m.View(), "\n")
 	for _, y := range []int{0, 15, 30} {
-		if !has(lines[y], ground[y]) {
+		if !near(fgRe, lines[y], hexRGB(ground[y])) {
 			t.Errorf("row %d is not %s: %q", y, ground[y], lines[y])
 		}
 	}
 	if !has(strings.Join(lines[:31], "\n"), "#313244") {
 		t.Error("the runner is not in its colour by day")
 	}
-	if c := testLock(t, "", nil); c.ground(31) != nil {
-		t.Errorf("a clock's ground %v", c.ground(31))
+	if c := testLock(t, "", nil); c.shading() != nil {
+		t.Errorf("a clock's shading %v", c.shading())
 	}
 }
