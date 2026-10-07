@@ -221,9 +221,7 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 // the right up or down a column — nothing over the snout. Touching: the
 // same a pixel on, the link behind left to the body. Open, round the apple at
 // the node: the upper jaw over it and two on, the lower under it and
-// one on, the link behind — the node left to the apple. The body round
-// an apple on its way down is three pixels over its node, the node left
-// to the apple.
+// one on, the link behind — the node left to the apple.
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	set := func(sh shape, dx, dy int) map[[2]int]bool {
 		at := map[[2]int]bool{}
@@ -271,15 +269,12 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 			!open[c.crown1] || !open[c.crown2] || !open[back(c.crown2, 1)] || !open[across(c.crown1)] || !open[across(c.crown2)] {
 			t.Errorf("going %d,%d: open, the head is %v", dx, dy, open)
 		}
-		if lump := set(snakeLump, dx, dy); len(lump) != 3 || lump[node] || !lump[back(c.crown1, -1)] || !lump[c.crown1] || !lump[c.crown2] {
-			t.Errorf("going %d,%d: the lump is %v", dx, dy, lump)
-		}
 	}
 }
 
 // A frame is the snake in its colour — every node, the two pixels of
-// every link, its head — and in their own an apple on its way down, its
-// node and its bulge, and the apple every other few frames.
+// every link, its head — and in their own an apple on its way down at
+// its node, and the apple every other few frames.
 func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	s := NewSnake(6, SnakeSpeedDefault)
 	s.Draw(76, 31)
@@ -318,14 +313,6 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 			px, py := turn(p, dx, dy)
 			if at(sc, hx+px, hy+py) != ink {
 				t.Fatalf("frame %d: the head at %d,%d", f, px, py)
-			}
-		}
-		lx, ly := s.cellAt(s.body[2])
-		ldx, ldy := s.way(s.body[2], s.body[1])
-		for _, p := range snakeLump {
-			px, py := turn(p, ldx, ldy)
-			if at(sc, lx+px, ly+py) != ink {
-				t.Fatalf("frame %d: the body round the apple at %d,%d is ink %d", f, px, py, at(sc, lx+px, ly+py))
 			}
 		}
 		ax, ay := s.cellAt(s.apple)
@@ -434,9 +421,8 @@ func TestSnakeApplesQueue(t *testing.T) {
 // head touches the apple; the move it eats, the jaws are round it, the
 // apple in its colour at the node; the move after, it swallows, the
 // apple a pixel behind the shut head, still its colour, and the snake
-// still its own — and the body behind the crown is dark, open or shut,
-// but for an apple on its way down there. Shut the rest of the time; and
-// drawn so.
+// still its own — and the body behind the crown is dark, open or shut.
+// Shut the rest of the time; and drawn so.
 func TestSnakeEatsInThreeMoves(t *testing.T) {
 	s := NewSnake(8, SnakeSpeedDefault)
 	s.Draw(76, 31)
@@ -478,13 +464,13 @@ func TestSnakeEatsInThreeMoves(t *testing.T) {
 		body := uint8(1 + s.colour)
 		_, behind := s.lumpAt(1) // an apple on its way down, just behind the head
 		if bitten && (px(sc, [2]int{0, 0}) != uint8(1+jaws.colour) || px(sc, [2]int{0, 1}) != body || px(sc, [2]int{0, -1}) != body ||
-			(!behind && (px(sc, [2]int{3, 0}) != body || px(sc, [2]int{4, -1}) != 0))) {
+			(!behind && px(sc, [2]int{3, 0}) != body) || px(sc, [2]int{4, -1}) != 0) {
 			t.Fatalf("move %d: the apple %d in jaws %d, %d, the body %d, behind the jaw %d; the apple is %d, the snake %d",
 				i, px(sc, [2]int{0, 0}), px(sc, [2]int{0, -1}), px(sc, [2]int{0, 1}), px(sc, [2]int{3, 0}), px(sc, [2]int{4, -1}), jaws.colour, s.colour)
 		}
 		if swallowing && !bitten && !next {
 			swallowed++
-			if px(sc, [2]int{0, 0}) != uint8(1+gulp.colour) || px(sc, [2]int{-1, 0}) != body || (!behind && px(sc, [2]int{4, -1}) != 0) {
+			if px(sc, [2]int{0, 0}) != uint8(1+gulp.colour) || px(sc, [2]int{-1, 0}) != body || px(sc, [2]int{4, -1}) != 0 {
 				t.Fatalf("move %d: just swallowed, the apple is ink %d, the snout %d, behind the crown %d", i, px(sc, [2]int{0, 0}), px(sc, [2]int{-1, 0}), px(sc, [2]int{4, -1}))
 			}
 		}
@@ -600,12 +586,12 @@ func TestSnakeSpeed(t *testing.T) {
 	}
 }
 
-// The body goes round an apple on its way down (user, 2026-10-06): at
-// any segment — along a straight, at a corner — the snake's colour runs
-// on unbroken from the link on one side of the apple to the link on the
-// other; at a corner round the outside, the pixels about the apple but
-// the two links and the dark inner corner between them.
-func TestSnakeBodyGoesRoundTheApple(t *testing.T) {
+// An apple on its way down is its segment's node in its colour and
+// nothing more (user, 2026-10-07: the body swelled round it, and the user
+// took that away): at any segment — along a straight, at a corner, at the
+// tail — there is nothing about it but the links to the segments either
+// side.
+func TestSnakeAppleInTheBodyIsANode(t *testing.T) {
 	s := NewSnake(6, SnakeSpeedDefault)
 	s.Draw(76, 31)
 	corners, straights := 0, 0
@@ -613,71 +599,58 @@ func TestSnakeBodyGoesRoundTheApple(t *testing.T) {
 		for i := 0; i < 137; i++ {
 			s.Step()
 		}
-		corners, straights = roundEverySegment(t, s, corners, straights)
+		corners, straights = appleInEverySegment(t, s, corners, straights)
 	}
 	if corners == 0 || straights == 0 {
 		t.Errorf("%d corners, %d straights", corners, straights)
 	}
 }
 
-// roundEverySegment puts an apple in each segment of s but the ends in
-// turn, and looks at the body round it.
-func roundEverySegment(t *testing.T, s *Snake, corners, straights int) (int, int) {
+// appleInEverySegment puts an apple in each segment of s but the head in
+// turn, and looks about it.
+func appleInEverySegment(t *testing.T, s *Snake, corners, straights int) (int, int) {
 	t.Helper()
 	bean := otherColour(s.rng, s.colour)
 	ink := uint8(1 + s.colour)
-	for i := 1; i < len(s.body)-1; i++ {
+	for i := 1; i < len(s.body); i++ {
 		s.lumps = []lump{{at: i, colour: bean}}
 		sc := s.Draw(76, 31)
 		x, y := s.cellAt(s.body[i])
-		at := func(p [2]int) uint8 { return sc.Pix[(y+p[1])*sc.W+x+p[0]] }
-		if at([2]int{0, 0}) != uint8(1+bean) {
-			t.Fatalf("segment %d: the apple is ink %d", i, at([2]int{0, 0}))
-		}
-		adx, ady := s.way(s.body[i], s.body[i-1])
-		bdx, bdy := s.way(s.body[i], s.body[i+1])
-		a, b := [2]int{adx, ady}, [2]int{bdx, bdy}
-		// From one link to the other through the snake's colour about the
-		// apple, a step at a time.
-		seen, todo := map[[2]int]bool{a: true}, [][2]int{a}
-		for len(todo) > 0 {
-			p := todo[0]
-			todo = todo[1:]
-			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
-				q := [2]int{p[0] + d[0], p[1] + d[1]}
-				if q[0] < -1 || q[0] > 1 || q[1] < -1 || q[1] > 1 || seen[q] || at(q) != ink {
-					continue
-				}
-				seen[q] = true
-				todo = append(todo, q)
+		var links [][2]int
+		for _, j := range []int{i - 1, i + 1} {
+			if j < len(s.body) {
+				dx, dy := s.way(s.body[i], s.body[j])
+				links = append(links, [2]int{dx, dy})
 			}
 		}
-		if !seen[b] {
-			t.Fatalf("segment %d: the body does not go round the apple from %v to %v", i, a, b)
-		}
-		if a == [2]int{-b[0], -b[1]} {
-			straights++
-			continue
-		}
-		corners++
 		for py := -1; py <= 1; py++ {
 			for px := -1; px <= 1; px++ {
-				p := [2]int{px, py}
-				if p == [2]int{0, 0} {
-					continue
+				want := uint8(0)
+				switch p := [2]int{px, py}; {
+				case p == [2]int{0, 0}:
+					want = uint8(1 + bean)
+				case slices.Contains(links, p):
+					want = ink
 				}
-				if inner := p == [2]int{a[0] + b[0], a[1] + b[1]}; (at(p) == ink) == inner {
-					t.Fatalf("segment %d, a corner: the pixel %v is ink %d", i, p, at(p))
+				if got := sc.Pix[(y+py)*sc.W+x+px]; got != want {
+					t.Fatalf("segment %d of %d: the pixel %d,%d is ink %d, want %d", i, len(s.body), px, py, got, want)
 				}
 			}
+		}
+		switch {
+		case len(links) < 2:
+		case links[0] == [2]int{-links[1][0], -links[1][1]}:
+			straights++
+		default:
+			corners++
 		}
 	}
 	return corners, straights
 }
 
-// The end of an apple, as the user drew it (2026-10-06): at the tail, the
-// apple in the line and the body two pixels over it, nothing past the
-// end; then it is the body, and a pixel of the swelling is left.
+// The end of an apple (user, 2026-10-06; nothing about it, 2026-10-07):
+// at the tail, the apple at the node and the one link; then it is the
+// body, the node the snake's, and still nothing about it.
 func TestSnakeAppleAtTheTail(t *testing.T) {
 	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
@@ -689,19 +662,26 @@ func TestSnakeAppleAtTheTail(t *testing.T) {
 	ink := uint8(1 + s.colour)
 	x, y := s.cellAt(s.body[last])
 	dx, dy := s.way(s.body[last], s.body[last-1])
-	at := func(sc Scene, p [2]int) uint8 {
-		px, py := turn(p, dx, dy)
-		return sc.Pix[(y+py)*sc.W+x+px]
-	}
-	s.lumps = []lump{{at: last, colour: bean, wait: 5}}
-	sc := s.Draw(76, 31)
-	if at(sc, [2]int{0, 0}) != uint8(1+bean) || at(sc, [2]int{-1, -1}) != ink || at(sc, [2]int{0, -1}) != ink || at(sc, [2]int{1, -1}) != 0 {
-		t.Errorf("at the tail: the apple %d, over it %d %d, past the end %d", at(sc, [2]int{0, 0}), at(sc, [2]int{-1, -1}), at(sc, [2]int{0, -1}), at(sc, [2]int{1, -1}))
-	}
-	s.lumps = []lump{{at: last, colour: bean, wait: 5, gone: true}}
-	sc = s.Draw(76, 31)
-	if at(sc, [2]int{0, 0}) != ink || at(sc, [2]int{0, -1}) != ink || at(sc, [2]int{-1, -1}) != 0 {
-		t.Errorf("the body: the node %d, the swelling %d and %d", at(sc, [2]int{0, 0}), at(sc, [2]int{0, -1}), at(sc, [2]int{-1, -1}))
+	for _, c := range []struct {
+		gone bool
+		node uint8
+	}{{false, uint8(1 + bean)}, {true, ink}} {
+		s.lumps = []lump{{at: last, colour: bean, wait: 5, gone: c.gone}}
+		sc := s.Draw(76, 31)
+		for py := -1; py <= 1; py++ {
+			for px := -1; px <= 1; px++ {
+				want := uint8(0)
+				switch {
+				case px == 0 && py == 0:
+					want = c.node
+				case px == dx && py == dy:
+					want = ink
+				}
+				if got := sc.Pix[(y+py)*sc.W+x+px]; got != want {
+					t.Errorf("gone %v: the pixel %d,%d is ink %d, want %d", c.gone, px, py, got, want)
+				}
+			}
+		}
 	}
 }
 
