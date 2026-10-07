@@ -13,8 +13,8 @@ import (
 
 // The falling blocks are a game on the board in colours of their own
 // (user, 2026-10-07): the ground, the seven pieces', white for a row
-// going, the frame's grey, which is lit from the first frame, and the
-// end's black and red; and a piece comes in and falls.
+// going, the frame's grey, which is lit from the first frame, and END's
+// red; and a piece comes in and falls.
 func TestTetrominoLockWearsItsOwnColours(t *testing.T) {
 	m := testLock(t, "1234", func(c *config.Config) {
 		c.Profiles = []config.Profile{config.NewProfile("t", saver.KindTetromino)}
@@ -23,7 +23,7 @@ func TestTetrominoLockWearsItsOwnColours(t *testing.T) {
 	if _, ok := m.game.(*saver.Tetromino); !ok {
 		t.Fatalf("the game is %T", m.game)
 	}
-	if inks := m.inks(); len(inks) != 12 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#89dceb") || inks[8] != lipgloss.Color("#ffffff") || inks[9] != lipgloss.Color("#7f849c") || inks[10] != lipgloss.Color("#1e1e2e") || inks[11] != lipgloss.Color("#f38ba8") {
+	if inks := m.inks(); len(inks) != 11 || inks[0] != lipgloss.Color(config.DefaultBG) || inks[1] != lipgloss.Color("#89dceb") || inks[8] != lipgloss.Color("#ffffff") || inks[9] != lipgloss.Color("#7f849c") || inks[10] != lipgloss.Color("#f38ba8") {
 		t.Fatalf("inks %v", inks)
 	}
 	grey := 0
