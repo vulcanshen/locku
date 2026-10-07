@@ -258,7 +258,7 @@ func TestSceneFitsAndPaints(t *testing.T) {
 			t.Errorf("size %d on %dx%d: k %d scene %dx%d, want k %d %dx%d", c.size, c.cols, c.rows, k, w, h, c.k, c.w, c.h)
 		}
 	}
-	d := saver.NewDino(3, saver.RunnerBig, saver.CharacterTRex, saver.SceneGrass)
+	d := saver.NewDino(3, saver.RunnerBig, saver.CharacterTRex, saver.SceneGrass, saver.BackgroundNight, time.Now)
 	sc := d.Draw(50, 29)
 	b := paintScene(sc, 2, 200, 59)
 	if b.w != 100 || b.h != 59 {
@@ -296,7 +296,7 @@ func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 			l, plain := fit(faceTall, saver.Clock{Time: saver.TimeHM, Date: saver.DateYMD}, at, cols, rows, 2)
 			var out []string
 			if len(l.blocks) > 0 {
-				out = boardRows(paint(faceTall, l, cols, rows), []lipgloss.Color{bg, fg}, cols)
+				out = boardRows(paint(faceTall, l, cols, rows), []lipgloss.Color{bg, fg}, nil, cols)
 			} else {
 				out = plainRows(plain, bg, fg, cols, rows)
 			}
@@ -346,7 +346,7 @@ func TestEachInkWearsItsColour(t *testing.T) {
 	b.put(1, 0, 1)
 	b.put(2, 0, 2)
 	b.put(3, 0, 9)
-	row := boardRows(b, []lipgloss.Color{"#102030", "#405060", "#708090"}, 8)[0]
+	row := boardRows(b, []lipgloss.Color{"#102030", "#405060", "#708090"}, nil, 8)[0]
 	seen := fgRe.FindAllStringSubmatch(row, -1)
 	var got []string
 	for _, m := range seen {

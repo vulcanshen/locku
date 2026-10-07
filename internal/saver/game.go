@@ -36,6 +36,13 @@ type Inked interface {
 	Inks() []string
 }
 
+// Graded is an Inked game whose ground is no one colour but a gradient
+// down the board (user, 2026-10-07: the runner's sky): Ground is its
+// colour a row, rows of them, the whole board's top to bottom.
+type Graded interface {
+	Ground(rows int) []string
+}
+
 // The colours a saver with colours of its own draws in (user,
 // 2026-10-06): surface0, the family's ground, as the other savers'
 // default bg (config.DefaultBG); and the splash gold and
@@ -65,9 +72,10 @@ func otherColour(rng *rand.Rand, c int) int {
 }
 
 // Coloured says whether a kind of saver is drawn in its profile's bg
-// and fg: not the custom saver, whose picture is its program's (user,
-// 2026-09-25), nor one with colours of its own (user, 2026-10-06).
-func Coloured(kind string) bool { return kind != KindCustom && kind != KindBounce && kind != KindSnake }
+// and fg: the clock alone — not the custom saver, whose picture is its
+// program's (user, 2026-09-25), nor one with colours of its own (user,
+// 2026-10-06), as the runner is since its backgrounds (2026-10-07).
+func Coloured(kind string) bool { return kind == KindClock }
 
 // Scene is one frame: a bitmap in the game's own pixels, row by row, each
 // pixel an ink — 0 the ground, the others lit.

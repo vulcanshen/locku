@@ -22,10 +22,10 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ║ Profiles               ║│ Property          Value                          │
 ║ ● clock                ║│ name              clock                          │
 ║   clock2               ║│ saver             clock                          │
-║   dino                 ║│ layout            row                            │
+║   runner               ║│ layout            row                            │
 ║ Savers                 ║│ size              medium                         │
 ║   clock                ║│ font              3x7                            │
-║   dino                 ║│ time              HH MM                          │
+║   runner               ║│ time              HH MM                          │
 ║ Integration            ║│ date              off                            │
 ║   tmux                 ║│ bg                ■ #313244  →  ■ #ff3244        │
 ║   screen               ║│   R               ───────────● 255               │
@@ -43,7 +43,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
-複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、dino、bounce、snake、custom），它們沒有名字、名字就是自己，不能新增刪除；
+複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、runner、bounce、snake、custom），它們沒有名字、名字就是自己，不能新增刪除；
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
@@ -57,26 +57,27 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 
 | 列 | 值 |
 |---|---|
-| saver | `clock` / `dino` / `bounce` / `snake` / `custom` |
-| what | 一句話：clock 是 the time and the date, on the LED board；dino 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
+| saver | `clock` / `runner` / `bounce` / `snake` / `custom` |
+| what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；dino：runner / character / scene；這兩種再 bg / fg 各一色票列加 R G B；custom：只有 command，沒有顏色列；bounce：什麼都沒有；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；這兩種也沒有顏色列 |
+| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：什麼都沒有；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；這兩種也沒有顏色列 |
 
 `[2]` 在 profile 上：
 
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
-| saver | `clock` / `dino` / `bounce` / `snake` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
+| saver | `clock` / `runner` / `bounce` / `snake` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
-| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；dino 沒有 size，畫布自己取最大） |
+| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；runner 沒有 size，畫布自己取最大） |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
 | time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
-| runner | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（dino：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
-| character | `t-rex` / `cat` / `rabbit` / `horse` / `ghost`（dino：跑的是什麼，2026-10-06） | options popup |
-| scene | `grassland` / `desert`（dino：草原是仙人掌，沙漠是金字塔） | options popup（2026-09-24） |
+| participants | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（runner，2026-10-07 前叫 `runner`：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
+| character | `t-rex` / `cat` / `rabbit` / `giraffe` / `ghost`（runner：跑的是什麼，2026-10-06；`giraffe` 2026-10-07 前叫 `horse`） | options popup |
+| scene | `grassland` / `desert`（runner：草原是仙人掌，沙漠是金字塔） | options popup（2026-09-24） |
+| background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | options popup |
 | command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
 | speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake：跑多快，預設 `normal`；2026-10-07，原本是每秒幾格的 number 框） | options popup |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
@@ -211,11 +212,11 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 | `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
 | input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；每個框都留，`command` 也是（2026-10-06：值裡有換行或 Tab 每個框都不收；之前 `command` 送出不會被拒，不留）；預填目前值——值直接在框裡、游標在尾端、可以接著改，不是 dim 的提議（提議只有 config file path，`ux.md` §2.1）；清空 = 預設值；new profile 的 `name` 預填 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
-| options | menu | layout / size / font / time / date / runner / character / scene / speed / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
+| options | menu | layout / size / font / time / date / participants / character / scene / background / speed / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
 | confirm | confirm | Delete profile、activate on / off；離開時有未存的顏色草稿是另一個 confirm（`quitAsk`，疊在最上面） |
 | toast | toast | 寫檔失敗、`PIN set`、`PIN removed`（disabled 的列不跳 toast，2026-09-26，tdp M6；PIN 不一致 2026-09-28 起寫在 `confirm PIN` 的錯誤列，不再跳 toast） |
 
-new 與 duplicate 都是 `name` input popup：new 預填 saver 的名字（`dino`，用了就 `dino2`），確認後以那種 saver 的預設值生一個
+new 與 duplicate 都是 `name` input popup：new 預填 saver 的名字（`runner`，用了就 `runner2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 預填原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
 PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`）：
 每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
@@ -275,7 +276,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 ## §4 色帶
 
-錨點 catppuccin-mocha，與家族相同。點陣板的兩色是**使用者資料**（每個 saver 的 bg / fg），不屬於 app 色帶，預設值取 splash。
+錨點 catppuccin-mocha，與家族相同。點陣板的兩色是**使用者資料**（clock 的 bg / fg；其他 saver 的顏色是它自己的），不屬於 app 色帶，預設值取 splash。
 
 | 色帶 | 意思 | 值 |
 |---|---|---|

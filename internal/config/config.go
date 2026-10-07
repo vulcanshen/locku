@@ -59,16 +59,19 @@ type Profile struct {
 	Font   string `yaml:"font,omitempty"`
 	Time   string `yaml:"time,omitempty"`
 	Date   string `yaml:"date,omitempty"`
-	// The board's two colours — left out of the file for a custom
-	// profile, which has none (user, 2026-09-25: the picture is the
-	// program's; its PIN prompt and its ending board wear the defaults).
+	// The board's two colours, the clock's alone — left out of the file
+	// for the others (user, 2026-09-25: the custom saver's picture is
+	// the program's, its PIN prompt and its ending board wearing the
+	// defaults; 2026-10-06 and 2026-10-07: the rest bring their own).
 	BG string `yaml:"bg,omitempty"`
 	FG string `yaml:"fg,omitempty"`
-	// The dino run's own (2026-09-24): how many run, as what (user,
-	// 2026-10-06), and where. A clock leaves them out of the file.
-	Runner    string `yaml:"runner,omitempty"`
-	Character string `yaml:"character,omitempty"`
-	Scene     string `yaml:"scene,omitempty"`
+	// The runner's own (2026-09-24): how many run, as what (user,
+	// 2026-10-06), where, and under what sky (user, 2026-10-07). A clock
+	// leaves them out of the file.
+	Participants string `yaml:"participants,omitempty"`
+	Character    string `yaml:"character,omitempty"`
+	Scene        string `yaml:"scene,omitempty"`
+	Background   string `yaml:"background,omitempty"`
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
@@ -182,8 +185,8 @@ type Config struct {
 // come first: see Config.NewProfile.
 func NewProfile(name, kind string) Profile {
 	switch kind {
-	case saver.KindDino:
-		return Profile{Name: name, Saver: kind, Runner: saver.Runners[0], Character: saver.Characters[0], Scene: saver.Scenes[0], BG: DefaultBG, FG: DefaultFG}
+	case saver.KindRunner:
+		return Profile{Name: name, Saver: kind, Participants: saver.Participants[0], Character: saver.Characters[0], Scene: saver.Scenes[0], Background: saver.BackgroundTimeShifting}
 	case saver.KindCustom:
 		// No program until the user names one, and no colours: the
 		// picture is the program's (user, 2026-09-25).
@@ -359,8 +362,10 @@ var nestedRenamed = []struct{ parent, old, new string }{
 
 // carryOver rewrites the keys from before in the parsed document: the
 // renamed ones, the nested ones, a `savers` LIST to `profiles` (a
-// `savers` map is the savers' defaults and stays), and each profile's
-// `type` to `saver`. The next save writes only the new names.
+// `savers` map is the savers' defaults and stays), each profile's
+// `type` to `saver`, and the dino (user, 2026-10-07): a profile of it,
+// and its defaults, are the runner's, their `runner` the participants.
+// The next save writes only the new names.
 func carryOver(doc *yaml.Node) {
 	root := doc
 	if root.Kind == yaml.DocumentNode && len(root.Content) > 0 {
@@ -382,6 +387,22 @@ func carryOver(doc *yaml.Node) {
 			k.Value = "profiles"
 			for _, p := range v.Content {
 				renameKey(p, "type", "saver")
+			}
+		}
+	}
+	if ps := valueOf(root, "profiles"); ps != nil && ps.Kind == yaml.SequenceNode {
+		for _, p := range ps.Content {
+			if s := valueOf(p, "saver"); p.Kind == yaml.MappingNode && s != nil && s.Value == "dino" {
+				s.Value = saver.KindRunner
+				renameKey(p, "runner", "participants")
+			}
+		}
+	}
+	if sv := valueOf(root, "savers"); sv != nil && sv.Kind == yaml.MappingNode && !hasKey(sv, saver.KindRunner) {
+		for i := 0; i+1 < len(sv.Content); i += 2 {
+			if sv.Content[i].Value == "dino" {
+				sv.Content[i].Value = saver.KindRunner
+				renameKey(sv.Content[i+1], "runner", "participants")
 			}
 		}
 	}
@@ -463,7 +484,7 @@ func tidy(p Profile, kind string) Profile {
 	p.Command = strings.TrimSpace(p.Command)
 	switch {
 	case kind == saver.KindCustom:
-		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Runner, p.Character, p.Scene = "", "", "", "", "", "", "", ""
+		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Participants, p.Character, p.Scene, p.Background = "", "", "", "", "", "", "", "", ""
 		p.BG, p.FG, p.Speed = "", "", ""
 		return p
 	case kind == saver.KindBounce:
@@ -476,13 +497,13 @@ func tidy(p Profile, kind string) Profile {
 			p.Speed = d.Speed
 		}
 		return Profile{Name: p.Name, Saver: kind, Speed: p.Speed}
-	case kind == saver.KindDino:
+	case kind == saver.KindRunner:
 		p.Command, p.Speed = "", ""
-		if p.Runner == "" {
-			p.Runner = d.Runner
+		if p.Participants == "" {
+			p.Participants = d.Participants
 		}
-		if r, ok := renamedRunner[p.Runner]; ok {
-			p.Runner = r
+		if r, ok := renamedRunner[p.Participants]; ok {
+			p.Participants = r
 		}
 		if p.Character == "" {
 			p.Character = d.Character
@@ -490,9 +511,16 @@ func tidy(p Profile, kind string) Profile {
 		if p.Scene == "" {
 			p.Scene = d.Scene
 		}
+		// Its background is its own (user, 2026-10-07): its bg / fg go,
+		// and one it does not have is quietly the default.
+		if !slices.Contains(saver.Backgrounds, p.Background) {
+			p.Background = d.Background
+		}
+		p.BG, p.FG = "", ""
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
+		return p
 	default:
-		p.Command, p.Speed = "", ""
+		p.Command, p.Speed, p.Background = "", "", ""
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}
@@ -508,7 +536,7 @@ func tidy(p Profile, kind string) Profile {
 		if p.Date == "" {
 			p.Date = d.Date
 		}
-		p.Runner, p.Character, p.Scene = "", "", ""
+		p.Participants, p.Character, p.Scene = "", "", ""
 	}
 	if !ValidHex(p.BG) {
 		p.BG = d.BG

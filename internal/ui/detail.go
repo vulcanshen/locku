@@ -46,11 +46,12 @@ const (
 	rowFont
 	rowTime
 	rowDate
-	rowRunner
+	rowParticipants
 	rowCharacter
 	rowScene
-	rowCommand // a custom saver's program
-	rowSpeed   // the snake's, slow to super-fast
+	rowBackground // the runner's sky
+	rowCommand    // a custom saver's program
+	rowSpeed      // the snake's, slow to super-fast
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -90,7 +91,7 @@ const labelW = 28
 // about is what [2] says of a saver.
 var about = map[string]string{
 	saver.KindClock:  "the time and the date, on the LED board",
-	saver.KindDino:   "the offline dino run, jumping by itself, for ever",
+	saver.KindRunner: "the offline dino run, jumping by itself, for ever",
 	saver.KindBounce: "the time in a box, bouncing, changing colour",
 	saver.KindSnake:  "the Nokia snake, playing itself till the board is full",
 	saver.KindCustom: "your own program, on a terminal of its own, as the saver",
@@ -213,13 +214,14 @@ func fieldRows(p config.Profile) []row {
 		}
 		return []row{cmd}
 	}
-	if p.Saver == saver.KindDino {
+	if p.Saver == saver.KindRunner {
 		// No size: the run is drawn as large as the terminal allows
 		// (user, 2026-09-24).
 		return []row{
-			{kind: rowRunner, label: "runner", value: p.Runner, color: value, stop: true},
+			{kind: rowParticipants, label: "participants", value: p.Participants, color: value, stop: true},
 			{kind: rowCharacter, label: "character", value: p.Character, color: value, stop: true},
 			{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true},
+			{kind: rowBackground, label: "background", value: p.Background, color: value, stop: true},
 		}
 	}
 	return []row{

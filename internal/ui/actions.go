@@ -88,12 +88,14 @@ func (m AppModel) actions() []action {
 	switch r := m.rowAt(); r.kind {
 	case rowName:
 		out = append(out, action{key: "enter", label: "[Enter] Rename", hint: "this profile", run: (*AppModel).renameProfile})
-	case rowRunner:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one or two, big or small", run: (*AppModel).chooseRunner})
+	case rowParticipants:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one or two, big or small", run: (*AppModel).chooseParticipants})
 	case rowCharacter:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseCharacter})
 	case rowScene:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "where it runs", run: (*AppModel).chooseScene})
+	case rowBackground:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "day, night, or a day every three minutes", run: (*AppModel).chooseBackground})
 	case rowCommand:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the program that draws, as sh -c runs it; empty for none", run: (*AppModel).editCommand})
 	case rowLayout:
@@ -486,8 +488,8 @@ func (m *AppModel) choose(title string, values []string, current func(config.Pro
 	return m.openOptions(title, values, current(p), 0)
 }
 
-func (m *AppModel) chooseRunner() tea.Cmd {
-	return m.choose("runner", saver.Runners, func(p config.Profile) string { return p.Runner })
+func (m *AppModel) chooseParticipants() tea.Cmd {
+	return m.choose("participants", saver.Participants, func(p config.Profile) string { return p.Participants })
 }
 
 func (m *AppModel) chooseCharacter() tea.Cmd {
@@ -505,6 +507,10 @@ func (m *AppModel) chooseLock() tea.Cmd {
 
 func (m *AppModel) chooseScene() tea.Cmd {
 	return m.choose("scene", saver.Scenes, func(p config.Profile) string { return p.Scene })
+}
+
+func (m *AppModel) chooseBackground() tea.Cmd {
+	return m.choose("background", saver.Backgrounds, func(p config.Profile) string { return p.Background })
 }
 
 func (m *AppModel) chooseLayout() tea.Cmd {
@@ -571,14 +577,16 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 	v := strings.TrimPrefix(key, "v:")
 	before := m.snapshot()
 	switch r := m.optionsFor; r.kind {
-	case rowRunner:
-		m.edit(func(p *config.Profile) { p.Runner = v })
+	case rowParticipants:
+		m.edit(func(p *config.Profile) { p.Participants = v })
 	case rowCharacter:
 		m.edit(func(p *config.Profile) { p.Character = v })
 	case rowSpeed:
 		m.edit(func(p *config.Profile) { p.Speed = v })
 	case rowScene:
 		m.edit(func(p *config.Profile) { p.Scene = v })
+	case rowBackground:
+		m.edit(func(p *config.Profile) { p.Background = v })
 	case rowLayout:
 		m.edit(func(p *config.Profile) { p.Layout = v })
 	case rowSize:

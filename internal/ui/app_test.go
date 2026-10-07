@@ -788,35 +788,35 @@ func TestSaverDefaultsAreEditedAndPreviewed(t *testing.T) {
 
 // [n] on a saver makes a profile of it: the name box offers the saver's
 // own name while it is free, then a numbered one; the new profile has
-// the saver's rows — a dino's size, runner and scene — lands under the
-// cursor, and previews as the run.
+// the saver's rows — a runner's participants, character and scene —
+// lands under the cursor, and previews as the run.
 func TestNewProfileOfASaver(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "n") // the dino saver, above the tools
-	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "dino" {
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k", "n") // the runner saver, above the tools
+	if !m.input.isInteractive() || m.input.title != "name" || m.input.value != "runner" {
 		t.Fatalf("new box: %+v", m.input)
 	}
 	m = m.press("ctrl+u").typed("clock").press("enter")
 	if m.input.err != "name is taken" {
 		t.Fatalf("a taken name must be refused: %q", m.input.err)
 	}
-	m = m.press("ctrl+u").typed("dino").press("enter")
+	m = m.press("ctrl+u").typed("runner").press("enter")
 	p := m.cfg.Profiles[2]
-	if len(m.cfg.Profiles) != 3 || p.Name != "dino" || p.Saver != "dino" || p.Runner != "big" || p.Character != "t-rex" || p.Scene != "grassland" ||
-		len(saved(t).Profiles) != 3 || saved(t).Profiles[2].Saver != "dino" {
+	if len(m.cfg.Profiles) != 3 || p.Name != "runner" || p.Saver != "runner" || p.Participants != "big" || p.Character != "t-rex" || p.Scene != "grassland" ||
+		len(saved(t).Profiles) != 3 || saved(t).Profiles[2].Saver != "runner" {
 		t.Fatalf("profiles %+v", m.cfg.Profiles)
 	}
 	if m.cur1 != profileItem(2) || m.focus != panelDetail || m.sideAt().kind != sideProfile {
 		t.Errorf("the cursor must land on the new profile's [2]: cur1 %d focus %d", m.cur1, m.focus)
 	}
 	v := m.View()
-	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "runner") || !strings.Contains(v, "character") || !strings.Contains(v, "grassland") {
-		t.Errorf("a dino's rows:\n%s", v)
+	if strings.Contains(v, "layout") || strings.Contains(v, "HH MM") || !strings.Contains(v, "participants") || !strings.Contains(v, "character") || !strings.Contains(v, "grassland") {
+		t.Errorf("a runner's rows:\n%s", v)
 	}
-	if got := len(m.stops()); got != 10 { // name, runner, character, scene, six channels — no size
+	if got := len(m.stops()); got != 5 { // name, participants, character, scene, background — no size, no colours
 		t.Errorf("%d stops", got)
 	}
 	if p.Size != "" || p.Layout != "" || strings.Contains(v, "size") {
-		t.Errorf("a dino has no size or shapes: %+v", p)
+		t.Errorf("a runner has no size or shapes: %+v", p)
 	}
 	m = m.press("P")
 	if m.preview == nil || m.preview.game == nil {
@@ -826,11 +826,11 @@ func TestNewProfileOfASaver(t *testing.T) {
 	// A second one of the same saver is offered the next free name, and
 	// the saver's [2] lists both.
 	m = m.press("1", "G", "k", "k", "k", "k", "k", "k", "n")
-	if m.input.value != "dino2" {
+	if m.input.value != "runner2" {
 		t.Errorf("offer %q", m.input.value)
 	}
 	m = m.press("esc")
-	if rows := m.rows(); rows[3].label != "profiles" || rows[3].value != "dino" {
+	if rows := m.rows(); rows[3].label != "profiles" || rows[3].value != "runner" {
 		t.Errorf("the saver's profiles row: %+v", rows[3])
 	}
 }
