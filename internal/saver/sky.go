@@ -23,12 +23,14 @@ import (
 // is the one sky or the other, the runner and the sun or the moon in it
 // too, never a mix of the two (user, the same day: it changed all at
 // once and night to day was sudden; then a fade of the whole board was
-// smooth, but not what they had in mind). The runner is the same dark
-// in every sky; by night it has an outline round it, none under its
-// feet, a cooler white than the moon's, and its eyes in the night's
-// gold — not gold all over, which came in all at once from dusk (user,
-// the same day; the outline was the moon's own white, and the runner at
-// the top of a jump ran into it).
+// smooth, but not what they had in mind). The runner is dark in every
+// sky; by night a darker dark, a silhouette against the moonlit sky,
+// with an outline round it, none under its feet, a cooler white than
+// the moon's, and its eyes in the night's gold — not gold all over,
+// which came in all at once from dusk (user, the same day; the outline
+// was the moon's own white, and the runner at the top of a jump ran
+// into it; the runner was the dusk's dark, the night sky's own half way
+// down, and only its outline was seen).
 const (
 	BackgroundDay          = "day"
 	BackgroundNight        = "night"
@@ -78,11 +80,11 @@ var (
 	// world and the runner as by day; the setting sun.
 	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", runner: "#313244", sunset: true}
 	// Night: the ground and gold the runner had (user: as now), the
-	// ground darker above it and lighter below; the world in the gold,
-	// the runner as by day, with its outline white (user, 2026-10-07: it
-	// was the gold) — catppuccin's text, a cool white, the moon's warm —
-	// and its eyes in the gold; the moon.
-	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#313244", outline: "#cdd6f4", eye: "#f2b753", moon: true}
+	// ground darker above it and lighter below; the world in the gold;
+	// the runner in crust, darker than all the sky, with its outline
+	// white (user, 2026-10-07: it was the gold) — catppuccin's text, a
+	// cool white, the moon's warm — and its eyes in the gold; the moon.
+	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#11111b", outline: "#cdd6f4", eye: "#f2b753", moon: true}
 )
 
 // The sun, a yellow deep enough to show on the pale sky — catppuccin's

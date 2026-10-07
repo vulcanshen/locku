@@ -257,11 +257,12 @@ func TestRunnerSunYellowAndMoonRound(t *testing.T) {
 	}
 }
 
-// By night the runner keeps its dark (user, 2026-10-07): an outline round
-// it, white as the moon — corners too, none under its feet — and its
-// eyes in the night's gold, and nothing they pass drawn over; by day and
-// at dusk there are none. The runner is the same dark in every sky, so from dusk
-// to night only the outline comes in.
+// By night the runner is a silhouette (user, 2026-10-07): darker than all
+// of the night sky, so it is seen against it, and dark as at dusk, so
+// little changes from one to the other but the outline coming in — an
+// outline round it in a cool white — corners too, none under its feet —
+// and its eyes in the night's gold, and nothing they pass drawn over; by
+// day and at dusk there are none.
 func TestRunnerOutlinedByNight(t *testing.T) {
 	for _, c := range []struct {
 		background string
@@ -335,10 +336,17 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		}
 	}
 	night, dusk, day := nightSky.look(1), duskSky.look(1), daySky.look(1)
-	if night.Inks[inkRunner] != "#313244" || night.Inks[inkOutline] != "#cdd6f4" || night.Inks[inkEye] != "#f2b753" ||
-		dusk.Inks[inkRunner] != night.Inks[inkRunner] || day.Inks[inkRunner] != night.Inks[inkRunner] ||
+	if night.Inks[inkRunner] != "#11111b" || night.Inks[inkOutline] != "#cdd6f4" || night.Inks[inkEye] != "#f2b753" ||
+		dusk.Inks[inkRunner] != "#313244" || day.Inks[inkRunner] != "#313244" ||
 		dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" || dusk.Inks[inkEye] != "" || day.Inks[inkEye] != "" {
 		t.Errorf("the runner by night %v, at dusk %v, by day %v", night.Inks, dusk.Inks, day.Inks)
+	}
+	// Darker than every row of the night sky, all three channels.
+	body := channels(night.Inks[inkRunner])
+	for _, g := range nightSky.look(31).Ground {
+		if sky := channels(g); body[0] >= sky[0] || body[1] >= sky[1] || body[2] >= sky[2] {
+			t.Errorf("the runner %s against the night sky %s", night.Inks[inkRunner], g)
+		}
 	}
 }
 
