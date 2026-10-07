@@ -16,7 +16,7 @@
 
 ![demo](docs/demo.gif)
 
-`locku lock` 把終端機變成時鐘點陣板；按一個鍵叫出 PIN 框，PIN 錯了框變紅，對了終端機回來。接著是設定畫面：`[2]` 裡一個 profile 的設定、用 `p` 預覽 runner 與你自己的程式（cmatrix）、`Space` 列出這一列能做的事、Integration 底下的 tmux。
+`locku lock` 把終端機變成黃昏裡的 runner；按一個鍵，PIN 框疊在畫面上，PIN 錯了框變紅，對了終端機回來。接著是設定畫面：`[2]` 裡 runner 這個 profile 的設定，再用 `p` 一個接一個預覽其他 saver——pets、tetromino、snake、bounce、clock，`Space` 列出這一列能做的事、Integration 底下的 tmux。
 
 ## 你會看到什麼
 

@@ -166,11 +166,13 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make ch
 
 `V` 的 splash 彩蛋就是 `docs/icon.svg`，一格對一格（2026-09-26）：第一版在 icon 出現前一天畫，裡面是一個自創的掛鎖，icon 進來後沒跟上。`splash_test.go` 的 `TestSplashIsTheIcon` 直接讀 icon.svg 比對 `logoPixels`，icon 改了 splash 沒跟就失敗。揭露順序：底色 → L、O、C、K 由外往內 → 深藍 U 由下往上。
 
-### demo gif（2026-09-26）
+### demo gif（2026-09-26；2026-10-07 重錄）
 
-README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（clock / dino / 以 cmatrix 當 custom 的三個 profile，PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 複製到 `.local/demos/config`、以 `LOCKU__CONFIG` / `LOCKU__DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font、cmatrix。
+README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 蓋到 `.local/demos/config/config.yaml`、以 `LOCKU__CONFIG` / `LOCKU__DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font。
 
-VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），用 0.11.0：`make gif VHS=/opt/homebrew/Cellar/vhs/0.11.0/bin/vhs`。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
+2026-10-07 重錄，每種 saver 都出場，順序使用者定：runner → pets → tetromino → snake → bounce → clock。結構也是使用者選的：鎖在 runner 開場（PIN 框疊在畫面上，錯一次再對），接著在設定畫面依序預覽其他五種，最後照舊是 Space 選單與 tmux；custom（cmatrix）拿掉，錄影因此不再需要 cmatrix。展示 config 的 profile 照這個順序排、名字就是 saver 的種類，啟用中的是 runner，所以設定畫面按 `j` 就照順序走，從 clock 再按 8 次 `j` 經過 Savers 到 tmux。pets 五隻、runner 用 `big-small`（我的判斷：五種花色都看得到、跑者有大有小）。runner 的天空是 time-shifting，照時鐘輪替，使用者要錄到黃昏：tape 在鏡頭外先跑一個迴圈，等到分鐘 % 3 = 1 那一分鐘的第 22 到 35 秒才開鏡（前 20 秒是從白天換過來的過場；runner 在畫面上約 11 秒，所以結束時還在黃昏），因此 `make gif` 最多要先等三分鐘。成品約 58 秒、6.9 MB（舊的 3.2 MB，多的主要是 runner 與 pets 的漸層）。
+
+VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），當時改用 0.11.0；2026-10-07 機器上只剩 0.12.1，正常出檔。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號；鏡頭外的指令用 `Type@5ms` 打，不然要等很久；等某個輸出用 `Wait+Screen@<逾時> /regex/`，要等的字在指令裡寫成 `RE''ADY`，免得一打出指令就符合。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
 
 ## 發布
 
