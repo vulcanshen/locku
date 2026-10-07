@@ -19,7 +19,7 @@ func TestRunnerBackgrounds(t *testing.T) {
 	if !slices.Equal(Backgrounds, []string{"day", "night", "time-shifting"}) {
 		t.Errorf("backgrounds %v", Backgrounds)
 	}
-	if daySky.stops[len(daySky.stops)-1] != "#ffffff" || daySky.fg != "#313244" || !slices.Contains(nightSky.stops, "#313244") || nightSky.fg != "#f2b753" {
+	if daySky.stops[len(daySky.stops)-1] != "#ffffff" || daySky.fg != "#313244" || !slices.Contains(nightSky.stops, "#313244") || nightSky.fg != "#7f849c" {
 		t.Errorf("day %v, night %v", daySky, nightSky)
 	}
 	at := func(minute int) func() time.Time {
@@ -317,23 +317,28 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		if c.lined && at(x+8, y+1) != inkEye { // the eye
 			t.Errorf("%s: the eye is ink %d", c.background, at(x+8, y+1))
 		}
-		// In the air too: under its feet the sky, beside them the outline.
+		// In the air the outline goes under its feet too (user,
+		// 2026-10-07): under each foot and a corner either side of it,
+		// the sky between.
 		if c.lined {
-			d.air[0], d.jump[0] = 4, small
+			d.air[0], d.jump[0], d.clouds = 4, small, nil
 			air := d.runner.figures[0].air
 			y := d.groundY() - air.h() - d.lift(0)
 			sc := d.Draw(76, 31)
-			under := 0
+			sole := air[air.h()-1]
 			for px := -1; px <= air.w(); px++ {
-				if k := sc.Pix[(y+air.h())*76+x+px]; k == inkOutline {
-					t.Errorf("in the air, an outline under the feet at %d", px)
-				} else if k == 0 {
-					under++
+				want := uint8(0)
+				for dx := -1; dx <= 1; dx++ {
+					if px+dx >= 0 && px+dx < len(sole) && sole[px+dx] == '#' {
+						want = inkOutline
+					}
+				}
+				if got := sc.Pix[(y+air.h())*76+x+px]; got != want {
+					t.Errorf("in the air, %d up: under the feet at %d, ink %d, want %d", d.lift(0), px, got, want)
 				}
 			}
-			foot := strings.Index(air[air.h()-1], "#")
-			if d.lift(0) < 2 || under == 0 || foot < 1 || sc.Pix[(y+air.h()-1)*76+x+foot-1] != inkOutline {
-				t.Errorf("in the air, %d up: %d of the sky under its feet, no outline beside them", d.lift(0), under)
+			if d.lift(0) < 2 || !strings.Contains(sole, "#.") {
+				t.Errorf("in the air %d up, the soles %q", d.lift(0), sole)
 			}
 		}
 	}
@@ -407,5 +412,26 @@ func TestRunnerKeepsClearOfTheMoon(t *testing.T) {
 	out, moon := channels(nightSky.outline), channels(moonColour)
 	if nightSky.outline == moonColour || out[2] <= out[0] || moon[2] >= moon[0] {
 		t.Errorf("the outline %s, the moon %s", nightSky.outline, moonColour)
+	}
+}
+
+// By night the world is in moonlight (user, 2026-10-07: the gold was a
+// lamp's): the ground, the obstacles and the clouds a cool grey, blue
+// over red; darker than the moon and the runner's outline, so they stand
+// out from it; lighter than every row of the night sky, so it shows on
+// it. The eyes alone are gold.
+func TestRunnerNightWorldIsMoonlit(t *testing.T) {
+	lum := func(hex string) int { c := channels(hex); return 2*c[0] + 7*c[1] + c[2] }
+	world := channels(nightSky.fg)
+	if world[2] <= world[0] || lum(nightSky.fg) >= lum(nightSky.outline) || lum(nightSky.fg) >= lum(moonColour) {
+		t.Errorf("the world %s, the outline %s, the moon %s", nightSky.fg, nightSky.outline, moonColour)
+	}
+	for _, g := range nightSky.look(31).Ground {
+		if lum(nightSky.fg)-lum(g) < 3*100 {
+			t.Errorf("the world %s on the night sky %s", nightSky.fg, g)
+		}
+	}
+	if nightSky.eye != "#f2b753" || nightSky.fg == nightSky.eye {
+		t.Errorf("the eyes %s, the world %s", nightSky.eye, nightSky.fg)
 	}
 }

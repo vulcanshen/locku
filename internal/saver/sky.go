@@ -23,16 +23,19 @@ import (
 // is the one sky or the other, the runner and the sun or the moon in it
 // too, never a mix of the two (user, the same day: it changed all at
 // once and night to day was sudden; then a fade of the whole board was
-// smooth, but not what they had in mind). The runner is dark in every
-// sky; by night a darker dark, a silhouette against the moonlit sky —
-// but not the crust a terminal's own ground is often in, which runs
-// into the gaps between its squares (user, the same day) —
-// with an outline round it, none under its feet, a cooler white than
-// the moon's, and its eyes in the night's gold — not gold all over,
-// which came in all at once from dusk (user, the same day; the outline
-// was the moon's own white, and the runner at the top of a jump ran
-// into it; the runner was the dusk's dark, the night sky's own half way
-// down, and only its outline was seen).
+// smooth, but not what they had in mind).
+//
+// By night (user, the same day) the world — the ground, the obstacles,
+// the clouds — is in the moon's grey light rather than gold, which was
+// a lamp's; and the runner, dark in every sky, is a silhouette, a
+// darker dark than the sky behind it but not the crust a terminal's own
+// ground is often in, which runs into the gaps between its squares; an
+// outline round it, a cooler white than the moon's — none under its
+// feet on the ground, all round it in the air — and its eyes in gold.
+// It is not gold all over, which came in all at once from dusk; the
+// outline is not the moon's own white, which the runner at the top of a
+// jump ran into; and the runner is not the dusk's dark, the night sky's
+// own half way down, against which only its outline was seen.
 const (
 	BackgroundDay          = "day"
 	BackgroundNight        = "night"
@@ -81,14 +84,17 @@ var (
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
 	// world and the runner as by day; the setting sun.
 	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", runner: "#313244", sunset: true}
-	// Night: the ground and gold the runner had (user: as now), the
-	// ground darker above it and lighter below; the world in the gold;
-	// the runner in base, darker than the sky it runs against, a step
-	// lighter than crust — in crust, the terminal's ground, its squares
-	// ran into one blot (user, 2026-10-07) — with its outline white
-	// (user, the same day: it was the gold) — catppuccin's text, a cool
-	// white, the moon's warm — and its eyes in the gold; the moon.
-	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#f2b753", runner: "#1e1e2e", outline: "#cdd6f4", eye: "#f2b753", moon: true}
+	// Night: the ground the runner had (user: as now), darker above it
+	// and lighter below; the world in moonlight, catppuccin's overlay1,
+	// a cool grey — darker than the moon and the runner's outline, which
+	// stand out from it, lighter than all the sky (user, 2026-10-07: it
+	// was the gold the runner had, a lamp's); the runner in base, darker
+	// than the sky it runs against, a step lighter than crust — in
+	// crust, the terminal's ground, its squares ran into one blot (user,
+	// the same day) — with its outline white (user, the same day: it was
+	// the gold) — catppuccin's text, a cool white, the moon's warm — and
+	// its eyes in the gold, the one warm light; the moon.
+	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#7f849c", runner: "#1e1e2e", outline: "#cdd6f4", eye: "#f2b753", moon: true}
 )
 
 // The sun, a yellow deep enough to show on the pale sky — catppuccin's
@@ -236,10 +242,12 @@ func hasSunset(s sky) bool  { return s.sunset }
 func hasOutline(s sky) bool { return s.outline != "" }
 
 // rim is the outline round a sprite — every pixel about it, corners
-// too, that is not of it, but none under its last row, its feet — and
-// its eyes, the pixels marked 'e'. (A dark pixel the body closes round
-// is not always an eye: between the T-Rex's legs, mid stride, is one;
-// and the ghost's eyes are open at a corner.)
+// too, that is not of it, under its feet as well: on the ground they are
+// on the ground line, and the outline goes on the sky alone (user,
+// 2026-10-07: none under the feet on the ground, but under them in the
+// air) — and its eyes, the pixels marked 'e'. (A dark pixel the body
+// closes round is not always an eye: between the T-Rex's legs, mid
+// stride, is one; and the ghost's eyes are open at a corner.)
 func rim(sp sprite) (edge, eyes [][2]int) {
 	at := func(x, y int) byte {
 		if y >= 0 && y < len(sp) && x >= 0 && x < len(sp[y]) {
@@ -247,7 +255,7 @@ func rim(sp sprite) (edge, eyes [][2]int) {
 		}
 		return '.'
 	}
-	for y := -1; y < len(sp); y++ {
+	for y := -1; y <= len(sp); y++ {
 		for x := -1; x <= sp.w(); x++ {
 			switch at(x, y) {
 			case '#':
