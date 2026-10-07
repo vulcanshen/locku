@@ -96,17 +96,16 @@ func TestTetrominoBagOfSeven(t *testing.T) {
 	}
 }
 
-// The frame is grey round the whole field, a pixel thick at the top and
-// the sides and two at the foot, the floor (user, 2026-10-07; it was two
-// all round); the boxes for the pieces to come are a column at its
+// The frame is grey round the whole field, a pixel thick (user,
+// 2026-10-07; it was two all round, then two at the foot); the boxes for the pieces to come are a column at its
 // right, framed a pixel thick, the field's side theirs and one line
 // between two boxes, as many as the frame's height holds whole, the
 // rest under them dark (user, the same day; they were in the field's top
 // corners, then the next two). A pixel a character, on the least scene
 // and a pixel over each way, which is dark.
 func TestTetrominoFrameAndBoxes(t *testing.T) {
-	g := tetroGame(1, 30, 24)
-	sc := g.Draw(30, 24)
+	g := tetroGame(1, 30, 23)
+	sc := g.Draw(30, 23)
 	if g.cols != 10 || g.rows != 10 {
 		t.Fatalf("field %dx%d, want 10x10", g.cols, g.rows)
 	}
@@ -133,11 +132,10 @@ func TestTetrominoFrameAndBoxes(t *testing.T) {
 		"#....................#......#.",
 		"#....................########.",
 		"######################........",
-		"######################........",
 		"..............................",
 	}
 	var got []string
-	for y := 0; y < 24; y++ {
+	for y := 0; y < 23; y++ {
 		var b strings.Builder
 		for x := 0; x < 30; x++ {
 			if sc.Pix[y*30+x] == inkTetroFrame {
@@ -151,11 +149,11 @@ func TestTetrominoFrameAndBoxes(t *testing.T) {
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the frame:\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
-	if g.Room() != (Room{W: 29, H: 23, Most: 1}) {
+	if g.Room() != (Room{W: 29, H: 22, Most: 1}) {
 		t.Errorf("room %+v", g.Room())
 	}
 	// 120 x 36 cells, a row of them the status: twenty-eight blocks by
-	// sixteen, a pixel to spare.
+	// sixteen, a pixel to spare each way.
 	if g := tetroGame(1, 65, 35); g.cols != 28 || g.rows != 16 {
 		t.Errorf("field %dx%d, want 28x16", g.cols, g.rows)
 	}
@@ -226,8 +224,10 @@ func TestTetrominoQueue(t *testing.T) {
 			t.Errorf("seed %d: came %d, queue %v; was %v", seed, g.cur, g.queue, before)
 		}
 	}
-	// As many boxes as the height holds: four on 80 x 24, nine on 200 x 50.
-	for _, c := range []struct{ w, h, n int }{{40, 23, 4}, {100, 49, 9}} {
+	// As many boxes as the height holds: four on 80 x 24, nine on 200 x 50;
+	// five where the frame is thirty pixels high, the sixth's foot under
+	// the floor.
+	for _, c := range []struct{ w, h, n int }{{40, 23, 4}, {100, 49, 9}, {65, 30, 5}} {
 		if g := tetroGame(1, c.w, c.h); len(g.queue) != c.n {
 			t.Errorf("%dx%d: %d boxes, want %d", c.w, c.h, len(g.queue), c.n)
 		}
@@ -460,11 +460,12 @@ func TestTetrominoKeepsOffTheTop(t *testing.T) {
 	}
 }
 
-// A stack that reaches the top is the end (user, 2026-10-07): all of it
-// goes black, the whole scene, a row at a time from the top in five
-// seconds, the frames too; then END in red in the middle of the field, a
-// block a pixel of the lock's letters, for two seconds; then a new game.
-// It is at the clear's pace.
+// A stack that reaches the top is the end (user, 2026-10-07): every
+// piece there is dims into the frame's grey, all together, over five
+// seconds — the scene the same, the colours going; then END in red in
+// the middle of the screen, a block a pixel of the lock's letters, on a
+// plate of the ground, for two seconds; then a new game in the colours
+// again. It is at the clear's pace.
 func TestTetrominoEnds(t *testing.T) {
 	g := tetroGame(6, 65, 35)
 	// Full but for a hole a row, none beside another: nowhere for a piece.
@@ -485,57 +486,62 @@ func TestTetrominoEnds(t *testing.T) {
 	if g.Next(time.Unix(0, 0)) != time.Unix(0, 0).Add(40*time.Millisecond) {
 		t.Errorf("the end's next frame at %v", g.Next(time.Unix(0, 0)))
 	}
-	curtain, end := g.frames(tetroCurtain), g.frames(tetroEnd)
-	if curtain != 125 || end != 50 {
-		t.Fatalf("curtain %d frames, END %d", curtain, end)
+	fade, end := g.frames(tetroFade), g.frames(tetroEnd)
+	if fade != 125 || end != 50 {
+		t.Fatalf("fade %d frames, END %d", fade, end)
 	}
-	// dark is how many pixel rows from the top are black, all across the
-	// scene, and the rest not.
-	dark := func(sc Scene) int {
-		n := 0
-		for n < 35 && sc.Pix[n*65] == inkTetroBlack {
-			n++
+	// pieces are the pieces' inks now; the rest stay as they are.
+	pieces := func() []string {
+		inks := g.Inks()
+		if inks[0] != ownGround || inks[8] != tetroWhite || inks[9] != tetroGrey || inks[10] != tetroRed {
+			t.Fatalf("inks %v", inks)
 		}
-		for y := 0; y < 35; y++ {
-			for x := 0; x < 65; x++ {
-				if (sc.Pix[y*65+x] == inkTetroBlack) != (y < n) {
-					t.Fatalf("%d rows black, and pixel %d,%d is %d", n, x, y, sc.Pix[y*65+x])
-				}
-			}
+		return inks[1:8]
+	}
+	first := g.Draw(65, 35)
+	for i, c := range pieces() {
+		if want := mix(tetroColours[i], tetroGrey, 1.0/125); c != want {
+			t.Fatalf("the frame it ends, piece %d is %s, want %s", i, c, want)
 		}
-		return n
 	}
-	// Thirty-five rows, in a hundred and twenty-five frames: the frame it
-	// ends, one; fifty frames in, fourteen.
-	if n := dark(g.Draw(65, 35)); n != 1 {
-		t.Fatalf("the first frame of the end: %d pixel rows black", n)
-	}
-	for i := 0; i < 49; i++ {
+	for i := 0; i < 62; i++ {
 		g.Step()
 	}
-	sc := g.Draw(65, 35)
-	if n := dark(sc); n != 14 || slices.Contains(sc.Pix, inkTetroRed) {
-		t.Fatalf("fifty frames in: %d pixel rows black", n)
+	// Half way, half way into the grey, all alike; the scene as it was.
+	for i, c := range pieces() {
+		if want := mix(tetroColours[i], tetroGrey, 63.0/125); c != want {
+			t.Fatalf("half way, piece %d is %s, want %s", i, c, want)
+		}
 	}
-	for g.fx < curtain-1 {
+	if sc := g.Draw(65, 35); !slices.Equal(sc.Pix, first.Pix) {
+		t.Fatal("the scene changed while the pieces dimmed")
+	}
+	for g.fx < fade-1 {
 		g.Step()
 	}
-	sc = g.Draw(65, 35)
-	if n := dark(sc); n != 35 || slices.Contains(sc.Pix, inkTetroRed) {
-		t.Fatalf("the curtain down: %d pixel rows black", n)
+	for i, c := range pieces() {
+		if c != tetroGrey {
+			t.Fatalf("dimmed, piece %d is %s", i, c)
+		}
+	}
+	if slices.Contains(g.Draw(65, 35).Pix, inkTetroRed) {
+		t.Fatal("END before the pieces have dimmed")
 	}
 	g.Step()
 	// END, eleven pixels by five of the letters, twenty-two by ten in
-	// the scene, in the middle of the field's frame, fifty-eight by
-	// thirty-five; all else black.
-	sc = g.Draw(65, 35)
+	// the scene, in the middle of its sixty-five by thirty-five, on the
+	// ground two pixels round; the rest as it was.
+	sc := g.Draw(65, 35)
 	art := tetroSpell("END")
 	for y := 0; y < 35; y++ {
 		for x := 0; x < 65; x++ {
-			ax, ay := (x-18)/2, (y-12)/2
-			lit := x >= 18 && y >= 12 && ax < len(art[0]) && ay < len(art) && art[ay][ax] == '#'
-			if (sc.Pix[y*65+x] == inkTetroRed) != lit || !lit && sc.Pix[y*65+x] != inkTetroBlack {
-				t.Fatalf("END at pixel %d,%d: %d", x, y, sc.Pix[y*65+x])
+			ax, ay := (x-21)/2, (y-12)/2
+			lit := x >= 21 && y >= 12 && ax < len(art[0]) && ay < len(art) && art[ay][ax] == '#'
+			plate := x >= 19 && x < 45 && y >= 10 && y < 24
+			got := sc.Pix[y*65+x]
+			switch {
+			case lit && got != inkTetroRed, !lit && plate && got != 0, !plate && got != first.Pix[y*65+x]:
+				t.Fatalf("END at pixel %d,%d: %d", x, y, got)
 			}
 		}
 	}
@@ -549,8 +555,8 @@ func TestTetrominoEnds(t *testing.T) {
 	if g.over || slices.ContainsFunc(g.cells, func(c uint8) bool { return c != 0 }) || g.at.y >= 0 {
 		t.Fatalf("no new game: over %v, at %+v", g.over, g.at)
 	}
-	if slices.Contains(g.Draw(65, 35).Pix, inkTetroBlack) {
-		t.Error("the new game is black")
+	if !slices.Equal(pieces(), tetroColours) || slices.Contains(g.Draw(65, 35).Pix, inkTetroRed) {
+		t.Error("the new game is not in its colours")
 	}
 }
 
@@ -577,27 +583,27 @@ func TestTetrominoIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 		}
 	}
 	a.Draw(80, 40)
-	if a.cols != 35 || a.rows != 18 || slices.ContainsFunc(a.cells, func(c uint8) bool { return c != 0 }) {
+	if a.cols != 35 || a.rows != 19 || slices.ContainsFunc(a.cells, func(c uint8) bool { return c != 0 }) {
 		t.Errorf("after a resize: %dx%d, stack %v", a.cols, a.rows, slices.ContainsFunc(a.cells, func(c uint8) bool { return c != 0 }))
 	}
-	for _, s := range [][2]int{{28, 40}, {65, 22}} {
+	for _, s := range [][2]int{{28, 40}, {65, 21}} {
 		g := tetroGame(1, s[0], s[1])
 		g.Step()
 		if sc := g.Draw(s[0], s[1]); slices.ContainsFunc(sc.Pix, func(c uint8) bool { return c != 0 }) {
 			t.Errorf("%dx%d: something drawn", s[0], s[1])
 		}
 	}
-	g := tetroGame(1, 29, 23)
-	if sc := g.Draw(29, 23); sc.Pix[0] != inkTetroFrame {
-		t.Errorf("29x23: no frame")
+	g := tetroGame(1, 29, 22)
+	if sc := g.Draw(29, 22); sc.Pix[0] != inkTetroFrame {
+		t.Errorf("29x22: no frame")
 	}
 	NewTetromino(1, SpeedNormal, tetroSpell).Step() // before the first draw: nothing, and no panic
 }
 
 // Its colours: the ground, the pieces' as they usually are, white for a
-// row going, grey for the frame, and the end's black and red.
+// row going, grey for the frame, and red for END.
 func TestTetrominoInks(t *testing.T) {
-	want := []string{"#313244", "#89dceb", "#f9e2af", "#cba6f7", "#a6e3a1", "#f38ba8", "#89b4fa", "#fab387", "#ffffff", "#7f849c", "#1e1e2e", "#f38ba8"}
+	want := []string{"#313244", "#89dceb", "#f9e2af", "#cba6f7", "#a6e3a1", "#f38ba8", "#89b4fa", "#fab387", "#ffffff", "#7f849c", "#f38ba8"}
 	if got := NewTetromino(1, "", tetroSpell).Inks(); !slices.Equal(got, want) {
 		t.Errorf("inks %v", got)
 	}
