@@ -56,8 +56,8 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 5 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
-		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") {
+	if len(cfg.Savers) != 6 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
+		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") || cfg.Saver("tetromino") != NewProfile("", "tetromino") {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -419,6 +419,23 @@ func TestASnakeProfileIsItsSpeed(t *testing.T) {
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "  - name: s\n      saver: snake\n      speed: very-fast\n") || !strings.Contains(s, "    snake:\n        saver: snake\n        speed: normal\n") {
 		t.Errorf("saved:\n%s", s)
+	}
+}
+
+// The falling blocks are as the snake: their speed and nothing else
+// (user, 2026-10-07), normal unless they say one they have.
+func TestATetrominoProfileIsItsSpeed(t *testing.T) {
+	p := write(t, "profile: t\nprofiles:\n  - name: t\n    saver: tetromino\n    speed: fast\n    size: large\n    time: HH:MM\n    bg: \"#43523d\"\n"+
+		"  - name: odd\n    saver: tetromino\n    speed: 12\n  - name: none\n    saver: tetromino\n")
+	cfg, _ := LoadFile(p)
+	if s, _ := cfg.Active(); s != (Profile{Name: "t", Saver: "tetromino", Speed: "fast"}) {
+		t.Errorf("the profile %+v", s)
+	}
+	if cfg.Profiles[1].Speed != "normal" || cfg.Profiles[2].Speed != "normal" {
+		t.Errorf("speeds %+v", cfg.Profiles)
+	}
+	if n := cfg.NewProfile("n", "tetromino"); n != (Profile{Name: "n", Saver: "tetromino", Speed: "normal"}) {
+		t.Errorf("a new one %+v", n)
 	}
 }
 

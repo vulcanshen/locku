@@ -51,7 +51,7 @@ const (
 	rowScene
 	rowBackground // the runner's sky
 	rowCommand    // a custom saver's program
-	rowSpeed      // the snake's, slow to super-fast
+	rowSpeed      // the snake's, the bouncing box's, the falling blocks': slow to super-fast
 	rowSwatch
 	rowChannel
 	rowAbout // a saver's description, read-only
@@ -90,11 +90,12 @@ const labelW = 28
 
 // about is what [2] says of a saver.
 var about = map[string]string{
-	saver.KindClock:  "the time and the date, on the LED board",
-	saver.KindRunner: "the offline dino run, jumping by itself, for ever",
-	saver.KindBounce: "the time in a box, bouncing, changing colour",
-	saver.KindSnake:  "the Nokia snake, playing itself till the board is full",
-	saver.KindCustom: "your own program, on a terminal of its own, as the saver",
+	saver.KindClock:     "the time and the date, on the LED board",
+	saver.KindRunner:    "the offline dino run, jumping by itself, for ever",
+	saver.KindBounce:    "the time in a box, bouncing, changing colour",
+	saver.KindSnake:     "the Nokia snake, playing itself till the board is full",
+	saver.KindTetromino: "falling blocks, playing themselves, full rows going",
+	saver.KindCustom:    "your own program, on a terminal of its own, as the saver",
 }
 
 // usualConf is where a tool's file usually is: the offer in the conf
@@ -197,7 +198,7 @@ func (m AppModel) anyDirty() bool {
 // fieldRows is a saver's own settings for p: the clock's shapes and
 // size, the run's runner and scene, the custom saver's command, the
 // snake's speed (user, 2026-10-06), the bouncing box's speed and time
-// (user, 2026-10-07).
+// (user, 2026-10-07), the falling blocks' speed (user, the same day).
 func fieldRows(p config.Profile) []row {
 	value := valueColor
 	if p.Saver == saver.KindBounce {
@@ -206,7 +207,7 @@ func fieldRows(p config.Profile) []row {
 			{kind: rowTime, label: "time", value: p.Time, color: value, stop: true},
 		}
 	}
-	if p.Saver == saver.KindSnake {
+	if p.Saver == saver.KindSnake || p.Saver == saver.KindTetromino {
 		return []row{{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true}}
 	}
 	if p.Saver == saver.KindCustom {
