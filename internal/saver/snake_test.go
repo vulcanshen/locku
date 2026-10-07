@@ -219,8 +219,9 @@ func TestSnakeCutsWhileThereIsRoom(t *testing.T) {
 // same a pixel on, the link behind left to the body. Open, round the apple at
 // the node: the upper jaw over it and two on, the lower under it and
 // one on, the link behind — the node left to the apple. Swallowing, the
-// head is shut and the apple a pixel behind the crown. A lump is its
-// node and the crown's two pixels beside it.
+// head is shut and the body swells a pixel behind the crown. The body
+// round an apple on its way down is three pixels over its node, the
+// node left to the apple.
 func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 	set := func(sh shape, dx, dy int) map[[2]int]bool {
 		at := map[[2]int]bool{}
@@ -269,9 +270,9 @@ func TestSnakeHeadTurnsWithTheWay(t *testing.T) {
 			t.Errorf("going %d,%d: open, the head is %v", dx, dy, open)
 		}
 		if gulp := set(snakeGulp, dx, dy); len(gulp) != 1 || !gulp[back(c.crown2, 3)] {
-			t.Errorf("going %d,%d: just swallowed, the apple is at %v", dx, dy, gulp)
+			t.Errorf("going %d,%d: just swallowed, the swelling is at %v", dx, dy, gulp)
 		}
-		if lump := set(snakeLump, dx, dy); len(lump) != 3 || !lump[node] || !lump[c.crown1] || !lump[c.crown2] {
+		if lump := set(snakeLump, dx, dy); len(lump) != 3 || lump[node] || !lump[back(c.crown1, -1)] || !lump[c.crown1] || !lump[c.crown2] {
 			t.Errorf("going %d,%d: the lump is %v", dx, dy, lump)
 		}
 	}
@@ -324,8 +325,8 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 		ldx, ldy := s.way(s.body[2], s.body[1])
 		for _, p := range snakeLump {
 			px, py := turn(p, ldx, ldy)
-			if at(sc, lx+px, ly+py) != uint8(1+bean) {
-				t.Fatalf("frame %d: the lump at %d,%d is ink %d", f, px, py, at(sc, lx+px, ly+py))
+			if at(sc, lx+px, ly+py) != ink {
+				t.Fatalf("frame %d: the body round the apple at %d,%d is ink %d", f, px, py, at(sc, lx+px, ly+py))
 			}
 		}
 		ax, ay := s.cellAt(s.apple)
@@ -470,8 +471,8 @@ func TestSnakeEatsInThreeMoves(t *testing.T) {
 		}
 		if swallowing && !bitten && !next {
 			swallowed++
-			if px(sc, [2]int{4, -1}) != uint8(1+gulp.colour) || px(sc, [2]int{-1, 0}) != body {
-				t.Fatalf("move %d: just swallowed, the apple is ink %d, the snout %d", i, px(sc, [2]int{4, -1}), px(sc, [2]int{-1, 0}))
+			if px(sc, [2]int{0, 0}) != uint8(1+gulp.colour) || px(sc, [2]int{4, -1}) != body || px(sc, [2]int{-1, 0}) != body {
+				t.Fatalf("move %d: just swallowed, the apple is ink %d, the swelling %d, the snout %d", i, px(sc, [2]int{0, 0}), px(sc, [2]int{4, -1}), px(sc, [2]int{-1, 0}))
 			}
 		}
 		if next && !bitten {
