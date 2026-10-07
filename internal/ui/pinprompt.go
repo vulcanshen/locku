@@ -13,14 +13,14 @@ import (
 
 // pinPrompt is the lock screen's one popup (ui.md §3.2): a masked line,
 // as wide as every popup (tdp F7; 48 columns until 2026-09-28), centred,
-// a row of air above and below, the dots growing out from the middle of
-// the box (user, 2026-09-24: bigger, and the input starting from the
-// centre). A 64-character PIN is 129 columns of dots, wider than a popup
-// gets: the dots it has no room for go from the front (user, 2026-09-28:
-// the widest PIN against 120 settles the width). Under the dots is its
-// error row, blank until an Enter is refused (tdp F7, K3; 2026-09-28 — the
-// error used to be in the title). It has five looks, and the box never
-// changes size:
+// the dots in its middle row growing out from the middle of the box (user,
+// 2026-09-24: bigger, and the input starting from the centre). A
+// 64-character PIN is 129 columns of dots, wider than a popup gets: the
+// dots it has no room for go from the front (user, 2026-09-28: the widest
+// PIN against 120 settles the width). Two rows under the dots is its error
+// row, blank until an Enter is refused (tdp F7, K3; 2026-09-28 — the error
+// used to be in the title; pinBox lays the rows out). It has five looks,
+// and the box never changes size:
 //
 //	idle        the layer colour, enter unlock · esc back
 //	not taken   red, why in the error row — a line break or a tab in it
@@ -111,7 +111,18 @@ func (p pinPrompt) view(now time.Time) string {
 			bc, err = warnColor, p.err
 		}
 	}
-	return drawPopupBox(bc, title, hint, animRows(p.anim, []string{row, errorRow(err, innerW, true)}), innerW)
+	return pinBox(bc, title, hint, p.anim, row, errorRow(err, innerW, true), innerW)
+}
+
+// pinBox frames every PIN box — the lock's prompt and the settings
+// screen's current / new / confirm boxes: seven rows with the borders,
+// two rows of air, the dots in the middle row, a row of air, the error
+// row against the bottom border (user, 2026-10-07: the error row under the
+// dots, with a row of air under it too, had left them a row above the
+// middle).
+func pinBox(bc lipgloss.Color, title string, hint [][2]string, a popupAnimator, row, err string, innerW int) string {
+	air := spaces(innerW)
+	return drawPopupBoxPad(bc, title, hint, animRows(a, []string{air, air, row, air, err}), innerW, false)
 }
 
 // pinRow is the masked line every PIN box shares — the lock's prompt and

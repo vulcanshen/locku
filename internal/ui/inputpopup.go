@@ -162,8 +162,8 @@ func (m inputPopup) view() string {
 		if m.frozen {
 			hint = nil
 		}
-		return drawPopupBox(bc, " "+glyphLock+" "+m.title+" ", hint,
-			animRows(m.anim, []string{pinRow(valueLen(m.value), innerW), errorRow(m.err, innerW, true)}), innerW)
+		return pinBox(bc, " "+glyphLock+" "+m.title+" ", hint, m.anim,
+			pinRow(valueLen(m.value), innerW), errorRow(m.err, innerW, true), innerW)
 	}
 
 	innerW := popupInnerW(m.screenW)

@@ -52,6 +52,42 @@ func TestPINPromptErrorRow(t *testing.T) {
 	inside(t, "lockout", p.view(now), "try again in 30 s")
 }
 
+// A PIN box, the lock's and the settings screen's alike, is seven rows
+// with its borders: the dots in the middle one, the fourth, and the error
+// row the sixth, a row of air between them and two above the dots (user,
+// 2026-10-07: the error row under the dots had left them a row above the
+// middle).
+func TestPINBoxDotsInTheMiddle(t *testing.T) {
+	open := popupAnimator{phase: animOpen}
+	boxes := map[string]func(err string) string{
+		"lock": func(err string) string {
+			return pinPrompt{anim: open, value: []rune("12"), err: err, screenW: 100, screenH: 30}.view(time.Now())
+		},
+		"new PIN": func(err string) string {
+			return inputPopup{anim: open, title: "new PIN", masked: true, action: inputPINNew, value: "12", err: err, screenW: 100, screenH: 30}.view()
+		},
+	}
+	for name, box := range boxes {
+		for _, err := range []string{"", "a line break"} {
+			lines := strings.Split(ansi.Strip(box(err)), "\n")
+			if len(lines) != 7 {
+				t.Fatalf("%s %q: %d rows, want 7:\n%s", name, err, len(lines), strings.Join(lines, "\n"))
+			}
+			if !strings.Contains(lines[3], "● ●") {
+				t.Errorf("%s %q: the dots are not in the fourth row:\n%s", name, err, strings.Join(lines, "\n"))
+			}
+			if got := strings.TrimSpace(strings.Trim(lines[5], "│")); got != err {
+				t.Errorf("%s %q: the sixth row is %q", name, err, got)
+			}
+			for _, i := range []int{1, 2, 4} {
+				if strings.TrimSpace(strings.Trim(lines[i], "│")) != "" {
+					t.Errorf("%s %q: row %d is not air: %q", name, err, i+1, lines[i])
+				}
+			}
+		}
+	}
+}
+
 // inside: want is on a row inside box, and not on its borders.
 func inside(t *testing.T, name, box, want string) {
 	t.Helper()
