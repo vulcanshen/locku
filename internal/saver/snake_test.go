@@ -79,10 +79,10 @@ func check(t *testing.T, s *Snake, step int, enough bool) {
 		}
 	}
 	for _, l := range s.lumps {
-		if (l.at < 0 && l.at != snakeBitten) || l.at >= len(s.body) || (l.gone && l.at < 0) {
+		if (l.at < 0 && l.at != snakeBitten) || l.at >= len(s.body) || l.colour >= len(ownColours) {
 			t.Fatalf("step %d: a lump at %d, off a body %d long", step, l.at, len(s.body))
 		}
-		if enough && !l.gone && (l.colour == s.colour || (s.apple >= 0 && l.colour == s.next)) {
+		if enough && (l.colour == s.colour || (s.apple >= 0 && l.colour == s.next)) {
 			t.Fatalf("step %d: a lump in the colour of the snake (%d) or the apple (%d): %v", step, s.colour, s.next, s.lumps)
 		}
 	}
@@ -99,26 +99,27 @@ func check(t *testing.T, s *Snake, step int, enough bool) {
 	if s.apple >= 0 && (on[s.apple] || s.pos[s.apple] < 0) {
 		t.Fatalf("step %d: the apple at %d", step, s.apple)
 	}
-	if enough && s.apple >= 0 && s.next == s.colour {
-		t.Fatalf("step %d: the apple is the snake's colour", step)
+	if s.apple >= 0 && (s.next >= len(ownColours) || (enough && s.next == s.colour)) {
+		t.Fatalf("step %d: the apple is colour %d, the snake %d", step, s.next, s.colour)
 	}
 }
 
 // It plays the board full without ever running into itself, holds the
-// full board, and starts again. An apple eaten is a lump in its colour,
-// in the jaws first; the snake takes the colour when the lump goes past
-// the tail, and only then.
+// full board, and starts again. The snake starts white; an apple eaten
+// is a lump in its colour, in the jaws first, and the snake takes the
+// colour when the lump is at the tail and goes, and only then.
 func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 	for i, sz := range [][2]int{{15, 11}, {21, 13}, {40, 23}, {31, 19}, {16, 9}, {76, 31}, {50, 29}, {49, 31}, {11, 7}, {100, 59}} {
 		s := NewSnake(uint64(4+i), SnakeSpeedDefault)
 		s.Draw(sz[0], sz[1])
 		n := len(s.tour)
-		if len(s.body) != snakeStart || n == 0 {
-			t.Fatalf("%v: start %d long on %d cells", sz, len(s.body), n)
+		if len(s.body) != snakeStart || n == 0 || s.colour != len(ownColours) {
+			t.Fatalf("%v: start %d long on %d cells, colour %d", sz, len(s.body), n, s.colour)
 		}
 		steps, eats, enough := 0, 0, true
 		for s.apple >= 0 {
 			long, colour, next, apple, before := len(s.body), s.colour, s.next, s.apple, slices.Clone(s.lumps)
+			tail := s.body[long-1]
 			s.Step()
 			steps++
 			if len(s.lumps) >= len(ownColours)-1 {
@@ -139,8 +140,17 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 			if len(s.body)+s.grow+len(s.lumps) != snakeStart+eats || s.grow < 0 || len(s.body)-long > 1 || len(s.body) < long {
 				t.Fatalf("%v step %d: %d long (was %d), %d to grow, %d on the way down, %d eaten", sz, steps, len(s.body), long, s.grow, len(s.lumps), eats)
 			}
-			if want := turned(before, s.lumps, colour); s.colour != want {
+			if want := turned(before, long, colour); s.colour != want {
 				t.Fatalf("%v step %d: the snake is %d, the lumps were %v and are %v", sz, steps, s.colour, before, s.lumps)
+			}
+			// The move a lump is the body, the tail grows with it — but
+			// where the head goes into the tail.
+			added := 0
+			if ate {
+				added = 1
+			}
+			if len(before)+added > len(s.lumps) && s.body[0] != tail && len(s.body) != long+1 {
+				t.Fatalf("%v step %d: an apple is the body, and the snake is %d long, was %d", sz, steps, len(s.body), long)
 			}
 			if steps > 4*n*n {
 				t.Fatalf("%v: %d long after %d steps", sz, len(s.body), steps)
@@ -173,26 +183,21 @@ func TestSnakeFillsTheBoardAndStartsAgain(t *testing.T) {
 			}
 		}
 		s.Step()
-		if len(s.body) != snakeStart || s.apple < 0 {
-			t.Fatalf("%v: no new game: %d long", sz, len(s.body))
+		if len(s.body) != snakeStart || s.apple < 0 || s.colour != len(ownColours) {
+			t.Fatalf("%v: no new game: %d long, colour %d", sz, len(s.body), s.colour)
 		}
 		t.Logf("%v: %d cells in %d steps", sz, n, steps)
 	}
 }
 
-// turned is the snake's colour after a move: that of the last lump to be
-// the body now, past the tail — or the colour it was. The lumps keep
-// their order, the oldest first: the move drops some from the front
-// that were the body, and an apple eaten is a new one at the back.
-func turned(before, after []lump, colour int) int {
-	added := 0
-	if len(after) > 0 && after[len(after)-1].at == snakeBitten {
-		added = 1
-	}
-	dropped := len(before) + added - len(after)
-	for i := 0; i < len(after)-added; i++ {
-		if !before[i+dropped].gone && after[i].gone {
-			colour = after[i].colour
+// turned is the snake's colour after a move: that of the last lump, the
+// oldest first, whose second at the tail of a body long segments was up
+// — the body now — or the colour it was. On a small board a few apples
+// eaten close together wait at the tail at once, each on its own clock.
+func turned(before []lump, long, colour int) int {
+	for _, l := range before {
+		if l.at != snakeBitten && l.at >= long-1 && l.wait <= 1 {
+			colour = l.colour
 		}
 	}
 	return colour
@@ -329,7 +334,7 @@ func TestSnakeDrawsItsBodyHeadLumpsAndApple(t *testing.T) {
 	if !lit[true] || !lit[false] {
 		t.Errorf("the apple is lit %v", lit)
 	}
-	if inks := s.Inks(); len(inks) != 1+len(ownColours) || inks[0] != ownGround {
+	if inks := s.Inks(); len(inks) != 2+len(ownColours) || inks[0] != ownGround || inks[len(inks)-1] != "#ffffff" {
 		t.Errorf("inks %v", inks)
 	}
 }
@@ -361,9 +366,9 @@ func TestSnakeIsTheSeedsAndStartsOverOnAResize(t *testing.T) {
 
 // An apple eaten goes down the body to the tail at its own pace (user,
 // 2026-10-06), whatever the snake does: in the throat the move after,
-// then a segment a second — twelve moves at twelve a second; at the tail
-// it is the body a second later, the snake its colour, and a second after
-// that it is gone and the tail has a segment to grow.
+// then a segment a second — twelve moves at twelve a second; a second at
+// the tail and it is the body: the snake its colour and the tail a
+// segment to grow, both at once (user, 2026-10-07).
 func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
@@ -379,20 +384,14 @@ func TestSnakeLumpGoesDownASegmentASecond(t *testing.T) {
 	s.digest()
 	for at := 0; at < long; at++ {
 		for k := 0; k < second; k++ {
-			if len(s.lumps) != 1 || s.lumps[0].at != at || s.lumps[0].gone || s.colour != colour {
-				t.Fatalf("segment %d, move %d: lumps %v, the snake %d", at, k, s.lumps, s.colour)
+			if len(s.lumps) != 1 || s.lumps[0].at != at || s.colour != colour || s.grow != 0 {
+				t.Fatalf("segment %d, move %d: lumps %v, the snake %d, %d to grow", at, k, s.lumps, s.colour, s.grow)
 			}
 			s.digest()
 		}
 	}
-	for k := 0; k < second; k++ {
-		if len(s.lumps) != 1 || !s.lumps[0].gone || s.colour != bean || s.grow != 0 {
-			t.Fatalf("the body, move %d: lumps %v, the snake %d (the apple %d), %d to grow", k, s.lumps, s.colour, bean, s.grow)
-		}
-		s.digest()
-	}
-	if len(s.lumps) != 0 || s.grow != 1 {
-		t.Errorf("gone: lumps %v, %d to grow", s.lumps, s.grow)
+	if len(s.lumps) != 0 || s.colour != bean || s.grow != 1 {
+		t.Errorf("the body: lumps %v, the snake %d (the apple %d), %d to grow", s.lumps, s.colour, bean, s.grow)
 	}
 	// And the tail grows it, the next move the head is not going where
 	// the tail is.
@@ -649,8 +648,7 @@ func appleInEverySegment(t *testing.T, s *Snake, corners, straights int) (int, i
 }
 
 // The end of an apple (user, 2026-10-06; nothing about it, 2026-10-07):
-// at the tail, the apple at the node and the one link; then it is the
-// body, the node the snake's, and still nothing about it.
+// at the tail, the apple at the node and the one link, and nothing else.
 func TestSnakeAppleAtTheTail(t *testing.T) {
 	s := NewSnake(3, SnakeSpeedDefault)
 	s.Draw(76, 31)
@@ -662,24 +660,19 @@ func TestSnakeAppleAtTheTail(t *testing.T) {
 	ink := uint8(1 + s.colour)
 	x, y := s.cellAt(s.body[last])
 	dx, dy := s.way(s.body[last], s.body[last-1])
-	for _, c := range []struct {
-		gone bool
-		node uint8
-	}{{false, uint8(1 + bean)}, {true, ink}} {
-		s.lumps = []lump{{at: last, colour: bean, wait: 5, gone: c.gone}}
-		sc := s.Draw(76, 31)
-		for py := -1; py <= 1; py++ {
-			for px := -1; px <= 1; px++ {
-				want := uint8(0)
-				switch {
-				case px == 0 && py == 0:
-					want = c.node
-				case px == dx && py == dy:
-					want = ink
-				}
-				if got := sc.Pix[(y+py)*sc.W+x+px]; got != want {
-					t.Errorf("gone %v: the pixel %d,%d is ink %d, want %d", c.gone, px, py, got, want)
-				}
+	s.lumps = []lump{{at: last, colour: bean, wait: 5}}
+	sc := s.Draw(76, 31)
+	for py := -1; py <= 1; py++ {
+		for px := -1; px <= 1; px++ {
+			want := uint8(0)
+			switch {
+			case px == 0 && py == 0:
+				want = uint8(1 + bean)
+			case px == dx && py == dy:
+				want = ink
+			}
+			if got := sc.Pix[(y+py)*sc.W+x+px]; got != want {
+				t.Errorf("the pixel %d,%d is ink %d, want %d", px, py, got, want)
 			}
 		}
 	}
