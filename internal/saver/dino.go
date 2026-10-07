@@ -119,6 +119,7 @@ var arcs = [...][]int{
 var arcTop = max(slices.Max(arcs[small]), slices.Max(arcs[medium]), slices.Max(arcs[large]))
 
 // A sprite is rows of '#' lit and '.' dark, top to bottom, all one width.
+// An 'e' is dark too: an eye, which the night lights (user, 2026-10-07).
 type sprite []string
 
 func (s sprite) w() int { return len(s[0]) }
@@ -191,7 +192,7 @@ type obstacleArt struct {
 // The T-Rex, facing the way it runs, twelve wide and fourteen tall.
 var trexBody = sprite{
 	".......#####",
-	".......#.###",
+	".......#e###",
 	".......#####",
 	".......####.",
 	".......###..",
@@ -215,7 +216,7 @@ var trex = figure{
 // A small T-Rex, eight wide and ten tall.
 var smallTRexBody = sprite{
 	"....####",
-	"....#.##",
+	"....#e##",
 	"....####",
 	"....###.",
 	"#..#####",
@@ -241,7 +242,7 @@ var smallTRex = figure{
 var catBody = sprite{
 	"#.......#..#",
 	"#.......####",
-	".#......#.##",
+	".#......#e##",
 	".#......####",
 	"..##########",
 	"..#########.",
@@ -278,7 +279,7 @@ var rabbitBody = sprite{
 	".......#.#..",
 	".......#.#..",
 	"......#####.",
-	"......##.###",
+	"......##e###",
 	"......######",
 	"..#########.",
 	".##########.",
@@ -300,7 +301,7 @@ var smallRabbitBody = sprite{
 	".....#.#",
 	".....#.#",
 	"....####",
-	"....#.##",
+	"....#e##",
 	"..######",
 	"#######.",
 	".######.",
@@ -321,7 +322,7 @@ var smallRabbit = figure{
 var giraffeBody = sprite{
 	"..........#.",
 	".........###",
-	"........##.#",
+	"........##e#",
 	".......#####",
 	"......###...",
 	".....###....",
@@ -342,7 +343,7 @@ var giraffe = figure{
 var smallGiraffeBody = sprite{
 	"......#.",
 	".....###",
-	"....#.##",
+	"....#e##",
 	"...###..",
 	"#.####..",
 	"######..",
@@ -363,8 +364,8 @@ var ghostBody = sprite{
 	"....####....",
 	"..########..",
 	".##########.",
-	".####..##..#",
-	"#####..##..#",
+	".####ee##ee#",
+	"#####ee##ee#",
 	"############",
 	"############",
 	"############",
@@ -383,8 +384,8 @@ var ghost = figure{
 var smallGhostBody = sprite{
 	"..####..",
 	".######.",
-	"###.##.#",
-	"###.##.#",
+	"###e##e#",
+	"###e##e#",
 	"########",
 	"########",
 }
@@ -755,8 +756,8 @@ func (d *Dino) Draw(w, h int) Scene {
 
 // drawRunners draws the runners where their jumps have them, each in the
 // pose its stride is at; and while the night is in the sky, the outline
-// round each — on the sky alone, so nothing it passes is drawn over —
-// first, so the runners are on top of one another's.
+// round each and its eyes — on the sky alone, so nothing it passes is
+// drawn over — first, so the runners are on top of one another's.
 func (d *Dino) drawRunners(sc *Scene, gy int) {
 	type placed struct {
 		pose sprite
@@ -772,9 +773,12 @@ func (d *Dino) drawRunners(sc *Scene, gy int) {
 	}
 	if from, to, f := d.skies(); shows(from, to, f, hasOutline) {
 		for _, p := range on {
-			for _, q := range rim(p.pose) {
-				if x, y := p.x+q[0], p.y+q[1]; x >= 0 && x < sc.W && y >= 0 && y < sc.H && sc.Pix[y*sc.W+x] == 0 {
-					sc.put(x, y, inkOutline)
+			edge, eyes := rim(p.pose)
+			for ink, qs := range map[uint8][][2]int{inkOutline: edge, inkEye: eyes} {
+				for _, q := range qs {
+					if x, y := p.x+q[0], p.y+q[1]; x >= 0 && x < sc.W && y >= 0 && y < sc.H && sc.Pix[y*sc.W+x] == 0 {
+						sc.put(x, y, ink)
+					}
 				}
 			}
 		}
