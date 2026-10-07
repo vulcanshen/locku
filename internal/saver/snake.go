@@ -22,8 +22,10 @@ import (
 // apple, the snout touching it; the move it eats, the jaws are round the
 // apple — the upper three pixels over it and on behind, the lower two
 // under it; the move after, the mouth is shut, the apple in its throat
-// and a pixel of the body swelling behind the head. (The jaws opened
-// short of the apple at first, and the snake looked broken.) The apple
+// and nothing else (a pixel of the body swelled behind the crown, and in
+// the jaws too by mistake; user, 2026-10-07: a pixel that means
+// nothing). (The jaws opened short of the apple at first, and the snake
+// looked broken.) The apple
 // blinks in a colour of its own, at random, and keeps it all the way
 // through: an apple eaten goes down the body to the tail in the line of
 // the body, in its colour, and the body goes round it — three pixels
@@ -89,9 +91,6 @@ var (
 	// it and two on, the lower under it and one on, the link behind. The
 	// node is the apple's to draw.
 	snakeOpen = shape{{1, 0}, {2, 0}, {0, -1}, {1, -1}, {2, -1}, {0, 1}, {1, 1}}
-	// Swallowing, the head shut and the apple at its node: the body
-	// swelling, a pixel behind the crown.
-	snakeGulp = shape{{4, -1}}
 	// A lump: the body round an apple on its way through, which is at the
 	// node — three pixels over it (user, 2026-10-06: they were the
 	// apple's, two, beside the node, before the body went round it).
@@ -523,7 +522,7 @@ func (s *Snake) Draw(w, h int) Scene {
 			s.stamp(&sc, snakeFade, s.body[last], tdx, tdy, ink)
 			continue // the apple is the body now
 		case at == 0:
-			s.stamp(&sc, snakeGulp, c, dx, dy, ink)
+			// in the jaws or the throat: the head is all there is about it
 		case at == last:
 			tdx, tdy := s.way(c, s.body[at-1])
 			s.stamp(&sc, snakeEnd, c, tdx, tdy, ink)
