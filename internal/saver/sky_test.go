@@ -257,8 +257,10 @@ func TestRunnerSunYellowAndMoonRound(t *testing.T) {
 	}
 }
 
-// By night the runner is a silhouette (user, 2026-10-07): darker than all
-// of the night sky, so it is seen against it, and dark as at dusk, so
+// By night the runner is a silhouette (user, 2026-10-07): darker than the
+// night sky it runs against, so it is seen against it — and not crust,
+// a terminal's ground, or its squares run together — and dark as at
+// dusk, so
 // little changes from one to the other but the outline coming in — an
 // outline round it in a cool white — corners too, none under its feet —
 // and its eyes in the night's gold, and nothing they pass drawn over; by
@@ -336,16 +338,23 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		}
 	}
 	night, dusk, day := nightSky.look(1), duskSky.look(1), daySky.look(1)
-	if night.Inks[inkRunner] != "#11111b" || night.Inks[inkOutline] != "#cdd6f4" || night.Inks[inkEye] != "#f2b753" ||
+	if night.Inks[inkRunner] != "#1e1e2e" || night.Inks[inkOutline] != "#cdd6f4" || night.Inks[inkEye] != "#f2b753" ||
 		dusk.Inks[inkRunner] != "#313244" || day.Inks[inkRunner] != "#313244" ||
 		dusk.Inks[inkOutline] != "" || day.Inks[inkOutline] != "" || dusk.Inks[inkEye] != "" || day.Inks[inkEye] != "" {
 		t.Errorf("the runner by night %v, at dusk %v, by day %v", night.Inks, dusk.Inks, day.Inks)
 	}
-	// Darker than every row of the night sky, all three channels.
-	body := channels(night.Inks[inkRunner])
-	for _, g := range nightSky.look(31).Ground {
+	// Darker than the night sky from half way down, where it runs, all
+	// three channels; and ten or more above crust in each, so its squares
+	// show apart from the gaps between them on a terminal set in crust.
+	body, crust := channels(night.Inks[inkRunner]), channels("#11111b")
+	for _, g := range nightSky.look(31).Ground[15:] {
 		if sky := channels(g); body[0] >= sky[0] || body[1] >= sky[1] || body[2] >= sky[2] {
 			t.Errorf("the runner %s against the night sky %s", night.Inks[inkRunner], g)
+		}
+	}
+	for k := range body {
+		if body[k]-crust[k] < 10 {
+			t.Errorf("the runner %s against crust", night.Inks[inkRunner])
 		}
 	}
 }
