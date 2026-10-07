@@ -8,13 +8,16 @@ import (
 
 // The falling blocks (user, 2026-10-07): the seven tetrominoes, falling
 // and stacking, playing themselves, as the snake does — not in a narrow
-// well but across the whole screen, framed two pixels thick. A row full
+// well but across the whole screen, framed in grey — a pixel at the top
+// and the sides, two at the foot, the floor the stack stands on (user,
+// the same day; it was two all round). A row full
 // from wall to wall goes: it flashes white, goes from the middle out to
 // both ends, and the rows above come down. A block is two pixels by two
 // (user, the same day): a piece is four of them, a 2 × 2 square each.
 //
-// In the top corners are two boxes, walled as the frame is and part of
-// it: the left one holds the next piece, the right one the piece after
+// In the top corners are two boxes, walled a pixel thick as the frame's
+// sides are and part of it: the left one holds the next piece, the right
+// one the piece after
 // (user, the same day). Nothing is lettered: which is which is where it
 // is. The field is what is left: the whole width under the boxes and the
 // gap between them above, where the pieces come in from behind the top
@@ -28,7 +31,7 @@ import (
 // one of each in some order, so none is long in coming.
 //
 // A stack that reaches the top is the end (user, the same day): all of
-// it goes black, a block's row at a time from the top — the frame and
+// it goes black, a row at a time from the top — the frame and
 // the boxes too, or on a small field END would have their walls through
 // it — and END is lettered in red in the middle, in the lock's own pixel
 // letters, a block a pixel; two seconds, and a new game.
@@ -46,10 +49,14 @@ const KindTetromino = "tetromino"
 var tetroSpeeds = map[string]int{SpeedSlow: 5, SpeedNormal: 7, SpeedFast: 10, SpeedVeryFast: 14, SpeedSuperFast: 20}
 
 const (
-	tetroBlock  = 2 // a block's side in pixels (user, 2026-10-07)
-	tetroBorder = 2 // the frame's width in pixels: a block (user, the same day)
-	// A box is six blocks by four inside, the longest piece and some air,
-	// its wall a block thick inside the frame.
+	tetroBlock = 2 // a block's side in pixels (user, 2026-10-07)
+	// The frame's width in pixels: one at the top and the sides, two at
+	// the foot (user, the same day; it was two all round).
+	tetroEdge, tetroFloor = 1, 2
+	// A box is six blocks by four inside, the longest piece and some air.
+	// Its wall is the block beside that and the row under it, in which it
+	// is a pixel thick, against the inside — the field keeps to whole
+	// blocks; the wall's other pixel is the ground.
 	tetroBoxW, tetroBoxH = 6, 4
 	// The least field: a gap of four between the boxes, for the long
 	// piece lying down, and four rows under them.
@@ -71,7 +78,7 @@ const (
 // tetroRoom is the least field and its frame, never drawn larger: a
 // block is two pixels whatever the screen, and a larger screen is a
 // wider field.
-var tetroRoom = Room{W: 2*tetroBorder + tetroBlock*tetroMinCols, H: 2*tetroBorder + tetroBlock*tetroMinRows, Most: 1}
+var tetroRoom = Room{W: 2*tetroEdge + tetroBlock*tetroMinCols, H: tetroEdge + tetroFloor + tetroBlock*tetroMinRows, Most: 1}
 
 // The pieces in their boxes as they come in, in the order of their
 // colours below: I, O, T, S, Z, J, L.
@@ -156,7 +163,6 @@ type Tetromino struct {
 	rng        *rand.Rand
 	w, h       int     // the scene as last drawn; nothing moves before the first draw
 	cols, rows int     // the field, in blocks; none when too small
-	ox, oy     int     // the frame's top-left in the scene
 	cells      []uint8 // the stack: a block's ink, 0 none
 	bag        []int   // the pieces still to come from this bag
 	cur        int     // the piece falling
@@ -204,16 +210,16 @@ func (g *Tetromino) Inks() []string {
 }
 
 // reset is a new game on a w × h scene: the field as wide and as high
-// as the frame round it leaves, empty, and a piece coming in.
+// as the frame round it leaves, empty, and a piece coming in. The frame
+// is at the scene's top left; what is left over, less than a block, is
+// dark to the right and under it.
 func (g *Tetromino) reset(w, h int) {
 	g.w, g.h = w, h
-	g.cols, g.rows = (w-2*tetroBorder)/tetroBlock, (h-2*tetroBorder)/tetroBlock
+	g.cols, g.rows = (w-2*tetroEdge)/tetroBlock, (h-tetroEdge-tetroFloor)/tetroBlock
 	if g.cols < tetroMinCols || g.rows < tetroMinRows {
 		g.cols, g.rows = 0, 0
 		return
 	}
-	g.ox = (w - 2*tetroBorder - tetroBlock*g.cols) / 2
-	g.oy = (h - 2*tetroBorder - tetroBlock*g.rows) / 2
 	g.cells = make([]uint8, g.cols*g.rows)
 	g.bag, g.going, g.over, g.fx = nil, nil, false, 0
 	g.next, g.then = g.deal(), g.deal()
@@ -551,9 +557,14 @@ func (g *Tetromino) wiped(x, y int) bool {
 	return min(x-lo, hi-x) >= rings-gone
 }
 
+// size is the frame's, the field in it, in pixels.
+func (g *Tetromino) size() (int, int) {
+	return 2*tetroEdge + tetroBlock*g.cols, tetroEdge + tetroFloor + tetroBlock*g.rows
+}
+
 // block lights block x, y of the field in ink.
 func (g *Tetromino) block(sc *Scene, x, y int, ink uint8) {
-	px, py := g.ox+tetroBorder+tetroBlock*x, g.oy+tetroBorder+tetroBlock*y
+	px, py := tetroEdge+tetroBlock*x, tetroEdge+tetroBlock*y
 	for dy := 0; dy < tetroBlock; dy++ {
 		for dx := 0; dx < tetroBlock; dx++ {
 			sc.put(px+dx, py+dy, ink)
@@ -569,8 +580,8 @@ func (g *Tetromino) preview(sc *Scene, p, x int) {
 	for _, b := range blocks {
 		lx, hx, ly, hy = min(lx, b[0]), max(hx, b[0]), min(ly, b[1]), max(hy, b[1])
 	}
-	px := g.ox + tetroBorder + tetroBlock*x + (tetroBlock*tetroBoxW-tetroBlock*(hx-lx+1))/2
-	py := g.oy + tetroBorder + (tetroBlock*tetroBoxH-tetroBlock*(hy-ly+1))/2
+	px := tetroEdge + tetroBlock*x + (tetroBlock*tetroBoxW-tetroBlock*(hx-lx+1))/2
+	py := tetroEdge + (tetroBlock*tetroBoxH-tetroBlock*(hy-ly+1))/2
 	for _, b := range blocks {
 		for dy := 0; dy < tetroBlock; dy++ {
 			for dx := 0; dx < tetroBlock; dx++ {
@@ -593,24 +604,24 @@ func (g *Tetromino) Draw(w, h int) Scene {
 	if g.cols == 0 {
 		return sc
 	}
-	fw, fh := 2*tetroBorder+tetroBlock*g.cols, 2*tetroBorder+tetroBlock*g.rows
-	for k := 0; k < tetroBorder; k++ {
-		for i := 0; i < fw; i++ {
-			sc.put(g.ox+i, g.oy+k, inkTetroFrame)
-			sc.put(g.ox+i, g.oy+fh-1-k, inkTetroFrame)
-		}
-		for j := 0; j < fh; j++ {
-			sc.put(g.ox+k, g.oy+j, inkTetroFrame)
-			sc.put(g.ox+fw-1-k, g.oy+j, inkTetroFrame)
-		}
-	}
-	for y := 0; y <= tetroBoxH; y++ {
-		for x := 0; x < g.cols; x++ {
-			inside := y < tetroBoxH && (x < tetroBoxW || x > g.cols-1-tetroBoxW)
-			if g.boxed(x, y) && !inside {
-				g.block(&sc, x, y, inkTetroFrame)
+	fw, fh := g.size()
+	for x := 0; x < fw; x++ {
+		for y := 0; y < fh; y++ {
+			if y < tetroEdge || y >= fh-tetroFloor || x < tetroEdge || x >= fw-tetroEdge {
+				sc.put(x, y, inkTetroFrame)
 			}
 		}
+	}
+	// The boxes' walls, against their insides: down from the top of the
+	// frame to the corner, and along to it from the side.
+	in, down := tetroBlock*tetroBoxW, tetroEdge+tetroBlock*tetroBoxH
+	for y := tetroEdge; y <= down; y++ {
+		sc.put(tetroEdge+in, y, inkTetroFrame)
+		sc.put(fw-1-tetroEdge-in, y, inkTetroFrame)
+	}
+	for x := 0; x < in; x++ {
+		sc.put(tetroEdge+x, down, inkTetroFrame)
+		sc.put(fw-1-tetroEdge-x, down, inkTetroFrame)
 	}
 	g.preview(&sc, g.next, 0)
 	g.preview(&sc, g.then, g.cols-tetroBoxW)
@@ -640,24 +651,23 @@ func (g *Tetromino) Draw(w, h int) Scene {
 	return sc
 }
 
-// drawEnd blacks it all out from the top, the frame and all, a block's
-// row at a time, as far as the end has gone — a second for the whole —
-// and, then, letters END in red in the middle.
+// drawEnd blacks it all out from the top, the frame and all, a row at a
+// time, as far as the end has gone — a second for the whole — and, then,
+// letters END in red in the middle.
 func (g *Tetromino) drawEnd(sc *Scene) {
-	fw, fh := 2*tetroBorder+tetroBlock*g.cols, 2*tetroBorder+tetroBlock*g.rows
+	fw, fh := g.size()
 	n := g.frames(tetroCurtain)
-	rows := fh / tetroBlock
-	dark := tetroBlock * min(rows, (rows*(g.fx+1)+n-1)/n)
+	dark := min(fh, (fh*(g.fx+1)+n-1)/n)
 	for y := 0; y < dark; y++ {
 		for x := 0; x < fw; x++ {
-			sc.put(g.ox+x, g.oy+y, inkTetroBlack)
+			sc.put(x, y, inkTetroBlack)
 		}
 	}
 	if g.fx < n {
 		return
 	}
-	px := g.ox + (fw-tetroBlock*len(g.end[0]))/2
-	py := g.oy + (fh-tetroBlock*len(g.end))/2
+	px := (fw - tetroBlock*len(g.end[0])) / 2
+	py := (fh - tetroBlock*len(g.end)) / 2
 	for dy, row := range g.end {
 		for dx := 0; dx < len(row); dx++ {
 			if row[dx] != '#' {
