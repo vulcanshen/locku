@@ -223,9 +223,10 @@ A new shell has it. A screen already running gets it once detached and attached 
 | settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU__CONFIG` names it outright) |
 | data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU__DATA`) |
 
-No history, no cache, no session. `config.yaml` is written atomically, mode 0600, and can be edited by hand:
+No history, no cache, no session. `config.yaml` is written atomically, mode 0600, and can be edited by hand. It says its `version`: a file from an older locku is converted the first time it is read, and written back in full, saying the new one.
 
 ```yaml
+version: 1                # the file's shape; locku writes it
 auth: pin                 # the only check there is; pam is reserved
 pin_hash: "$2a$10$..."    # bcrypt; empty or missing = no PIN, any key unlocks
 profile: clock            # the active profile

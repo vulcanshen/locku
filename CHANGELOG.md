@@ -9,6 +9,7 @@
 
 ### Changed
 - The `dino` saver is now `runner`, and its `runner` setting `participants`, with the same values; a config file that says `dino` or `runner` is read as before. It no longer has `bg` / `fg`: its colours come with its `background`.
+- `config.yaml` says its `version`, now 1. A file without one — every file before — is converted the first time locku reads it, the dino and its runner renamed, and written back in full, saying `version: 1`; one from a later locku is read as it is and not written back.
 
 ## [0.2.0] - 2026-10-06
 ### Changed
