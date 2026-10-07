@@ -76,9 +76,9 @@ type Profile struct {
 	// The custom saver's own (2026-09-25): the program that draws, as
 	// sh -c runs it; empty is none, and the lock says so on its board.
 	Command string `yaml:"command,omitempty"`
-	// The snake's and the bouncing box's (user, 2026-10-06, 2026-10-07):
-	// how fast it goes, by name, one of saver.Speeds (2026-10-07; it was
-	// the snake's cells a second).
+	// The snake's, the bouncing box's and the falling blocks' (user,
+	// 2026-10-06, 2026-10-07): how fast it goes, by name, one of
+	// saver.Speeds (2026-10-07; it was the snake's cells a second).
 	Speed string `yaml:"speed,omitempty"`
 }
 
@@ -206,8 +206,9 @@ func NewProfile(name, kind string) Profile {
 		// Its speed and its time (user, 2026-10-07), and colours of its
 		// own (user, 2026-10-06).
 		return Profile{Name: name, Saver: kind, Time: saver.BounceTimeHM, Speed: saver.SpeedNormal}
-	case saver.KindSnake:
-		// Its speed alone: colours of its own (user, 2026-10-06).
+	case saver.KindSnake, saver.KindTetromino:
+		// Its speed alone: colours of its own (user, 2026-10-06; the
+		// falling blocks the same, 2026-10-07).
 		return Profile{Name: name, Saver: kind, Speed: saver.SpeedNormal}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
@@ -543,7 +544,7 @@ func tidy(p Profile, kind string) Profile {
 			p.Time = d.Time
 		}
 		return Profile{Name: p.Name, Saver: kind, Time: p.Time, Speed: p.Speed}
-	case kind == saver.KindSnake:
+	case kind == saver.KindSnake || kind == saver.KindTetromino:
 		// A speed it does not have is quietly the default, as a colour
 		// that is not one is — cells a second too, as it was before the
 		// speeds had names.

@@ -20,12 +20,13 @@
 
 ## 你會看到什麼
 
-五種 saver，每種可以生任意多個有名字的 profile，其中一個是啟用中的：
+六種 saver，每種可以生任意多個有名字的 profile，其中一個是啟用中的：
 
 - **clock**——整個終端機是一面 LED 點陣板：每個像素是一個 Nerd Font 方塊，暗格是 profile 的 `bg`、亮格是它的 `fg`。時間用全直角的 3 × 7 像素字型（或 3 × 5）畫，像七段顯示器，`HH MM` 或 `HH MM SS`，24 時制，不畫冒號；日期在下面，四種格式或關掉。`column` 直排把 `HH` / `MM` / `SS` 疊起來、字大好幾倍，日期在左邊。三種 size；塞不下就先去年、去秒、去日期，再降 size。只重畫有變的像素，用 shuffle 的方式揭露。
 - **runner**——Chrome 的離線小恐龍遊戲當螢幕保護：地面與障礙向左捲，草原上是仙人掌、沙漠裡是金字塔，暴龍自己跳過去，無限循環、不會死；不記分、不畫時間。一隻或兩隻、大或小，畫布自己取塞得下的最大倍率；跑的可以是暴龍，也可以是貓、兔子、長頸鹿或小精靈的鬼。天空是它自己的，從上到下漸層：白天有太陽、夜晚有月亮（世界是月光的灰藍，跑者是描著白色外框的深色剪影、眼睛是金色的），或 time-shifting——三分鐘一天，白天、黃昏（夕陽落在地平線上）、夜晚各一分鐘，下一段從右往左一格一格換上來。
 - **bounce**——一個裝著時間的框在板子上飄，撞到邊就反彈、換一個顏色；剛好撞進角落，它會把所有顏色閃一輪。可以設定速度（slow 到 super-fast 五段）與時間（`HH:MM` 或 `HH:MM:SS`）；顏色是它自己的。
 - **snake**——老 Nokia 的貪食蛇，自己玩：有空間時直奔果子，永遠不會撞到自己，一直玩到填滿整面，然後重來。它有頭：碰到果子、上下顎夾住、吞下去；果子閃著自己的顏色，吃下去也保持那個顏色，在身體那條線上用自己的慢節拍往尾巴走，看得到它穿過身體；到了尾巴變成身體，蛇換成那個顏色、長一節（開場的蛇是白色的）。每一節是一個點、相連的兩節之間亮兩格，蛇怎麼轉彎、哪裡只是並排看得出來。顏色是它自己的；唯一的設定是速度，從 slow 到 super-fast 五段可選。
+- **tetromino**——自己玩的俄羅斯方塊，不是窄窄的一口井，而是整個畫面，外面一圈灰框；下一個方塊在左上角的盒子裡等，再下一個在右上角。每個方塊從兩個盒子中間進場，自己找最低的位置落下去，會繞過牆、鑽到盒子下面。填滿的一列先閃白、從中間往兩邊消掉，上面的整排落下；堆到頂就結束：全部從上到下變黑、紅字 END，2 秒後重開一局。顏色是它自己的；唯一的設定是速度，從 slow 到 super-fast 五段可選。終端機小時比較常結束：80 × 24 大約每分鐘一次，120 × 36 以上很少。
 - **custom**——你自己的程式當畫面：例如 `cmatrix -b`，任何會畫畫面的東西，經 `sh -c` 跑。locku 管鎖、PIN 與整合；程式跑在 locku 開的 pty 上，輸出原樣直通，按鍵永遠到不了它。PIN 框直接疊在還在動的畫面上，解鎖時程式跟鎖一起結束。
 
 clock 各 size 需要的終端機（欄 × 列，`3x7` / `3x5`）：
@@ -125,8 +126,8 @@ locku pin reset
 
 兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，Property / Value 兩欄的表。`Tab`、`1`、`2` 在兩邊移動；`Enter` 進 `[2]` 或編輯一列；`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上是每一列的說明，在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。
 
-- **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 的 `speed`；bounce 的 `speed`、`time`；以及 clock 的 `bg` / `fg` 各三個 RGB slider，改的是草稿，`S` 才寫檔（`R` 丟掉；有未存草稿時 `q` 先問）。其他每一列一改就寫檔。
-- **Savers**——五種種類：clock、runner、bounce、snake、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
+- **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；以及 clock 的 `bg` / `fg` 各三個 RGB slider，改的是草稿，`S` 才寫檔（`R` 丟掉；有未存草稿時 `q` 先問）。其他每一列一改就寫檔。
+- **Savers**——六種種類：clock、runner、bounce、snake、tetromino、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
 - **Settings › preference**——PIN（設定；已設時 `Enter` 先驗目前的，再選 `New PIN` 或 `Remove PIN`）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
 
@@ -232,7 +233,7 @@ pin_hash: "$2a$10$..."    # bcrypt；空或缺欄位 = 無 PIN，任何鍵解鎖
 profile: clock            # 啟用中的 profile
 profiles:
   - name: clock
-    saver: clock          # clock / runner / bounce / snake / custom；建立後不改
+    saver: clock          # clock / runner / bounce / snake / tetromino / custom；建立後不改
     layout: row           # row / column
     size: medium          # small / medium / large：一個像素佔 1 / 2 / 3 格見方
     font: 3x7             # 3x7 / 3x5
@@ -254,6 +255,7 @@ savers:                   # 每種 saver 的預設值：新 profile 從這裡開
   runner: { saver: runner, participants: big, character: t-rex, scene: grassland, background: time-shifting }
   bounce: { saver: bounce, time: "HH:MM", speed: normal }
   snake: { saver: snake, speed: normal }
+  tetromino: { saver: tetromino, speed: normal }
   custom: { saver: custom, command: "" }
 show_status: true               # user@host · locked since 那一列
 pin_prompt_timeout: 30          # 幾秒沒按鍵框收起；0 永不收起

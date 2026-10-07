@@ -43,7 +43,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
-複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、runner、bounce、snake、custom），它們沒有名字、名字就是自己，不能新增刪除；
+複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、runner、bounce、snake、tetromino、custom），它們沒有名字、名字就是自己，不能新增刪除；
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
@@ -57,18 +57,18 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 
 | 列 | 值 |
 |---|---|
-| saver | `clock` / `runner` / `bounce` / `snake` / `custom` |
-| what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
+| saver | `clock` / `runner` / `bounce` / `snake` / `tetromino` / `custom` |
+| what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；tetromino 是 falling blocks, playing themselves, full rows going（2026-10-07）；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；這兩種也沒有顏色列 |
+| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；tetromino：只有 speed（2026-10-07）；這三種也沒有顏色列 |
 
 `[2]` 在 profile 上：
 
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
-| saver | `clock` / `runner` / `bounce` / `snake` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
+| saver | `clock` / `runner` / `bounce` / `snake` / `tetromino` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；runner 沒有 size，畫布自己取最大） |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
@@ -79,7 +79,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | scene | `grassland` / `desert`（runner：草原是仙人掌，沙漠是金字塔） | options popup（2026-09-24） |
 | background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | options popup |
 | command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
-| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake 與 bounce：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有） | options popup |
+| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake、bounce 與 tetromino：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有，tetromino 同日新增） | options popup |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；軌道底色反向，0 時全白、255 時全黑，暗的值才看得見；數字是 Mauve、沒有底色，跟其他列的值一樣（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 

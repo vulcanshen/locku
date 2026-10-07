@@ -56,9 +56,9 @@ func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 // name (2026-10-07; it was cells a second, typed), the cursor on the one
 // it is, normal to begin with, written at once.
 func TestSnakeHasItsSpeed(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k") // the snake, above the custom saver
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // the snake, above the falling blocks
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindSnake {
-		t.Fatalf("the snake sits above the custom saver, not %+v", it)
+		t.Fatalf("the snake sits above the falling blocks, not %+v", it)
 	}
 	v := m.View()
 	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "participants") {

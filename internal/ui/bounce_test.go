@@ -80,7 +80,7 @@ func TestSpellIsTheBoardsLettering(t *testing.T) {
 // draft to save or reset; a new profile of it is normal and HH:MM, and
 // P shows it.
 func TestBounceHasItsSpeedAndTime(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // the bouncing box, above the snake
+	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k") // the bouncing box, above the snake
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindBounce {
 		t.Fatalf("the bouncing box sits above the snake, not %+v", it)
 	}

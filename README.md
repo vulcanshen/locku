@@ -20,12 +20,13 @@
 
 ## What you see
 
-Five kinds of saver, as many named profiles of each as you like, one of them active:
+Six kinds of saver, as many named profiles of each as you like, one of them active:
 
 - **clock** — the terminal as one LED board: every pixel a Nerd Font square, dark in the profile's `bg`, lit in its `fg`. The time is drawn in a right-angled 3 × 7 pixel font (or 3 × 5), the look of a seven-segment display, as `HH MM` or `HH MM SS`, twenty-four hours, no colon; the date under it in one of four forms, or off. The `column` layout stacks `HH` / `MM` / `SS` and makes the digits several times bigger, the date to their left. Three sizes; what does not fit sheds the year, the seconds, then the date, before the size steps down. Only the pixels that change are redrawn, as a shuffled reveal.
 - **runner** — Chrome's offline dinosaur game as a screensaver: the ground and the obstacles scroll by, cacti on the grassland or pyramids in the desert, and the T-Rex jumps them by itself, for ever, never dying; no score, no clock. One runner or two, big or small, drawn as large as the terminal allows — the T-Rex, or a cat, a rabbit, a giraffe, or Pac-Man's ghost. Its sky is its own, shading down the screen: day, with the sun; night, with the moon, the world in its grey light and the runner a dark silhouette outlined in white, its eyes in gold; or time-shifting, a day every three minutes — a minute of day, a minute of dusk with the sun setting, a minute of night, the next coming in square by square from the right.
 - **bounce** — a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. Its settings are its speed, slow to super fast, and its time, `HH:MM` or `HH:MM:SS`; the colours are its own.
 - **snake** — the old Nokia game, playing itself: the snake makes for the apple while there is room, and never runs into itself, until it fills the board; then it starts again. It has a head: it reaches the apple, closes its jaws round it, and swallows; the apple blinks in a colour of its own and keeps it, and you can watch it go down the body at its own slow pace; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Each segment is a dot and each link between two is lit, so where the body turns can be told from where it merely lies alongside itself. Its colours are its own; its one setting is its speed, from slow to super fast.
+- **tetromino** — falling blocks playing themselves, not down a narrow well but across the whole screen, framed in grey; the next piece waits in a box in the top left corner and the one after it in the top right. Each piece comes in through the gap between the boxes and makes its own way down to the lowest place it can find, round the walls and under the boxes. A full row flashes white and goes from the middle out, and the rows above come down; a stack that reaches the top ends the game — everything goes black from the top down, END in red, and two seconds later a new game. The colours are its own; its one setting is its speed, from slow to super fast. On a small terminal the game ends more often: about every minute at 80 × 24, rarely from 120 × 36.
 - **custom** — a program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
 
 The terminal each clock size needs (columns × rows, `3x7` / `3x5`):
@@ -125,8 +126,8 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 
 Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — what each row means on preference's, tmux's or screen's `[2]`, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.
 
-- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's `speed`; bounce's `speed` and `time`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
-- **Savers** — the five kinds: clock, runner, bounce, snake, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
+- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
+- **Savers** — the six kinds: clock, runner, bounce, snake, tetromino, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
 - **Settings › preference** — the PIN (set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
 
@@ -232,7 +233,7 @@ pin_hash: "$2a$10$..."    # bcrypt; empty or missing = no PIN, any key unlocks
 profile: clock            # the active profile
 profiles:
   - name: clock
-    saver: clock          # clock / runner / bounce / snake / custom; fixed once made
+    saver: clock          # clock / runner / bounce / snake / tetromino / custom; fixed once made
     layout: row           # row / column
     size: medium          # small / medium / large: one pixel is 1 / 2 / 3 cells square
     font: 3x7             # 3x7 / 3x5
@@ -254,6 +255,7 @@ savers:                   # each kind's defaults: what a new profile starts as
   runner: { saver: runner, participants: big, character: t-rex, scene: grassland, background: time-shifting }
   bounce: { saver: bounce, time: "HH:MM", speed: normal }
   snake: { saver: snake, speed: normal }
+  tetromino: { saver: tetromino, speed: normal }
   custom: { saver: custom, command: "" }
 show_status: true               # the user@host · locked since row
 pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
