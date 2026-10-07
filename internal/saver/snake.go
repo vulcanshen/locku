@@ -417,6 +417,37 @@ func (s *Snake) cellAt(c int) (int, int) {
 	return s.ox + snakePitch*(c%s.cw), s.oy + snakePitch*(c/s.cw)
 }
 
+// round is where the body goes round an apple at segment i's node, as
+// pixels about it. Along a straight, the lump, on the head's side as the
+// head stands up; at a corner, every pixel about the node but the two
+// links and the inner corner between them — round the outside, so the
+// body is whole from one link to the other (user, 2026-10-06: at a
+// corner the lump stood off the link it turned to).
+func (s *Snake) round(i int) [][2]int {
+	c := s.body[i]
+	adx, ady := s.way(c, s.body[i-1])
+	if i+1 < len(s.body) {
+		if bdx, bdy := s.way(c, s.body[i+1]); adx != -bdx || ady != -bdy {
+			var out [][2]int
+			for y := -1; y <= 1; y++ {
+				for x := -1; x <= 1; x++ {
+					switch [2]int{x, y} {
+					case [2]int{0, 0}, [2]int{adx, ady}, [2]int{bdx, bdy}, [2]int{adx + bdx, ady + bdy}:
+					default:
+						out = append(out, [2]int{x, y})
+					}
+				}
+			}
+			return out
+		}
+	}
+	out := make([][2]int, len(snakeLump))
+	for k, p := range snakeLump {
+		out[k][0], out[k][1] = turn(p, adx, ady)
+	}
+	return out
+}
+
 // way is the step from cell from to the cell beside it, to.
 func (s *Snake) way(from, to int) (int, int) { return to%s.cw - from%s.cw, to/s.cw - from/s.cw }
 
@@ -463,8 +494,10 @@ func (s *Snake) Draw(w, h int) Scene {
 		case l.at == 0:
 			s.stamp(&sc, snakeGulp, c, dx, dy, ink)
 		case l.at > 0:
-			ldx, ldy := s.way(c, s.body[at-1])
-			s.stamp(&sc, snakeLump, c, ldx, ldy, ink)
+			x, y := s.cellAt(c)
+			for _, p := range s.round(l.at) {
+				sc.put(x+p[0], y+p[1], ink)
+			}
 		}
 		x, y := s.cellAt(c)
 		sc.put(x, y, uint8(1+l.colour))

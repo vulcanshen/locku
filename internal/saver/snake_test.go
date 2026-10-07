@@ -530,3 +530,78 @@ func TestSnakeSpeed(t *testing.T) {
 		}
 	}
 }
+
+// The body goes round an apple on its way down (user, 2026-10-06): at
+// any segment — along a straight, at a corner — the snake's colour runs
+// on unbroken from the link on one side of the apple to the link on the
+// other; at a corner round the outside, the pixels about the apple but
+// the two links and the dark inner corner between them.
+func TestSnakeBodyGoesRoundTheApple(t *testing.T) {
+	s := NewSnake(6, SnakeSpeedDefault)
+	s.Draw(76, 31)
+	corners, straights := 0, 0
+	for moment := 0; moment < 20; moment++ {
+		for i := 0; i < 137; i++ {
+			s.Step()
+		}
+		corners, straights = roundEverySegment(t, s, corners, straights)
+	}
+	if corners == 0 || straights == 0 {
+		t.Errorf("%d corners, %d straights", corners, straights)
+	}
+}
+
+// roundEverySegment puts an apple in each segment of s but the ends in
+// turn, and looks at the body round it.
+func roundEverySegment(t *testing.T, s *Snake, corners, straights int) (int, int) {
+	t.Helper()
+	bean := otherColour(s.rng, s.colour)
+	ink := uint8(1 + s.colour)
+	for i := 1; i < len(s.body)-1; i++ {
+		s.lumps = []lump{{i, bean}}
+		sc := s.Draw(76, 31)
+		x, y := s.cellAt(s.body[i])
+		at := func(p [2]int) uint8 { return sc.Pix[(y+p[1])*sc.W+x+p[0]] }
+		if at([2]int{0, 0}) != uint8(1+bean) {
+			t.Fatalf("segment %d: the apple is ink %d", i, at([2]int{0, 0}))
+		}
+		adx, ady := s.way(s.body[i], s.body[i-1])
+		bdx, bdy := s.way(s.body[i], s.body[i+1])
+		a, b := [2]int{adx, ady}, [2]int{bdx, bdy}
+		// From one link to the other through the snake's colour about the
+		// apple, a step at a time.
+		seen, todo := map[[2]int]bool{a: true}, [][2]int{a}
+		for len(todo) > 0 {
+			p := todo[0]
+			todo = todo[1:]
+			for _, d := range [4][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {
+				q := [2]int{p[0] + d[0], p[1] + d[1]}
+				if q[0] < -1 || q[0] > 1 || q[1] < -1 || q[1] > 1 || seen[q] || at(q) != ink {
+					continue
+				}
+				seen[q] = true
+				todo = append(todo, q)
+			}
+		}
+		if !seen[b] {
+			t.Fatalf("segment %d: the body does not go round the apple from %v to %v", i, a, b)
+		}
+		if a == [2]int{-b[0], -b[1]} {
+			straights++
+			continue
+		}
+		corners++
+		for py := -1; py <= 1; py++ {
+			for px := -1; px <= 1; px++ {
+				p := [2]int{px, py}
+				if p == [2]int{0, 0} {
+					continue
+				}
+				if inner := p == [2]int{a[0] + b[0], a[1] + b[1]}; (at(p) == ink) == inner {
+					t.Fatalf("segment %d, a corner: the pixel %v is ink %d", i, p, at(p))
+				}
+			}
+		}
+	}
+	return corners, straights
+}
