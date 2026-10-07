@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/charmbracelet/lipgloss"
 
@@ -74,10 +75,11 @@ func TestSpellIsTheBoardsLettering(t *testing.T) {
 	}
 }
 
-// On the settings screen the bouncing box is a saver with nothing to
-// set: no rows of its own, no colours, and so no draft to save or reset
-// — a profile of it is its name and its saver, and P shows it.
-func TestBounceHasNothingToSet(t *testing.T) {
+// On the settings screen the bouncing box has its speed and its time to
+// set (user, 2026-10-07), each chosen from a list, and no colours, so no
+// draft to save or reset; a new profile of it is normal and HH:MM, and
+// P shows it.
+func TestBounceHasItsSpeedAndTime(t *testing.T) {
 	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // the bouncing box, above the snake
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindBounce {
 		t.Fatalf("the bouncing box sits above the snake, not %+v", it)
@@ -87,7 +89,7 @@ func TestBounceHasNothingToSet(t *testing.T) {
 	}
 	m = m.press("n", "enter")
 	it := m.sideAt()
-	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "bounce", Saver: saver.KindBounce}) {
+	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "bounce", Saver: saver.KindBounce, Time: "HH:MM", Speed: "normal"}) {
 		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
 	}
 	keys := m.press("2", " ").menu.menuKeys()
@@ -97,9 +99,41 @@ func TestBounceHasNothingToSet(t *testing.T) {
 	if v := m.press("2").View(); strings.Contains(v, " bg ") || !strings.Contains(v, "bounce") {
 		t.Errorf("its rows:\n%s", v)
 	}
+	m = m.press("2", "j")
+	if r := m.rowAt(); r.kind != rowSpeed || r.value != "normal" {
+		t.Fatalf("the row under the name: %+v", r)
+	}
+	m = m.press("j")
+	if r := m.rowAt(); r.kind != rowTime || r.label != "time" || r.value != "HH:MM" {
+		t.Fatalf("the row under the speed: %+v", r)
+	}
+	m = m.press("enter")
+	if !m.options.isInteractive() || len(m.options.items) != 2 || m.options.items[1].label != "HH:MM:SS" {
+		t.Fatalf("options %+v", m.options.items)
+	}
+	m = m.press("j", "enter", "k", "enter", "j", "j", "enter")
+	if p := m.cfg.Profiles[it.ref]; p.Time != "HH:MM:SS" || p.Speed != "very-fast" || saved(t).Profiles[it.ref] != p {
+		t.Errorf("chose %+v", p)
+	}
 	if m = m.press("P"); m.preview == nil {
 		t.Fatal("P shows nothing")
 	} else if _, ok := m.preview.game.(*saver.Bounce); !ok {
 		t.Errorf("the preview's game is %T", m.preview.game)
+	}
+}
+
+// The lock runs the box at the profile's speed and time (user,
+// 2026-10-07): super fast is twenty-eight pixels a second.
+func TestBounceLockRunsAtTheProfileSpeed(t *testing.T) {
+	m := testLock(t, "1234", func(c *config.Config) {
+		p := config.NewProfile("box", saver.KindBounce)
+		p.Speed, p.Time = saver.SpeedSuperFast, saver.BounceTimeHMS
+		c.Profiles, c.Profile = []config.Profile{p}, "box"
+	})
+	if d := m.game.Next(at).Sub(at); d != time.Second/28 {
+		t.Errorf("a move every %v super fast", d)
+	}
+	if room := m.game.Room(); room.W != 3*35 {
+		t.Errorf("the room %+v for HH:MM:SS", room)
 	}
 }

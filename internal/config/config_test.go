@@ -365,18 +365,24 @@ func TestOldVariableNamesAreNotRead(t *testing.T) {
 }
 
 // The bouncing box has no settings and colours of its own (user,
-// 2026-10-06): whatever else a bounce profile carries in the file goes,
-// and it is written back as its name and its saver.
-func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
-	p := write(t, "profile: box\nprofiles:\n  - name: box\n    saver: bounce\n    bg: \"#000000\"\n    fg: \"#ffffff\"\n    size: large\n    runner: big\n    command: cmatrix\n")
+// 2026-10-06): whatever else a bounce profile carries in the file goes
+// but its speed and its time (user, 2026-10-07) — normal and HH:MM
+// unless it says, or says one it does not have, the clock's HH MM among
+// them — and it is written back as its name, its saver and those.
+func TestABounceProfileIsItsSpeedAndTime(t *testing.T) {
+	p := write(t, "profile: box\nprofiles:\n  - name: box\n    saver: bounce\n    bg: \"#000000\"\n    fg: \"#ffffff\"\n    size: large\n    runner: big\n    command: cmatrix\n    speed: fast\n    time: \"HH:MM:SS\"\n"+
+		"  - name: old\n    saver: bounce\n    time: HH MM\n    speed: 12\n")
 	cfg, note := LoadFile(p)
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if s, ok := cfg.Active(); !ok || s != (Profile{Name: "box", Saver: "bounce"}) {
+	if s, ok := cfg.Active(); !ok || s != (Profile{Name: "box", Saver: "bounce", Time: "HH:MM:SS", Speed: "fast"}) {
 		t.Errorf("the bounce profile %+v", s)
 	}
-	if n := cfg.NewProfile("b", "bounce"); n != (Profile{Name: "b", Saver: "bounce"}) {
+	if o := cfg.Profiles[1]; o != (Profile{Name: "old", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
+		t.Errorf("one with a time and a speed it does not have %+v", o)
+	}
+	if n := cfg.NewProfile("b", "bounce"); n != (Profile{Name: "b", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
 		t.Errorf("a new one %+v", n)
 	}
 	if err := SaveFile(p, cfg); err != nil {
@@ -384,7 +390,7 @@ func TestABounceProfileIsItsNameAndSaver(t *testing.T) {
 	}
 	body, _ := os.ReadFile(p)
 	if s := string(body); !strings.Contains(s, "  - name: box\n      saver: bounce\n") || strings.Contains(s, "#000000") || strings.Contains(s, "cmatrix") ||
-		!strings.Contains(s, "    bounce:\n        saver: bounce\n    clock:") {
+		!strings.Contains(s, "    bounce:\n        saver: bounce\n        time: HH:MM\n        speed: normal\n    clock:") {
 		t.Errorf("saved:\n%s", s)
 	}
 }

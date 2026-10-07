@@ -61,7 +61,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：什麼都沒有；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；這兩種也沒有顏色列 |
+| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；這兩種也沒有顏色列 |
 
 `[2]` 在 profile 上：
 
@@ -72,14 +72,14 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | layout | `row` / `column` | options popup，cursor 在目前值（clock） |
 | size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；runner 沒有 size，畫布自己取最大） |
 | font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
-| time | `HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號） | options popup，cursor 在目前值 |
+| time | clock：`HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號）；bounce：`HH:MM` / `HH:MM:SS`，畫出冒號（2026-10-07） | options popup，cursor 在目前值 |
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
 | participants | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（runner，2026-10-07 前叫 `runner`：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
 | character | `t-rex` / `cat` / `rabbit` / `giraffe` / `ghost`（runner：跑的是什麼，2026-10-06；`giraffe` 2026-10-07 前叫 `horse`） | options popup |
 | scene | `grassland` / `desert`（runner：草原是仙人掌，沙漠是金字塔） | options popup（2026-09-24） |
 | background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | options popup |
 | command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
-| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake：跑多快，預設 `normal`；2026-10-07，原本是每秒幾格的 number 框） | options popup |
+| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake 與 bounce：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有） | options popup |
 | bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
 | R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；軌道底色反向，0 時全白、255 時全黑，暗的值才看得見；數字是 Mauve、沒有底色，跟其他列的值一樣（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
 

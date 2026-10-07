@@ -105,7 +105,11 @@ func (m AppModel) actions() []action {
 	case rowFont:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "3x7, or the shorter 3x5", run: (*AppModel).chooseFont})
 	case rowTime:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "one of four shapes", run: (*AppModel).chooseTime})
+		hint := "one of four shapes"
+		if p, _, _ := m.subject(); p.Saver == saver.KindBounce {
+			hint = "hours and minutes, or the seconds too"
+		}
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: hint, run: (*AppModel).chooseTime})
 	case rowDate:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "off, or one of four shapes", run: (*AppModel).chooseDate})
 	case rowChannel:
@@ -127,7 +131,7 @@ func (m AppModel) actions() []action {
 	case rowWrongPINCooldown:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	case rowSpeed:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how fast it runs", run: (*AppModel).chooseSpeed})
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how fast it goes", run: (*AppModel).chooseSpeed})
 	case rowConf:
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the file the block goes into", run: (*AppModel).editPath})
 	case rowIdle:
@@ -526,7 +530,11 @@ func (m *AppModel) chooseFont() tea.Cmd {
 }
 
 func (m *AppModel) chooseTime() tea.Cmd {
-	return m.choose("time", saver.TimeFormats, func(p config.Profile) string { return p.Time })
+	times := saver.TimeFormats
+	if p, _, _ := m.subject(); p.Saver == saver.KindBounce {
+		times = saver.BounceTimes
+	}
+	return m.choose("time", times, func(p config.Profile) string { return p.Time })
 }
 
 func (m *AppModel) chooseDate() tea.Cmd {

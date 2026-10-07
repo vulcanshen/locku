@@ -8,24 +8,40 @@ import (
 // The bouncing box (user, 2026-09-27, made 2026-10-06): the old video
 // recorder's screensaver — a box drifts across the screen, and every
 // edge it meets sends it back the other way in another colour. It has
-// the time in it, HH MM, so it is a clock too (user, 2026-10-06), and
-// it moves, so nothing stays lit in one place. Run into a corner, edge
-// and edge at once, it flashes through every colour it has: the thing
+// the time in it, so it is a clock too (user, 2026-10-06), and it
+// moves, so nothing stays lit in one place. Run into a corner, edge and
+// edge at once, it flashes through every colour it has: the thing
 // everyone watching it waits for.
 //
 // Its colours are its own (user, 2026-10-06: a saver of many colours
-// brings them, and has no bg / fg). It has no settings at all.
+// brings them, and has no bg / fg). Its settings are its speed, picked
+// by name as the snake's is, and its time, HH:MM or HH:MM:SS, with
+// colons — it has no size to keep small (user, 2026-10-07; it had none,
+// and HH MM).
 
 const KindBounce = "bounce"
 
-// BounceFrame is the time between two frames: ten a second, a pixel
-// each way a frame.
-const BounceFrame = 100 * time.Millisecond
+// The bouncing box's times (user, 2026-10-07): hours and minutes, or the
+// seconds too.
+const (
+	BounceTimeHM  = "HH:MM"
+	BounceTimeHMS = "HH:MM:SS"
+)
+
+// BounceTimes are the bouncing box's times, HH:MM the default.
+var BounceTimes = []string{BounceTimeHM, BounceTimeHMS}
+
+// bounceSpeeds are its speeds in pixels a second, a pixel each way a
+// frame: normal ten, as it always went, and each about 1.4 times the one
+// before, as the snake's; twenty-eight at most, short of the thirty
+// frames a second the lock draws at most.
+var bounceSpeeds = map[string]int{SpeedSlow: 7, SpeedNormal: 10, SpeedFast: 14, SpeedVeryFast: 20, SpeedSuperFast: 28}
 
 const (
-	bouncePad   = 2 // dark pixels between the frame and the time
-	bounceRooms = 3 // the box is about a third of the screen each way
-	bounceMost  = 4 // and drawn at most four times over
+	bounceBorder = 2 // the frame's width (user, 2026-10-07: thicker; it was a pixel)
+	bouncePad    = 2 // dark pixels between the frame and the time
+	bounceRooms  = 3 // the box is about a third of the screen each way
+	bounceMost   = 4 // and drawn at most four times over
 )
 
 // Bounce is one box on its way.
@@ -39,19 +55,31 @@ type Bounce struct {
 	dx, dy int // a pixel a frame, each way
 	ink    int // the box's colour, in ownColours
 	flash  int // frames of a corner's flash still to come
+	frame  time.Duration
+	layout string // the time, as Go lays it out
 }
 
-// NewBounce is a box from its first frame. now is the time it shows;
-// spell sets a line in the board's pixel font, as rows of '#' and '.'.
-// The same seed is the same box.
-func NewBounce(seed uint64, now func() time.Time, spell func(string) []string) *Bounce {
-	b := &Bounce{
-		rng:   rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
-		now:   now,
-		spell: spell,
+// NewBounce is a box from its first frame, at a speed out of Speeds and
+// with a time out of BounceTimes — normal and HH:MM for any other. now
+// is the time it shows; spell sets a line in the board's pixel font, as
+// rows of '#' and '.'. The same seed is the same box.
+func NewBounce(seed uint64, now func() time.Time, spell func(string) []string, speed, times string) *Bounce {
+	n, ok := bounceSpeeds[speed]
+	if !ok {
+		n = bounceSpeeds[SpeedNormal]
 	}
-	t := spell("00 00")
-	b.bw, b.bh = len(t[0])+2*(bouncePad+1), len(t)+2*(bouncePad+1)
+	b := &Bounce{
+		rng:    rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)),
+		now:    now,
+		spell:  spell,
+		frame:  time.Second / time.Duration(n),
+		layout: "15:04",
+	}
+	if times == BounceTimeHMS {
+		b.layout = "15:04:05"
+	}
+	t := spell(time.Time{}.Format(b.layout))
+	b.bw, b.bh = len(t[0])+2*(bouncePad+bounceBorder), len(t)+2*(bouncePad+bounceBorder)
 	b.ink = b.rng.IntN(len(ownColours))
 	b.dx, b.dy = 1-2*b.rng.IntN(2), 1-2*b.rng.IntN(2)
 	return b
@@ -63,7 +91,7 @@ func (b *Bounce) Room() Room {
 }
 
 // Next is when the next frame is due.
-func (b *Bounce) Next(now time.Time) time.Time { return now.Add(BounceFrame) }
+func (b *Bounce) Next(now time.Time) time.Time { return now.Add(b.frame) }
 
 // Inks are the ground and the box's colours.
 func (b *Bounce) Inks() []string { return ownInks() }
@@ -115,24 +143,26 @@ func (b *Bounce) place(w, h int) {
 	b.x, b.y = min(b.x, max(0, w-b.bw)), min(b.y, max(0, h-b.bh))
 }
 
-// Draw is the frame at w × h pixels: the box's frame, and the time in
-// it, in the box's colour.
+// Draw is the frame at w × h pixels: the box's frame, two pixels
+// thick, and the time in it, in the box's colour.
 func (b *Bounce) Draw(w, h int) Scene {
 	if w != b.w || h != b.h {
 		b.place(w, h)
 	}
 	sc := newScene(w, h)
 	ink := uint8(1 + b.ink)
-	for i := 0; i < b.bw; i++ {
-		sc.put(b.x+i, b.y, ink)
-		sc.put(b.x+i, b.y+b.bh-1, ink)
+	for k := 0; k < bounceBorder; k++ {
+		for i := 0; i < b.bw; i++ {
+			sc.put(b.x+i, b.y+k, ink)
+			sc.put(b.x+i, b.y+b.bh-1-k, ink)
+		}
+		for j := 0; j < b.bh; j++ {
+			sc.put(b.x+k, b.y+j, ink)
+			sc.put(b.x+b.bw-1-k, b.y+j, ink)
+		}
 	}
-	for j := 0; j < b.bh; j++ {
-		sc.put(b.x, b.y+j, ink)
-		sc.put(b.x+b.bw-1, b.y+j, ink)
-	}
-	t := b.spell(b.now().Format("15 04"))
-	ox, oy := b.x+(b.bw-len(t[0]))/2, b.y+bouncePad+1
+	t := b.spell(b.now().Format(b.layout))
+	ox, oy := b.x+(b.bw-len(t[0]))/2, b.y+bouncePad+bounceBorder
 	for dy, row := range t {
 		for dx := 0; dx < len(row); dx++ {
 			if row[dx] == '#' {

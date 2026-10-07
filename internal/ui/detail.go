@@ -196,11 +196,15 @@ func (m AppModel) anyDirty() bool {
 
 // fieldRows is a saver's own settings for p: the clock's shapes and
 // size, the run's runner and scene, the custom saver's command, the
-// snake's speed (user, 2026-10-06) — or none, the bouncing box's.
+// snake's speed (user, 2026-10-06), the bouncing box's speed and time
+// (user, 2026-10-07).
 func fieldRows(p config.Profile) []row {
 	value := valueColor
 	if p.Saver == saver.KindBounce {
-		return nil
+		return []row{
+			{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true},
+			{kind: rowTime, label: "time", value: p.Time, color: value, stop: true},
+		}
 	}
 	if p.Saver == saver.KindSnake {
 		return []row{{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true}}
