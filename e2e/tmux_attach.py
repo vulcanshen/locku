@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """End to end, on a real tmux with the real binary (function.md §12):
-the settings screen's Integration › tmux › activate writes the block,
-the bind-key typed there included; on a server started on it, `locku`
+the settings screen's Integration › tmux › activate writes locku's own
+file, the bind-key typed there included, and the line in tmux.conf that
+reads it; on a server started on it, `locku`
 locks every client and marks the server; a client attaching to ANY
 session meanwhile is locked by the hook; unlocking clears the mark, and
 a client attaching then is not locked; a terminal that dies under the
@@ -27,6 +28,7 @@ os.symlink(LOCKU, os.path.join(binDir, "locku"))
 cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 conf = os.path.join(work, "tmux.conf")
+own = os.path.join(cfgDir, "locku.tmux.conf")  # locku's own file, which conf reads
 with open(os.path.join(cfgDir, "config.yaml"), "w") as f:
     f.write('tmux:\n  conf: "' + conf + '"\n')
 # TMUX_TMPDIR keeps every tmux here away from the user's own server.
@@ -132,9 +134,12 @@ def settings(*keys):
 # [2], down past the path, the lock and the idle time to bind-key and l
 # typed into it, back up to activate, Enter, and Enter on the confirm.
 screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
-text = open(conf).read() if os.path.exists(conf) else ""
-check("activate from the settings screen wrote the block, every line marked, the lock command absolute, the key bound",
-      "# >>> locku >>>" in text and "client-attached[90]" in text and 'lock-command "/' in text
+block = open(conf).read() if os.path.exists(conf) else ""
+text = open(own).read() if os.path.exists(own) else ""
+check("activate from the settings screen wrote the block into tmux.conf: one line, reading locku's own file by ~",
+      "# >>> locku >>>" in block and "\nsource-file -q ~/cfg/locku.tmux.conf " in block and "lock-command" not in block)
+check("and locku's own file: every line marked, the lock command absolute, the key bound",
+      "client-attached[90]" in text and 'lock-command "/' in text
       and "socket_path" in text and "locku=lock-server" in text and "bind-key l lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
 check("the screen said so", b"wrote" in screen)
@@ -143,7 +148,7 @@ subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.D
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
 time.sleep(1.5)
 tmux("new-session", "-d", "-s", "u")  # a second session, nobody on it
-check("the server took the block: alias, hooks and the key",
+check("the server read locku's file through tmux.conf: alias, hooks and the key",
       "locku=lock-server" in tmux("show", "-s", "command-alias") and "client-attached[90]" in tmux("show-hooks", "-g")
       and "lock-server" in tmux("list-keys", "-T", "prefix"))
 
@@ -194,22 +199,24 @@ tmux("kill-server")
 kill(pd)
 
 # 6. lock-session, chosen on the screen while activate is on AND a server
-# runs on the lock-server block: the file is rewritten at once, and the
-# running server takes the whole block — the alias, the key, the session
-# hook, each session's own lock-command — with a stale mark cleared.
+# runs on the lock-server lines: locku's file is rewritten at once,
+# tmux.conf is left as it is, and the running server takes the whole
+# file — the alias, the key, the session hook, each session's own
+# lock-command — with a stale mark cleared.
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
 time.sleep(1.5)
 tmux("new-session", "-d", "-s", "u")
 tmux("set", "-g", "@locked", "1")  # a mark left over, which a switch must clear
 screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"j", b"\r")
-text = open(conf).read()
-check("lock-session chosen on the screen: the alias, the key and the session hook are in the file",
+text = open(own).read()
+check("lock-session chosen on the screen leaves tmux.conf as it was", open(conf).read() == block)
+check("lock-session chosen on the screen: the alias, the key and the session hook are in locku's file",
       "locku=lock-session" in text and "bind-key l lock-session" in text and "session-created[90]" in text
       and "-t '#{session_id}'" in text and "lock-server" not in text)
 # A session is named with its colon: a bare name is tried as a window
 # name's prefix first, and u's window is called after its shell (measured
 # 2026-09-25: -t t found u's window "tmux").
-check("the running server took the block: alias, key, hook, and each session's own lock-command",
+check("the running server took the file: alias, key, hook, and each session's own lock-command",
       "locku=lock-session" in tmux("show", "-s", "command-alias") and "session-created[90]" in tmux("show-hooks", "-g")
       and "lock-session" in tmux("list-keys", "-T", "prefix")
       and "-t '$0'" in tmux("show", "-t", "t:", "-v", "lock-command") and "-t '$1'" in tmux("show", "-t", "u:", "-v", "lock-command"))
@@ -236,7 +243,8 @@ for p in (pa, pb, pe):
 # 7. Deactivate from the screen: activate is the first row, Enter, then
 # Enter on the confirm.
 screen = settings(b"G", b"k", b"k", b"2", b"\r", b"\r")
-check("deactivate from the settings screen took the block out", "locku" not in open(conf).read())
+check("deactivate from the settings screen took the block out, and locku's own file away",
+      "locku" not in open(conf).read() and not os.path.exists(own))
 check("the screen said so", b"removed" in screen)
 
 print("ALL OK" if ok else "SOMETHING FAILED")

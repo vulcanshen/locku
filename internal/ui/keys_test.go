@@ -87,7 +87,7 @@ func TestKeyReferenceKeys(t *testing.T) {
 		t.Errorf("the Space menu's ?:\n%s", s)
 	}
 	tmux := m.press("G", "k", "k", "2", "?")
-	g := line(helpLines(tmux), "locku's block is in the file")
+	g := line(helpLines(tmux), "the file reads locku's own")
 	if !has(fgBefore(g, "activate"), handColor) || has(g, focusColor) {
 		t.Errorf("tmux's glossary: the name is not a key: %q", g)
 	}

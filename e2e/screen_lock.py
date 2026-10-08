@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """End to end, on a real GNU screen with the real binary (function.md
-§12): the settings screen's Integration › screen › activate writes the
-block into the screenrc, the bind typed there included, and LOCKPRG into
-the shell rc; a screen already running takes the idle time and the key
+§12): the settings screen's Integration › screen › activate writes
+locku's own screenrc, the bind typed there included, the line in the
+screenrc that reads it, and LOCKPRG into the shell rc; a screen already running takes the idle time and the key
 at once (`screen -X`); on a screen started on the file with LOCKPRG in
 its environment, C-a x shows locku's board, and so does the bound key;
 idle set to 2 on the screen while activate is on is in the file at once
@@ -26,6 +26,7 @@ os.symlink(LOCKU, os.path.join(binDir, "locku"))
 cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 rc = os.path.join(work, "screenrc")
+own = os.path.join(cfgDir, "locku.screenrc")  # locku's own file, which rc reads
 with open(rc, "w") as f:
     f.write("startup_message off\n")
 with open(os.path.join(cfgDir, "config.yaml"), "w") as f:
@@ -127,11 +128,13 @@ check("a screen is running on its own SCREENDIR", ".t\t" in screen("-ls"))
 # [2], down past the path and the idle time to bind and l typed into it,
 # back up to activate, Enter, and Enter on the confirm.
 shown = settings(b"G", b"k", b"2", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
-text = open(rc).read()
-block = text[text.find("# >>> locku >>>"):text.find("# <<< locku <<<")].splitlines()[1:]
-check("activate from the settings screen wrote the block, every line marked, the idle time and the key bound, the user's line kept",
-      "# >>> locku >>>" in text and "idle 300 lockscreen" in text and "bind l lockscreen" in text
-      and text.startswith("startup_message off\n") and block and all("# locku" in l for l in block))
+users = open(rc).read()
+text = open(own).read() if os.path.exists(own) else ""
+lines = [l for l in text.splitlines() if l and not l.startswith("#")]
+check("activate from the settings screen wrote the block into the screenrc: one line, reading locku's own file by $HOME, the user's line kept",
+      users.startswith("startup_message off\n") and "\nsource $HOME/cfg/locku.screenrc " in users and "lockscreen" not in users)
+check("and locku's own file: every line marked, the idle time and the key bound",
+      "idle 300 lockscreen" in text and "bind l lockscreen" in text and lines and all("# locku" in l for l in lines))
 prof = open(profile).read() if os.path.exists(profile) else ""
 check("LOCKPRG went into ~/.profile (SHELL=/bin/sh), locku by its absolute path, marked",
       "export LOCKPRG=" + os.path.join(binDir, "locku") in prof and "# locku" in prof)
@@ -154,7 +157,8 @@ check("A shows the board after C-a l, bound live", board(oa))
 unlock(fa)
 del oa[:]
 
-# 3. A screen started on the file now: the bind is read from the file.
+# 3. A screen started on the file now: the bind is read from locku's
+# file, through the screenrc's line.
 pb, fb, ob = spawn(["screen", "-c", rc, "-S", "u"], screenEnv)
 time.sleep(1.5)
 os.write(fb, b"\x01l")
@@ -168,7 +172,8 @@ kill(pb)
 # 4. idle 2 typed on the screen while activate is on: the file is
 # rewritten at once, the running screen takes it, and locks by itself.
 shown = settings(b"G", b"k", b"2", b"j", b"j", b"\r", b"\x15", b"2", b"\r")
-check("idle 2 chosen on the screen is in the file at once", "idle 2 lockscreen" in open(rc).read())
+check("idle 2 chosen on the screen is in locku's file at once", "idle 2 lockscreen" in open(own).read())
+check("and the screenrc is left as it was", open(rc).read() == users)
 check("the screen said so", b"wrote" in shown)
 time.sleep(2.5)
 check("A locks by itself after 2 idle seconds", board(oa))
@@ -179,7 +184,8 @@ del oa[:]
 # Enter on the confirm. The files lose the block; the running screen
 # loses the idle timer and the key.
 shown = settings(b"G", b"k", b"2", b"\r", b"\r")
-check("deactivate from the settings screen took the block out of the screenrc", "locku" not in open(rc).read() and "startup_message off" in open(rc).read())
+check("deactivate from the settings screen took the block out of the screenrc, and locku's own file away",
+      "locku" not in open(rc).read() and "startup_message off" in open(rc).read() and not os.path.exists(own))
 check("and out of ~/.profile", "LOCKPRG" not in open(profile).read())
 check("the screen said so", b"removed" in shown)
 # A may have idled into a lock again meanwhile: a key ends it either way.

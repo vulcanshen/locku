@@ -1,9 +1,13 @@
 // Package setup writes the lock into tmux's and screen's configuration
 // and takes it out again — Integration › activate on the settings
-// screen (function.md §6.2). Only a managed block is ever touched — between two marker
-// lines, every line of it marked `# locku` so it reads as locku's when
-// met on its own — so running it again replaces the block and nothing
-// else, and a hand-written file keeps every other line.
+// screen (function.md §6.2). What the lock needs is written into a file
+// of locku's own, next to its config.yaml, and the tool's file gets one
+// line that reads it (user, 2026-10-08): the user's file is touched when
+// activate is turned and not when a row changes, and holds nothing of
+// this machine's. That line is a managed block — between two marker
+// lines, marked `# locku` so it reads as locku's when met on its own —
+// so running it again replaces the block and nothing else, and a
+// hand-written file keeps every other line.
 package setup
 
 import (
@@ -125,14 +129,141 @@ func confPath(p, tool string) (string, error) {
 
 // Installed reports whether locku's block is in the file at p — "~/…"
 // allowed; a file that is not there, or a path that is no path, has it
-// not.
+// not — and, when the block reads locku's own file, whether that is
+// there too: a line that reads nothing locks nothing. A block from
+// before 2026-10-08 holds the lines themselves.
 func Installed(p string) bool {
 	abs, ok := config.AbsPath(p)
 	if !ok {
 		return false
 	}
 	b, err := os.ReadFile(abs)
-	return err == nil && strings.Contains(string(b), blockBegin)
+	if err != nil || !strings.Contains(string(b), blockBegin) {
+		return false
+	}
+	block := strings.Join(blockOf(string(b)), "\n")
+	for _, name := range []string{tmuxFile, screenFile} {
+		if strings.Contains(block, name) {
+			_, err := os.Stat(ownPath(name))
+			return err == nil
+		}
+	}
+	return true
+}
+
+// blockOf is the lines between the markers in content, or none when it
+// has no block.
+func blockOf(content string) []string {
+	i := strings.Index(content, blockBegin)
+	if i < 0 {
+		return nil
+	}
+	lines := strings.Split(content[i:], "\n")[1:]
+	for j, l := range lines {
+		if l == blockEnd {
+			return lines[:j]
+		}
+	}
+	return lines
+}
+
+// ours is every line locku has written for a tool: the block in the
+// file at path, and its own file — the one or the other holds the lines
+// the lock needs, as the block was written before 2026-10-08 or since.
+func ours(path, own string) []string {
+	b, _ := os.ReadFile(path)
+	o, _ := os.ReadFile(own)
+	return append(blockOf(string(b)), strings.Split(string(o), "\n")...)
+}
+
+// The files locku keeps a tool's lines in, in its own config directory
+// (user, 2026-10-08: the names say whose and which).
+const (
+	tmuxFile   = "locku.tmux.conf"
+	screenFile = "locku.screenrc"
+)
+
+// ownPath is the file of locku's own named name, by its absolute path.
+func ownPath(name string) string {
+	d, err := filepath.Abs(config.Dir())
+	if err != nil {
+		d = config.Dir()
+	}
+	return filepath.Join(d, name)
+}
+
+// Own is locku's own file for the tool named, as Integration says it.
+func Own(tool string) string {
+	if tool == "screen" {
+		return tilde(ownPath(screenFile))
+	}
+	return tilde(ownPath(tmuxFile))
+}
+
+// tilde is p with the home directory in it written ~.
+func tilde(p string) string {
+	if rel, ok := homeRel(p); ok {
+		return "~/" + rel
+	}
+	return p
+}
+
+// homeRel is p below the home directory, when it is there.
+func homeRel(p string) (string, bool) {
+	rel, err := filepath.Rel(home(), p)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, "../") {
+		return "", false
+	}
+	return rel, true
+}
+
+// includeArg is own as the line that reads it names it: below the home
+// directory, from home as the tool writes it — tmux expands ~, screen
+// only $HOME (measured 2026-10-08, tmux 3.7c, screen 4.00.03: screen
+// took ~/… as a file that is not there) — so the line is the same on
+// every machine the user's dotfiles go to; anywhere else, or with a
+// character a config line would read as something else, the whole path
+// in single quotes, which both read as it is.
+func includeArg(own, homeAs string) string {
+	if rel, ok := homeRel(own); ok && !strings.ContainsFunc(rel, notPlain) {
+		return homeAs + rel
+	}
+	return "'" + own + "'"
+}
+
+const plainChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._/-"
+
+func notPlain(r rune) bool { return !strings.ContainsRune(plainChars, r) }
+
+// ownText is locku's own file for a tool: what it is, which file reads
+// it, and the lines.
+func ownText(tool, conf string, lines []string) string {
+	return "# locku's " + tool + " settings, as Integration > " + tool + " on locku's settings\n" +
+		"# screen sets them; " + conf + " reads this file. Set them there:\n" +
+		"# this file is written over.\n" + strings.Join(lines, "\n") + "\n"
+}
+
+// writeOwn writes locku's own file for a tool, and says so when it changed.
+func writeOwn(w io.Writer, own, text string) error {
+	changed, err := rewrite(own, func(string) string { return text }, true)
+	if err != nil {
+		return err
+	}
+	report(w, own, changed, "wrote")
+	return nil
+}
+
+// dropOwn removes locku's own file, and says so; one that is not there
+// is nothing to say.
+func dropOwn(w io.Writer, own string) error {
+	err := os.Remove(own)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err == nil {
+		fmt.Fprintf(w, "removed %s\n", own)
+	}
+	return err
 }
 
 func report(w io.Writer, path string, changed bool, verb string) {
@@ -212,7 +343,7 @@ func who(lock string) string {
 // keep, or after one space when the line is longer than that.
 func noted(line, comment string) string { return pad(line, 75) + " " + comment }
 
-// tmuxLines is the block tmux.conf gets, from Integration › tmux: the
+// tmuxLines is what locku's own tmux file holds, from Integration › tmux: the
 // idle time as it is, the lock `locku` runs, for lock-session the hook
 // that tells each session's lock its session, and the bind-key when
 // there is one.
@@ -233,18 +364,18 @@ func tmuxLines(t config.Tmux) []string {
 	return lines
 }
 
-// bound is what the block in content binds — the key, and which lock —
-// read off the file, so a key or a lock changed since the last write
-// can be undone on the running server.
-func bound(content string) (key, lock string) {
-	i := strings.Index(content, blockBegin)
-	if i < 0 {
-		return "", ""
-	}
-	for _, l := range strings.Split(content[i:], "\n") {
-		if l == blockEnd {
-			break
-		}
+// tmuxInclude is the one line tmux.conf gets: locku's own file, read
+// with -q, which says nothing when it is not there — on a machine the
+// same dotfiles went to without locku, say.
+func tmuxInclude(own string) string {
+	return "source-file -q " + includeArg(own, "~/") + "  # locku: the lock, as locku's settings screen sets it"
+}
+
+// bound is what locku's lines bind — the key, and which lock — read off
+// the files (ours), so a key or a lock changed since the last write can
+// be undone on the running server.
+func bound(lines []string) (key, lock string) {
+	for _, l := range lines {
 		f := strings.Fields(l)
 		switch {
 		case len(f) >= 3 && f[0] == "bind-key":
@@ -258,36 +389,17 @@ func bound(content string) (key, lock string) {
 	return key, lock
 }
 
-// boundIn is bound, for the file at path; a file that is not there
-// binds nothing.
-func boundIn(path string) (key, lock string) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return "", ""
-	}
-	return bound(string(b))
-}
-
-// sourceBlock hands lines — the block, as the file got it — to the
-// running server, from a file of their own: the same text, read the
-// same way, so the server and the file cannot drift apart (user,
-// 2026-09-25: one block, written whole, not a list of commands kept in
-// step with it).
-func sourceBlock(w io.Writer, tmux string, lines []string) {
-	f, err := os.CreateTemp("", "locku-block-*.conf")
-	if err != nil {
-		fmt.Fprintln(w, "the block could not be handed to the server:", err)
-		return
-	}
-	defer os.Remove(f.Name())
-	f.WriteString(strings.Join(lines, "\n") + "\n")
-	f.Close()
-	if out, err := exec.Command(tmux, "source-file", f.Name()).CombinedOutput(); err != nil {
+// sourceOwn hands locku's own file to the running server: the same text
+// tmux.conf reads, read the same way, so the server and the file cannot
+// drift apart (user, 2026-09-25: one block, written whole, not a list
+// of commands kept in step with it).
+func sourceOwn(w io.Writer, tmux, own string) {
+	if out, err := exec.Command(tmux, "source-file", own).CombinedOutput(); err != nil {
 		fmt.Fprintf(w, "tmux source-file: %s\n", strings.TrimSpace(string(out)))
 	}
 }
 
-// tmuxUnset takes off the server everything the block sets, one for
+// tmuxUnset takes off the server everything the lines set, one for
 // one — then the session hook, the key that was bound, and the mark a
 // lock may have left on the server; what each session holds is
 // eachSession's to take off.
@@ -316,22 +428,29 @@ func pad(s string, w int) string {
 	return s
 }
 
-// Tmux writes the block into the file at t.Conf — "~/…" allowed — and,
-// when a server is running, hands it the same block (sourceBlock). What
-// the old block did and this one does not is undone first: a key it
-// bound comes off; a lock changed takes the session hook and every mark
-// off, the server's and each session's, since a mark left over reads as
-// locked under the other rule (the study: a global mark after a switch
-// to lock-session reads as every session locked). Then each session
-// gets its own lock-command, or loses it, as the lock says — the hook
-// in the block only reaches sessions made from now on.
+// Tmux writes the lines into locku's own file, then the line that reads
+// it into the file at t.Conf — "~/…" allowed; in that order, so the
+// line never reads a file that is not there yet — and, when a server is
+// running, hands it the same file (sourceOwn). A block an earlier locku
+// wrote whole into t.Conf is replaced by the line. What the old lines
+// did and these do not is undone first: a key they bound comes off; a
+// lock changed takes the session hook and every mark off, the server's
+// and each session's, since a mark left over reads as locked under the
+// other rule (the study: a global mark after a switch to lock-session
+// reads as every session locked). Then each session gets its own
+// lock-command, or loses it, as the lock says — the hook in the lines
+// only reaches sessions made from now on.
 func Tmux(w io.Writer, t config.Tmux) error {
 	path, err := confPath(t.Conf, "tmux")
 	if err != nil {
 		return err
 	}
-	wasKey, wasLock := boundIn(path)
-	changed, err := write(path, tmuxLines(t))
+	own := ownPath(tmuxFile)
+	wasKey, wasLock := bound(ours(path, own))
+	if err := writeOwn(w, own, ownText("tmux", tilde(path), tmuxLines(t))); err != nil {
+		return err
+	}
+	changed, err := write(path, []string{tmuxInclude(own)})
 	if err != nil {
 		return err
 	}
@@ -348,7 +467,7 @@ func Tmux(w io.Writer, t config.Tmux) error {
 	if !ok {
 		return nil
 	}
-	sourceBlock(w, tmux, tmuxLines(t))
+	sourceOwn(w, tmux, own)
 	eachSession(tmux, func(id string) {
 		if t.Lock == config.LockSession {
 			exec.Command(tmux, "set", "-t", id, "-F", "lock-command", sessionLockCmd()).Run()
@@ -380,20 +499,24 @@ func idleSays(idle int) string {
 	return itoa(idle) + " idle seconds lock"
 }
 
-// TmuxUndo takes the block out of the file at path and, when a server is
-// running, the same things off it — the key it bound, each session's
-// own lock-command, and every mark included.
+// TmuxUndo takes the block out of the file at path, and locku's own file
+// away, and, when a server is running, the same things off it — the key
+// they bound, each session's own lock-command, and every mark included.
 func TmuxUndo(w io.Writer, path string) error {
 	path, err := confPath(path, "tmux")
 	if err != nil {
 		return err
 	}
-	wasKey, _ := boundIn(path)
+	own := ownPath(tmuxFile)
+	wasKey, _ := bound(ours(path, own))
 	changed, err := erase(path)
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "removed locku's block from")
+	if err := dropOwn(w, own); err != nil {
+		return err
+	}
 	tmux, ok := tmuxLive(w, tmuxUnset(wasKey))
 	if !ok {
 		return nil
@@ -454,9 +577,9 @@ func eachSession(tmux string, f func(id string)) {
 // 2026-09-25, screen 4.00.03).
 const screenLock = "lockscreen"
 
-// screenLines is the block the screenrc gets, from Integration › screen:
-// the idle time as screen's idle (0 turns it off there too), and the
-// bind when there is one.
+// screenLines is what locku's own screenrc holds, from Integration ›
+// screen: the idle time as screen's idle (0 turns it off there too), and
+// the bind when there is one.
 func screenLines(s config.Screen) []string {
 	lines := []string{"idle " + itoa(s.Idle) + " " + screenLock + "   # locku: 0 never"}
 	if s.Bind != "" {
@@ -465,33 +588,25 @@ func screenLines(s config.Screen) []string {
 	return lines
 }
 
-// screenBound is the key the block in content binds, read off the
-// file, so a key changed since the last write can be unbound on the
-// running screens; a key bound outside the block is not locku's.
-func screenBound(content string) string {
-	i := strings.Index(content, blockBegin)
-	if i < 0 {
-		return ""
-	}
-	for _, l := range strings.Split(content[i:], "\n") {
-		if l == blockEnd {
-			break
-		}
+// screenInclude is the one line the screenrc gets: locku's own file.
+// screen has no -q: a file that is not there is said on its message
+// line as screen starts, and screen goes on (measured 2026-10-08,
+// screen 4.00.03) — which activate never leaves, as it writes the file
+// before the line.
+func screenInclude(own string) string {
+	return "source " + includeArg(own, "$HOME/") + "   # locku: the lock, as locku's settings screen sets it"
+}
+
+// screenBound is the key locku's lines bind, read off the files (ours),
+// so a key changed since the last write can be unbound on the running
+// screens; a key bound outside them is not locku's.
+func screenBound(lines []string) string {
+	for _, l := range lines {
 		if f := strings.Fields(l); len(f) >= 3 && f[0] == "bind" && f[2] == screenLock {
 			return f[1]
 		}
 	}
 	return ""
-}
-
-// screenBoundIn is screenBound, for the file at path; a file that is
-// not there binds nothing.
-func screenBoundIn(path string) string {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	return screenBound(string(b))
 }
 
 // screenSet is the same on a running screen, sent with -X; screenUnset
@@ -513,10 +628,11 @@ func screenUnset(key string) [][]string {
 	return cmds
 }
 
-// Screen writes the block into the file at s.Conf — Integration ›
-// screen's conf, "~/…" allowed — LOCKPRG into the shell's rc file, and,
-// when screens are running, sets the idle time and the key on each of
-// them now (measured 2026-09-25, screen 4.00.03: `screen -S <session>
+// Screen writes the lines into locku's own file and the line that reads
+// it into the file at s.Conf — Integration › screen's conf, "~/…"
+// allowed; in that order, as on tmux — LOCKPRG into the shell's rc file,
+// and, when screens are running, sets the idle time and the key on each
+// of them now (measured 2026-09-25, screen 4.00.03: `screen -S <session>
 // -X idle` and `-X bind` reach a running session, attached or not). A
 // key the file bound before, and this write does not, comes off them.
 // What cannot be set on a running screen is LOCKPRG itself: it is the
@@ -529,8 +645,12 @@ func Screen(w io.Writer, s config.Screen) error {
 	if err != nil {
 		return err
 	}
-	wasKey := screenBoundIn(path)
-	changed, err := write(path, screenLines(s))
+	own := ownPath(screenFile)
+	wasKey := screenBound(ours(path, own))
+	if err := writeOwn(w, own, ownText("screen", tilde(path), screenLines(s))); err != nil {
+		return err
+	}
+	changed, err := write(path, []string{screenInclude(own)})
 	if err != nil {
 		return err
 	}
@@ -554,20 +674,24 @@ func Screen(w io.Writer, s config.Screen) error {
 	return nil
 }
 
-// ScreenUndo takes the blocks out of the file at path and the shell's rc
-// and, when screens are running, the same things off them — the idle
-// timer, and the key the file bound.
+// ScreenUndo takes the blocks out of the file at path and the shell's rc,
+// and locku's own file away, and, when screens are running, the same
+// things off them — the idle timer, and the key the lines bound.
 func ScreenUndo(w io.Writer, path string) error {
 	path, err := confPath(path, "screen")
 	if err != nil {
 		return err
 	}
-	wasKey := screenBoundIn(path)
+	own := ownPath(screenFile)
+	wasKey := screenBound(ours(path, own))
 	changed, err := erase(path)
 	if err != nil {
 		return err
 	}
 	report(w, path, changed, "removed locku's block from")
+	if err := dropOwn(w, own); err != nil {
+		return err
+	}
 	shellRC, _ := shellRCLine(os.Getenv("SHELL"), "")
 	changed, err = erase(shellRC)
 	if err != nil {

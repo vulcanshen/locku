@@ -67,11 +67,11 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | speed（snake 2026-10-06、bounce 與 tetromino 2026-10-07） | `[Enter] Choose`（hint `how fast it goes`；2026-10-07 起從清單選，原本是 number 框；saver 上改的是預設值） | 同上 |
 | animals（pets 2026-10-08） | `[Enter] Choose`（hint `what they are`；目前只有 `cats`；saver 上改的是預設值） | 同上 |
 | count（pets 2026-10-07） | `[Enter] Choose`（hint `how many cats`；saver 上改的是預設值） | 同上 |
-| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把區塊寫進 config file path；tmux 有 server 在跑就整塊套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`）/ `[Enter] Deactivate`（confirm 後拿掉，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled（2026-09-25；2026-09-26 起不另說原因，config file path 那列本身是黃色的 `not set`） | preference、tmux、screen 的 `[2]` 上：`[P] Preview`（啟用中的 profile；2026-09-26 補進 menu，tdp M3） |
+| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進 config file path；tmux 有 server 在跑就整份套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`）/ `[Enter] Deactivate`（confirm 後拿掉區塊、刪掉 locku 的檔案，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled（2026-09-25；2026-09-26 起不另說原因，config file path 那列本身是黃色的 `not set`） | preference、tmux、screen 的 `[2]` 上：`[P] Preview`（啟用中的 profile；2026-09-26 補進 menu，tdp M3） |
 | config file path | `[Enter] Edit`（on 時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
 | 分隔線 | 不可停 | 無 |
-| lock（tmux） | `[Enter] Choose`（lock-server / lock-session；on 時直接重寫區塊、tmux 換旗） | 無 |
-| lock-after-time（screen：idle） | `[Enter] Edit`（on 時直接重寫區塊、tmux 即時套用、screen 送進跑著的 session） | 無 |
+| lock（tmux） | `[Enter] Choose`（lock-server / lock-session；on 時直接重寫 locku 的檔案、tmux 換旗） | 無 |
+| lock-after-time（screen：idle） | `[Enter] Edit`（on 時直接重寫 locku 的檔案、tmux 即時套用、screen 送進跑著的 session） | 無 |
 | bind-key（tmux）/ bind（screen） | `[Enter] Edit`（同上；2026-09-25 screen 也有，`C-a x` 內建就鎖） | 無 |
 
 修訂（2026-09-24）：duplicate / delete 改成 `D` / `X` 大寫，對齊 sshu 的紀錄類項目；`d` 仍是半頁。
@@ -235,7 +235,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <檔> · applied to the running tmux server: …` / `removed locku's block from <檔> · …`，錯誤時紅色）。
+**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <locku 的檔> · wrote <檔> · applied to the running tmux server: …`，沒變的檔說 `already up to date` / `removed locku's block from <檔> · removed <locku 的檔> · …`，錯誤時紅色）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、D2；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。

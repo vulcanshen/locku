@@ -426,7 +426,7 @@ func (m *AppModel) activateTool() tea.Cmd {
 		then = "LOCKPRG goes into the shell rc too, running screens take the rest at once"
 	}
 	return m.confirm.ask(confirmPopup{title: "Activate " + name + " integration", accept: "activate",
-		lines:  []string{"Write locku's block into " + t.Conf + "?", then + "; from then on a change here is written at once"},
+		lines:  []string{"Write locku's block into " + t.Conf + "?", "the rows here go into " + setup.Own(name) + ", which it reads", then + "; from then on a change here is written at once"},
 		action: confirmActivate, ref: m.sideAt().ref}, m.layer())
 }
 
@@ -435,7 +435,7 @@ func (m *AppModel) activateTool() tea.Cmd {
 func (m *AppModel) deactivateTool() tea.Cmd {
 	name, t := m.tool()
 	return m.confirm.ask(confirmPopup{title: "Deactivate " + name + " integration", accept: "deactivate",
-		lines:  []string{"Take locku's block out of " + t.Conf + "?", "the file is rewritten at once"},
+		lines:  []string{"Take locku's block out of " + t.Conf + "?", "the file is rewritten at once, and " + setup.Own(name) + " removed"},
 		action: confirmDeactivate, ref: m.sideAt().ref}, m.layer())
 }
 

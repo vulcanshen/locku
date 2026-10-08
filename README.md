@@ -183,30 +183,48 @@ Integration › tmux and Integration › screen each have `activate` (on / off),
 | The key after the prefix that locks, in the tool's own spelling; empty binds nothing | `bind-key` (`l`, `C-l`) | `bind` (`l`, `^L`); `C-a x` locks anyway |
 | What locks | `lock`: `lock-server` (every client on the server) or `lock-session` (this session only) | — (a screen has no server to scope) |
 
-`activate` on writes locku's block into the file, after a confirm, and while it is on rewrites it the moment any row changes: a running tmux server takes the whole block at once, and running screens take `idle` and `bind` at once. Off takes the block out again, from the file and from what is running. Only the block between the markers is ever touched, every line of it ending in `# locku`; the rest of the file is yours. With no path filled in, `activate` cannot be pressed: nothing is guessed.
+`activate` on, after a confirm, writes the settings into a file of locku's own, next to its `config.yaml` — `~/.config/locku/locku.tmux.conf` or `locku.screenrc` — and into your file one line that reads it. While it is on, a row changed rewrites locku's file the moment it changes, and your file is not touched again: a running tmux server takes the whole file at once, and running screens take `idle` and `bind` at once. Off takes the line out of your file, locku's file away, and the settings off what is running. In your file only the block between the markers is ever touched, its line ending in `# locku`; the rest of the file is yours. The line names locku's file from your home directory, so dotfiles shared between machines carry the same line; where the file is not there, tmux skips it without a word, and screen says so on its message line and carries on. With no path filled in, `activate` cannot be pressed: nothing is guessed.
 
-What tmux gets:
+What your tmux.conf gets:
 
 ```
 # >>> locku >>>
+source-file -q ~/.config/locku/locku.tmux.conf  # locku: the lock, as locku's settings screen sets it
+# <<< locku <<<
+```
+
+and what `locku.tmux.conf` holds:
+
+```
+# locku's tmux settings, as Integration > tmux on locku's settings
+# screen sets them; ~/.tmux.conf reads this file. Set them there:
+# this file is written over.
 set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: 0 never
 set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
 set-hook -g "client-attached[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: attaching while locked locks the client
 set-hook -g "client-session-changed[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: so does switching sessions
 bind-key l lock-server                                                      # locku: prefix l locks every client
-# <<< locku <<<
 ```
 
 `prefix :` then `locku` locks, and so does `prefix l` when `bind-key` is `l`. The server stays locked for whoever comes: attaching to it, or switching sessions, while it is locked lands on the screensaver too, until a PIN unlocks it. With `lock` set to `lock-session` the same lines point at `lock-session`, one more hook gives every session its own lock-command, and the other sessions carry on.
 
-What screen gets:
+What your screenrc gets:
 
 ```
 # >>> locku >>>
-idle 300 lockscreen   # locku: 0 never
-bind l lockscreen     # locku: C-a l locks, as C-a x does
+source $HOME/.config/locku/locku.screenrc   # locku: the lock, as locku's settings screen sets it
 # <<< locku <<<
+```
+
+and what `locku.screenrc` holds:
+
+```
+# locku's screen settings, as Integration > screen on locku's settings
+# screen sets them; ~/.screenrc reads this file. Set them there:
+# this file is written over.
+idle 300 lockscreen   # locku: 0 never
+bind l lockscreen   # locku: C-a l locks, as C-a x does
 ```
 
 and, because screen reads its lock program from the shell that started it and never from the screenrc, the shell rc (`~/.zshrc`, `~/.bashrc`, or fish's `config.fish`) gets:
@@ -217,7 +235,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 # <<< locku <<<
 ```
 
-A new shell has it. A screen already running gets it once detached and attached again from a new shell; until then that session locks with screen's own built-in lock, which the settings screen says. The blocks are the same text whether locku writes them or you do.
+A new shell has it. A screen already running gets it once detached and attached again from a new shell; until then that session locks with screen's own built-in lock, which the settings screen says. It is the same text whether locku writes it or you do.
 
 ## Key bindings
 
