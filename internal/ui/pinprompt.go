@@ -12,12 +12,12 @@ import (
 )
 
 // pinPrompt is the lock screen's one popup (ui.md §3.2): a masked line,
-// as wide as every popup (tdp F7; 48 columns until 2026-09-28), centred,
-// the dots in its middle row growing out from the middle of the box (user,
-// 2026-09-24: bigger, and the input starting from the centre). A
-// 64-character PIN is 129 columns of dots, wider than a popup gets: the
-// dots it has no room for go from the front (user, 2026-09-28: the widest
-// PIN against 120 settles the width). Two rows under the dots is its error
+// as wide as the longest PIN asks (pinInnerW), centred, the dots in its
+// middle row growing out from the middle of the box (user, 2026-09-24:
+// bigger, and the input starting from the centre). On a terminal too
+// narrow for it the dots it has no room for go from the front (user,
+// 2026-09-28, when a 64-character PIN was 129 columns of dots against a
+// popup's 120). Two rows under the dots is its error
 // row, blank until an Enter is refused (tdp F7, K3; 2026-09-28 — the error
 // used to be in the title; pinBox lays the rows out). It has five looks,
 // and the box never changes size:
@@ -91,7 +91,7 @@ func (p pinPrompt) remaining(now time.Time) int {
 }
 
 func (p pinPrompt) view(now time.Time) string {
-	innerW := popupInnerW(p.screenW)
+	innerW := pinInnerW(p.screenW)
 	bc := popupLayerColor(1)
 	title := " " + glyphLock + " PIN "
 	var hint [][2]string
@@ -124,6 +124,16 @@ func pinBox(bc lipgloss.Color, title string, hint [][2]string, a popupAnimator, 
 	air := spaces(innerW)
 	return drawPopupBoxPad(bc, title, hint, animRows(a, []string{air, air, row, air, err}), innerW, false)
 }
+
+// pinInnerW is every PIN box's inner width (user, 2026-10-08; as wide as
+// every popup, tdp F7, from 2026-09-28, and the deviation is in
+// dev-remarks.md): the longest PIN's dots with the spaces between, the
+// space and the cursor after them, and two columns either side — 29. It
+// is odd, so the dots and the cursor sit in the very middle at any length.
+// A terminal too narrow for it gives the box what it gives every popup.
+func pinInnerW(screenW int) int { return min(pinInnerMax, popupInnerW(screenW)) }
+
+const pinInnerMax = 2*config.PINMax + 1 + 2*2
 
 // pinRow is the masked line every PIN box shares — the lock's prompt and
 // the settings screen's current / new / confirm boxes (ui.md §3.2): one

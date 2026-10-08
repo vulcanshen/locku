@@ -901,7 +901,7 @@ func TestPINSetChangeClear(t *testing.T) {
 		t.Fatalf("box %+v", m.input)
 	}
 	m = m.typed("123").press("enter")
-	if !strings.Contains(m.input.err, "4-64") {
+	if !strings.Contains(m.input.err, "4-12") {
 		t.Fatalf("a short PIN must be refused: %q", m.input.err)
 	}
 	// Each step is its own popup, over the one before (tdp v0.1.9 F1).

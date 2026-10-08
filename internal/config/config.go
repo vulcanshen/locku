@@ -32,9 +32,10 @@ const (
 	// later `auth: pam` changes nothing about its shape (function.md §4.1).
 	AuthPIN = "pin"
 
-	// PINMin and PINMax bound a PIN's length in characters (function.md §4.2).
+	// PINMin and PINMax bound a PIN's length in characters (function.md §4.2;
+	// user, 2026-10-08: 12, where it was 64).
 	PINMin = 4
-	PINMax = 64
+	PINMax = 12
 
 	// DefaultIdle is how long a tool waits idle before it locks by
 	// itself, until the user says otherwise.

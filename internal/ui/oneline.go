@@ -69,6 +69,11 @@ func hasBreak(v string) bool { return strings.ContainsAny(v, "\r\n\t") }
 // box takes.
 func breakErr(field string) string { return field + " can't have line breaks or tabs" }
 
+// pinBreakErr is a PIN box's: the box is too narrow for breakErr's 34
+// columns (pinInnerW), and its title says PIN already (user, 2026-10-08;
+// breakErr("PIN") until then).
+const pinBreakErr = "no line breaks or tabs"
+
 // unitShown is how a unit is drawn, and whether it is a control one.
 func unitShown(u string) (string, bool) {
 	switch u {

@@ -834,11 +834,10 @@ func (m *AppModel) takeName(v string, self int) (string, bool) {
 func (m *AppModel) commitInput(box *inputPopup) tea.Cmd {
 	v := box.value
 	if hasBreak(v) {
-		field := box.title
+		box.err = breakErr(box.title)
 		if box.masked {
-			field = "PIN"
+			box.err = pinBreakErr
 		}
-		box.err = breakErr(field)
 		return nil
 	}
 	switch box.action {
