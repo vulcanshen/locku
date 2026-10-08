@@ -175,6 +175,8 @@ README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 conf
 
 VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），當時改用 0.11.0；2026-10-07 機器上只剩 0.12.1，正常出檔。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號；鏡頭外的指令用 `Type@5ms` 打，不然要等很久；等某個輸出用 `Wait+Screen@<逾時> /regex/`，要等的字在指令裡寫成 `RE''ADY`，免得一打出指令就符合。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
 
+兩支 tape 的主題是 Catppuccin Mocha 的色票、終端機底色換成 crust `#11111b`（2026-10-08）：Mocha 原本的底色是 base `#1e1e2e`，跟夜晚跑者的身體同色，方塊之間的縫看不出來，README 的 runner 圖像一整塊暗色——正是使用者否決過的樣子（跑者用 crust 時方塊糊成一團）。使用者的終端機底色是更深的 `#11111a`，身體的方塊比縫亮一階、看得到格點；換成 crust 後錄出來的跟他看到的一樣，gif 與靜態圖一起換。
+
 ### saver 的靜態圖（2026-10-08）
 
 README 的「What you see」每種 saver 一節，各配一張靜態圖 `docs/savers/<種類>.png`（使用者：不需要 gif）。用 VHS 的 `Screenshot` 拍：`.local/demos/savers.tape` 與 `savers.yaml`（七個 profile 照 Savers 的順序，`make shots`），在設定畫面逐一 `p` 預覽、等畫面有內容再拍。runner 是 city 配 night（使用者選的，新場景、夜裡一部分窗戶亮著）；custom 跑 cmatrix（使用者選的，所以拍照要裝 cmatrix）；snake 與 tetromino 用 `super-fast`、分別等 15 與 25 秒，畫面才不會空空的（我的判斷）；clock 用 `large`（使用者：全螢幕應該放得下 3 × 3），`HH MM SS` 的 large 要 148 欄，所以拍照的視窗是 1300 × 720、151 欄（gif 的 1200 寬只有 140 欄，放不下會先拿掉秒），七張一樣大。
