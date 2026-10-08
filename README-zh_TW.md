@@ -183,30 +183,48 @@ Integration › tmux 與 Integration › screen 各有 `activate`（on / off）�
 | prefix 之後按哪個鍵就鎖，照工具自己的寫法；空就不綁 | `bind-key`（`l`、`C-l`） | `bind`（`l`、`^L`）；`C-a x` 內建就鎖 |
 | 鎖什麼 | `lock`：`lock-server`（整台 server 的 client）或 `lock-session`（只鎖這個 session） | ——（screen 沒有 server 可選範圍） |
 
-`activate` 打開，confirm 後把 locku 的區塊寫進檔案；開著的時候任何一列一改就重寫：跑著的 tmux server 整塊立刻收到，跑著的 screen 立刻收到 `idle` 與 `bind`。關掉就拿掉，檔案與跑著的都拿掉。只碰兩個標記之間的區塊，每行尾巴 `# locku`；檔案其他部分是你的。路徑沒填，`activate` 按不下去：不猜。
+`activate` 打開、confirm 後，設定寫進 locku 自己的檔案，跟 `config.yaml` 放在一起——`~/.config/locku/locku.tmux.conf` 或 `locku.screenrc`——你的檔案只多一行去讀它。開著的時候任何一列一改，就重寫 locku 的檔案，不再動你的：跑著的 tmux server 整份立刻收到，跑著的 screen 立刻收到 `idle` 與 `bind`。關掉就把那一行從你的檔案拿掉、刪掉 locku 的檔案，跑著的也一併拿掉。你的檔案只碰兩個標記之間的區塊，裡面那一行尾巴 `# locku`；其他部分是你的。那一行從家目錄寫起，同一份 dotfiles 放到別台機器也是同一行；那台沒有 locku 的檔案時，tmux 安靜跳過，screen 在訊息列說一聲、照常啟動。路徑沒填，`activate` 按不下去：不猜。
 
-tmux 拿到的：
+你的 tmux.conf 拿到的：
 
 ```
 # >>> locku >>>
+source-file -q ~/.config/locku/locku.tmux.conf  # locku: the lock, as locku's settings screen sets it
+# <<< locku <<<
+```
+
+`locku.tmux.conf` 裡是：
+
+```
+# locku's tmux settings, as Integration > tmux on locku's settings
+# screen sets them; ~/.tmux.conf reads this file. Set them there:
+# this file is written over.
 set -gF lock-command "/opt/homebrew/bin/locku lock -S '#{socket_path}'"  # locku
 set -g lock-after-time 300                                                  # locku: 0 never
 set -s "command-alias[90]" "locku=lock-server"                              # locku: prefix : locku locks every client
 set-hook -g "client-attached[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: attaching while locked locks the client
 set-hook -g "client-session-changed[90]" "run -C \"#{?#{@locked},lock-client -t #{hook_client},}\"" # locku: so does switching sessions
 bind-key l lock-server                                                      # locku: prefix l locks every client
-# <<< locku <<<
 ```
 
 `prefix :` 打 `locku` 就鎖，`bind-key` 填 `l` 時 `prefix l` 也鎖。鎖著的時候誰來都被鎖：鎖定中 attach 進來、或切換 session，一樣落在保護程式上，直到 PIN 解開。`lock` 選 `lock-session` 時同樣的行改指向 `lock-session`，多一個 hook 給每個 session 自己的 lock-command，其他 session 照常用。
 
-screen 拿到的：
+你的 screenrc 拿到的：
 
 ```
 # >>> locku >>>
-idle 300 lockscreen   # locku: 0 never
-bind l lockscreen     # locku: C-a l locks, as C-a x does
+source $HOME/.config/locku/locku.screenrc   # locku: the lock, as locku's settings screen sets it
 # <<< locku <<<
+```
+
+`locku.screenrc` 裡是：
+
+```
+# locku's screen settings, as Integration > screen on locku's settings
+# screen sets them; ~/.screenrc reads this file. Set them there:
+# this file is written over.
+idle 300 lockscreen   # locku: 0 never
+bind l lockscreen   # locku: C-a l locks, as C-a x does
 ```
 
 而且因為 screen 的鎖定程式只從啟動它的 shell 環境讀、從不讀 screenrc，shell rc（`~/.zshrc`、`~/.bashrc`，或 fish 的 `config.fish`）也拿到：
@@ -217,7 +235,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 # <<< locku <<<
 ```
 
-新開的 shell 就有。已在跑的 screen session 要 detach 後從新 shell 重新 attach 才有；在那之前那個 session 鎖到的是 screen 內建的鎖，設定畫面會說明。區塊是同一份文字，locku 寫或你手寫都一樣。
+新開的 shell 就有。已在跑的 screen session 要 detach 後從新 shell 重新 attach 才有；在那之前那個 session 鎖到的是 screen 內建的鎖，設定畫面會說明。這些都是同一份文字，locku 寫或你手寫都一樣。
 
 ## 按鍵
 

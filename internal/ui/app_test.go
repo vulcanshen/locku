@@ -474,10 +474,17 @@ func TestActivateScreenFromTheScreen(t *testing.T) {
 	if !m.confirm.isInteractive() || m.confirm.action != confirmActivate || !strings.Contains(m.View(), "LOCKPRG") {
 		t.Fatalf("activate must confirm, and say where LOCKPRG goes:\n%s", m.View())
 	}
+	if !strings.Contains(m.View(), "the rows here go into") {
+		t.Errorf("activate must say where the rows go:\n%s", m.View())
+	}
 	m = m.press("enter")
+	// The screenrc gets one line that reads locku's own file, which holds
+	// the rows (user, 2026-10-08).
+	own := filepath.Join(os.Getenv("LOCKU__CONFIG"), "locku.screenrc")
 	b, err := os.ReadFile(rc)
-	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "idle 300 lockscreen") || !strings.Contains(string(b), "bind l lockscreen") {
-		t.Fatalf("after activate: %v\n%s", err, b)
+	o, _ := os.ReadFile(own)
+	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "source '"+own+"'") || !strings.Contains(string(o), "idle 300 lockscreen") || !strings.Contains(string(o), "bind l lockscreen") {
+		t.Fatalf("after activate: %v\n%s\n%s", err, b, o)
 	}
 	if p, err := os.ReadFile(profile); err != nil || !strings.Contains(string(p), "export LOCKPRG=") || !strings.Contains(string(p), "# locku") {
 		t.Fatalf("the shell rc: %v\n%s", err, p)
@@ -485,20 +492,26 @@ func TestActivateScreenFromTheScreen(t *testing.T) {
 	if !strings.Contains(m.toast.msg, "wrote") || m.rowAt().value != "on" {
 		t.Errorf("toast %q, row %+v", m.toast.msg, m.rowAt())
 	}
-	// On: the idle time changed is in the file at once, and so is the
-	// key emptied.
+	// On: the idle time changed is in locku's file at once, and so is the
+	// key emptied; the screenrc is left as it is.
 	m = m.expireToast().press("j", "j", "enter", "ctrl+u").typed("45").press("enter")
-	if b, _ := os.ReadFile(rc); !strings.Contains(string(b), "idle 45 lockscreen") || !strings.Contains(m.toast.msg, "wrote") {
-		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, b)
+	if o, _ := os.ReadFile(own); !strings.Contains(string(o), "idle 45 lockscreen") || !strings.Contains(m.toast.msg, "wrote") {
+		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, o)
 	}
 	m = m.expireToast().press("j", "enter", "ctrl+u", "enter")
-	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "bind") || !strings.Contains(string(b), "idle 45 lockscreen") {
-		t.Errorf("key emptied while on:\n%s", b)
+	if o, _ := os.ReadFile(own); strings.Contains(string(o), "bind") || !strings.Contains(string(o), "idle 45 lockscreen") {
+		t.Errorf("key emptied while on:\n%s", o)
 	}
-	// Off: both files lose the block.
+	if b2, _ := os.ReadFile(rc); string(b2) != string(b) {
+		t.Errorf("a row changed rewrote the screenrc:\n%s", b2)
+	}
+	// Off: both files lose the block, and locku's own file goes.
 	m = m.expireToast().press("g", "g", "enter", "enter")
 	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "locku") || m.rowAt().value != "off" {
 		t.Errorf("after deactivate:\n%s\n%s", b, m.View())
+	}
+	if _, err := os.Stat(own); err == nil {
+		t.Error("locku's own screenrc is left after deactivate")
 	}
 	if p, _ := os.ReadFile(profile); strings.Contains(string(p), "LOCKPRG") {
 		t.Errorf("the shell rc after deactivate:\n%s", p)
@@ -541,30 +554,40 @@ func TestActivateFromTheScreen(t *testing.T) {
 	if !m.confirm.isInteractive() || m.confirm.action != confirmActivate || !strings.Contains(m.View(), "Write locku's block into") {
 		t.Fatalf("activate must confirm:\n%s", m.View())
 	}
+	if !strings.Contains(m.View(), "the rows here go into") {
+		t.Errorf("activate must say where the rows go:\n%s", m.View())
+	}
 	m = m.press("enter")
+	// tmux.conf gets one line that reads locku's own file, which holds
+	// the rows (user, 2026-10-08).
+	own := filepath.Join(os.Getenv("LOCKU__CONFIG"), "locku.tmux.conf")
 	b, err := os.ReadFile(conf)
-	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "lock-after-time 300") || !strings.Contains(string(b), "bind-key l lock-server") {
-		t.Fatalf("after activate: %v\n%s", err, b)
+	o, _ := os.ReadFile(own)
+	if err != nil || !strings.Contains(string(b), "# >>> locku >>>") || !strings.Contains(string(b), "source-file -q '"+own+"'") || !strings.Contains(string(o), "lock-after-time 300") || !strings.Contains(string(o), "bind-key l lock-server") {
+		t.Fatalf("after activate: %v\n%s\n%s", err, b, o)
 	}
 	if !strings.Contains(m.toast.msg, "wrote") || m.rowAt().value != "on" || strings.Contains(m.View(), "installed") {
 		t.Errorf("toast %q, row %+v:\n%s", m.toast.msg, m.rowAt(), m.View())
 	}
-	// On: the idle time changed is in the file at once, and so is the
-	// key emptied.
+	// On: the idle time changed is in locku's file at once, and so is
+	// the key emptied; tmux.conf is left as it is.
 	m = m.expireToast().press("j", "j", "j", "enter", "ctrl+u").typed("45").press("enter")
-	if b, _ := os.ReadFile(conf); !strings.Contains(string(b), "lock-after-time 45") || !strings.Contains(m.toast.msg, "wrote") {
+	if b, _ := os.ReadFile(own); !strings.Contains(string(b), "lock-after-time 45") || !strings.Contains(m.toast.msg, "wrote") {
 		t.Errorf("idle changed while on, toast %q:\n%s", m.toast.msg, b)
 	}
 	// So is the lock chosen: lock-session, and the hook that tells each
 	// session its lock.
 	m = m.expireToast().press("k", "enter", "j", "enter")
-	if b, _ := os.ReadFile(conf); m.cfg.Tmux.Lock != config.LockSession || !strings.Contains(string(b), `"locku=lock-session"`) || !strings.Contains(string(b), "session-created[90]") || !strings.Contains(string(b), "bind-key l lock-session") {
+	if b, _ := os.ReadFile(own); m.cfg.Tmux.Lock != config.LockSession || !strings.Contains(string(b), `"locku=lock-session"`) || !strings.Contains(string(b), "session-created[90]") || !strings.Contains(string(b), "bind-key l lock-session") {
 		t.Errorf("lock-session while on:\n%s", b)
 	}
 	m = m.expireToast().press("j")
 	m = m.expireToast().press("j", "enter", "ctrl+u", "enter")
-	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "bind-key") {
-		t.Errorf("key emptied while on:\n%s", b)
+	if o, _ := os.ReadFile(own); strings.Contains(string(o), "bind-key") {
+		t.Errorf("key emptied while on:\n%s", o)
+	}
+	if b2, _ := os.ReadFile(conf); string(b2) != string(b) {
+		t.Errorf("a row changed rewrote tmux.conf:\n%s", b2)
 	}
 	// The file moved: the block goes with it, out of the old file.
 	conf2 := filepath.Join(t.TempDir(), "tmux.conf")
@@ -572,8 +595,9 @@ func TestActivateFromTheScreen(t *testing.T) {
 	if b, _ := os.ReadFile(conf); strings.Contains(string(b), "locku") {
 		t.Errorf("the old file keeps the block:\n%s", b)
 	}
-	if b, _ := os.ReadFile(conf2); !strings.Contains(string(b), "lock-after-time 45") || m.press("k").rowAt().value != "on" {
-		t.Errorf("the new file:\n%s\n%s", b, m.View())
+	b2, _ := os.ReadFile(conf2)
+	if o, _ := os.ReadFile(own); !strings.Contains(string(b2), "source-file -q '"+own+"'") || !strings.Contains(string(o), "lock-after-time 45") || m.press("k").rowAt().value != "on" {
+		t.Errorf("the new file:\n%s\n%s\n%s", b2, o, m.View())
 	}
 	// The menu on activate says what Enter does.
 	m = m.expireToast().press("k", " ")
@@ -588,6 +612,9 @@ func TestActivateFromTheScreen(t *testing.T) {
 	m = m.press("enter")
 	if b, _ := os.ReadFile(conf2); strings.Contains(string(b), "locku") {
 		t.Errorf("after deactivate:\n%s", b)
+	}
+	if _, err := os.Stat(own); err == nil {
+		t.Error("locku's own tmux file is left after deactivate")
 	}
 	if !strings.Contains(m.toast.msg, "removed") || m.rowAt().value != "off" {
 		t.Errorf("toast %q, row %+v", m.toast.msg, m.rowAt())

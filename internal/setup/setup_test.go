@@ -96,10 +96,10 @@ func TestScreenBindsAKeyWhenNamed(t *testing.T) {
 	if u := screenUnset(""); len(u) != 1 {
 		t.Errorf("no key to unbind: %v", u)
 	}
-	if k := screenBound(Apply("bind l redisplay\n", screenLines(keyed))); k != "^L" {
+	if k := screenBound(blockOf(Apply("bind l redisplay\n", screenLines(keyed)))); k != "^L" {
 		t.Errorf("read off the file: %q", k)
 	}
-	if k := screenBound(Apply("bind l lockscreen\n", screenLines(plain))); k != "" {
+	if k := screenBound(blockOf(Apply("bind l lockscreen\n", screenLines(plain)))); k != "" {
 		t.Errorf("a key bound outside the block is not locku's: %q", k)
 	}
 	// A screen -ls listing is a line per session under a tab; its
@@ -118,7 +118,8 @@ func TestScreenBindsAKeyWhenNamed(t *testing.T) {
 func TestEveryLineIsMarked(t *testing.T) {
 	server := config.Tmux{LockAfterTime: 300, Lock: config.LockServer}
 	session := config.Tmux{LockAfterTime: 300, Lock: config.LockSession, BindKey: "C-l"}
-	for _, l := range append(append(tmuxLines(server), tmuxLines(session)...), screenLines(config.Screen{Idle: 300, Bind: "l"})...) {
+	lines := append(append(tmuxLines(server), tmuxLines(session)...), screenLines(config.Screen{Idle: 300, Bind: "l"})...)
+	for _, l := range append(lines, tmuxInclude("/x/locku.tmux.conf"), screenInclude("/x/locku.screenrc")) {
 		if !strings.Contains(l, " # locku") {
 			t.Errorf("unmarked: %q", l)
 		}
@@ -198,10 +199,10 @@ func TestEveryLineIsMarked(t *testing.T) {
 	}
 	// What the file binds is read back off it; a key bound outside the
 	// block is not locku's.
-	if k, l := bound(Apply("set -g mouse on\n", tmuxLines(session))); k != "C-l" || l != config.LockSession {
+	if k, l := bound(blockOf(Apply("set -g mouse on\n", tmuxLines(session)))); k != "C-l" || l != config.LockSession {
 		t.Errorf("read off the file: %q %q", k, l)
 	}
-	if k, l := bound(Apply("bind-key l last-window\n", tmuxLines(server))); k != "" || l != config.LockServer {
+	if k, l := bound(blockOf(Apply("bind-key l last-window\n", tmuxLines(server)))); k != "" || l != config.LockServer {
 		t.Errorf("read off the file: %q %q", k, l)
 	}
 }
@@ -210,7 +211,9 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	h := t.TempDir()
 	t.Setenv("HOME", h)
 	t.Setenv("PATH", t.TempDir()) // no tmux
+	t.Setenv("LOCKU__CONFIG", filepath.Join(h, ".config", "locku"))
 	path := filepath.Join(h, ".tmux.conf")
+	own := filepath.Join(h, ".config", "locku", "locku.tmux.conf")
 	os.WriteFile(path, []byte("set -g mouse on\n"), 0o644)
 	at := func(conf, lock, key string) config.Tmux {
 		return config.Tmux{Conf: conf, LockAfterTime: 300, Lock: lock, BindKey: key}
@@ -219,7 +222,17 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
-	body, err := os.ReadFile(path)
+	// The user's file gets the block with one line in it, which reads
+	// locku's own file by ~, the same on every machine (user, 2026-10-08);
+	// the lines are in locku's own file.
+	user, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(user) != "set -g mouse on\n\n"+blockBegin+"\nsource-file -q ~/.config/locku/locku.tmux.conf  # locku: the lock, as locku's settings screen sets it\n"+blockEnd+"\n" {
+		t.Errorf("the user's file:\n%s", user)
+	}
+	body, err := os.ReadFile(own)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -228,27 +241,46 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 			t.Errorf("missing %q in\n%s", want, body)
 		}
 	}
-	if !strings.Contains(out.String(), "wrote") || !strings.Contains(out.String(), "not on PATH") {
+	if !strings.Contains(string(body), "~/.tmux.conf reads this file") {
+		t.Errorf("locku's own file says nothing of who reads it:\n%s", body)
+	}
+	if !strings.Contains(out.String(), "wrote "+own) || !strings.Contains(out.String(), "wrote "+path) || !strings.Contains(out.String(), "not on PATH") {
 		t.Errorf("output:\n%s", out.String())
+	}
+	if !Installed(path) {
+		t.Error("not installed after a write")
 	}
 	out.Reset()
 	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "already up to date") {
+	if strings.Count(out.String(), "already up to date") != 2 {
 		t.Errorf("second run:\n%s", out.String())
+	}
+	// A row changed is locku's own file's alone: the user's is not
+	// touched again (user, 2026-10-08).
+	mine := func(label string, lines int) string {
+		t.Helper()
+		if b, _ := os.ReadFile(path); string(b) != string(user) {
+			t.Errorf("%s: the user's file changed:\n%s", label, b)
+		}
+		b, _ := os.ReadFile(own)
+		if n := strings.Count(string(b), " # locku"); n != lines {
+			t.Errorf("%s: %d lines of locku's, want %d:\n%s", label, n, lines, b)
+		}
+		return string(b)
 	}
 	// A key: one bind-key line; emptied again, the line goes.
 	if err := Tmux(&out, at(path, config.LockServer, "l")); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(path); !strings.Contains(string(b), "bind-key l lock-server") || strings.Count(string(b), "# locku") != 6 {
+	if b := mine("with a key", 6); !strings.Contains(b, "bind-key l lock-server") {
 		t.Errorf("with a key:\n%s", b)
 	}
 	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(path); strings.Contains(string(b), "bind-key") || strings.Count(string(b), "# locku") != 5 {
+	if b := mine("key emptied", 5); strings.Contains(b, "bind-key") {
 		t.Errorf("key emptied:\n%s", b)
 	}
 	// lock-session: the alias, and the session hook; lock-server again,
@@ -256,16 +288,23 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if err := Tmux(&out, at(path, config.LockSession, "")); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(path); !strings.Contains(string(b), `"locku=lock-session"`) || !strings.Contains(string(b), "session-created[90]") || strings.Count(string(b), "# locku") != 6 {
+	if b := mine("lock-session", 6); !strings.Contains(b, `"locku=lock-session"`) || !strings.Contains(b, "session-created[90]") {
 		t.Errorf("lock-session:\n%s", b)
 	}
 	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(path); strings.Contains(string(b), "lock-session") || strings.Contains(string(b), "session-created") || strings.Count(string(b), "# locku") != 5 {
+	if b := mine("lock-server again", 5); strings.Contains(b, "lock-session") || strings.Contains(b, "session-created") {
 		t.Errorf("lock-server again:\n%s", b)
 	}
-	// Undo: the block goes, the user's line stays; again, nothing to do.
+	// locku's own file gone, the line reads nothing: not installed.
+	os.Rename(own, own+".away")
+	if Installed(path) {
+		t.Error("installed with locku's own file gone")
+	}
+	os.Rename(own+".away", own)
+	// Undo: the block goes, the user's line stays, locku's own file goes;
+	// again, nothing to do.
 	out.Reset()
 	if err := TmuxUndo(&out, path); err != nil {
 		t.Fatal(err)
@@ -273,7 +312,10 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if b, _ := os.ReadFile(path); string(b) != "set -g mouse on\n" {
 		t.Errorf("after undo:\n%s", b)
 	}
-	if !strings.Contains(out.String(), "removed") {
+	if _, err := os.Stat(own); err == nil {
+		t.Error("locku's own file is left after undo")
+	}
+	if !strings.Contains(out.String(), "removed locku's block from") || !strings.Contains(out.String(), "removed "+own) {
 		t.Errorf("undo output:\n%s", out.String())
 	}
 	out.Reset()
@@ -308,10 +350,71 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	}
 }
 
+// A block an earlier locku wrote whole into the user's file — the lines
+// themselves, before 2026-10-08 — is installed as it is, the key and the
+// lock it set are read off it to be undone, and the next write puts the
+// one line in its place.
+func TestAnEarlierBlockGivesWayToTheLine(t *testing.T) {
+	h := t.TempDir()
+	t.Setenv("HOME", h)
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("SHELL", "/bin/sh")
+	t.Setenv("LOCKU__CONFIG", filepath.Join(h, ".config", "locku"))
+	tc := filepath.Join(h, ".tmux.conf")
+	os.WriteFile(tc, []byte(Apply("set -g mouse on\n", tmuxLines(config.Tmux{LockAfterTime: 300, Lock: config.LockSession, BindKey: "l"}))), 0o644)
+	if !Installed(tc) {
+		t.Error("an earlier tmux block is not installed")
+	}
+	if k, l := bound(ours(tc, ownPath(tmuxFile))); k != "l" || l != config.LockSession {
+		t.Errorf("read off an earlier block: %q %q", k, l)
+	}
+	if err := Tmux(new(bytes.Buffer), config.Tmux{Conf: tc, LockAfterTime: 300, Lock: config.LockServer}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(tc); !strings.HasPrefix(string(b), "set -g mouse on\n\n"+blockBegin+"\nsource-file -q ~/") || strings.Contains(string(b), "lock-command") {
+		t.Errorf("tmux, after a write:\n%s", b)
+	}
+	rc := filepath.Join(h, ".screenrc")
+	os.WriteFile(rc, []byte(Apply("", screenLines(config.Screen{Idle: 300, Bind: "^L"}))), 0o644)
+	if !Installed(rc) || screenBound(ours(rc, ownPath(screenFile))) != "^L" {
+		t.Errorf("an earlier screen block: installed %v, key %q", Installed(rc), screenBound(ours(rc, ownPath(screenFile))))
+	}
+	if err := Screen(new(bytes.Buffer), config.Screen{Conf: rc, Idle: 300}); err != nil {
+		t.Fatal(err)
+	}
+	if b, _ := os.ReadFile(rc); !strings.HasPrefix(string(b), blockBegin+"\nsource $HOME/.config/locku/locku.screenrc ") || strings.Contains(string(b), "idle") {
+		t.Errorf("screen, after a write:\n%s", b)
+	}
+}
+
+// The line names locku's own file from home as each tool writes it —
+// tmux ~, screen $HOME (measured 2026-10-08) — and, outside home or with
+// a character a config line reads otherwise, by the whole path, quoted.
+func TestTheLineNamesLockusOwnFile(t *testing.T) {
+	h := t.TempDir()
+	t.Setenv("HOME", h)
+	for _, c := range []struct{ own, tmux, screen string }{
+		{filepath.Join(h, ".config", "locku", "locku.tmux.conf"), "~/.config/locku/locku.tmux.conf", "$HOME/.config/locku/locku.tmux.conf"},
+		{filepath.Join(h, "My Config", "locku.tmux.conf"), "'" + h + "/My Config/locku.tmux.conf'", "'" + h + "/My Config/locku.tmux.conf'"},
+		{"/etc/locku/locku.tmux.conf", "'/etc/locku/locku.tmux.conf'", "'/etc/locku/locku.tmux.conf'"},
+	} {
+		if got := includeArg(c.own, "~/"); got != c.tmux {
+			t.Errorf("tmux, %s: %s", c.own, got)
+		}
+		if got := includeArg(c.own, "$HOME/"); got != c.screen {
+			t.Errorf("screen, %s: %s", c.own, got)
+		}
+	}
+	if tilde(filepath.Join(h, "a", "b")) != "~/a/b" || tilde("/etc/a") != "/etc/a" || tilde(h) != h {
+		t.Errorf("tilde: %s %s %s", tilde(filepath.Join(h, "a", "b")), tilde("/etc/a"), tilde(h))
+	}
+}
+
 func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 	h := t.TempDir()
 	t.Setenv("HOME", h)
 	t.Setenv("PATH", t.TempDir())
+	t.Setenv("LOCKU__CONFIG", filepath.Join(h, ".config", "locku"))
 	for _, c := range []struct{ shell, rc, prefix string }{
 		{"/bin/zsh", ".zshrc", "export LOCKPRG="},
 		{"/bin/bash", ".bashrc", "export LOCKPRG="},
@@ -344,29 +447,49 @@ func TestScreenWritesAndUndoesRCAndShellRC(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	// The screenrc gets one line, which reads locku's own file by $HOME;
+	// the lines are in that file, and a row changed is that file's alone.
 	rc := filepath.Join(h, ".screenrc")
-	b, _ := os.ReadFile(rc)
-	if !strings.Contains(string(b), "idle 300 lockscreen") || strings.Contains(string(b), "setenv") || strings.Contains(string(b), "bind") || strings.Count(string(b), "# locku") != 1 {
-		t.Errorf(".screenrc:\n%s", b)
+	own := filepath.Join(h, ".config", "locku", "locku.screenrc")
+	user, _ := os.ReadFile(rc)
+	if string(user) != blockBegin+"\nsource $HOME/.config/locku/locku.screenrc   # locku: the lock, as locku's settings screen sets it\n"+blockEnd+"\n" {
+		t.Errorf(".screenrc:\n%s", user)
+	}
+	mine := func(label string, lines int) string {
+		t.Helper()
+		if b, _ := os.ReadFile(rc); string(b) != string(user) {
+			t.Errorf("%s: the user's file changed:\n%s", label, b)
+		}
+		b, _ := os.ReadFile(own)
+		if n := strings.Count(string(b), " # locku"); n != lines {
+			t.Errorf("%s: %d lines of locku's, want %d:\n%s", label, n, lines, b)
+		}
+		return string(b)
+	}
+	if b := mine("idle", 1); !strings.Contains(b, "idle 300 lockscreen") || strings.Contains(b, "setenv") || strings.Contains(b, "bind") {
+		t.Errorf("locku.screenrc:\n%s", b)
 	}
 	// A key: one bind line more; emptied again, the line goes.
 	if err := Screen(new(bytes.Buffer), config.Screen{Conf: rc, Idle: 300, Bind: "l"}); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(rc); !strings.Contains(string(b), "bind l lockscreen") || strings.Count(string(b), "# locku") != 2 {
+	if b := mine("with a key", 2); !strings.Contains(b, "bind l lockscreen") {
 		t.Errorf("with a key:\n%s", b)
 	}
 	if err := Screen(new(bytes.Buffer), config.Screen{Conf: rc, Idle: 300}); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "bind") || strings.Count(string(b), "# locku") != 1 {
+	if b := mine("key emptied", 1); strings.Contains(b, "bind") {
 		t.Errorf("key emptied:\n%s", b)
 	}
 	if err := ScreenUndo(new(bytes.Buffer), rc); err != nil {
 		t.Fatal(err)
 	}
-	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "lockscreen") {
+	if b, _ := os.ReadFile(rc); strings.Contains(string(b), "locku") {
 		t.Errorf(".screenrc after undo:\n%s", b)
+	}
+	if _, err := os.Stat(own); err == nil {
+		t.Error("locku's own screenrc is left after undo")
 	}
 	// Unset, nothing is written — not even the shell rc.
 	h3 := t.TempDir()

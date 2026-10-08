@@ -3,6 +3,8 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+
+	"github.com/vulcanshen/locku/internal/setup"
 )
 
 // helpPopup is ?, the key reference of whatever is in front, to read and
@@ -126,8 +128,8 @@ var helpPreference = []helpEntry{
 func helpTool(name string) []helpEntry {
 	out := []helpEntry{
 		{desc: "[2] " + name + " — what each row is"},
-		{key: "activate", desc: "on: locku's block is in the file, and every row here is written into it the moment it changes; off: it is not. [Enter] turns it, after a confirm"},
-		{key: "config file path", desc: "the file locku's block is written into; ~/ allowed"},
+		{key: "activate", desc: "on: the file reads locku's own, " + setup.Own(name) + ", and every row here is written into that the moment it changes; off: it does not. [Enter] turns it, after a confirm"},
+		{key: "config file path", desc: "the file locku's block, one line that reads locku's own, is written into; ~/ allowed"},
 		{desc: "under the line: " + name + "'s own settings"},
 	}
 	if name == tools[toolTmux] {

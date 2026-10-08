@@ -44,7 +44,7 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
 複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、runner、bounce、snake、tetromino、pets、custom），它們沒有名字、名字就是自己，不能新增刪除；
-**Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
+**Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
 是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
@@ -112,14 +112,14 @@ cooldown lasts`。列數超過面板時跟著 cursor 捲。
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
-| activate | `on`（Green）/ `off`（Mauve）：區塊在不在 config file path 裡，每次畫都讀一次 | Enter → confirm popup 才執行：on 把區塊寫進檔案（tmux 有 server 在跑就整塊 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled（2026-09-26 起只變暗，不另說原因，tdp M6） |
+| activate | `on`（Green）/ `off`（Mauve）：區塊在不在 config file path 裡、它讀的 locku 自己的檔案在不在，每次畫都讀一次 | Enter → confirm popup 才執行：on 把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進檔案（tmux 有 server 在跑就把 locku 的檔案 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉區塊、刪掉 locku 的檔案（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled（2026-09-26 起只變暗，不另說原因，tdp M6） |
 | config file path | 路徑照存的樣子；未設 `not set`（Yellow），activate 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc`；on 的時候改路徑，區塊搬到新檔、清空就拿掉 |
 | ── 分隔線 | Surface2 一條線，不可停：上面是 locku 的設定，下面是寫進工具設定檔的 key | 無 |
-| lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | options popup，兩個值；on 時改了立刻重寫區塊、server 換旗 |
+| lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | options popup，兩個值；on 時改了立刻重寫 locku 的檔案、server 換旗 |
 | lock-after-time（tmux）/ idle（screen） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱，activate on 時原樣寫進去、一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
 | bind-key（tmux）/ bind（screen） | 鍵照工具自己的寫法——tmux `l`、`C-l`、`F12`，screen `l`、`^L`；空顯示 `none`：prefix / C-a 之後按它就鎖，寫成 `bind-key <鍵> <lock>` / `bind <鍵> lockscreen`；screen 的 `C-a x` 內建就鎖，`?` 說明會講 | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著 |
 
-**開一次，之後隨設即得**（2026-09-25，使用者定案）：`activate` on 時任何一列改動就直接重寫區塊、tmux 整塊套到 server、screen 即時送進跑著的 session，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完 toast 一行結果；off 就只寫 config.yaml，activate 仍由使用者開。
+**開一次，之後隨設即得**（2026-09-25，使用者定案）：`activate` on 時任何一列改動就直接重寫 locku 自己的檔案（使用者的檔案不再動，2026-10-08）、tmux 整份套到 server、screen 即時送進跑著的 session，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完 toast 一行結果；off 就只寫 config.yaml，activate 仍由使用者開。
 `?` help 的鍵清單說 Enter 在 activate 上做什麼；focus 在這個 `[2]` 時 `?` 只有 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，screen 再多一條 `LOCKPRG`：鎖本體不是一列、住在 shell rc、新開 shell 才有。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
