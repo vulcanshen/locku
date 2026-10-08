@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-08
 ### Changed
 - Integration keeps tmux's and screen's settings in a file of locku's own, next to `config.yaml` — `locku.tmux.conf`, `locku.screenrc` — and your tmux.conf or screenrc gets one line that reads it, `source-file -q ~/.config/locku/locku.tmux.conf` or `source $HOME/.config/locku/locku.screenrc`, between the same markers as before. Your file is touched when `activate` is turned, and no longer when a row changes; and it holds nothing of this machine's, so dotfiles shared between machines carry the same line, which tmux skips without a word where the file is not there. A block an earlier locku wrote whole into your file is replaced by the line the next time it writes — change any row, or turn `activate` off and on. `activate` off removes locku's file too. The shell rc's `LOCKPRG` is as it was.
 
