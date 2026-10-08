@@ -76,7 +76,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
 | participants | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（runner，2026-10-07 前叫 `runner`：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
 | character | `t-rex` / `cat` / `rabbit` / `giraffe` / `ghost`（runner：跑的是什麼，2026-10-06；`giraffe` 2026-10-07 前叫 `horse`） | options popup |
-| scene | `grassland` / `desert`（runner：草原是仙人掌，沙漠是金字塔）；`outdoor`（pets：目前只有這一個，2026-10-08） | options popup（2026-09-24） |
+| scene | `grassland` / `desert` / `city`（runner：草原是仙人掌，沙漠是金字塔，城市是平房、大廈、摩天大樓，2026-10-08）；`outdoor`（pets：目前只有這一個，2026-10-08） | options popup（2026-09-24） |
 | background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | options popup |
 | command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
 | speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake、bounce 與 tetromino：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有，tetromino 同日新增） | options popup |

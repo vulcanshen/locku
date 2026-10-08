@@ -197,7 +197,7 @@ func TestArtByName(t *testing.T) {
 			t.Errorf("%s: figures %v wide, want %v", c.name, got, c.widths)
 		}
 	}
-	if sceneOf("nonsense").tuftEvery != grassland.tuftEvery || sceneOf(SceneDesert).obstacles[2].h() != 5 {
+	if sceneOf("nonsense").tuftEvery != grassland.tuftEvery || sceneOf(SceneDesert).obstacles[2].h() != 5 || sceneOf(SceneCity).obstacles[2].h() != 10 {
 		t.Error("sceneOf")
 	}
 	if greatPyramid.w() != 9 || greatPyramid[0] != "....#...." || greatPyramid[4] != "#########" {
@@ -225,6 +225,7 @@ func TestObstaclesComeInThreeTiers(t *testing.T) {
 	}{
 		{SceneGrass, grassland, []sprite{cactus, tallCactus, bigCactus}, []int{5, 7, 10}},
 		{SceneDesert, desert, []sprite{pyramid, greatPyramid, hugePyramid}, []int{3, 5, 7}},
+		{SceneCity, city, []sprite{bungalow, block, skyscraper}, []int{5, 7, 10}},
 	} {
 		for i, art := range c.tiers {
 			if !slices.ContainsFunc(c.scene.obstacles, func(o obstacleArt) bool { return slices.Equal(o.sprite, art) && o.tier == tier(i) }) {
@@ -292,6 +293,38 @@ func TestJumpIsTheObstaclesSize(t *testing.T) {
 					t.Errorf("%s in %s over obstacle %d, tier %d: peaked at %d, want %d", runner, scene, kind, o.tier, peak, slices.Max(arcs[o.tier]))
 				}
 			}
+		}
+	}
+}
+
+// The city's windows (user, 2026-10-08): some of each building's are lit
+// at night, in the gold of the runner's eyes; the rest are dark, the sky
+// through them, and so are all of them by day and at dusk, which have no
+// eyes to light (TestRunnerInks).
+func TestCityWindowsLightAtNight(t *testing.T) {
+	for kind, want := range []int{2, 7, 6} {
+		o := city.obstacles[kind]
+		d := NewDino(3, RunnerSmall, CharacterTRex, SceneCity, BackgroundNight, time.Now)
+		d.Draw(76, 31)
+		d.obs = []obstacle{{x: 50, kind: kind}}
+		sc := d.Draw(76, 31)
+		top, lit, dark := d.groundY()-o.h(), 0, 0
+		for y, row := range o.sprite {
+			for x := range row {
+				got, want := sc.Pix[(top+y)*sc.W+50+x], map[byte]uint8{'#': 1, '.': 0, 'w': inkEye}[row[x]]
+				if got != want {
+					t.Errorf("obstacle %d at %d,%d: ink %d, want %d", kind, x, y, got, want)
+				}
+				if row[x] == 'w' {
+					lit++
+				}
+				if row[x] == '.' && x > 0 && x < len(row)-1 && row[x-1] != '.' && row[x+1] != '.' && y < len(o.sprite)-1 {
+					dark++ // inside, above the door's row
+				}
+			}
+		}
+		if lit != want || dark == 0 {
+			t.Errorf("obstacle %d: %d windows lit, want %d, and %d dark, want some", kind, lit, want, dark)
 		}
 	}
 }
