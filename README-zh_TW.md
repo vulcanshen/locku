@@ -112,7 +112,7 @@ locku pin reset  # 忘記 PIN 時，用登入密碼換一組新的
 locku version    # 版本；locku help 印用法
 ```
 
-1. `locku`，到 **Settings › preference**，PIN 那列按 `Enter`，輸入一組。這步可省略：不設 PIN，locku 就是螢幕保護，任何鍵結束。
+1. `locku`，到 **Settings › preference**，PIN 那列按 `Enter`，輸入一組，4 到 12 個字元。這步可省略：不設 PIN，locku 就是螢幕保護，任何鍵結束。
 2. **Integration › tmux**（或 **screen**）：填 `config file path`（會提議 `~/.tmux.conf`），把 `activate` 打開、確認。locku 的區塊已在檔案裡，跑著的 tmux server 也立刻收到。
 3. 在 tmux 裡 `prefix :` 打 `locku`，整台 server 的 client 一起鎖。閒置 `lock-after-time` 秒（預設 300）的 session 自己鎖。填一個 `bind-key`，例如 `l`，`prefix l` 也鎖。
 4. 任何鍵叫出 PIN 框；PIN 對了終端機回來。
@@ -169,7 +169,7 @@ locku pin reset
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg` 各三個 RGB slider，改的是草稿，`S` 才寫檔（`R` 丟掉；有未存草稿時 `q` 先問）。其他每一列一改就寫檔。
 - **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
-- **Settings › preference**——PIN（設定；已設時 `Enter` 先驗目前的，再選 `New PIN` 或 `Remove PIN`）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
+- **Settings › preference**——PIN（4 到 12 個字元；設定；已設時 `Enter` 先驗目前的，再選 `New PIN` 或 `Remove PIN`）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
 
 任何 `[2]` 上 `P` 就地預覽鎖定畫面：profile 或 saver 的 `[2]` 是那一個，其他是啟用中的 profile。任意鍵回來，不驗 PIN。custom profile 的預覽把終端機整個交給程式，直到按鍵。
 
