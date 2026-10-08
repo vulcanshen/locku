@@ -177,7 +177,7 @@ VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（w
 
 ### saver 的靜態圖（2026-10-08）
 
-README 的「What you see」每種 saver 一節，各配一張靜態圖 `docs/savers/<種類>.png`（使用者：不需要 gif）。用 VHS 的 `Screenshot` 拍：`.local/demos/savers.tape` 與 `savers.yaml`（七個 profile 照 Savers 的順序，`make shots`），在設定畫面逐一 `p` 預覽、等畫面有內容再拍。runner 是 city 配 night（使用者選的，新場景、夜裡一部分窗戶亮著）；custom 跑 cmatrix（使用者選的，所以拍照要裝 cmatrix）；snake 與 tetromino 用 `super-fast`、分別等 15 與 25 秒，畫面才不會空空的（我的判斷）。
+README 的「What you see」每種 saver 一節，各配一張靜態圖 `docs/savers/<種類>.png`（使用者：不需要 gif）。用 VHS 的 `Screenshot` 拍：`.local/demos/savers.tape` 與 `savers.yaml`（七個 profile 照 Savers 的順序，`make shots`），在設定畫面逐一 `p` 預覽、等畫面有內容再拍。runner 是 city 配 night（使用者選的，新場景、夜裡一部分窗戶亮著）；custom 跑 cmatrix（使用者選的，所以拍照要裝 cmatrix）；snake 與 tetromino 用 `super-fast`、分別等 15 與 25 秒，畫面才不會空空的（我的判斷）；clock 用 `large`（使用者：全螢幕應該放得下 3 × 3），`HH MM SS` 的 large 要 148 欄，所以拍照的視窗是 1300 × 720、151 欄（gif 的 1200 寬只有 140 欄，放不下會先拿掉秒），七張一樣大。
 
 畫面是隨機的，`make shots` 一次拍七張，挑過才進版控：runner 要有一棟完整的樓在跑者右邊；snake、tetromino 要沒有殘影。VHS 的畫面（headless 瀏覽器裡的 xterm.js）偶爾會在預覽開始後留著設定畫面左上角幾個字，snake、tetromino 的上面幾列不會再畫，殘影就一直留著；custom 偶爾整張是空的。同樣的按鍵節奏在 tmux 裡試 40 次都沒有殘影——tmux 記的是 locku 實際寫出的內容——所以是 VHS 顯示的問題，不是 locku 的（2026-10-08）。
 
