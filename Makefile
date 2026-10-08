@@ -52,6 +52,10 @@ VHS ?= vhs
 gif: build ## 錄 docs/demo.gif（需 vhs、JetBrainsMono Nerd Font；最多先等三分鐘到 runner 的黃昏；tape 與展示用 config 在 .local/demos/，不碰你的 config）
 	$(VHS) .local/demos/demo.tape
 
+.PHONY: shots
+shots: build ## 拍 docs/savers/*.png，README 每種 saver 一張（需 vhs、JetBrainsMono Nerd Font、cmatrix；隨機的畫面要挑，見 dev-remarks「saver 的靜態圖」）
+	$(VHS) .local/demos/savers.tape
+
 ##@ 執行（run）
 
 .PHONY: run
