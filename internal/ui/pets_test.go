@@ -24,10 +24,10 @@ func TestPetsLockWearsItsOwnColours(t *testing.T) {
 	if _, ok := m.game.(*saver.Pets); !ok {
 		t.Fatalf("the game is %T", m.game)
 	}
-	if inks := m.inks(); len(inks) != 32 || inks[0] != lipgloss.Color("#1d2745") || inks[1] != lipgloss.Color("#4f7d36") || inks[2] != lipgloss.Color("#847260") || inks[7] != lipgloss.Color("#f6b06a") {
+	if inks := m.inks(); len(inks) != 32 || inks[0] != lipgloss.Color("#7e9bbb") || inks[1] != lipgloss.Color("#4f7d36") || inks[2] != lipgloss.Color("#847260") || inks[7] != lipgloss.Color("#f6b06a") {
 		t.Fatalf("inks %v", inks)
 	}
-	if s := m.shading(); s == nil || s.Looks[0].Ground[0] != "#1d2745" || s.Looks[0].Ground[len(s.Looks[0].Ground)-1] != "#1c2f1a" {
+	if s := m.shading(); s == nil || s.Looks[0].Ground[0] != "#7e9bbb" || s.Looks[0].Ground[len(s.Looks[0].Ground)-1] != "#1c2f1a" {
 		t.Fatalf("no backdrop: %+v", s)
 	}
 	grass := 0

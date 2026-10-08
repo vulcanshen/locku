@@ -204,13 +204,16 @@ var petCoats = [][5]string{
 
 // The outdoors' colours (user, 2026-10-07: the cats go out). The
 // backdrop is a gradient a row at a time, as the runner's dusk is: the
-// sky, dark blue high and lighter low, over a green field, lighter far
-// and darker near — dark enough for the cats to show on it, a light one
-// having lost them. Then the grass of the ground, the trees' bark, their
-// leaves and the leaves' shade, a stump's cut top, and the z.
+// sky over a green field, lighter far and darker near — dark enough for
+// the cats to show on it, a light one having lost them. The sky is light
+// high and darker low, the other way up from the runner's day (user,
+// 2026-10-08: it had been dark blue high, #1d2745, and #3f5a7c low, too
+// dark); its two blues half way between those and the runner's day sky.
+// Then the grass of the ground, the trees' bark, their leaves and the
+// leaves' shade, a stump's cut top, and the z.
 var petBackdrop = []petStop{
-	{0, "#1d2745"},
-	{0.5, "#3f5a7c"},
+	{0, "#7e9bbb"},
+	{0.5, "#4c709d"},
 	{0.52, "#4e6e46"},
 	{1, "#1c2f1a"},
 }
