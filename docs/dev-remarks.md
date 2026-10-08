@@ -35,7 +35,7 @@ locku/
 │   ├── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
 │   └── version/        版本字串（goreleaser 以 ldflags 注入，本機 build 是 dev）
 ├── e2e/                pty 端到端：tmux_attach.py、custom_lock.py、screen_lock.py
-└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、demo.gif、savers/（README 每種 saver 的靜態圖）
+└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、social-preview.png、demo.gif、savers/（README 每種 saver 的靜態圖）
 ```
 
 ## 設計決定
@@ -136,6 +136,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 | [`ui.md`](ui.md) | 設定畫面兩個面板的 grid、鎖定畫布、每個欄位怎麼呈現、popup、PIN prompt 四個狀態、色帶、存檔 | 2 |
 | [`ux.md`](ux.md) | core-key 語意、Space menu 內容、`?` 全域、每種欄位怎麼填、PIN 三連問、hotkey 分層、浮層、時間軸 | 3 |
 | [`icon.svg`](icon.svg) | 圖示：黑底方塊上家族的方塊字 mark，深藍 U 包住金色的 L、O、C、K；splash 照它畫 | — |
+| [`social-preview.png`](social-preview.png) | GitHub 的 social preview：icon 在上、下面 Tiny5 字樣 `locku`，`/social-preview locku` 產生（2026-10-08） | — |
 
 Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、custom saver 的程式與登入密碼驗證用 [creack/pty](https://github.com/creack/pty)、`charmbracelet/x/term` 與 `charmbracelet/x/ansi`、`muesli/cancelreader`、PIN 用 `golang.org/x/crypto/bcrypt`、config 用 `gopkg.in/yaml.v3`。色系 catppuccin-mocha。
 
