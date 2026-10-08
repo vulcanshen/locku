@@ -749,7 +749,8 @@ func (d *Dino) clears(i int, o obstacle, delay int) bool {
 }
 
 func (d *Dino) newCloud(x int) cloud {
-	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.tallest()-arcTop-d.scene.cloud.h()))}
+	// A row more than the cloud: its edge by day clears the runner.
+	return cloud{x: x, y: 1 + d.rng.IntN(max(1, d.groundY()-d.runner.tallest()-arcTop-d.scene.cloud.h()-1))}
 }
 
 // resize is a new scene size: the clouds find their sky again; the
@@ -804,8 +805,18 @@ func (d *Dino) Draw(w, h int) Scene {
 		}
 	}
 	d.drawLights(&sc)
+	// The clouds in their own colour, and by day an edge round each, in
+	// front of the sun as they are (user, 2026-10-08).
+	from, to, f := d.skies()
+	edged := shows(from, to, f, hasCloudEdge)
 	for _, c := range d.clouds {
-		sc.blit(d.scene.cloud, c.x, c.y)
+		if edged {
+			edge, _ := rim(d.scene.cloud)
+			for _, q := range edge {
+				sc.put(c.x+q[0], c.y+q[1], inkCloudEdge)
+			}
+		}
+		sc.blitIn(d.scene.cloud, c.x, c.y, inkCloud)
 	}
 	for _, o := range d.obs {
 		s := d.scene.obstacles[o.kind]

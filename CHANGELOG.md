@@ -5,6 +5,9 @@
 - A third scene for the runner, `city`: a bungalow, a block of flats and a skyscraper to jump, small, medium and large, and at night some of their windows lit in gold.
 - The pets have two settings more, one choice each for now, making room for more: `animals`, cats, and `scene`, outdoor. A pets profile without them is cats outdoors, as before.
 
+### Changed
+- The runner's clouds have colours of their own: by day white with a grey edge round them, at dusk white, by night in the moonlight as before. By day they were the world's dark grey.
+
 ## [0.2.3] - 2026-10-07
 ### Changed
 - The PIN box has its dots in its middle row, the lock's and the settings screen's alike: two rows of air above them, one below, and the row kept for why an Enter was refused (`wrong PIN`, `try again in 27 s`) against the bottom border. The dots used to sit a row above the middle.
