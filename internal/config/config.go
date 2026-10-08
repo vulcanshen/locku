@@ -68,7 +68,8 @@ type Profile struct {
 	FG string `yaml:"fg,omitempty"`
 	// The runner's own (2026-09-24): how many run, as what (user,
 	// 2026-10-06), where, and under what sky (user, 2026-10-07). A clock
-	// leaves them out of the file.
+	// leaves them out of the file. Where is the pets' too (2026-10-08),
+	// one of saver.PetScenes for them.
 	Participants string `yaml:"participants,omitempty"`
 	Character    string `yaml:"character,omitempty"`
 	Scene        string `yaml:"scene,omitempty"`
@@ -80,9 +81,10 @@ type Profile struct {
 	// 2026-10-06, 2026-10-07): how fast it goes, by name, one of
 	// saver.Speeds (2026-10-07; it was the snake's cells a second).
 	Speed string `yaml:"speed,omitempty"`
-	// The pets' (user, 2026-10-07): how many cats, one of
-	// saver.PetCounts.
-	Count int `yaml:"count,omitempty"`
+	// The pets' (user, 2026-10-07): what they are (2026-10-08), one of
+	// saver.PetAnimals, and how many, one of saver.PetCounts.
+	Animals string `yaml:"animals,omitempty"`
+	Count   int    `yaml:"count,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -214,8 +216,9 @@ func NewProfile(name, kind string) Profile {
 		// falling blocks the same, 2026-10-07).
 		return Profile{Name: name, Saver: kind, Speed: saver.SpeedNormal}
 	case saver.KindPets:
-		// How many cats alone: colours of their own (user, 2026-10-07).
-		return Profile{Name: name, Saver: kind, Count: saver.PetsDefault}
+		// What, how many and where: colours of their own (user,
+		// 2026-10-07; what and where 2026-10-08).
+		return Profile{Name: name, Saver: kind, Scene: saver.PetScenes[0], Animals: saver.PetAnimals[0], Count: saver.PetsDefault}
 	}
 	return Profile{Name: name, Saver: saver.KindClock, Layout: "row", Size: "large", Font: "3x5", Time: "HH MM SS", Date: "YYYY-MM-DD", BG: DefaultBG, FG: DefaultFG}
 }
@@ -538,7 +541,7 @@ func tidy(p Profile, kind string) Profile {
 	switch {
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Participants, p.Character, p.Scene, p.Background = "", "", "", "", "", "", "", "", ""
-		p.BG, p.FG, p.Speed, p.Count = "", "", "", 0
+		p.BG, p.FG, p.Speed, p.Animals, p.Count = "", "", "", "", 0
 		return p
 	case kind == saver.KindBounce:
 		// A speed or a time it does not have is quietly the default —
@@ -559,13 +562,20 @@ func tidy(p Profile, kind string) Profile {
 		}
 		return Profile{Name: p.Name, Saver: kind, Speed: p.Speed}
 	case kind == saver.KindPets:
-		// A count it does not have is quietly the default.
+		// A count, animals or a scene it does not have is quietly the
+		// default — the runner's scenes among them.
 		if !slices.Contains(saver.PetCounts, p.Count) {
 			p.Count = d.Count
 		}
-		return Profile{Name: p.Name, Saver: kind, Count: p.Count}
+		if !slices.Contains(saver.PetAnimals, p.Animals) {
+			p.Animals = d.Animals
+		}
+		if !slices.Contains(saver.PetScenes, p.Scene) {
+			p.Scene = d.Scene
+		}
+		return Profile{Name: p.Name, Saver: kind, Scene: p.Scene, Animals: p.Animals, Count: p.Count}
 	case kind == saver.KindRunner:
-		p.Command, p.Speed, p.Count = "", "", 0
+		p.Command, p.Speed, p.Animals, p.Count = "", "", "", 0
 		if p.Participants == "" {
 			p.Participants = d.Participants
 		}
@@ -587,7 +597,7 @@ func tidy(p Profile, kind string) Profile {
 		p.Layout, p.Size, p.Font, p.Time, p.Date = "", "", "", "", ""
 		return p
 	default:
-		p.Command, p.Speed, p.Background, p.Count = "", "", "", 0
+		p.Command, p.Speed, p.Background, p.Animals, p.Count = "", "", "", "", 0
 		if p.Layout == "" {
 			p.Layout = d.Layout
 		}
