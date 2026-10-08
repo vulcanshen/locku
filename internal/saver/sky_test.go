@@ -44,7 +44,7 @@ func TestRunnerBackgrounds(t *testing.T) {
 		sh, inks := d.Shade(60, 31), d.Inks()
 		ground := sh.Looks[1].Ground
 		top, bottom := c.want.stops[0], c.want.stops[len(c.want.stops)-1]
-		if len(inks) != 10 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
+		if len(inks) != 9 || inks[0] != top || inks[1] != c.want.fg || sh.Looks[1].Inks[1] != c.want.fg ||
 			len(ground) != 31 || ground[0] != top || ground[30] != bottom {
 			t.Errorf("%q at minute %d: inks %v, the ground %v", c.background, c.minute, inks, ground)
 			continue
@@ -119,19 +119,17 @@ func TestRunnerSunAndMoon(t *testing.T) {
 	}
 }
 
-// The clouds (user, 2026-10-08): by day white with a grey edge round
-// them, as the night outlines the runner; at dusk white alone; by night
-// in the world's moonlight, as they were, alone. Clouds of their own
-// colour, not the world's: by day the world is dark. The edge clears the
-// runner at the top of the highest jump.
+// The clouds (user, 2026-10-08): white by day and at dusk, in the
+// world's moonlight by night, as they were; no edge round them in any
+// sky (user, the same day: a grey one by day was a mistake). Clouds of
+// their own colour, not the world's: by day the world is dark.
 func TestRunnerClouds(t *testing.T) {
-	if daySky.cloud != "#ffffff" || daySky.cloudEdge != "#9ca0b0" || duskSky.cloud != "#ffffff" || duskSky.cloudEdge != "" ||
-		nightSky.cloud != nightSky.fg || nightSky.cloudEdge != "" {
-		t.Errorf("clouds: day %s %s, dusk %s %s, night %s %s", daySky.cloud, daySky.cloudEdge, duskSky.cloud, duskSky.cloudEdge, nightSky.cloud, nightSky.cloudEdge)
+	if daySky.cloud != "#ffffff" || duskSky.cloud != "#ffffff" || nightSky.cloud != nightSky.fg {
+		t.Errorf("clouds: day %s, dusk %s, night %s", daySky.cloud, duskSky.cloud, nightSky.cloud)
 	}
 	for _, s := range []sky{daySky, duskSky, nightSky} {
-		if l := s.look(31); l.Inks[inkCloud] != s.cloud || l.Inks[inkCloudEdge] != s.cloudEdge {
-			t.Errorf("the look's cloud inks %v", l.Inks)
+		if l := s.look(31); l.Inks[inkCloud] != s.cloud {
+			t.Errorf("the look's cloud ink %v", l.Inks)
 		}
 	}
 	edge, _ := rim(cloudArt)
@@ -147,18 +145,10 @@ func TestRunnerClouds(t *testing.T) {
 				}
 			}
 		}
-		want := map[string]uint8{BackgroundDay: inkCloudEdge, BackgroundNight: 0}[bg]
 		for _, q := range edge {
-			if got := sc.Pix[(4+q[1])*76+20+q[0]]; got != want {
-				t.Errorf("%s: the cloud's edge at %d,%d is ink %d, want %d", bg, q[0], q[1], got, want)
+			if got := sc.Pix[(4+q[1])*76+20+q[0]]; got != 0 {
+				t.Errorf("%s: round the cloud at %d,%d is ink %d, not the sky", bg, q[0], q[1], got)
 			}
-		}
-	}
-	d := NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundDay, time.Now)
-	d.Draw(76, 31)
-	for i := 0; i < 500; i++ {
-		if c := d.newCloud(0); c.y < 1 || c.y+cloudArt.h() >= d.groundY()-d.runner.tallest()-arcTop {
-			t.Fatalf("a cloud at %d: its edge meets the runner at the top of a jump", c.y)
 		}
 	}
 }
@@ -170,8 +160,8 @@ func TestRunnerCloudsPassInFrontOfTheSun(t *testing.T) {
 	d.Draw(76, 31)
 	sx, sy := d.sunAt()
 	d.clouds = []cloud{{x: sx, y: sy}}
-	if sc := d.Draw(76, 31); sc.Pix[(sy+1)*76+sx+3] != inkCloud || sc.Pix[(sy+2)*76+sx+3] != inkCloudEdge {
-		t.Errorf("the cloud over the sun is ink %d, its edge %d", sc.Pix[(sy+1)*76+sx+3], sc.Pix[(sy+2)*76+sx+3])
+	if sc := d.Draw(76, 31); sc.Pix[(sy+1)*76+sx+3] != inkCloud {
+		t.Errorf("the cloud over the sun is ink %d", sc.Pix[(sy+1)*76+sx+3])
 	}
 	dusk := func() time.Time { return time.Date(2026, time.October, 7, 14, 1, 59, 0, time.Local) }
 	d = NewDino(1, RunnerBig, CharacterTRex, SceneGrass, BackgroundTimeShifting, dusk)
@@ -321,11 +311,6 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 		x, y := d.runnerX(0), d.groundY()-pose.h()
 		// A cloud just left of the tail: the outline leaves it be.
 		d.clouds = []cloud{{x: x - 10, y: y + 5}}
-		cloudRing := map[[2]int]bool{}
-		edge, _ := rim(cloudArt)
-		for _, q := range edge {
-			cloudRing[q] = true
-		}
 		sc := d.Draw(76, 31)
 		at := func(px, py int) uint8 { return sc.Pix[py*sc.W+px] }
 		body := func(px, py int) bool {
@@ -351,8 +336,6 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 					want = inkRunner
 				case px == -1 && py == 6:
 					want = inkCloud
-				case !c.lined && cloudRing[[2]int{px + 10, py - 5}]:
-					want = inkCloudEdge // by day the cloud's edge
 				case px == 8 && py == 1 && c.lined:
 					want = inkEye
 				case ring[[2]int{px, py}] && c.lined:

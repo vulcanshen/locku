@@ -55,40 +55,39 @@ const (
 
 // The inks of the runner's scene past the ground and the world's: the
 // sun, the moon and the setting sun; the runner, its outline and its
-// eyes; the clouds and their edge.
+// eyes; the clouds.
 const (
-	inkSun       uint8 = 2
-	inkMoon      uint8 = 3
-	inkSunset    uint8 = 4
-	inkRunner    uint8 = 5
-	inkOutline   uint8 = 6
-	inkEye       uint8 = 7
-	inkCloud     uint8 = 8
-	inkCloudEdge uint8 = 9
+	inkSun     uint8 = 2
+	inkMoon    uint8 = 3
+	inkSunset  uint8 = 4
+	inkRunner  uint8 = 5
+	inkOutline uint8 = 6
+	inkEye     uint8 = 7
+	inkCloud   uint8 = 8
 )
 
 // sky is a background: the colours its gradient passes through, top to
 // bottom and evenly apart, the colour the world is drawn in — the
 // ground line, the obstacles — the runner's, its outline's and its
-// eyes' ("" for none), the clouds' and their edge's ("" for none), and
-// whether the sun, the moon or the setting sun is in it.
+// eyes' ("" for none), the clouds', and whether the sun, the moon or the
+// setting sun is in it.
 type sky struct {
 	stops                []string
 	fg                   string
 	runner, outline, eye string
-	cloud, cloudEdge     string
+	cloud                string
 	sun, moon, sunset    bool
 }
 
 var (
 	// Day: white, as the user asked, a pale blue at the top; the world
 	// and the runner in surface0, the night's ground; the sun. The
-	// clouds white, edged in a soft grey, latte's overlay0, as the night
-	// outlines the runner (user, 2026-10-08: they were the world's dark).
-	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", cloudEdge: "#9ca0b0", sun: true}
+	// clouds white (user, 2026-10-08: they were the world's dark; a grey
+	// edge round them, as the night outlines the runner, was a mistake).
+	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sun: true}
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
-	// world and the runner as by day; the setting sun. The clouds white,
-	// no edge (user, 2026-10-08).
+	// world and the runner as by day; the setting sun. The clouds white
+	// (user, 2026-10-08).
 	duskSky = sky{stops: []string{"#cba6f7", "#f38ba8", "#fab387", "#f9e2af"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sunset: true}
 	// Night: the ground the runner had (user: as now), darker above it
 	// and lighter below; the world in moonlight, catppuccin's overlay1,
@@ -100,7 +99,7 @@ var (
 	// the same day) — with its outline white (user, the same day: it was
 	// the gold) — catppuccin's text, a cool white, the moon's warm — and
 	// its eyes in the gold, the one warm light; the moon. The clouds in
-	// the world's moonlight, no edge.
+	// the world's moonlight.
 	nightSky = sky{stops: []string{"#1e1e2e", "#313244", "#45475a"}, fg: "#7f849c", runner: "#1e1e2e", outline: "#cdd6f4", eye: "#f2b753", cloud: "#7f849c", moon: true}
 )
 
@@ -153,7 +152,7 @@ func (s sky) at(p float64) string {
 // the runner's, the sun's, the moon's and the setting sun's, and the
 // clouds', each "" when it is not in this sky, the ground there.
 func (s sky) look(rows int) Look {
-	l := Look{Ground: make([]string, rows), Inks: []string{s.stops[0], s.fg, "", "", "", s.runner, s.outline, s.eye, s.cloud, s.cloudEdge}}
+	l := Look{Ground: make([]string, rows), Inks: []string{s.stops[0], s.fg, "", "", "", s.runner, s.outline, s.eye, s.cloud}}
 	for y := range l.Ground {
 		p := 0.0
 		if rows > 1 {
@@ -247,8 +246,6 @@ func hasSun(s sky) bool     { return s.sun }
 func hasMoon(s sky) bool    { return s.moon }
 func hasSunset(s sky) bool  { return s.sunset }
 func hasOutline(s sky) bool { return s.outline != "" }
-
-func hasCloudEdge(s sky) bool { return s.cloudEdge != "" }
 
 // rim is the outline round a sprite — every pixel about it, corners
 // too, that is not of it, under its feet as well: on the ground they are
