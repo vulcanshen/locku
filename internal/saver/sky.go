@@ -80,11 +80,13 @@ type sky struct {
 }
 
 var (
-	// Day: white, as the user asked, a pale blue at the top; the world
-	// and the runner in surface0, the night's ground; the sun. The
-	// clouds white (user, 2026-10-08: they were the world's dark; a grey
-	// edge round them, as the night outlines the runner, was a mistake).
-	daySky = sky{stops: []string{"#cfe8ff", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sun: true}
+	// Day: white, as the user asked, a blue at the top; the world and the
+	// runner in surface0, the night's ground; the sun. The clouds white
+	// (user, 2026-10-08: they were the world's dark; a grey edge round
+	// them, as the night outlines the runner, was a mistake), and the
+	// blue at the top deep enough for them to show on (user, the same
+	// day: it was a pale #cfe8ff, as light as they are).
+	daySky = sky{stops: []string{"#9ccfff", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sun: true}
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
 	// world and the runner as by day; the setting sun. The clouds white
 	// (user, 2026-10-08).

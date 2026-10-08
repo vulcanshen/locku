@@ -6,7 +6,7 @@
 - The pets have two settings more, one choice each for now, making room for more: `animals`, cats, and `scene`, outdoor. A pets profile without them is cats outdoors, as before.
 
 ### Changed
-- The runner's clouds have a colour of their own: white by day and at dusk, by night in the moonlight as before. By day they were the world's dark grey.
+- The runner's clouds have a colour of their own: white by day and at dusk, by night in the moonlight as before. By day they were the world's dark grey; and the day sky is a deeper blue at the top, for them to show on.
 
 ## [0.2.3] - 2026-10-07
 ### Changed

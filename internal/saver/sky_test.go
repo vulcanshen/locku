@@ -127,6 +127,12 @@ func TestRunnerClouds(t *testing.T) {
 	if daySky.cloud != "#ffffff" || duskSky.cloud != "#ffffff" || nightSky.cloud != nightSky.fg {
 		t.Errorf("clouds: day %s, dusk %s, night %s", daySky.cloud, duskSky.cloud, nightSky.cloud)
 	}
+	// White on the day sky's top, where the clouds go, shows (user, the
+	// same day: on its pale blue, #cfe8ff, it could not be told apart).
+	lum := func(hex string) int { c := channels(hex); return 2*c[0] + 7*c[1] + c[2] }
+	if top := daySky.stops[0]; lum(daySky.cloud)-lum(top) < 4*100 {
+		t.Errorf("the day's clouds %s on its sky %s", daySky.cloud, top)
+	}
 	for _, s := range []sky{daySky, duskSky, nightSky} {
 		if l := s.look(31); l.Inks[inkCloud] != s.cloud {
 			t.Errorf("the look's cloud ink %v", l.Inks)
