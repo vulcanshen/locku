@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.2.7] - 2026-10-08
 ### Fixed
 - The runner's small cat has an eye, as every other runner has, lit gold at night; its head is a row taller to hold it.
 
