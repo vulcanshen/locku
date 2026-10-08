@@ -93,7 +93,11 @@ func (m AppModel) actions() []action {
 	case rowCharacter:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "who runs", run: (*AppModel).chooseCharacter})
 	case rowScene:
-		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "where it runs", run: (*AppModel).chooseScene})
+		hint := "where it runs"
+		if p, _, _ := m.subject(); p.Saver == saver.KindPets {
+			hint = "where they are"
+		}
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: hint, run: (*AppModel).chooseScene})
 	case rowBackground:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "day, night, or a day every three minutes", run: (*AppModel).chooseBackground})
 	case rowCommand:
@@ -132,6 +136,8 @@ func (m AppModel) actions() []action {
 		out = append(out, action{key: "enter", label: "[Enter] Edit", hint: "the cooldown, in seconds", run: (*AppModel).editNumber})
 	case rowSpeed:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how fast it goes", run: (*AppModel).chooseSpeed})
+	case rowAnimals:
+		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "what they are", run: (*AppModel).chooseAnimals})
 	case rowCount:
 		out = append(out, action{key: "enter", label: "[Enter] Choose", hint: "how many cats", run: (*AppModel).chooseCount})
 	case rowConf:
@@ -514,13 +520,22 @@ func (m *AppModel) chooseCount() tea.Cmd {
 	return m.choose("count", counts, func(p config.Profile) string { return itoa(p.Count) })
 }
 
+func (m *AppModel) chooseAnimals() tea.Cmd {
+	return m.choose("animals", saver.PetAnimals, func(p config.Profile) string { return p.Animals })
+}
+
 // chooseLock is Enter on tmux's lock: lock-server, or lock-session.
 func (m *AppModel) chooseLock() tea.Cmd {
 	return m.openOptions("lock", config.TmuxLocks, m.cfg.Tmux.Lock, 0)
 }
 
+// chooseScene is the runner's scenes, or the pets' (2026-10-08).
 func (m *AppModel) chooseScene() tea.Cmd {
-	return m.choose("scene", saver.Scenes, func(p config.Profile) string { return p.Scene })
+	scenes := saver.Scenes
+	if p, _, _ := m.subject(); p.Saver == saver.KindPets {
+		scenes = saver.PetScenes
+	}
+	return m.choose("scene", scenes, func(p config.Profile) string { return p.Scene })
 }
 
 func (m *AppModel) chooseBackground() tea.Cmd {
@@ -601,6 +616,8 @@ func (m *AppModel) commitOptions(key string) tea.Cmd {
 		m.edit(func(p *config.Profile) { p.Character = v })
 	case rowSpeed:
 		m.edit(func(p *config.Profile) { p.Speed = v })
+	case rowAnimals:
+		m.edit(func(p *config.Profile) { p.Animals = v })
 	case rowCount:
 		n, _ := strconv.Atoi(v)
 		m.edit(func(p *config.Profile) { p.Count = n })

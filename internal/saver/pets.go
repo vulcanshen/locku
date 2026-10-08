@@ -32,7 +32,9 @@ import (
 // it either side by turns, a step up each, and a crown of leaves on top.
 // A cat jumps up as high as a tree's step, and down from anywhere.
 //
-// Its one setting is how many cats (user, the same day).
+// Its settings are what animals, how many (user, the same day) and where
+// (2026-10-08): the animals are cats and the scene the outdoors, the one
+// choice of each for now, making room for more (user).
 
 const KindPets = "pets"
 
@@ -40,6 +42,19 @@ const KindPets = "pets"
 var PetCounts = []int{1, 2, 3, 4, 5}
 
 const PetsDefault = 3
+
+// PetAnimals are what the pets may be, PetScenes where they may be; the
+// first of each is the default (user, 2026-10-08: the one choice of each
+// for now).
+const (
+	PetAnimalsCats  = "cats"
+	PetSceneOutdoor = "outdoor"
+)
+
+var (
+	PetAnimals = []string{PetAnimalsCats}
+	PetScenes  = []string{PetSceneOutdoor}
+)
 
 const (
 	petFrame  = 80 * time.Millisecond

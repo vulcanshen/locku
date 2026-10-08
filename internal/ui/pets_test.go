@@ -61,26 +61,39 @@ func TestPetsLockWearsItsOwnColours(t *testing.T) {
 	}
 }
 
-// On the settings screen the pets have how many cats to set and nothing
-// else (user, 2026-10-07): from one to five, three to begin with, the
-// cursor on the one it is, written at once.
-func TestPetsHaveTheirCount(t *testing.T) {
+// On the settings screen the pets have what they are, how many and where
+// to set, and nothing else (user, 2026-10-07; the animals and the scene
+// 2026-10-08, in that order: what, how many, where): the animals only
+// cats and the scene only outdoors for now, the count from one to five,
+// three to begin with; the cursor on the one it is, written at once.
+func TestPetsHaveAnimalsACountAndAScene(t *testing.T) {
 	m := newTestApp(t).press("G", "k", "k", "k", "k") // above the custom saver
 	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindPets {
 		t.Fatalf("the pets sit above the custom saver, not %+v", it)
 	}
 	v := m.View()
-	if !strings.Contains(v, "cats outdoors") || !strings.Contains(v, "count") || strings.Contains(v, " bg ") || strings.Contains(v, "speed") {
+	if !strings.Contains(v, "cats outdoors") || !strings.Contains(v, "count") || !strings.Contains(v, "animals") || !strings.Contains(v, "scene") || strings.Contains(v, " bg ") || strings.Contains(v, "speed") {
 		t.Errorf("the pets' [2]:\n%s", v)
 	}
 	m = m.press("n", "enter")
 	it := m.sideAt()
-	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "pets", Saver: saver.KindPets, Count: 3}) {
+	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "pets", Saver: saver.KindPets, Scene: "outdoor", Animals: "cats", Count: 3}) {
 		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
 	}
 	m = m.press("2", "j")
-	if r := m.rowAt(); r.kind != rowCount || r.label != "count" || r.value != "3" {
+	if r := m.rowAt(); r.kind != rowAnimals || r.label != "animals" || r.value != "cats" {
 		t.Fatalf("the row under the name: %+v", r)
+	}
+	if acts := m.actions(); len(acts) == 0 || acts[0].hint != "what they are" {
+		t.Errorf("the animals' actions %+v", acts)
+	}
+	m = m.press("enter")
+	if !m.options.isInteractive() || len(m.options.items) != 1 || m.options.items[0].label != "cats" || m.options.cursor != 0 {
+		t.Fatalf("animals %+v", m.options.items)
+	}
+	m = m.press("enter", "j")
+	if r := m.rowAt(); r.kind != rowCount || r.label != "count" || r.value != "3" {
+		t.Fatalf("the row under the animals: %+v", r)
 	}
 	m = m.press("enter")
 	if !m.options.isInteractive() || len(m.options.items) != 5 || m.options.items[0].label != "1" || m.options.items[m.options.cursor].label != "3" {
@@ -90,7 +103,19 @@ func TestPetsHaveTheirCount(t *testing.T) {
 	if got := m.cfg.Profiles[it.ref].Count; got != 5 || saved(t).Profiles[it.ref].Count != 5 {
 		t.Errorf("chose %d", got)
 	}
-	if b, _ := os.ReadFile(config.Path()); !strings.Contains(string(b), "count: 5") {
+	m = m.press("j")
+	if r := m.rowAt(); r.kind != rowScene || r.label != "scene" || r.value != "outdoor" {
+		t.Fatalf("the row under the count: %+v", r)
+	}
+	if acts := m.actions(); len(acts) == 0 || acts[0].hint != "where they are" {
+		t.Errorf("the scene's actions %+v", acts)
+	}
+	m = m.press("enter")
+	if !m.options.isInteractive() || len(m.options.items) != 1 || m.options.items[0].label != "outdoor" {
+		t.Fatalf("scenes %+v: the runner's are not the pets'", m.options.items)
+	}
+	m = m.press("enter")
+	if b, _ := os.ReadFile(config.Path()); !strings.Contains(string(b), "count: 5") || !strings.Contains(string(b), "animals: cats") || !strings.Contains(string(b), "scene: outdoor") {
 		t.Errorf("the file:\n%s", b)
 	}
 }

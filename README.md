@@ -27,7 +27,7 @@ Seven kinds of saver, as many named profiles of each as you like, one of them ac
 - **bounce** — a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. Its settings are its speed, slow to super fast, and its time, `HH:MM` or `HH:MM:SS`; the colours are its own.
 - **snake** — the old Nokia game, playing itself: the snake makes for the apple while there is room, and never runs into itself, until it fills the board; then it starts again. It has a head: it reaches the apple, closes its jaws round it, and swallows; the apple blinks in a colour of its own and keeps it, and you can watch it go down the body at its own slow pace; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Each segment is a dot and each link between two is lit, so where the body turns can be told from where it merely lies alongside itself. Its colours are its own; its one setting is its speed, from slow to super fast.
 - **tetromino** — falling blocks playing themselves, not down a narrow well but across the screen, framed in grey; the pieces to come wait in a column of small boxes at its right, the next at the top. Each piece comes in at the top and makes its own way down to the lowest place it can find, sliding under an overhang when it has to. A full row flashes white and goes from the middle out, and the rows above come down; a stack that reaches the top ends the game — the blocks turn the frame's grey from the top down, END in red, and two seconds later a new game. The colours are its own; its one setting is its speed, from slow to super fast.
-- **pets** — cats outdoors, going where they please: along the grass, onto a stump, up a tree and out along its branches, jumping up and down and climbing as the way asks; there they sit a while, flick a tail, curl up and sleep under a rising yellow z, or hang on to a trunk, then go on. The sky over a green field shades down the screen; the trees and stumps are laid out anew each time, as many as the terminal holds, and one at the least in a narrow pane. The cats come in order — an orange tabby, an amber, a white, a grey-blue, a black-and-white — and their colours, like the outdoors', are their own; the one setting is how many, one to five.
+- **pets** — cats outdoors, going where they please: along the grass, onto a stump, up a tree and out along its branches, jumping up and down and climbing as the way asks; there they sit a while, flick a tail, curl up and sleep under a rising yellow z, or hang on to a trunk, then go on. The sky over a green field shades down the screen; the trees and stumps are laid out anew each time, as many as the terminal holds, and one at the least in a narrow pane. The cats come in order — an orange tabby, an amber, a white, a grey-blue, a black-and-white — and their colours, like the outdoors', are their own. Its settings are the `animals`, cats for now, how many, one to five, and the `scene`, outdoor for now.
 - **custom** — a program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
 
 The terminal each clock size needs (columns × rows, `3x7` / `3x5`):
@@ -127,7 +127,7 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 
 Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — what each row means on preference's, tmux's or screen's `[2]`, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.
 
-- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `count`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
+- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
 - **Settings › preference** — the PIN (set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
@@ -246,7 +246,7 @@ profiles:
     saver: runner
     participants: big     # big / small / big-big / small-small / small-big / big-small
     character: t-rex      # t-rex / cat / rabbit / giraffe / ghost
-    scene: grassland      # grassland / desert
+    scene: grassland      # grassland / desert (the pets': outdoor)
     background: time-shifting # day / night / time-shifting
   - name: matrix
     saver: custom
@@ -257,7 +257,7 @@ savers:                   # each kind's defaults: what a new profile starts as
   bounce: { saver: bounce, time: "HH:MM", speed: normal }
   snake: { saver: snake, speed: normal }
   tetromino: { saver: tetromino, speed: normal }
-  pets: { saver: pets, count: 3 }
+  pets: { saver: pets, scene: outdoor, animals: cats, count: 3 }
   custom: { saver: custom, command: "" }
 show_status: true               # the user@host · locked since row
 pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never

@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- The pets have two settings more, one choice each for now, making room for more: `animals`, cats, and `scene`, outdoor. A pets profile without them is cats outdoors, as before.
 
 ## [0.2.3] - 2026-10-07
 ### Changed

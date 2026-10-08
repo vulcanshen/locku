@@ -448,7 +448,7 @@ func TestAPetsProfileIsItsCount(t *testing.T) {
 		"  - name: odd\n    saver: pets\n    count: 9\n  - name: none\n    saver: pets\n"+
 		"  - name: c\n    saver: clock\n    count: 2\n  - name: s\n    saver: snake\n    count: 2\n  - name: r\n    saver: runner\n    count: 2\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "p", Saver: "pets", Count: 5}) {
+	if s, _ := cfg.Active(); s != (Profile{Name: "p", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 5}) {
 		t.Errorf("the profile %+v", s)
 	}
 	if cfg.Profiles[1].Count != 3 || cfg.Profiles[2].Count != 3 {
@@ -457,8 +457,39 @@ func TestAPetsProfileIsItsCount(t *testing.T) {
 	if cfg.Profiles[3].Count != 0 || cfg.Profiles[4].Count != 0 || cfg.Profiles[5].Count != 0 {
 		t.Errorf("not the pets: %+v", cfg.Profiles[3:])
 	}
-	if n := cfg.NewProfile("n", "pets"); n != (Profile{Name: "n", Saver: "pets", Count: 3}) {
+	if n := cfg.NewProfile("n", "pets"); n != (Profile{Name: "n", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 3}) {
 		t.Errorf("a new one %+v", n)
+	}
+}
+
+// The pets have a scene and animals too, one of each for now — outdoor,
+// cats — making room for more (user, 2026-10-08): a pets profile without
+// them, or with one it does not have, is outdoors and cats; animals are
+// the pets' alone, and the runner keeps its own scene.
+func TestAPetsProfileHasASceneAndAnimals(t *testing.T) {
+	p := write(t, "profile: p\nprofiles:\n  - name: p\n    saver: pets\n"+
+		"  - name: odd\n    saver: pets\n    scene: desert\n    animals: dogs\n"+
+		"  - name: c\n    saver: clock\n    animals: cats\n  - name: r\n    saver: runner\n    scene: desert\n    animals: cats\n"+
+		"  - name: s\n    saver: snake\n    scene: outdoor\n    animals: cats\n  - name: m\n    saver: custom\n    animals: cats\n")
+	cfg, _ := LoadFile(p)
+	for _, i := range []int{0, 1} {
+		if s := cfg.Profiles[i]; s.Scene != "outdoor" || s.Animals != "cats" {
+			t.Errorf("%s: scene %q, animals %q", s.Name, s.Scene, s.Animals)
+		}
+	}
+	for _, s := range cfg.Profiles[2:] {
+		if s.Animals != "" {
+			t.Errorf("%s has animals: %q", s.Name, s.Animals)
+		}
+	}
+	if s := cfg.Profiles[3].Scene; s != "desert" {
+		t.Errorf("the runner's scene: %q", s)
+	}
+	if s := cfg.Profiles[4].Scene; s != "" {
+		t.Errorf("the snake's scene: %q", s)
+	}
+	if d := cfg.Savers["pets"]; d.Scene != "outdoor" || d.Animals != "cats" {
+		t.Errorf("the pets' defaults %+v", d)
 	}
 }
 

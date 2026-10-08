@@ -52,6 +52,7 @@ const (
 	rowBackground // the runner's sky
 	rowCommand    // a custom saver's program
 	rowSpeed      // the snake's, the bouncing box's, the falling blocks': slow to super-fast
+	rowAnimals    // the pets': what they are
 	rowCount      // the pets': how many cats
 	rowSwatch
 	rowChannel
@@ -214,7 +215,12 @@ func fieldRows(p config.Profile) []row {
 		return []row{{kind: rowSpeed, label: "speed", value: p.Speed, color: value, stop: true}}
 	}
 	if p.Saver == saver.KindPets {
-		return []row{{kind: rowCount, label: "count", value: itoa(p.Count), color: value, stop: true}}
+		// What, how many, where (2026-10-08).
+		return []row{
+			{kind: rowAnimals, label: "animals", value: p.Animals, color: value, stop: true},
+			{kind: rowCount, label: "count", value: itoa(p.Count), color: value, stop: true},
+			{kind: rowScene, label: "scene", value: p.Scene, color: value, stop: true},
+		}
 	}
 	if p.Saver == saver.KindCustom {
 		// The program, as sh -c runs it; none yet is said in yellow, as
