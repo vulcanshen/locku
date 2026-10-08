@@ -20,7 +20,8 @@ import (
 // T-Rex, a cat, a rabbit, a giraffe, Pac-Man's ghost (user, 2026-10-06;
 // the giraffe was a horse till the day after), any of them in any of
 // the six. Scenes:
-// grassland, with cacti; the desert, with pyramids — either's in three
+// grassland, with cacti; the desert, with pyramids; the city (user,
+// 2026-10-08), with bungalows, blocks and skyscrapers — each's in three
 // sizes, small, medium and large (user, 2026-09-25: there had been
 // only small and medium), and the jump is as high as the size asks
 // (user, the same day: it had been one height over everything).
@@ -46,6 +47,7 @@ const (
 	RunnerBigSmall   = "big-small"
 	SceneGrass       = "grassland"
 	SceneDesert      = "desert"
+	SceneCity        = "city"
 
 	// Who runs (user, 2026-10-06): the T-Rex, as it always was, or
 	// another, in either size.
@@ -60,7 +62,7 @@ var (
 	Kinds        = []string{KindClock, KindRunner, KindBounce, KindSnake, KindTetromino, KindPets, KindCustom}
 	Participants = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
 	Characters   = []string{CharacterTRex, CharacterCat, CharacterRabbit, CharacterGiraffe, CharacterGhost}
-	Scenes       = []string{SceneGrass, SceneDesert}
+	Scenes       = []string{SceneGrass, SceneDesert, SceneCity}
 )
 
 // DinoFrame is the time between two frames: fourteen a second.
@@ -119,7 +121,8 @@ var arcs = [...][]int{
 var arcTop = max(slices.Max(arcs[small]), slices.Max(arcs[medium]), slices.Max(arcs[large]))
 
 // A sprite is rows of '#' lit and '.' dark, top to bottom, all one width.
-// An 'e' is dark too: an eye, which the night lights (user, 2026-10-07).
+// An 'e' is dark too: an eye, which the night lights (user, 2026-10-07);
+// and a 'w', a window, which the night lights too (user, 2026-10-08).
 type sprite []string
 
 func (s sprite) w() int { return len(s[0]) }
@@ -506,6 +509,49 @@ var (
 		cloud:     cloudArt,
 		tuftEvery: 11, // sand: fewer specks
 	}
+
+	// The city's (user, 2026-10-08): a bungalow, small, five high, its
+	// roof three rows over two windows and a door; a block, medium,
+	// seven, four windows a floor; a skyscraper, large, ten, stepping in
+	// twice up to its mast. The windows are dark, the sky through them,
+	// and at night some are lit, the 'w's (user, the same day).
+	bungalow = sprite{
+		"...#####...",
+		".#########.",
+		"###########",
+		".#.w#.#w.#.",
+		".####.####.",
+	}
+	block = sprite{
+		"#########",
+		"#w#.#w#w#",
+		"#########",
+		"#.#w#.#w#",
+		"#########",
+		"#w#.#w#.#",
+		"####.####",
+	}
+	skyscraper = sprite{
+		"....#....",
+		"....#....",
+		"...###...",
+		"...#w#...",
+		"..#####..",
+		"..#w#.#..",
+		".#######.",
+		".#w#.#w#.",
+		".#w#.#w#.",
+		".###.###.",
+	}
+	city = sceneArt{
+		obstacles: []obstacleArt{
+			{bungalow, small},
+			{block, medium},
+			{skyscraper, large},
+		},
+		cloud:     cloudArt,
+		tuftEvery: 9,
+	}
 )
 
 // runnerOf and sceneOf are the art a name picks: the runner's figures,
@@ -532,8 +578,11 @@ func runnerOf(name, character string) runnerArt {
 }
 
 func sceneOf(name string) sceneArt {
-	if name == SceneDesert {
+	switch name {
+	case SceneDesert:
 		return desert
+	case SceneCity:
+		return city
 	}
 	return grassland
 }
@@ -716,6 +765,18 @@ func (d *Dino) resize(w, h int) {
 	}
 }
 
+// windows puts a sprite's windows, its 'w's, in the eyes' ink: gold at
+// night, and by day and at dusk, which have no eyes to light, the sky.
+func windows(sc *Scene, sp sprite, x, y int) {
+	for dy, row := range sp {
+		for dx := 0; dx < len(row); dx++ {
+			if row[dx] == 'w' {
+				sc.put(x+dx, y+dy, inkEye)
+			}
+		}
+	}
+}
+
 // tuft says whether the ground has a tuft at world position x, one in
 // every so many: a hash, so the tufts scroll with the ground and cost
 // nothing to keep.
@@ -749,6 +810,7 @@ func (d *Dino) Draw(w, h int) Scene {
 	for _, o := range d.obs {
 		s := d.scene.obstacles[o.kind]
 		sc.blit(s.sprite, o.x, gy-s.h())
+		windows(&sc, s.sprite, o.x, gy-s.h())
 	}
 	d.drawRunners(&sc, gy)
 	return sc
