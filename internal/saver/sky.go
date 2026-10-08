@@ -85,8 +85,10 @@ var (
 	// (user, 2026-10-08: they were the world's dark; a grey edge round
 	// them, as the night outlines the runner, was a mistake), and the
 	// blue at the top deep enough for them to show on (user, the same
-	// day: it was a pale #cfe8ff, as light as they are).
-	daySky = sky{stops: []string{"#9ccfff", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sun: true}
+	// day: it was a pale #cfe8ff, as light as they are; then #9ccfff, and
+	// a step deeper again). The pets' sky is half way between this and
+	// theirs.
+	daySky = sky{stops: []string{"#7ab8f5", "#ffffff"}, fg: "#313244", runner: "#313244", cloud: "#ffffff", sun: true}
 	// Dusk: the sunset, catppuccin's mauve, red, peach and yellow; the
 	// world and the runner as by day; the setting sun. The clouds white
 	// (user, 2026-10-08).

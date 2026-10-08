@@ -7,6 +7,7 @@
 
 ### Changed
 - The runner's clouds have a colour of their own: white by day and at dusk, by night in the moonlight as before. By day they were the world's dark grey; and the day sky is a deeper blue at the top, for them to show on.
+- The pets' sky is lighter, light at the top and darker down to the horizon, half way between the dark blue it was and the runner's day sky.
 
 ## [0.2.3] - 2026-10-07
 ### Changed

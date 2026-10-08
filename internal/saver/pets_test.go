@@ -443,7 +443,7 @@ func TestPetsRoomPaceAndInks(t *testing.T) {
 		t.Errorf("a frame every %v", d)
 	}
 	inks := g.Inks()
-	if len(inks) != 32 || inks[0] != "#1d2745" || inks[inkPetGrass] != "#4f7d36" || inks[inkPetBark] != "#847260" || inks[inkPetLeaf] != "#5e9140" || inks[inkPetLeafDark] != "#3f6c2c" || inks[inkPetCut] != "#b39b78" || inks[inkPetZ] != "#ffff00" || inks[inkPetCoats] != "#f6b06a" {
+	if len(inks) != 32 || inks[0] != "#7e9bbb" || inks[inkPetGrass] != "#4f7d36" || inks[inkPetBark] != "#847260" || inks[inkPetLeaf] != "#5e9140" || inks[inkPetLeafDark] != "#3f6c2c" || inks[inkPetCut] != "#b39b78" || inks[inkPetZ] != "#ffff00" || inks[inkPetCoats] != "#f6b06a" {
 		t.Errorf("inks %v", inks)
 	}
 }
@@ -625,15 +625,16 @@ func TestPetsTreesVary(t *testing.T) {
 }
 
 // The backdrop is a gradient a row at a time, the way the runner's dusk
-// goes down the screen (user, 2026-10-07): the sky dark blue high and
-// lighter low, over a green field lighter far and darker near; the one
-// look all over, its inks the game's.
+// goes down the screen (user, 2026-10-07): the sky light high and darker
+// low (2026-10-08: it was dark blue high and lighter low, and darker),
+// over a green field lighter far and darker near; the one look all over,
+// its inks the game's.
 func TestPetsBackdrop(t *testing.T) {
 	g := NewPets(1, 1)
 	var _ Graded = g
 	s := g.Shade(10, 51)
 	l := s.Looks[0]
-	if len(l.Ground) != 51 || l.Ground[0] != "#1d2745" || l.Ground[13] != "#2f4262" || l.Ground[25] != "#3f5a7c" || l.Ground[26] != "#4e6e46" || l.Ground[50] != "#1c2f1a" {
+	if len(l.Ground) != 51 || l.Ground[0] != "#7e9bbb" || l.Ground[13] != "#6485ab" || l.Ground[25] != "#4c709d" || l.Ground[26] != "#4e6e46" || l.Ground[50] != "#1c2f1a" {
 		t.Errorf("the backdrop %v", l.Ground)
 	}
 	if !slices.Equal(l.Inks, g.Inks()) || !slices.Equal(s.Looks[1].Ground, l.Ground) || s.Look(3, 7) != 0 {
