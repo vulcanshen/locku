@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.2.4] - 2026-10-08
 ### Added
 - A third scene for the runner, `city`: a bungalow, a block of flats and a skyscraper to jump, small, medium and large, and at night some of their windows lit in gold.
 - The pets have two settings more, one choice each for now, making room for more: `animals`, cats, and `scene`, outdoor. A pets profile without them is cats outdoors, as before.
