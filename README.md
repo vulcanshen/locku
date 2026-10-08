@@ -112,7 +112,7 @@ locku pin reset  # a new PIN, after your login password, when the old one is for
 locku version    # the version; locku help prints the usage
 ```
 
-1. `locku`, then **Settings › preference**, `Enter` on the PIN row, type one. This step is optional: with no PIN locku is a screensaver, and any key ends it.
+1. `locku`, then **Settings › preference**, `Enter` on the PIN row, type one, 4 to 12 characters. This step is optional: with no PIN locku is a screensaver, and any key ends it.
 2. **Integration › tmux** (or **screen**): fill in `config file path` (`~/.tmux.conf` is offered), turn `activate` on, confirm. locku's block is in the file, and on the running tmux server at once.
 3. In tmux, `prefix :` then `locku` locks every client on the server. An idle session locks by itself after `lock-after-time` seconds (300 by default). Fill in a `bind-key`, `l` say, and `prefix l` locks too.
 4. Any key brings up the PIN prompt; the right PIN gives the terminal back.
@@ -169,7 +169,7 @@ Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
-- **Settings › preference** — the PIN (set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
+- **Settings › preference** — the PIN (4 to 12 characters; set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
