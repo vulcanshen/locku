@@ -260,10 +260,13 @@ var cat = figure{
 	air: append(append(sprite{}, catBody...), ".##......##.", "#..........#"),
 }
 
-// A small cat, eight wide and six tall.
+// A small cat, the cat made smaller: eight wide and seven tall (user,
+// 2026-10-08: it had no eye; six tall till then, its head one row under
+// the ears, where an eye would have opened onto the gap between them).
 var smallCatBody = sprite{
 	"#...#..#",
-	".#..####",
+	"#...####",
+	".#..#e##",
 	"..######",
 	"..#####.",
 }

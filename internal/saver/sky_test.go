@@ -406,12 +406,14 @@ func TestRunnerOutlinedByNight(t *testing.T) {
 
 // The eyes are the ones drawn, marked 'e' (user, 2026-10-07: lit by
 // night): the T-Rex, the cat, the rabbit and the giraffe one each — the
-// small cat none — the ghost two of four pixels, the small ghost two of
-// two; each closed round by the body. The gap between the T-Rex's legs
-// mid stride is closed round too, and is no eye but outline.
+// small cat too, from 2026-10-08 (user: it had none) — the ghost two of
+// four pixels, the small ghost two of two; each closed round by the body,
+// so by day, a hole in it, it reads as an eye and not a notch. The gap
+// between the T-Rex's legs mid stride is closed round too, and is no eye
+// but outline.
 func TestRunnerEyes(t *testing.T) {
 	for name, want := range map[string][2]int{
-		CharacterTRex: {1, 1}, CharacterCat: {1, 0}, CharacterRabbit: {1, 1}, CharacterGiraffe: {1, 1}, CharacterGhost: {8, 4},
+		CharacterTRex: {1, 1}, CharacterCat: {1, 1}, CharacterRabbit: {1, 1}, CharacterGiraffe: {1, 1}, CharacterGhost: {8, 4},
 	} {
 		for size, f := range cast[name] {
 			for _, pose := range append(f.run[:], f.air) {
