@@ -35,7 +35,7 @@ locku/
 │   ├── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
 │   └── version/        版本字串（goreleaser 以 ldflags 注入，本機 build 是 dev）
 ├── e2e/                pty 端到端：tmux_attach.py、custom_lock.py、screen_lock.py
-└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、demo.gif
+└── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、demo.gif、savers/（README 每種 saver 的靜態圖）
 ```
 
 ## 設計決定
@@ -158,6 +158,7 @@ LOCKU__DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的�
 make lock                                        # 編譯並鎖住這個終端機
 make e2e                                         # 端到端：真的 tmux（e2e/tmux_attach.py，自己的 TMUX_TMPDIR）、custom saver（e2e/custom_lock.py）、真的 screen（e2e/screen_lock.py，自己的 SCREENDIR）；不碰你的 server 與 session
 make gif                                         # 重錄 docs/demo.gif，見下方「demo gif」
+make shots                                       # 重拍 docs/savers/*.png，見下方「saver 的靜態圖」
 ```
 
 TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix d、prefix c、Ctrl-C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
@@ -173,6 +174,14 @@ README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 conf
 2026-10-07 重錄，每種 saver 都出場，順序使用者定：runner → pets → tetromino → snake → bounce → clock。結構也是使用者選的：鎖在 runner 開場（PIN 框疊在畫面上，錯一次再對），接著在設定畫面依序預覽其他五種，最後照舊是 Space 選單與 tmux；custom（cmatrix）拿掉，錄影因此不再需要 cmatrix。展示 config 的 profile 照這個順序排、名字就是 saver 的種類，啟用中的是 runner，所以設定畫面按 `j` 就照順序走，從 clock 再按 8 次 `j` 經過 Savers 到 tmux。pets 五隻、runner 用 `big-small`（我的判斷：五種花色都看得到、跑者有大有小）。runner 的天空是 time-shifting，照時鐘輪替，使用者要錄到黃昏：tape 在鏡頭外先跑一個迴圈，等到分鐘 % 3 = 1 那一分鐘的第 22 到 35 秒才開鏡（前 20 秒是從白天換過來的過場；runner 在畫面上約 11 秒，所以結束時還在黃昏），因此 `make gif` 最多要先等三分鐘。成品約 58 秒、6.4 到 6.9 MB（舊的 3.2 MB，多的主要是 runner 與 pets 的漸層；pets 的樹每次隨機，大小跟著差一點）。
 
 VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），當時改用 0.11.0；2026-10-07 機器上只剩 0.12.1，正常出檔。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號；鏡頭外的指令用 `Type@5ms` 打，不然要等很久；等某個輸出用 `Wait+Screen@<逾時> /regex/`，要等的字在指令裡寫成 `RE''ADY`，免得一打出指令就符合。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
+
+### saver 的靜態圖（2026-10-08）
+
+README 的「What you see」每種 saver 一節，各配一張靜態圖 `docs/savers/<種類>.png`（使用者：不需要 gif）。用 VHS 的 `Screenshot` 拍：`.local/demos/savers.tape` 與 `savers.yaml`（七個 profile 照 Savers 的順序，`make shots`），在設定畫面逐一 `p` 預覽、等畫面有內容再拍。runner 是 city 配 night（使用者選的，新場景、夜裡一部分窗戶亮著）；custom 跑 cmatrix（使用者選的，所以拍照要裝 cmatrix）；snake 與 tetromino 用 `super-fast`、分別等 15 與 25 秒，畫面才不會空空的（我的判斷）。
+
+畫面是隨機的，`make shots` 一次拍七張，挑過才進版控：runner 要有一棟完整的樓在跑者右邊；snake、tetromino 要沒有殘影。VHS 的畫面（headless 瀏覽器裡的 xterm.js）偶爾會在預覽開始後留著設定畫面左上角幾個字，snake、tetromino 的上面幾列不會再畫，殘影就一直留著；custom 偶爾整張是空的。同樣的按鍵節奏在 tmux 裡試 40 次都沒有殘影——tmux 記的是 locku 實際寫出的內容——所以是 VHS 顯示的問題，不是 locku 的（2026-10-08）。
+
+README「The settings screen」那張 ASCII 圖是 tmux 擷取的真畫面（78 × 21，三個 profile、clock 的 bg 有一份 R 拉到 255 的草稿、焦點在 `[1]`），Nerd Font 的符號換成純文字：標題膠囊的兩端換成那個 panel 的邊框線、膠囊之間的分隔換成空格、色票換成 `■`，每列都是 78 欄（2026-10-08；之前的圖漏了膠囊兩端，最上面那條邊框短了 5 欄，Savers 也只列了兩種）。
 
 ## 發布
 

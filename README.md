@@ -20,15 +20,13 @@
 
 ## What you see
 
-Seven kinds of saver, as many named profiles of each as you like, one of them active:
+Seven kinds of saver, as many named profiles of each as you like, one of them active.
 
-- **clock** — the terminal as one LED board: every pixel a Nerd Font square, dark in the profile's `bg`, lit in its `fg`. The time is drawn in a right-angled 3 × 7 pixel font (or 3 × 5), the look of a seven-segment display, as `HH MM` or `HH MM SS`, twenty-four hours, no colon; the date under it in one of four forms, or off. The `column` layout stacks `HH` / `MM` / `SS` and makes the digits several times bigger, the date to their left. Three sizes; what does not fit sheds the year, the seconds, then the date, before the size steps down. Only the pixels that change are redrawn, as a shuffled reveal.
-- **runner** — Chrome's offline dinosaur game as a screensaver: the ground and the obstacles scroll by, cacti on the grassland, pyramids in the desert, or bungalows, blocks and skyscrapers in the city, some of their windows lit at night, and the T-Rex jumps them by itself, for ever, never dying; no score, no clock. One runner or two, big or small, drawn as large as the terminal allows — the T-Rex, or a cat, a rabbit, a giraffe, or Pac-Man's ghost. Its sky is its own, shading down the screen: day, with the sun; night, with the moon, the world in its grey light and the runner a dark silhouette outlined in white, its eyes in gold; or time-shifting, a day every three minutes — a minute of day, a minute of dusk with the sun setting, a minute of night, the next coming in square by square from the right.
-- **bounce** — a box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. Its settings are its speed, slow to super fast, and its time, `HH:MM` or `HH:MM:SS`; the colours are its own.
-- **snake** — the old Nokia game, playing itself: the snake makes for the apple while there is room, and never runs into itself, until it fills the board; then it starts again. It has a head: it reaches the apple, closes its jaws round it, and swallows; the apple blinks in a colour of its own and keeps it, and you can watch it go down the body at its own slow pace; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Each segment is a dot and each link between two is lit, so where the body turns can be told from where it merely lies alongside itself. Its colours are its own; its one setting is its speed, from slow to super fast.
-- **tetromino** — falling blocks playing themselves, not down a narrow well but across the screen, framed in grey; the pieces to come wait in a column of small boxes at its right, the next at the top. Each piece comes in at the top and makes its own way down to the lowest place it can find, sliding under an overhang when it has to. A full row flashes white and goes from the middle out, and the rows above come down; a stack that reaches the top ends the game — the blocks turn the frame's grey from the top down, END in red, and two seconds later a new game. The colours are its own; its one setting is its speed, from slow to super fast.
-- **pets** — cats outdoors, going where they please: along the grass, onto a stump, up a tree and out along its branches, jumping up and down and climbing as the way asks; there they sit a while, flick a tail, curl up and sleep under a rising yellow z, or hang on to a trunk, then go on. The sky over a green field shades down the screen; the trees and stumps are laid out anew each time, as many as the terminal holds, and one at the least in a narrow pane. The cats come in order — an orange tabby, an amber, a white, a grey-blue, a black-and-white — and their colours, like the outdoors', are their own. Its settings are the `animals`, cats for now, how many, one to five, and the `scene`, outdoor for now.
-- **custom** — a program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
+### clock
+
+![clock](docs/savers/clock.png)
+
+The terminal as one LED board: every pixel a Nerd Font square, dark in the profile's `bg`, lit in its `fg`. The time is drawn in a right-angled 3 × 7 pixel font (or 3 × 5), the look of a seven-segment display, as `HH MM` or `HH MM SS`, twenty-four hours, no colon; the date under it in one of four forms, or off. The `column` layout stacks `HH` / `MM` / `SS` and makes the digits several times bigger, the date to their left. Three sizes; what does not fit sheds the year, the seconds, then the date, before the size steps down. Only the pixels that change are redrawn, as a shuffled reveal.
 
 The terminal each clock size needs (columns × rows, `3x7` / `3x5`):
 
@@ -38,6 +36,42 @@ The terminal each clock size needs (columns × rows, `3x7` / `3x5`):
 | `HH MM SS` on one line | 58 × 10 / 8 | 94 × 17 / 13 | 148 × 24 / 18 |
 | `HH` / `MM` stacked | 18 × 18 / 14 | 30 × 32 / 24 | 44 × 47 / 35 |
 | `HH` / `MM` / `SS` stacked | 18 × 26 / 20 | 30 × 47 / 35 | 44 × 70 / 52 |
+
+### runner
+
+![runner, in the city at night](docs/savers/runner.png)
+
+Chrome's offline dinosaur game as a screensaver: the ground and the obstacles scroll by, cacti on the grassland, pyramids in the desert, or bungalows, blocks and skyscrapers in the city, some of their windows lit at night, and the T-Rex jumps them by itself, for ever, never dying; no score, no clock. One runner or two, big or small, drawn as large as the terminal allows — the T-Rex, or a cat, a rabbit, a giraffe, or Pac-Man's ghost. Its sky is its own, shading down the screen: day, with the sun; night, with the moon, the world in its grey light and the runner a dark silhouette outlined in white, its eyes in gold; or time-shifting, a day every three minutes — a minute of day, a minute of dusk with the sun setting, a minute of night, the next coming in square by square from the right.
+
+### bounce
+
+![bounce](docs/savers/bounce.png)
+
+A box with the time in it drifts across the board, and every edge it meets sends it back in another colour; run into a corner, it flashes through all of them. Its settings are its speed, slow to super fast, and its time, `HH:MM` or `HH:MM:SS`; the colours are its own.
+
+### snake
+
+![snake](docs/savers/snake.png)
+
+The old Nokia game, playing itself: the snake makes for the apple while there is room, and never runs into itself, until it fills the board; then it starts again. It has a head: it reaches the apple, closes its jaws round it, and swallows; the apple blinks in a colour of its own and keeps it, and you can watch it go down the body at its own slow pace; at the tail it becomes the body, and the snake, white to begin with, takes the colour and grows a segment. Each segment is a dot and each link between two is lit, so where the body turns can be told from where it merely lies alongside itself. Its colours are its own; its one setting is its speed, from slow to super fast.
+
+### tetromino
+
+![tetromino](docs/savers/tetromino.png)
+
+Falling blocks playing themselves, not down a narrow well but across the screen, framed in grey; the pieces to come wait in a column of small boxes at its right, the next at the top. Each piece comes in at the top and makes its own way down to the lowest place it can find, sliding under an overhang when it has to. A full row flashes white and goes from the middle out, and the rows above come down; a stack that reaches the top ends the game — the blocks turn the frame's grey from the top down, END in red, and two seconds later a new game. The colours are its own; its one setting is its speed, from slow to super fast.
+
+### pets
+
+![pets](docs/savers/pets.png)
+
+Cats outdoors, going where they please: along the grass, onto a stump, up a tree and out along its branches, jumping up and down and climbing as the way asks; there they sit a while, flick a tail, curl up and sleep under a rising yellow z, or hang on to a trunk, then go on. The sky over a green field shades down the screen; the trees and stumps are laid out anew each time, as many as the terminal holds, and one at the least in a narrow pane. The cats come in order — an orange tabby, an amber, a white, a grey-blue, a black-and-white — and their colours, like the outdoors', are their own. Its settings are the `animals`, cats for now, how many, one to five, and the `scene`, outdoor for now.
+
+### custom
+
+![custom](docs/savers/custom.png)
+
+A program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
 
 ## Install
 
@@ -108,20 +142,25 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 ## The settings screen
 
 ```
-╔[1] locku═════════════╗╭[2] clock  unsaved─────────────────────────────╮
-║ Profiles               ║│ Property          Value                          │
-║ ● clock                ║│ name              clock                          │
-║   clock2               ║│ saver             clock                          │
-║   runner               ║│ layout            row                            │
-║ Savers                 ║│ size              medium                         │
-║   clock                ║│ time              HH MM                          │
-║   runner               ║│ date              off                            │
-║ Integration            ║│ bg                ■ #313244  →  ■ #ff3244        │
-║   tmux                 ║│   R               ───────────● 255               │
-║   screen               ║│   G               ──●───────── 50                │
-║ Settings               ║│   B               ───●──────── 68                │
-║   preference           ║│ fg                ■ #f2b753                      │
-╚════════════════════════╝╰──────────────────────────────────────────────────╯
+╔═[1] locku════════════╗╭─[2] clock   unsaved────────────────────────────────╮
+║ Profiles             ║│ Property                   Value                   │
+║ ● clock              ║│ name                       clock                   │
+║   clock2             ║│ saver                      clock                   │
+║   runner             ║│ layout                     row                     │
+║ Savers               ║│ size                       medium                  │
+║   clock              ║│ font                       3x7                     │
+║   runner             ║│ time                       HH MM                   │
+║   bounce             ║│ date                       off                     │
+║   snake              ║│ bg                         ■ #313244  →  ■ #ff3244 │
+║   tetromino          ║│   R                        ───────────● 255        │
+║   pets               ║│   G                        ──●───────── 50         │
+║   custom             ║│   B                        ───●──────── 68         │
+║ Integration          ║│ fg                         ■ #f2b753               │
+║   tmux               ║│   R                        ──────────●─ 242        │
+║   screen             ║│   G                        ────────●─── 183        │
+║ Settings             ║│   B                        ────●─────── 83         │
+║   preference         ║│                                                    │
+╚══════════════════════╝╰────────────────────────────────────────────────────╯
  Space:menu ?:help Tab/1–2:panels q:quit
 ```
 
