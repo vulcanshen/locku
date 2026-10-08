@@ -194,18 +194,19 @@ func TestPromptBoxWithIcons(t *testing.T) {
 	withIcons(t, 2)
 	m := openPrompt(t, testLock(t, "1234", nil))
 	box := strings.Split(m.prompt.view(m.now()), "\n")
-	want := popupInnerW(80) + 2
+	want := pinInnerW(80) + 2
 	for r, l := range box {
 		if dispW(l) != want {
 			t.Errorf("row %d is %d wide, want %d: %q", r, dispW(l), want, ansi.Strip(l))
 		}
 	}
-	// On the board it sits a column in, as with icons one cell: every row
-	// being 80 wide is not enough — a box a pixel off to the right, its
-	// last pixel dropped, is 80 too.
+	// On the board it sits in the middle, as with icons one cell: every
+	// row being 31 wide is not enough — a row a column off to the right
+	// is 31 too.
+	at := 80/2 - want/2
 	for _, r := range []string{"╭", "│", "╰"} {
-		if l := line(m.View(), r); dispW(l[:strings.Index(l, r)]) != 1 {
-			t.Errorf("the box's %s is at %d, want 1", r, dispW(l[:strings.Index(l, r)]))
+		if l := line(m.View(), r); dispW(l[:strings.Index(l, r)]) != at {
+			t.Errorf("the box's %s is at %d, want %d", r, dispW(l[:strings.Index(l, r)]), at)
 		}
 	}
 	cfg := testLock(t, "1234", nil).cfg
@@ -215,8 +216,8 @@ func TestPromptBoxWithIcons(t *testing.T) {
 	for i := 0; i < animFrames+1; i++ {
 		pm, _ = pm.(LockModel).Update(AnimTickMsg{Target: "pinprompt"})
 	}
-	if len(widths) == 0 || widths[len(widths)-1] != popupInnerW(100)+2 {
-		t.Errorf("the box's width for the custom saver: %v, want %d", widths, popupInnerW(100)+2)
+	if len(widths) == 0 || widths[len(widths)-1] != pinInnerW(100)+2 {
+		t.Errorf("the box's width for the custom saver: %v, want %d", widths, pinInnerW(100)+2)
 	}
 }
 

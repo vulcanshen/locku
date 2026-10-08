@@ -106,7 +106,8 @@ func TestSettingsBoxTakesALineBreakButNotTheValue(t *testing.T) {
 }
 
 // Every box that takes a value refuses one with a line break or a tab,
-// before anything else: a current PIN is not checked, so not frozen.
+// before anything else: a current PIN is not checked, so not frozen. A
+// PIN box says it in fewer words: it is narrower (2026-10-08).
 func TestEveryBoxRefusesALineBreakOrATab(t *testing.T) {
 	for _, c := range []struct {
 		action inputAction
@@ -121,9 +122,9 @@ func TestEveryBoxRefusesALineBreakOrATab(t *testing.T) {
 		{inputPath, "path", false, "path"},
 		{inputBindKey, "key", false, "key"},
 		{inputCommand, "command", false, "command"},
-		{inputPINCurrent, "current PIN", true, "PIN"},
-		{inputPINNew, "new PIN", true, "PIN"},
-		{inputPINConfirm, "confirm PIN", true, "PIN"},
+		{inputPINCurrent, "current PIN", true, ""},
+		{inputPINNew, "new PIN", true, ""},
+		{inputPINConfirm, "confirm PIN", true, ""},
 	} {
 		for _, v := range []string{"12\n34", "12\t34", "1234\r"} {
 			m := newTestApp(t)
@@ -132,7 +133,11 @@ func TestEveryBoxRefusesALineBreakOrATab(t *testing.T) {
 			m.pinNew = v
 			m.input = inputPopup{anim: popupAnimator{phase: animOpen, target: "input"}, title: c.title, masked: c.masked, action: c.action, value: v}
 			m.commitInput(&m.input)
-			if want := c.err + " can't have line breaks or tabs"; m.input.err != want {
+			want := c.err + " can't have line breaks or tabs"
+			if c.masked {
+				want = "no line breaks or tabs"
+			}
+			if m.input.err != want {
 				t.Errorf("%s %q: err %q, want %q", c.title, v, m.input.err, want)
 			}
 			if m.input.frozen || m.pinConfirm.anim.owns() || m.cfg.PINHash != before.PINHash || m.cfg.Profiles[0].Name != before.Profiles[0].Name {
@@ -155,7 +160,7 @@ func TestNewPINWithALineBreak(t *testing.T) {
 		t.Errorf("a PIN box shows the line break:\n%s", v)
 	}
 	m = m.press("enter")
-	if m.input.err != "PIN can't have line breaks or tabs" || m.pinConfirm.anim.owns() || m.cfg.HasPIN() {
+	if m.input.err != "no line breaks or tabs" || m.pinConfirm.anim.owns() || m.cfg.HasPIN() {
 		t.Errorf("new PIN 12\\r\\n34: err %q, confirm %v, set %v", m.input.err, m.pinConfirm.anim.owns(), m.cfg.HasPIN())
 	}
 }
@@ -173,10 +178,10 @@ func TestLockPINWithALineBreak(t *testing.T) {
 		t.Errorf("%d dots, want 5", n)
 	}
 	m, _ = m.step(keyEnter)
-	if m.over || m.failures != 0 || m.prompt.state != promptIdle || m.prompt.err != "PIN can't have line breaks or tabs" {
+	if m.over || m.failures != 0 || m.prompt.state != promptIdle || m.prompt.err != "no line breaks or tabs" {
 		t.Fatalf("Enter: over %v, failures %d, state %v, err %q", m.over, m.failures, m.prompt.state, m.prompt.err)
 	}
-	inside(t, "line break", m.prompt.view(at), "PIN can't have line breaks or tabs")
+	inside(t, "line break", m.prompt.view(at), "no line breaks or tabs")
 	// The next key clears it; Backspace takes 4, 3, then the line break.
 	m, _ = m.step(tea.KeyMsg{Type: tea.KeyBackspace})
 	m, _ = m.step(tea.KeyMsg{Type: tea.KeyBackspace})

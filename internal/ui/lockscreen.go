@@ -343,7 +343,7 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 		// A PIN with a line break or a tab in it could never be set: it is
 		// not checked, and not a wrong one (oneline.go).
 		if hasBreak(string(m.prompt.value)) {
-			m.prompt.err = breakErr("PIN")
+			m.prompt.err = pinBreakErr
 			return m, m.armTimeout()
 		}
 		return m.check()

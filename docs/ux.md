@@ -153,7 +153,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號、`q` 是 q。Backspace 刪一字；沒有游標移動。
 
 貼上的換行（`\r\n` 算一個）與 Tab 留在值裡、畫成 Red 的 `\n` / `\t`，其他控制字元丟掉；`Backspace` 一次刪掉整個。值裡有換行或
-Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have line breaks or tabs`（PIN 框寫 `PIN`），框留著，什麼都不寫、不比對
+Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have line breaks or tabs`（PIN 框寫 `no line breaks or tabs`，2026-10-08；之前寫 `PIN can't have line breaks or tabs`），框留著，什麼都不寫、不比對
 （2026-10-06；之前照收，值列斷成兩列，new PIN 存得進一個鎖定畫面打不出來的換行）。打字的 `Tab` 鍵照舊：有提議時接受提議，
 其他時候不做事。
 
@@ -161,7 +161,7 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 
 | 動作 | 順序 | 失敗 |
 |---|---|---|
-| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：`confirm PIN` 的錯誤列 `not the new PIN`、清空、框留著，要重打新的就 `Esc` 回 `new PIN`（2026-09-28，tdp K3；之前跳 toast `PIN mismatch` 回到空的 `new PIN`）；長度不在 4 到 64：錯誤列 `4-64 chars` 框留著 |
+| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：`confirm PIN` 的錯誤列 `not the new PIN`、清空、框留著，要重打新的就 `Esc` 回 `new PIN`（2026-09-28，tdp K3；之前跳 toast `PIN mismatch` 回到空的 `new PIN`）；長度不在 4 到 12：錯誤列 `4-12 chars` 框留著（2026-10-08；之前 4 到 64） |
 | Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：錯誤列 `wrong PIN` 1 秒、清空、留在 current PIN |
 
 每一步一個 popup、疊在上一步上面，一次只問一件事；`Esc` 回到上一步，第一步再 `Esc` 就整串不做、什麼都不寫（2026-09-28，tdp v0.1.9 F1、F4；之前任一步 Esc 取消整串）。遮罩顯示 `●`，不顯示長度以外的資訊；`●` 之間空一格、從框中央向兩側長，跟鎖定畫布的 prompt 同一個畫法（2026-09-24）。
@@ -171,9 +171,9 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 | 事件 | 行為 |
 |---|---|
 | saver 上任何鍵 | 開 prompt；那個鍵**不算**輸入 |
-| 字元 | 追加，最多 64；`●` 遮罩；貼上的換行（`\r\n` 算一個）與 Tab 也收、一個一顆 `●`，其他控制字元丟掉（2026-10-06；之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來） |
+| 字元 | 追加，最多 12（2026-10-08；之前 64）；`●` 遮罩；貼上的換行（`\r\n` 算一個）與 Tab 也收、一個一顆 `●`，其他控制字元丟掉（2026-10-06；之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來） |
 | Backspace | 刪一字（`\r\n` 整個） |
-| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空。值裡有換行或 Tab → 不比對、不算一次連錯：錯誤列 `PIN can't have line breaks or tabs`、邊框 Red、點點留著，下一鍵恢復（2026-10-06） |
+| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空。值裡有換行或 Tab → 不比對、不算一次連錯：錯誤列 `no line breaks or tabs`、邊框 Red、點點留著，下一鍵恢復（2026-10-06） |
 | Esc | 回 saver、輸入丟掉 |
 | 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |

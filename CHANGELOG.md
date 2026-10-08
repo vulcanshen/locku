@@ -1,6 +1,12 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- A PIN is 4 to 12 characters, where it was 4 to 64, and the PIN boxes, on the lock and on the settings screen, are as wide as the longest one asks — 31 columns, where they were as wide as the terminal less two, up to 120. The lock takes no more than 12 either: a longer PIN an earlier locku set can no longer be typed, so set a shorter one before you upgrade, or run `locku pin reset` from another shell after.
+- A PIN with a line break or a tab pasted in says `no line breaks or tabs`, where it said `PIN can't have line breaks or tabs`, which the narrower box has no room for.
+
+### Fixed
+- A PIN longer than 72 bytes — 25 Chinese characters — passed `new PIN` and was refused only at `confirm PIN`, in bcrypt's words. No PIN of 12 characters is that long.
 
 ## [0.2.5] - 2026-10-08
 ### Changed

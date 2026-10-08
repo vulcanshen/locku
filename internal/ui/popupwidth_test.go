@@ -4,11 +4,14 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Every popup is min(terminal width - 2, 120) wide, whatever it holds
 // (tdp F7, 2026-09-28): 78 on 80 columns, 98 on 100, 120 on 200 — the PIN
-// boxes too, which were 48 — and a box does not grow as it is typed in.
+// boxes too, which were 48, until 2026-10-08 (TestAPINBoxIsAsWideAsTheLongestPIN)
+// — and a box does not grow as it is typed in.
 func TestEveryPopupIsF7Wide(t *testing.T) {
 	open := popupAnimator{phase: animOpen}
 	long := strings.Repeat("a very long description that goes on ", 8)
@@ -25,10 +28,8 @@ func TestEveryPopupIsF7Wide(t *testing.T) {
 			"input":      inputPopup{anim: open, title: "name", prompt: "name", screenW: W, screenH: H}.view(),
 			"input, 90 typed": inputPopup{anim: open, title: "name", prompt: "name", value: strings.Repeat("n", 90),
 				screenW: W, screenH: H}.view(),
-			"PIN input":  inputPopup{anim: open, title: "new PIN", masked: true, value: "1234", screenW: W, screenH: H}.view(),
-			"help":       help.view(),
-			"toast":      toastModel{anim: open, msg: "PIN set", screenW: W, screenH: H}.view(),
-			"PIN prompt": pinPrompt{anim: open, value: []rune("1234"), screenW: W, screenH: H}.view(time.Now()),
+			"help":  help.view(),
+			"toast": toastModel{anim: open, msg: "PIN set", screenW: W, screenH: H}.view(),
 		}
 		for name, v := range views {
 			for i, line := range strings.Split(v, "\n") {
@@ -38,5 +39,41 @@ func TestEveryPopupIsF7Wide(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// A PIN box — the lock's prompt and the settings screen's three — is as
+// wide as the longest PIN asks, 31 with its borders, wherever there is
+// room for it (user, 2026-10-08; F7 wide until then, the deviation is in
+// dev-remarks.md): twelve dots with a space between, the space and the
+// cursor after them, two columns either side. A terminal narrower than
+// that gives it what it gives every popup. A thirteenth character is not
+// taken, so the dots never outgrow the box.
+func TestAPINBoxIsAsWideAsTheLongestPIN(t *testing.T) {
+	open := popupAnimator{phase: animOpen}
+	full := strings.Repeat("7", 12)
+	for _, tw := range []struct{ screen, want int }{{200, 31}, {80, 31}, {33, 31}, {32, 30}, {20, 18}} {
+		W, H := tw.screen, 40
+		views := map[string]string{
+			"PIN input":  inputPopup{anim: open, title: "new PIN", masked: true, value: full, screenW: W, screenH: H}.view(),
+			"PIN prompt": pinPrompt{anim: open, value: []rune(full), screenW: W, screenH: H}.view(time.Now()),
+		}
+		for name, v := range views {
+			rows := strings.Split(v, "\n")
+			for i, line := range rows {
+				if got := dispW(line); got != tw.want {
+					t.Errorf("%d columns, %s, line %d: %d wide, want %d:\n%s", W, name, i, got, tw.want, v)
+					break
+				}
+			}
+			if want := "│  " + strings.Repeat("● ", 12) + "   │"; tw.want == 31 && ansi.Strip(rows[3]) != want {
+				t.Errorf("%d columns, %s, twelve dots %q, want %q", W, name, ansi.Strip(rows[3]), want)
+			}
+		}
+	}
+	var p pinPrompt
+	p.add([]rune(strings.Repeat("7", 13)))
+	if len(p.value) != 12 {
+		t.Errorf("the prompt took %d characters, want 12", len(p.value))
 	}
 }

@@ -311,8 +311,8 @@ func TestPINLength(t *testing.T) {
 	if err := cfg.SetPIN("123"); err == nil {
 		t.Error("3 chars accepted")
 	}
-	if err := cfg.SetPIN(strings.Repeat("x", 65)); err == nil {
-		t.Error("65 chars accepted")
+	if err := cfg.SetPIN(strings.Repeat("x", 13)); err == nil {
+		t.Error("13 chars accepted")
 	}
 	if err := cfg.SetPIN("with space ?"); err != nil {
 		t.Errorf("printable PIN refused: %v", err)
