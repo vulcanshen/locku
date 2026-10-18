@@ -222,7 +222,7 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 			// itself, and is not asked — asked, a curses program starts
 			// its picture over.
 			var unlocked, back bool
-			unlocked, back, tries = runPrompt(cfg, problem, t, tries)
+			unlocked, back, tries = runPrompt(cfg, problem, t, tries, p.Resize)
 			if !back {
 				p.Kill()
 				t.Give()
@@ -245,8 +245,10 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 // and whether the prompt closed instead — Esc, the timeout — so the
 // picture is to come back, and the tries it leaves the next. A prompt
 // that cannot even run leaves the lock as it is, the program back on
-// the screen.
-func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.Tries) (unlocked, back bool, left ui.Tries) {
+// the screen. The terminal resized while it is up is told to the screen,
+// the program (resize) and the prompt, which draws its box for the new
+// size (tdp E5; until 2026-10-18 the box kept the size it opened at).
+func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.Tries, resize func(cols, rows int)) (unlocked, back bool, left ui.Tries) {
 	var p *tea.Program
 	in := ui.LockInput(os.Stdin, func() { p.Send(ui.TTYGoneMsg{}) })
 	cols, rows := t.Size()
@@ -255,6 +257,26 @@ func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.T
 		tea.WithoutSignalHandler(),
 		tea.WithInput(in),
 	)
+	winch := make(chan os.Signal, 1)
+	signal.Notify(winch, syscall.SIGWINCH)
+	done := make(chan struct{})
+	defer func() {
+		signal.Stop(winch)
+		close(done)
+	}()
+	go func() {
+		for {
+			select {
+			case <-done:
+				return
+			case <-winch:
+				c, r := t.Size()
+				t.Resized(c, r)
+				resize(c, r)
+				p.Send(tea.WindowSizeMsg{Width: c, Height: r})
+			}
+		}
+	}()
 	m, err := p.Run()
 	if err != nil {
 		return false, true, tries

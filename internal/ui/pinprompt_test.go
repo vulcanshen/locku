@@ -119,3 +119,35 @@ func TestPromptOpensWithTheFamilyAnimation(t *testing.T) {
 		t.Error("open after nine frames")
 	}
 }
+
+// An Alt combination types nothing on the PIN box, as on every typing row
+// (components/input/README).
+func TestAltTypesNothing(t *testing.T) {
+	m := openPrompt(t, testLock(t, "1234", nil))
+	m, _ = m.step(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("b"), Alt: true})
+	if len(m.prompt.value) != 0 {
+		t.Errorf("Alt-b typed %q", string(m.prompt.value))
+	}
+}
+
+// The board is dimmed while the box opens and is open, and comes back the
+// moment it starts to close: a box closing is not the top any more
+// (components/layout/popup).
+func TestBoardBrightensAsTheBoxCloses(t *testing.T) {
+	m := openPrompt(t, testLock(t, "1234", nil))
+	open := m.View()
+	m, _ = m.step(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.prompt.anim.phase != animClosing {
+		t.Fatal("Esc did not start the close")
+	}
+	closing := m.View()
+	m2 := testLock(t, "1234", nil)
+	plain := m2.View()
+	last := func(v string) string { lines := strings.Split(v, "\n"); return lines[len(lines)-1] }
+	if last(open) == last(plain) {
+		t.Fatal("the status row is not dimmed under the open box")
+	}
+	if last(closing) != last(plain) {
+		t.Errorf("the status row is still dimmed while the box closes:\n%q\n%q", last(closing), last(plain))
+	}
+}

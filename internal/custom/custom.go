@@ -429,15 +429,22 @@ func (s *screen) Resized(cols, rows int) {
 // Nothing outside the lines is touched. The width comes from the one who
 // drew the box: an icon in its title takes two cells with some fonts,
 // which only the ui knows (tdp D6, 2026-09-29; measured here until then).
+// A box larger than the screen — drawn for the size before a resize —
+// starts at the top left and what falls off is cut, never written past
+// the screen's edge, where the terminal would wrap it onto the next row
+// (tdp E5; until 2026-10-18 the rows went out whole).
 func paintBox(out io.Writer, cols, rows int, box string, boxW int) (top, left, w, h int) {
 	lines := strings.Split(strings.TrimRight(box, "\n"), "\n")
-	if box == "" || len(lines) == 0 {
+	if box == "" || len(lines) == 0 || cols <= 0 || rows <= 0 {
 		return 0, 0, 0, 0
 	}
-	w, h = boxW, len(lines)
-	top, left = max(0, (rows-h)/2), max(0, (cols-w)/2)
+	top, left = max(0, (rows-len(lines))/2), max(0, (cols-boxW)/2)
+	w, h = min(boxW, cols-left), min(len(lines), rows-top)
 	var b strings.Builder
-	for i, l := range lines {
+	for i, l := range lines[:h] {
+		if terminu.Width(l) > w {
+			l = terminu.Cut(l, 0, w)
+		}
 		fmt.Fprintf(&b, "\x1b[%d;%dH%s\x1b[0m", top+i+1, left+1, l)
 	}
 	io.WriteString(out, b.String())

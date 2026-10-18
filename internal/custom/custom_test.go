@@ -298,3 +298,32 @@ func TestThePromptGetsPastesBracketed(t *testing.T) {
 		t.Errorf("Clear must stop it, before what was held back: %q", s)
 	}
 }
+
+// A box drawn for the size before a resize is cut at the screen's edges,
+// from the top left: no row past the bottom, nothing past the right edge
+// for the terminal to wrap onto the next row — wider, higher and both
+// (tdp E5).
+func TestPaintBoxCutsAtTheScreen(t *testing.T) {
+	row := strings.Repeat("x", 45)
+	box := strings.TrimSuffix(strings.Repeat(row+"\n", 9), "\n")
+	for _, sz := range [][2]int{{30, 24}, {80, 5}, {12, 4}} {
+		var out bytes.Buffer
+		top, left, w, h := paintBox(&out, sz[0], sz[1], box, 45)
+		if top+h > sz[1] || left+w > sz[0] || h == 0 || w == 0 {
+			t.Errorf("%v: the box took %d,%d %dx%d", sz, top, left, w, h)
+		}
+		writes := strings.Split(out.String(), "\x1b[")
+		rows := 0
+		for _, s := range writes {
+			if i := strings.IndexByte(s, 'H'); i > 0 && strings.Contains(s[:i], ";") {
+				rows++
+				if text := strings.TrimSuffix(s[i+1:], ""); strings.Count(text, "x") > sz[0]-left {
+					t.Errorf("%v: a row goes past the right edge: %d cells", sz, strings.Count(text, "x"))
+				}
+			}
+		}
+		if rows != h {
+			t.Errorf("%v: %d rows written, %d taken", sz, rows, h)
+		}
+	}
+}

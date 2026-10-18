@@ -351,7 +351,11 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 	case tea.KeySpace:
 		m.prompt.add([]rune{' '}, msg.Paste)
 	case tea.KeyRunes:
-		m.prompt.add(msg.Runes, msg.Paste)
+		// An Alt combination types nothing on a typing row
+		// (components/input/README, editing keys).
+		if !msg.Alt || msg.Paste {
+			m.prompt.add(msg.Runes, msg.Paste)
+		}
 	}
 	// Every key restarts the idle timer, so a PIN typed slowly does not
 	// vanish halfway (function.md §3).
@@ -530,7 +534,9 @@ func (m LockModel) View() string {
 		return ""
 	}
 	bg, fg := lipgloss.Color(m.style.BG), lipgloss.Color(m.style.FG)
-	dimmed := m.prompt.anim.isActive()
+	// Dimmed while the box is opening or open: one closing is not the top
+	// any more, and what is under it brightens at once (components/layout/popup).
+	dimmed := m.prompt.anim.owns()
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {

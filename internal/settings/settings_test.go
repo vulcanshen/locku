@@ -386,7 +386,10 @@ func TestActivateTmux(t *testing.T) {
 	if !strings.Contains(d.screen(), "Write locku's line into") {
 		t.Fatalf("activate asks first:\n%s", d.screen())
 	}
-	d.press("Enter")
+	// What setup did is told: in a toast, or in a note when it is longer
+	// than a toast's three rows (the temporary paths here are long). Esc
+	// takes either away.
+	d.press("Enter", "Esc")
 	b, err := os.ReadFile(conf)
 	if err != nil || !strings.Contains(string(b), "source-file") {
 		t.Fatalf("the line is not in the file: %q %v", b, err)
@@ -412,5 +415,76 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 	d.press("Esc").on(profileID("clock")).press("?")
 	if strings.Contains(d.screen(), "WHAT EACH ROW IS") {
 		t.Error("a profile's keys have no glossary")
+	}
+}
+
+// A number out of its range is said on the error row, the value named,
+// and the box stays (components/input/number).
+func TestNumberOutOfRangeIsSaid(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(preferenceID).toField("wrong_pin_attempt_cooldown", 0).press("Enter", "Backspace").typeText("0").press("Enter")
+	if !strings.Contains(d.screen(), "wrong_pin_attempt_cooldown must be 1 or more") {
+		t.Errorf("0 is refused in the box:\n%s", d.screen())
+	}
+	d.press("Backspace").typeText("99999999999999999999").press("Enter")
+	if !strings.Contains(d.screen(), "must be a whole number") {
+		t.Errorf("a number past an int is refused in the box:\n%s", d.screen())
+	}
+	if got := d.saved().WrongPINCooldown; got != testConfig().WrongPINCooldown {
+		t.Errorf("a refused number was written: %d", got)
+	}
+}
+
+// What the Space menu opens — a box, a confirm — opens over it, and Esc
+// goes back to it (tdp F4, T1).
+func TestMenuStaysUnderWhatItOpens(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(profileID("clock2")).press("Space", "r")
+	if v := d.screen(); !strings.Contains(v, "RENAME: clock2") || !strings.Contains(v, "Enter:run Esc:close") {
+		t.Fatalf("the box over the menu:\n%s", v)
+	}
+	d.press("Esc")
+	if v := d.screen(); strings.Contains(v, "RENAME") || !strings.Contains(v, "Enter:run Esc:close") {
+		t.Errorf("Esc goes back to the menu:\n%s", v)
+	}
+	d.press("Esc", "Space", "X")
+	if v := d.screen(); !strings.Contains(v, "Delete clock2?") || !strings.Contains(v, "Enter:run Esc:close") {
+		t.Fatalf("the confirm over the menu:\n%s", v)
+	}
+	d.press("Esc")
+	if v := d.screen(); strings.Contains(v, "Delete clock2?") || !strings.Contains(v, "Enter:run Esc:close") {
+		t.Errorf("Esc on the confirm goes back to the menu:\n%s", v)
+	}
+}
+
+// A write that fails opens an error popup with the whole of it, and the
+// config is as it was (components/dialog/toast, dialog/note).
+func TestWriteFailureIsAnErrorPopup(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	dir := config.Dir()
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+	d.on(profileID("clock2")).press("r", "Tab").typeText("x").press("Enter")
+	if v := d.screen(); !strings.Contains(v, "WRITE FAILED") {
+		t.Errorf("an error popup:\n%s", v)
+	}
+	if d.s.cfg.Index("clock2x") >= 0 {
+		t.Error("the change stayed after the write failed")
+	}
+}
+
+// A profile the file names but does not have is a value gone wrong: the
+// profile row's label is Red (components/layout/panel).
+func TestMissingProfileIsRed(t *testing.T) {
+	cfg := testConfig()
+	cfg.Profile = "ghost-profile"
+	d := newDriver(t, cfg, 100, 30)
+	d.on(preferenceID)
+	for _, f := range d.s.vals.Fields {
+		if f.Label == "profile" && (f.Err == nil || !f.Err()) {
+			t.Error("the profile row is not marked wrong")
+		}
 	}
 }

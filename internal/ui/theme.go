@@ -12,11 +12,11 @@ var (
 	dimColor = lipgloss.Color("#6c7086") // overlay0: the status row
 	// a thing that is on: a custom saver's EXIT 0.
 	liveColor = lipgloss.Color("#a6e3a1") // green
-	// red is "wrong", yellow is "not set yet".
-	warnColor   = lipgloss.Color("#f38ba8") // red
-	yellowColor = lipgloss.Color("#f9e2af") // yellow
-	// a custom saver's program that ended with a code other than 0: the
-	// code on the board (user, 2026-09-25: red is NONE's, nothing ran).
+	// red is "wrong".
+	warnColor = lipgloss.Color("#f38ba8") // red
+	// a warning — no PIN, any key unlocks — and a custom saver's program
+	// that ended with a code other than 0: the code on the board (user,
+	// 2026-09-25: red is NONE's, nothing ran).
 	peachColor = lipgloss.Color("#fab387") // peach
 )
 

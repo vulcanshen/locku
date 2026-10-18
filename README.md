@@ -95,6 +95,10 @@ Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
 **A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
 
+### The first start
+
+There is no setup step. The first `locku` opens the settings screen on the defaults — one clock profile, the active one, and no PIN — and `~/.config/locku/config.yaml` is written the first time something is changed there. It asks the terminal at start how wide its icons are, which takes a moment on a terminal that does not answer. Until a PIN is set, `locku lock` is a plain screensaver: its status row says `no PIN · any key unlocks`, and any key ends it. Nothing goes into tmux, screen or your shell rc until `activate` is turned on.
+
 ### Uninstall
 
 ```bash

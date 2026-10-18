@@ -102,15 +102,19 @@ func (s *Settings) sideActions() []terminu.Action {
 			Do:       func() tea.Cmd { return s.change(func() { s.cfg.Profile = name }) }},
 		{Key: "p", Label: "preview", Desc: "the lock, showing this profile", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd { return s.previewProfile(ref) }},
-		{Key: "D", Label: "Duplicate", Desc: "a copy, under a new name", Scope: terminu.ItemScope,
+		// A box for a name, from the Space menu, opens over it, and Esc goes
+		// back to it (tdp F4, T1: a value written back keeps its source).
+		{Key: "D", Label: "Duplicate", Desc: "a copy, under a new name", Scope: terminu.ItemScope, Stay: true,
 			Do: func() tea.Cmd { return s.duplicate(ref) }},
-		{Key: "r", Label: "rename", Desc: "this profile", Scope: terminu.ItemScope,
+		{Key: "r", Label: "rename", Desc: "this profile", Scope: terminu.ItemScope, Stay: true,
 			Do: func() tea.Cmd { return s.rename(ref) }},
 		// The last one, or the one the lock shows: there, but not now
-		// (tdp M6).
+		// (tdp M6). It asks first, over the menu it was run from (tdp F6, F4).
 		{Key: "X", Label: "Delete", Desc: "this profile", Scope: terminu.ItemScope,
 			Disabled: func() bool { return active || len(s.cfg.Profiles) == 1 },
-			Do:       func() tea.Cmd { return s.delete(ref) }},
+			Ask: &terminu.Ask{Title: "Delete", Subject: name, Question: "Delete " + name + "?", Verb: "delete",
+				Details: []string{"config.yaml is written at once"}},
+			Do: func() tea.Cmd { return s.delete(name) }},
 	}
 }
 
@@ -118,7 +122,7 @@ func (s *Settings) sideActions() []terminu.Action {
 // has no name, an object does; what is made is a profile, made as the
 // saver's defaults say).
 func (s *Settings) newAction(kind string, scope terminu.Scope) terminu.Action {
-	return terminu.Action{Key: "n", Label: "new", Desc: "a profile of this saver, under a name", Scope: scope,
+	return terminu.Action{Key: "n", Label: "new", Desc: "a profile of this saver, under a name", Scope: scope, Stay: true,
 		Do: func() tea.Cmd { return s.newProfile(kind) }}
 }
 
@@ -194,20 +198,17 @@ func (s *Settings) rename(ref int) tea.Cmd {
 		}})
 }
 
-func (s *Settings) delete(ref int) tea.Cmd {
-	name := s.cfg.Profiles[ref].Name
-	return s.app.Confirm(terminu.Ask{Title: "Delete", Subject: name, Question: "Delete " + name + "?", Verb: "delete",
-		Details: []string{"config.yaml is written at once"}},
-		func() tea.Cmd {
-			i := s.cfg.Index(name)
-			if i < 0 {
-				return nil
-			}
-			cmd := s.change(func() { s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...) })
-			// The cursor stays among the profiles: the next one, or the new last.
-			s.selectProfile(s.cfg.Profiles[min(i, len(s.cfg.Profiles)-1)].Name)
-			return cmd
-		})
+// delete takes the profile called name away, once its confirm is
+// answered (the action's Ask).
+func (s *Settings) delete(name string) tea.Cmd {
+	i := s.cfg.Index(name)
+	if i < 0 {
+		return nil
+	}
+	cmd := s.change(func() { s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...) })
+	// The cursor stays among the profiles: the next one, or the new last.
+	s.selectProfile(s.cfg.Profiles[min(i, len(s.cfg.Profiles)-1)].Name)
+	return cmd
 }
 
 // selectProfile puts [1]'s cursor on the profile called name, and [2] on it.

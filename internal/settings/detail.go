@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"errors"
 	"slices"
 	"strconv"
 	"strings"
@@ -249,7 +250,7 @@ func switchField(label string, on bool) *terminu.Field {
 // shows 0 as "0 (off)". An empty box is not a number (components/input/number):
 // the prompt says the default, to type (until 2026-10-18 empty was the default).
 // TODO(tdp LK8): an empty number box as "the default".
-func (s *Settings) number(label, prompt string, value int, zeroOff bool, set func(int) tea.Cmd) *terminu.Field {
+func (s *Settings) number(label, prompt string, value, least int, zeroOff bool, set func(int) tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label,
 		Value: func() string {
 			if zeroOff && value == 0 {
@@ -260,11 +261,20 @@ func (s *Settings) number(label, prompt string, value int, zeroOff bool, set fun
 		Edit: func() tea.Cmd {
 			return s.app.Number(terminu.NumberInput{Title: "Edit", Subject: label, Glyph: glyphTimer, Name: label,
 				Prompt: prompt, Verb: "save", Old: itoa(value),
-				Done: func(v string) tea.Cmd {
+				// Out of range is said on the error row, the value named
+				// (components/input/number).
+				Check: func(v string) error {
 					n, err := strconv.Atoi(v)
-					if err != nil {
-						return nil
+					switch {
+					case err != nil:
+						return errors.New(label + " must be a whole number")
+					case n < least:
+						return errors.New(label + " must be " + itoa(least) + " or more")
 					}
+					return nil
+				},
+				Done: func(v string) tea.Cmd {
+					n, _ := strconv.Atoi(v)
 					return set(n)
 				}})
 		}}
@@ -285,6 +295,9 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	profile := s.choice("profile", names, s.cfg.Profile, func(v string) tea.Cmd {
 		return s.change(func() { s.cfg.Profile = v })
 	})
+	// A profile the file names but does not have is a value gone wrong:
+	// its label is Red (components/layout/panel, one value per row).
+	profile.Err = func() bool { return s.cfg.Index(s.cfg.Profile) < 0 }
 	status := switchField("show_status", s.cfg.ShowStatus)
 	status.OnChange = func() tea.Cmd {
 		on := status.Checked[0]
@@ -296,16 +309,11 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 		profile,
 		status,
 		s.number("pin_prompt_timeout", "Seconds without a key before the PIN box closes, 0 or more; 0 never, "+itoa(def.PINPromptTimeout)+" by default",
-			s.cfg.PINPromptTimeout, false, func(n int) tea.Cmd { return s.change(func() { s.cfg.PINPromptTimeout = n }) }),
+			s.cfg.PINPromptTimeout, 0, false, func(n int) tea.Cmd { return s.change(func() { s.cfg.PINPromptTimeout = n }) }),
 		s.number("wrong_pin_attempts", "Wrong PINs in a row before a cooldown, 0 or more; 0 off, "+itoa(def.WrongPINAttempts)+" by default",
-			s.cfg.WrongPINAttempts, true, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINAttempts = n }) }),
+			s.cfg.WrongPINAttempts, 0, true, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINAttempts = n }) }),
 		s.number("wrong_pin_attempt_cooldown", "Seconds the cooldown lasts, 1 or more; "+itoa(def.WrongPINCooldown)+" by default",
-			s.cfg.WrongPINCooldown, false, func(n int) tea.Cmd {
-				if n == 0 {
-					n = def.WrongPINCooldown
-				}
-				return s.change(func() { s.cfg.WrongPINCooldown = n })
-			}),
+			s.cfg.WrongPINCooldown, 1, false, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINCooldown = n }) }),
 	}
 }
 
@@ -365,7 +373,7 @@ func (s *Settings) toolFields() []*terminu.Field {
 		}))
 	}
 	out = append(out, s.number(toolIdle[name], "Idle seconds before "+name+" locks by itself, 0 or more; 0 never, "+itoa(config.DefaultIdle)+" by default",
-		t.Idle, true, func(n int) tea.Cmd {
+		t.Idle, 0, true, func(n int) tea.Cmd {
 			cmd := s.change(func() {
 				t := s.cfg.Tool(name)
 				t.Idle = n
@@ -422,7 +430,9 @@ func (s *Settings) detailActions() []terminu.Action {
 					desc = "where they are"
 				}
 			}
-			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
+			// What it opens from the Space menu — a box, a list, a confirm —
+			// opens over the menu (tdp F4, T1).
+			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint, Stay: true,
 				Do: func() tea.Cmd {
 					_, cmd := s.vals.Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
 					return cmd

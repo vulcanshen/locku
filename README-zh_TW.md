@@ -95,6 +95,10 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 **需要 truecolor 終端機**：點陣板用 profile 自己的顏色畫，浮層底下的畫面會淡化，全部用 24 位元色。顏色數比較少的終端機上，顏色會失真。
 
+### 第一次啟動
+
+不用另外設定。第一次跑 `locku` 會用預設值打開設定畫面——一個 clock profile、就是啟用中的那個、沒有 PIN——在那裡第一次改了什麼，才寫出 `~/.config/locku/config.yaml`。啟動時會問終端機 icon 佔幾格，終端機不回答時要等一下。還沒設 PIN 時，`locku lock` 就是單純的螢幕保護：狀態列寫 `no PIN · any key unlocks`，任何鍵結束。在 `activate` 打開之前，tmux、screen 與 shell rc 都不會被寫入任何東西。
+
 ### 移除
 
 ```bash

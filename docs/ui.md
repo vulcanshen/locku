@@ -264,7 +264,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 - 錯誤時框與標題維持層色，只有錯誤列是 Red（components/layout/popup 的錯誤列；2026-10-17 以前邊框變紅）。錯誤只在 `Enter` 檢查時改（input/README），之間打字不清掉。
 - 貼上的控制字元（`\n`、`\t`、`\x1b`……）一個都不丟、照樣畫成點，`Enter` 時擋下（input/README；2026-10-17 以前只收換行與 Tab、錯誤寫 `no line breaks or tabs`）。按 `Ctrl` 組合打出來的不進值。
 - `pin_prompt_timeout` 到：照常的收起動畫回 saver，標題不再寫 `· closing`。
-- 終端機比框小：框最高是畫面高度 − 2、寬是畫面寬 − 2（F7），置中，超出畫面的切掉（E5）。
+- 終端機比框小：框最高是畫面高度 − 2、寬是畫面寬 − 2（tdp F7），置中，超出畫面的切掉（tdp E5）。
 
 ---
 

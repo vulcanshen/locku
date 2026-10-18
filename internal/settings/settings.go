@@ -15,6 +15,7 @@ import (
 	_ "embed"
 	"slices"
 	"strconv"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	terminu "github.com/vulcanshen/terminu-go"
@@ -83,7 +84,7 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a.OnMsg = s.onMsg
 	a.Start = func() tea.Cmd {
 		if s.problem != "" {
-			return s.app.Toast(terminu.Error, "config.yaml ignored: "+s.problem)
+			return s.app.Error("config.yaml", s.problem)
 		}
 		return nil
 	}
@@ -175,9 +176,24 @@ func (s *Settings) save(before config.Config) tea.Cmd {
 	defer s.refresh()
 	if err := config.Save(s.cfg); err != nil {
 		s.cfg = before
-		return s.app.Toast(terminu.Error, "write failed: "+err.Error())
+		// An action that failed: an error popup, the whole of it there
+		// (components/dialog/toast, dialog/note).
+		// TODO(lib LK10): over the box the value came from, which has closed
+		// by now; Esc on the error popup leaves the value typed.
+		return s.app.Error("Write failed", err.Error())
 	}
 	return nil
+}
+
+// tell says text in a toast when it fits in one — three rows at most
+// (components/dialog/toast) — and in a note to read when it does not.
+func (s *Settings) tell(title string, lines []string) tea.Cmd {
+	text := strings.Join(lines, " · ")
+	w, _ := s.app.Size()
+	if len(terminu.Wrap(text, max(min(w-2, 120)-4, 1))) <= 3 {
+		return s.app.Toast(terminu.Info, text)
+	}
+	return s.app.Viewer(&terminu.Viewer{Title: title, Glyph: glyphFile, Lines: lines})
 }
 
 // change runs f on the config and saves it.
@@ -189,7 +205,7 @@ func (s *Settings) change(f func()) tea.Cmd {
 
 func (s *Settings) onMsg(msg tea.Msg) tea.Cmd {
 	if m, ok := msg.(previewDone); ok && m.err != nil {
-		return s.app.Toast(terminu.Error, "preview: "+m.err.Error())
+		return s.app.Error("Preview", m.err.Error())
 	}
 	return nil
 }

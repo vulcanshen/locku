@@ -261,10 +261,12 @@ func TestPreviewUnlockHandsBack(t *testing.T) {
 }
 
 func TestViewIsExactlyTheTerminal(t *testing.T) {
-	// Once more with icons two cells wide: the board's pixels and the
-	// prompt's title (tdp D6, L4).
-	for _, cells := range []int{1, 2} {
-		withIcons(t, cells)
+	// Once more with icons two cells wide, and with powerline symbols two
+	// as well: the board's pixels and the prompt's title, whose capsule's
+	// ends are powerline symbols (tdp E5, L4).
+	for _, w := range [][2]int{{1, 1}, {2, 1}, {2, 2}} {
+		cells := w[0]
+		withWidths(t, w[0], w[1])
 		for _, sz := range [][2]int{{80, 24}, {81, 25}, {40, 12}, {20, 5}} {
 			m := testLock(t, "1234", nil)
 			m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})

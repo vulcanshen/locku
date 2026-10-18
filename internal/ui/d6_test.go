@@ -13,9 +13,40 @@ import (
 // it, for the rest of the test.
 func withIcons(t *testing.T, n int) {
 	t.Helper()
-	icon, powerline := terminu.IconWidth(), terminu.PowerlineWidth()
-	terminu.SetIconWidth(n, powerline)
-	t.Cleanup(func() { terminu.SetIconWidth(icon, powerline) })
+	withWidths(t, n, terminu.PowerlineWidth())
+}
+
+// withWidths draws with icons and powerline symbols as wide as given, for
+// the rest of the test (tdp E5: the two are measured apart).
+func withWidths(t *testing.T, icon, powerline int) {
+	t.Helper()
+	wasIcon, wasPowerline := terminu.IconWidth(), terminu.PowerlineWidth()
+	terminu.SetIconWidth(icon, powerline)
+	t.Cleanup(func() { terminu.SetIconWidth(wasIcon, wasPowerline) })
+}
+
+// A box drawn for a screen larger than the one it lands on — the terminal
+// made smaller before the box is measured again — starts from the top
+// left and is cut at the screen's edges, never past them and never a
+// panic: wider, higher and both (tdp E5).
+func TestPromptLargerThanTheScreen(t *testing.T) {
+	for _, w := range [][2]int{{1, 1}, {2, 2}} {
+		withWidths(t, w[0], w[1])
+		for _, sz := range [][2]int{{30, 24}, {80, 5}, {12, 4}} {
+			m := openPrompt(t, testLock(t, "1234", nil))
+			m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+			m.prompt.setSize(80, 24) // the box still the size it was measured at
+			lines := strings.Split(m.View(), "\n")
+			if len(lines) != sz[1] {
+				t.Errorf("widths %v, %v: %d rows", w, sz, len(lines))
+			}
+			for r, l := range lines {
+				if got := dispW(l); got != sz[0] {
+					t.Errorf("widths %v, %v: row %d is %d wide", w, sz, r, got)
+				}
+			}
+		}
+	}
 }
 
 // The lock's PIN prompt alone, and the width a custom saver is handed

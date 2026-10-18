@@ -21,8 +21,8 @@ cfgFile = os.path.join(cfgDir, "config.yaml")
 env = {"HOME": work, "PATH": os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
        "LOCKU__CONFIG": cfgDir, "USER": os.environ.get("USER", "u")}
 MARK = "LOCKU-E2E-MARK"
-PIXEL = "".encode()   # the board's cell
-PROMPT = "".encode()  # the PIN prompt's lock
+PIXEL = "\uf0c8".encode()   # the board's cell: nf-fa-square, written as its code point (tdp E4)
+PROMPT = "\uf023".encode()  # the PIN prompt's lock: nf-fa-lock
 
 
 def config(command, pin_hash=None, extra=""):

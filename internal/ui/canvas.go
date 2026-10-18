@@ -470,7 +470,9 @@ func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN
 		add("config error: "+problem, warnColor)
 	}
 	if noPIN {
-		add("no PIN · any key unlocks", yellowColor)
+		// Peach, a warning: worth knowing, nothing broken (components/color;
+		// Yellow until 2026-10-18, which is a mode's).
+		add("no PIN · any key unlocks", peachColor)
 	}
 	// A custom saver's ending: why the board says what it says.
 	if note != "" {
