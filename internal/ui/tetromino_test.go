@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -51,37 +50,6 @@ func TestTetrominoLockWearsItsOwnColours(t *testing.T) {
 	}
 	if same {
 		t.Error("no piece came in")
-	}
-}
-
-// On the settings screen the falling blocks have their speed to set and
-// nothing else, as the snake (user, 2026-10-07): from the five by name,
-// normal to begin with, written at once.
-func TestTetrominoHasItsSpeed(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k") // above the pets
-	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindTetromino {
-		t.Fatalf("the falling blocks sit above the pets, not %+v", it)
-	}
-	v := m.View()
-	if !strings.Contains(v, "falling blocks") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "Tetris") {
-		t.Errorf("the falling blocks' [2]:\n%s", v)
-	}
-	m = m.press("n", "enter")
-	it := m.sideAt()
-	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "tetromino", Saver: saver.KindTetromino, Speed: saver.SpeedNormal}) {
-		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
-	}
-	m = m.press("2", "j")
-	if r := m.rowAt(); r.kind != rowSpeed || r.label != "speed" || r.value != "normal" {
-		t.Fatalf("the row under the name: %+v", r)
-	}
-	m = m.press("enter")
-	if !m.options.isInteractive() || len(m.options.items) != len(saver.Speeds) || m.options.items[m.options.cursor].label != "normal" {
-		t.Fatalf("options %+v", m.options.items)
-	}
-	m = m.press("k", "enter")
-	if got := m.cfg.Profiles[it.ref].Speed; got != saver.SpeedSlow || saved(t).Profiles[it.ref].Speed != saver.SpeedSlow {
-		t.Errorf("chose %q", got)
 	}
 }
 

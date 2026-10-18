@@ -18,6 +18,7 @@ import (
 	"github.com/vulcanshen/locku/internal/custom"
 	"github.com/vulcanshen/locku/internal/login"
 	"github.com/vulcanshen/locku/internal/saver"
+	"github.com/vulcanshen/locku/internal/settings"
 	"github.com/vulcanshen/locku/internal/termreply"
 	"github.com/vulcanshen/locku/internal/tmux"
 	"github.com/vulcanshen/locku/internal/ui"
@@ -129,6 +130,7 @@ func runBoard(model func() ui.LockModel) (code int, unlocked bool) {
 			tea.WithAltScreen(),
 			tea.WithoutSignalHandler(),
 			tea.WithInput(in),
+			tea.WithOutput(ui.ScreenOutput{File: os.Stdout}),
 		)
 		if m, err := p.Run(); err == nil {
 			lm, ok := m.(ui.LockModel)
@@ -271,12 +273,14 @@ func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.T
 
 // runSettings is the bare `locku`: the settings screen, where the tmux
 // and screen integration is set up and removed too (user, 2026-09-25:
-// buttons, in place of a `locku setup` command).
+// buttons, in place of a `locku setup` command). It is built on the lib,
+// which measures how wide an icon is as it starts (tdp E5, E8).
 func runSettings() int {
 	cfg, problem := config.Load()
-	ui.DetectIconWidth() // how wide an icon is (tdp D6)
-	p := tea.NewProgram(ui.NewApp(cfg, problem), tea.WithAltScreen())
-	_, err := p.Run()
+	s, err := settings.New(cfg, problem)
+	if err == nil {
+		err = s.Run()
+	}
 	switch {
 	case errors.Is(err, tea.ErrInterrupted):
 		return 130 // the conventional 128+SIGINT

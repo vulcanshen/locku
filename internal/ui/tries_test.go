@@ -24,8 +24,8 @@ func customPrompt(t *testing.T, tries Tries) LockModel {
 	}
 	cfg.PINHash = string(h)
 	m := NewLockPrompt(cfg, "", 80, 24, func(string, int) {}, tries)
-	for i := 0; i < animFrames+1 && !m.prompt.anim.isInteractive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && !m.prompt.anim.isInteractive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	return m
 }
@@ -56,7 +56,7 @@ func TestCustomPromptsShareTheTries(t *testing.T) {
 	}
 	m, _ = m.step(keyEsc)
 	m = customPrompt(t, m.Tries())
-	if v := ansi.Strip(m.prompt.view(m.now())); m.prompt.state != promptLockout || !strings.Contains(v, "try again in 30 s") && !strings.Contains(v, "try again in 29 s") {
+	if v := ansi.Strip(boxText(m.prompt, m.now())); m.prompt.state != promptLockout || !strings.Contains(v, "try again in 30 s") && !strings.Contains(v, "try again in 29 s") {
 		t.Fatalf("Esc and back: the cooling-off goes on:\n%s", v)
 	}
 	// Run out while no prompt was up: the count starts again.
@@ -79,8 +79,8 @@ func TestCooldownRunsOutWhileThePromptIsDown(t *testing.T) {
 		t.Fatalf("no lockout: %v", m.prompt.state)
 	}
 	m, _ = m.step(keyEsc)
-	for i := 0; i < animFrames+1 && m.prompt.anim.isActive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && m.prompt.anim.isActive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	m.now = func() time.Time { return at.Add(31 * time.Second) }
 	m = wrong(openPrompt(t, m))
@@ -94,8 +94,8 @@ func TestCooldownRunsOutWhileThePromptIsDown(t *testing.T) {
 	m, _ = m.step(lockoutTickMsg{gen: m.promptGen})
 	m = wrong(m)
 	m, _ = m.step(keyEsc)
-	for i := 0; i < animFrames+1 && m.prompt.anim.isActive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && m.prompt.anim.isActive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	if m = wrong(openPrompt(t, m)); m.prompt.state != promptLockout {
 		t.Errorf("two wrong since the last cooling-off: state %v, failures %d", m.prompt.state, m.failures)

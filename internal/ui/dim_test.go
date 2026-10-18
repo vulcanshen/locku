@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/muesli/termenv"
+	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // colours on: a test's output is no terminal, and lipgloss would draw
@@ -42,9 +43,10 @@ func near(re *regexp.Regexp, l string, c [3]int) bool {
 func has(l string, c lipgloss.Color) bool   { return near(fgRe, l, hexRGB(string(c))) }
 func hasBG(l string, c lipgloss.Color) bool { return near(bgRe, l, hexRGB(string(c))) }
 
-// dimmed is c faded as D2 has it.
+// dimmed is c faded as components/color has it.
 func dimmed(c lipgloss.Color) lipgloss.Color {
-	d := dimRGB(hexRGB(string(c)))
+	h := hexRGB(string(c))
+	d := terminu.DimRGB(terminu.RGB{uint8(h[0]), uint8(h[1]), uint8(h[2])})
 	return lipgloss.Color(fmt.Sprintf("#%02x%02x%02x", d[0], d[1], d[2]))
 }
 
@@ -58,100 +60,14 @@ func line(v, want string) string {
 	return ""
 }
 
-// D2: c × 0.45 + base × 0.55, and never lighter than c.
-func TestDimRGB(t *testing.T) {
-	if got := dimRGB([3]int{0x89, 0xb4, 0xfa}); got != [3]int{78, 98, 138} {
-		t.Errorf("blue: %v", got)
+// The lock fades with the lib's dimming: c × 0.45 + base × 0.55, a
+// background as a foreground, never lighter (components/color).
+func TestDimANSI(t *testing.T) {
+	got := dimANSI("\x1b[38;2;137;180;250mA\x1b[48;2;0;0;0mB")
+	if !near(fgRe, got, [3]int{78, 98, 138}) {
+		t.Errorf("blue: %q", got)
 	}
-	// Black is darker than the base: it stays black.
-	if got := dimRGB([3]int{0, 0, 0}); got != [3]int{0, 0, 0} {
-		t.Errorf("black must not lighten: %v", got)
-	}
-	// A background fades as a foreground does; a reset leaves the dimmed
-	// text colour behind it.
-	if got := dimSGR("48;2;137;180;250"); got != "48;2;78;98;138" {
-		t.Errorf("background: %q", got)
-	}
-	if got := dimSGR("0"); got != "0;"+sgrRGB(true, dimText) {
-		t.Errorf("reset: %q", got)
-	}
-}
-
-// With a popup up, everything below the topmost fades — every colour its
-// own way, backgrounds too, so the capsules, the cursor bars and a draft's
-// yellow unsaved chip are still there, only darker; a popup under it
-// fades frame and all, its frame its layer colour dimmed; the top is
-// itself; a toast fades nothing (tdp F8, D2, 2026-09-28).
-func TestPopupsDimBelowTheTop(t *testing.T) {
-	colours(t)
-	m := newTestApp(t)
-	if l := line(m.View(), "[1] locku"); !has(l, focusColor) || !hasBG(l, focusColor) {
-		t.Fatalf("no popup: the focused panel's frame and capsule are bright: %q", l)
-	}
-
-	// The Space menu is the top: the panels fade — the [1] capsule's
-	// background, the cursor bar's — the menu does not.
-	// (On clock2: the active profile cannot be deleted, and X below is to
-	// open a confirm.)
-	m = m.press("j", " ")
-	v := m.View()
-	if l := line(v, "[1] locku"); hasBG(l, focusColor) || !hasBG(l, dimmed(focusColor)) {
-		t.Errorf("under the menu the [1] capsule must fade, not go: %q", l)
-	}
-	if l := line(v, "║   clock2"); hasBG(l, handColor) || !hasBG(l, dimmed(handColor)) {
-		t.Errorf("under the menu the cursor bar must fade, not go: %q", l)
-	}
-	menuFrame := popupLayerColor(1)
-	if l := line(v, "Global operation"); !has(l, menuFrame) {
-		t.Errorf("the menu on top must keep its colour: %q", l)
-	}
-
-	// A confirm over it is the top: the menu fades, frame and all, its
-	// frame its own colour dimmed, its cursor bar still there.
-	m = m.press("X")
-	v = m.View()
-	if l := line(v, "Global operation"); has(l, menuFrame) || !has(l, dimmed(menuFrame)) {
-		t.Errorf("under the confirm the menu's frame must be its colour dimmed: %q", l)
-	}
-	if l := line(v, "item operation"); l != "" && hasBG(l, handColor) {
-		t.Errorf("under the confirm nothing of the menu is bright: %q", l)
-	}
-	if l := line(v, "Delete"); !has(l, popupLayerColor(2)) {
-		t.Errorf("the confirm on top must keep its colour: %q", l)
-	}
-
-	// Esc: the menu is the top again the moment the confirm starts to go,
-	// not once it has gone — as the keys are the menu's then (tdp D3).
-	m, _ = m.sends("esc")
-	if !m.confirm.isActive() {
-		t.Fatal("the confirm must still be closing")
-	}
-	if l := line(m.View(), "Global operation"); !has(l, menuFrame) {
-		t.Errorf("after Esc the menu must be bright again: %q", l)
-	}
-	m = m.settle()
-
-	// A toast alone fades nothing.
-	m = m.press("esc")
-	m.toast.show("PIN set", toastInfo)
-	m = m.settle()
-	if l := line(m.View(), "[1] locku"); !has(l, focusColor) {
-		t.Errorf("a toast must not fade the screen: %q", l)
-	}
-}
-
-// A colour draft's yellow unsaved chip fades as itself, under a popup.
-func TestDimKeepsTheUnsavedChip(t *testing.T) {
-	colours(t)
-	m := newTestApp(t).press("2")
-	d := m.cfg.Profiles[0].Colours()
-	d.BG = "#000000"
-	m.drafts[profileKey(m.cfg.Profiles[0].Name)] = d
-	if l := line(m.View(), "unsaved"); !hasBG(l, yellowColor) {
-		t.Fatalf("no popup: the unsaved chip is yellow: %q", l)
-	}
-	m = m.press(" ")
-	if l := line(m.View(), "unsaved"); hasBG(l, yellowColor) || !hasBG(l, dimmed(yellowColor)) {
-		t.Errorf("under the menu the unsaved chip must fade, not go: %q", l)
+	if !near(bgRe, got, [3]int{0, 0, 0}) {
+		t.Errorf("black must not lighten: %q", got)
 	}
 }

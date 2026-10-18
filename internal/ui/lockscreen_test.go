@@ -60,8 +60,8 @@ var (
 func openPrompt(t *testing.T, m LockModel) LockModel {
 	t.Helper()
 	m, _ = m.step(keyRunes("x"))
-	for i := 0; i < animFrames+1 && !m.prompt.anim.isInteractive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && !m.prompt.anim.isInteractive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	if !m.prompt.anim.isInteractive() {
 		t.Fatal("prompt did not open")
@@ -162,8 +162,8 @@ func TestLockout(t *testing.T) {
 		t.Fatal("a PIN got through the lockout")
 	}
 	m, _ = m.step(keyEsc)
-	for i := 0; i < animFrames+1 && m.prompt.anim.isActive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && m.prompt.anim.isActive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	m = openPrompt(t, m)
 	if m.prompt.state != promptLockout {
@@ -190,11 +190,8 @@ func TestPromptTimeoutClosesAndKeysRearmIt(t *testing.T) {
 		t.Fatal("a stale timeout closed the prompt")
 	}
 	m, _ = m.step(promptIdleMsg{gen: m.promptGen})
-	if m.prompt.anim.phase != animClosing || !m.prompt.timedOut {
+	if m.prompt.anim.phase != animClosing {
 		t.Fatal("the live timeout did not close the prompt")
-	}
-	if !strings.Contains(m.View(), "closing") {
-		t.Error("the closing title is missing")
 	}
 }
 
@@ -250,13 +247,16 @@ func TestDinoLockRunsFrameByFrame(t *testing.T) {
 	}
 }
 
+// A preview is a program of its own, run while the settings screen has
+// handed the terminal over: any key ends it, and the settings screen is
+// back (ui.md §2.1).
 func TestPreviewUnlockHandsBack(t *testing.T) {
 	m := newLock(config.Default(), "", true)
 	m.now = func() time.Time { return at }
 	m, _ = m.step(tea.WindowSizeMsg{Width: 80, Height: 24})
 	m, cmd := m.step(keyRunes("x"))
-	if quits(cmd) || !m.unlocked {
-		t.Error("a preview must hand back, not quit")
+	if !quits(cmd) || !m.unlocked || m.over {
+		t.Error("a key must end the preview, and only the preview")
 	}
 }
 

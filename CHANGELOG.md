@@ -4,6 +4,14 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
+- The settings screen is built on terminu-go, the family's library, and follows tdp v0.7.4: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
+- On `[2]` a choice of five or fewer is a radio drawn in place, `Enter` on the option picks it; more — `participants`, a long list of profiles — opens a select you can type to filter; `show_status` and `activate` are checkboxes.
+- `bg` and `fg` are chosen in a colour picker, the old colour and the new side by side, R, G and B in hex, and written when chosen, as every other value is. The colour draft, its `[S]` Save and `[R]` Reset and the `unsaved` chip are gone.
+- Changing the PIN asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it. The `New PIN` / `Remove PIN` menu is gone.
+- A number box no longer takes an empty value for the default: type the number. New and Duplicate offer no name ready in the box; the prompt says which is free.
+- After New or Duplicate the cursor is on the new profile and the focus stays in `[1]`. Quitting leaves at once.
+- The lock's PIN box is drawn as the library draws a PIN box: 45 columns wide, nine rows, the title `UNLOCK` and the prompt `The PIN` over the dots; an error leaves the frame its colour and stays on the error row until the next `Enter`. `Backspace` clears the whole PIN. A control character pasted into it is refused with `PIN can't have control characters`, where it said `no line breaks or tabs`.
+- Where a Nerd Font icon takes two cells, the lock's last column is no longer erased. Powerline symbols are measured as well as icons (`LOCKU__POWERLINE_WIDTH`, `TERMINU__POWERLINE_WIDTH`), and dimming fades the terminal's own sixteen colours, which it asks for, instead of xterm's.
 - The repository takes the terminu family templates of tdp v0.7.4 as they are: `family.mk` with the Makefile including it, the release workflow, `.goreleaser.yaml`, `install.sh`, `uninstall.sh`, `internal/version` and `.gitignore`. `make check` turns on `check-lib` when a `go.work` is there; the release notes are this file's section under the tag's own heading; the uninstaller asks about `~/.locku` (the PIN resets' log) as well as the settings.
 
 ## [0.2.7] - 2026-10-08

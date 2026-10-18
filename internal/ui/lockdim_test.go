@@ -39,8 +39,8 @@ func TestPromptDimsTheLock(t *testing.T) {
 
 	// Esc: the prompt goes, and the lock is itself again.
 	m, _ = m.step(keyEsc)
-	for i := 0; i < animFrames+1 && m.prompt.anim.isActive(); i++ {
-		m, _ = m.step(AnimTickMsg{Target: "pinprompt"})
+	for i := 0; i < openFrames+1 && m.prompt.anim.isActive(); i++ {
+		m, _ = m.step(AnimTickMsg{})
 	}
 	if l := status(m); !has(l, warnColor) {
 		t.Errorf("the prompt gone, the config error is red again: %q", l)

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	terminu "github.com/vulcanshen/terminu-go"
 
 	"github.com/vulcanshen/locku/internal/saver"
 )
@@ -41,7 +42,7 @@ func gap(k int) int { return (k + 1) / 2 }
 
 // pixelCell is one pixel on the terminal, two cells: the glyph and its
 // space, or the glyph alone where it takes two (tdp D6, 2026-09-29).
-func pixelCell() string { return pixelGlyph + spaces(2-iconCells) }
+func pixelCell() string { return pixelGlyph + spaces(2-terminu.IconWidth()) }
 
 // board is the pixel grid: w pixels across (half the columns), h down (the
 // rows above the status row). Each pixel is an ink: 0 is dark, the

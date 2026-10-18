@@ -171,7 +171,7 @@ kill(pb)
 
 # 4. idle 2 typed on the screen while activate is on: the file is
 # rewritten at once, the running screen takes it, and locks by itself.
-shown = settings(b"G", b"k", b"2", b"j", b"j", b"\r", b"\x15", b"2", b"\r")
+shown = settings(b"G", b"k", b"2", b"j", b"j", b"\r", b"2", b"\r")  # typing over the old value's grey suggestion
 check("idle 2 chosen on the screen is in locku's file at once", "idle 2 lockscreen" in open(own).read())
 check("and the screenrc is left as it was", open(rc).read() == users)
 check("the screen said so", b"wrote" in shown)

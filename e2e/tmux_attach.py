@@ -131,9 +131,10 @@ def settings(*keys):
 
 
 # 0. Activate from the screen: G to preference, k k up to tmux, into
-# [2], down past the path, the lock and the idle time to bind-key and l
-# typed into it, back up to activate, Enter, and Enter on the confirm.
-screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
+# [2], down past the path, the lock's two options and the idle time to
+# bind-key and l typed into it, back up to activate, Enter, and Enter on
+# the confirm.
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"j", b"j", b"\r", b"l", b"\r", b"g", b"g", b"\r", b"\r")
 block = open(conf).read() if os.path.exists(conf) else ""
 text = open(own).read() if os.path.exists(own) else ""
 check("activate from the settings screen wrote the block into tmux.conf: one line, reading locku's own file by ~",
@@ -207,7 +208,7 @@ pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
 time.sleep(1.5)
 tmux("new-session", "-d", "-s", "u")
 tmux("set", "-g", "@locked", "1")  # a mark left over, which a switch must clear
-screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"\r", b"j", b"\r")
+screen = settings(b"G", b"k", b"k", b"2", b"j", b"j", b"j", b"\r")  # lock-session, the lock's second option
 text = open(own).read()
 check("lock-session chosen on the screen leaves tmux.conf as it was", open(conf).read() == block)
 check("lock-session chosen on the screen: the alias, the key and the session hook are in locku's file",

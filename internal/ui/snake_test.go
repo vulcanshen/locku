@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"strings"
 	"testing"
 	"time"
 
@@ -48,45 +47,6 @@ func TestSnakeLockWearsItsOwnColours(t *testing.T) {
 	}
 	if same {
 		t.Error("the snake did not move")
-	}
-}
-
-// On the settings screen the snake has its speed to set and nothing
-// else, not even colours (user, 2026-10-06): chosen from the five by
-// name (2026-10-07; it was cells a second, typed), the cursor on the one
-// it is, normal to begin with, written at once.
-func TestSnakeHasItsSpeed(t *testing.T) {
-	m := newTestApp(t).press("G", "k", "k", "k", "k", "k", "k") // the snake, above the falling blocks
-	if it := m.sideAt(); it.kind != sideSaver || saver.Kinds[it.ref] != saver.KindSnake {
-		t.Fatalf("the snake sits above the falling blocks, not %+v", it)
-	}
-	v := m.View()
-	if !strings.Contains(v, "the Nokia snake") || !strings.Contains(v, "normal") || strings.Contains(v, " bg ") || strings.Contains(v, " fg ") || strings.Contains(v, "layout") || strings.Contains(v, "participants") {
-		t.Errorf("the snake's [2]:\n%s", v)
-	}
-	m = m.press("n", "enter")
-	it := m.sideAt()
-	if it.kind != sideProfile || m.cfg.Profiles[it.ref] != (config.Profile{Name: "snake", Saver: saver.KindSnake, Speed: saver.SpeedNormal}) {
-		t.Fatalf("the new profile: %+v", m.cfg.Profiles)
-	}
-	keys := m.press("2", " ").menu.menuKeys()
-	if hotkeyIndex(keys, "P") < 0 || hotkeyIndex(keys, "S") >= 0 || hotkeyIndex(keys, "R") >= 0 {
-		t.Errorf("its menu: %v", keys)
-	}
-	m = m.press("2", "j")
-	if r := m.rowAt(); r.kind != rowSpeed || r.label != "speed" || r.value != "normal" {
-		t.Fatalf("the row under the name: %+v", r)
-	}
-	m = m.press("enter")
-	if !m.options.isInteractive() || len(m.options.items) != len(saver.Speeds) || m.options.items[m.options.cursor].label != "normal" {
-		t.Fatalf("options %+v", m.options.items)
-	}
-	m = m.press("j", "j", "enter")
-	if got := m.cfg.Profiles[it.ref].Speed; got != saver.SpeedVeryFast || saved(t).Profiles[it.ref].Speed != saver.SpeedVeryFast {
-		t.Errorf("chose %q", got)
-	}
-	if r := m.rowAt(); r.value != "very-fast" {
-		t.Errorf("the row %+v", r)
 	}
 }
 

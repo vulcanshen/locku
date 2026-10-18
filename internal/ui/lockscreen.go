@@ -9,7 +9,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	overlay "github.com/rmhubbert/bubbletea-overlay"
+	terminu "github.com/vulcanshen/terminu-go"
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/saver"
@@ -217,13 +217,13 @@ func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
 func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	m, cmd := m.step(msg)
 	if m.promptOnly && m.paint != nil && !m.over {
-		// Cut to the screen as compositeDisp cuts a box on the board: from
-		// the top left, what falls off goes; the program's side would put
-		// the rows past the bottom over the last one (tdp D6, 2026-09-29).
-		lines := strings.Split(m.prompt.view(m.now()), "\n")
+		// Cut to the screen as a box on the board is: from the top left,
+		// what falls off goes; the program's side would put the rows past
+		// the bottom over the last one (tdp E5).
+		lines, _, _ := m.prompt.view(m.now())
 		lines = lines[:min(len(lines), max(m.height, 0))]
 		for i, l := range lines {
-			lines[i] = clipANSI(l, m.width)
+			lines[i] = terminu.Cut(l, 0, m.width)
 		}
 		m.paint(strings.Join(lines, "\n"), blockWidth(lines))
 	}
@@ -268,12 +268,12 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		m.shown = m.rev.cur
 		return m, m.revealTick()
 	case AnimTickMsg:
-		return m, m.prompt.anim.tick(msg)
+		return m, m.prompt.anim.tick()
 	case promptIdleMsg:
 		if msg.gen != m.promptGen || !m.prompt.anim.owns() || m.prompt.state != promptIdle {
 			return m, nil
 		}
-		return m, m.closePrompt(true)
+		return m, m.closePrompt()
 	case wrongOverMsg:
 		if msg.gen != m.promptGen || m.prompt.state != promptWrong {
 			return m, nil
@@ -287,7 +287,7 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		if !m.now().Before(m.lockoutUntil) {
 			// The cooling-off is over and the count starts again (§4.4).
 			m.endLockout()
-			m.prompt.state = promptIdle
+			m.prompt.state, m.prompt.err = promptIdle, ""
 			return m, m.armTimeout()
 		}
 		return m, m.lockoutTick()
@@ -331,28 +331,27 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 		return m, nil
 	case promptLockout:
 		if msg.Type == tea.KeyEsc {
-			return m, m.closePrompt(false)
+			return m, m.closePrompt()
 		}
 		return m, nil
 	}
-	m.prompt.err = ""
 	switch msg.Type {
 	case tea.KeyEsc:
-		return m, m.closePrompt(false)
+		return m, m.closePrompt()
 	case tea.KeyEnter:
-		// A PIN with a line break or a tab in it could never be set: it is
-		// not checked, and not a wrong one (oneline.go).
-		if hasBreak(string(m.prompt.value)) {
-			m.prompt.err = pinBreakErr
+		// A PIN with a control character in it — pasted — could never be
+		// set: it is not checked, and not a wrong one (components/input/README).
+		if m.prompt.hasControl() {
+			m.prompt.err = pinControlErr
 			return m, m.armTimeout()
 		}
 		return m.check()
 	case tea.KeyBackspace:
-		m.prompt.backspace()
+		m.prompt.clear()
 	case tea.KeySpace:
-		m.prompt.add([]rune{' '})
+		m.prompt.add([]rune{' '}, msg.Paste)
 	case tea.KeyRunes:
-		m.prompt.add(msg.Runes)
+		m.prompt.add(msg.Runes, msg.Paste)
 	}
 	// Every key restarts the idle timer, so a PIN typed slowly does not
 	// vanish halfway (function.md §3).
@@ -383,13 +382,13 @@ func (m *LockModel) endLockout() { m.failures, m.lockoutUntil = 0, time.Time{} }
 
 // closePrompt takes it down; the board never stopped. Prompt-only, the
 // program is waiting for the screen: this lock ends, with Back.
-func (m *LockModel) closePrompt(timedOut bool) tea.Cmd {
+func (m *LockModel) closePrompt() tea.Cmd {
 	if m.promptOnly {
 		m.back, m.over = true, true
 		return tea.Quit
 	}
 	m.promptGen++
-	return m.prompt.close(timedOut)
+	return m.prompt.close()
 }
 
 // check is Enter in the prompt: the right PIN ends the lock at once — no
@@ -404,6 +403,7 @@ func (m LockModel) check() (LockModel, tea.Cmd) {
 	}
 	m.failures++
 	m.promptGen++
+	m.prompt.err = pinWrong
 	if m.cfg.WrongPINAttempts > 0 && m.failures >= m.cfg.WrongPINAttempts {
 		m.lockoutUntil = m.now().Add(time.Duration(m.cfg.WrongPINCooldown) * time.Second)
 		m.prompt.until = m.lockoutUntil
@@ -424,7 +424,7 @@ func (m LockModel) TTYGone() bool { return m.gone }
 func (m LockModel) unlock() (LockModel, tea.Cmd) {
 	if m.preview {
 		m.unlocked = true
-		return m, nil
+		return m, tea.Quit
 	}
 	m.over = true
 	return m, tea.Quit
@@ -554,8 +554,8 @@ func (m LockModel) View() string {
 		// status row stripped).
 		view = dimANSI(view)
 	}
-	if m.prompt.anim.isActive() {
-		view = compositeDisp(m.prompt.view(m.now()), view, overlay.Center, overlay.Center, 0, 0)
+	if rows, x, y := m.prompt.view(m.now()); rows != nil {
+		view = strings.Join(terminu.Composite(strings.Split(view, "\n"), rows, x, y, m.width), "\n")
 	}
 	return view
 }
