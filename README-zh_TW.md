@@ -16,7 +16,7 @@
 
 ![demo](docs/demo.gif)
 
-`locku lock` 把終端機變成黃昏裡的 runner；按一個鍵，PIN 框疊在畫面上，PIN 錯了框變紅，對了終端機回來。接著是設定畫面：`[2]` 裡 runner 這個 profile 的設定，再用 `p` 一個接一個預覽其他 saver——pets、tetromino、snake、bounce、clock，`Space` 列出這一列能做的事、Integration 底下的 tmux。
+`locku lock` 把終端機變成黃昏裡的 runner；按一個鍵，PIN 框疊在畫面上，PIN 錯了紅字說一聲，對了終端機回來。接著是設定畫面：`[2]` 裡 runner 這個 profile 的設定，再用 `p` 一個接一個預覽其他 saver——pets、tetromino、snake、bounce、clock，`Space` 列出這一列能做的事、Integration 底下的 tmux。
 
 ## 你會看到什麼
 
@@ -91,7 +91,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 從原始碼建置見 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
 
-**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。icon 畫成兩格的 Nerd Font（有些給 CJK 用的就是）也可以：locku 啟動時問終端機。要手動指定就設 `TERMINU__ICON_WIDTH=1` 或 `2`：terminu 家族每個 app 都讀它，設一次全家族通用；`LOCKU__ICON_WIDTH` 只給 locku，比它優先。在另一個 terminu app 的終端機裡跑時，那個 app 會替 locku 設好 `TERMINU__ICON_WIDTH`；locku 也這樣替 custom saver 的程式設。
+**Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。icon 佔幾格、powerline 符號（膠囊的兩端、cursor 尾端的箭頭）佔幾格，要看字型與終端機，locku 啟動時問終端機。要手動指定就把 `TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 設成 `1` 或 `2`：terminu 家族每個 app 都讀它們，設一次全家族通用；`LOCKU__ICON_WIDTH` 與 `LOCKU__POWERLINE_WIDTH` 只給 locku，比它們優先。在另一個 terminu app 的終端機裡跑時，那個 app 會替 locku 設好兩個 `TERMINU__` 變數；locku 也這樣替 custom saver 的程式設。
 
 **需要 truecolor 終端機**：點陣板用 profile 自己的顏色畫，浮層底下的畫面會淡化，全部用 24 位元色。顏色數比較少的終端機上，顏色會失真。
 
@@ -101,7 +101,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/uninstall.sh | sh
 ```
 
-移除 binary，然後問你——不擅自決定——要不要刪設定目錄。先在設定畫面把 `activate` 關掉，tmux.conf、screenrc 與 shell rc 裡 locku 的區塊就沒了；移除腳本不碰那些檔。
+移除 binary，然後問你——不擅自決定——要不要刪設定目錄與資料目錄（PIN reset 的紀錄）。先在設定畫面把 `activate` 關掉，tmux.conf、screenrc 與 shell rc 裡 locku 的那一行就沒了；移除腳本不碰那些檔，最後會提醒你。
 
 ## 快速開始
 
@@ -113,7 +113,7 @@ locku version    # 版本；locku help 印用法
 ```
 
 1. `locku`，到 **Settings › preference**，PIN 那列按 `Enter`，輸入一組，4 到 12 個字元。這步可省略：不設 PIN，locku 就是螢幕保護，任何鍵結束。
-2. **Integration › tmux**（或 **screen**）：填 `config file path`（會提議 `~/.tmux.conf`），把 `activate` 打開、確認。locku 的區塊已在檔案裡，跑著的 tmux server 也立刻收到。
+2. **Integration › tmux**（或 **screen**）：填 `config file path`（通常是 `~/.tmux.conf`），勾起 `activate`、確認。locku 的那一行已在檔案裡，跑著的 tmux server 也立刻收到設定。
 3. 在 tmux 裡 `prefix :` 打 `locku`，整台 server 的 client 一起鎖。閒置 `lock-after-time` 秒（預設 300）的 session 自己鎖。填一個 `bind-key`，例如 `l`，`prefix l` 也鎖。
 4. 任何鍵叫出 PIN 框；PIN 對了終端機回來。
 
@@ -121,8 +121,8 @@ locku version    # 版本；locku help 印用法
 
 ## 鎖定畫面
 
-- 任何鍵開 PIN 框，那個鍵不算輸入。`Enter` 送出、`Esc` 回 saver、`Backspace` 刪一字。
-- 錯誤 PIN 邊框變紅 1 秒並吞掉所有輸入。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
+- 任何鍵開 PIN 框，那個鍵不算輸入。`Enter` 送出、`Esc` 回 saver、`Backspace` 清掉打的字。
+- 錯誤的 PIN 會寫 `wrong PIN`，並吞掉 1 秒內的所有輸入。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
 - 狀態列 `user@host · locked since HH:MM`（`show_status: false` 可關），沒設 PIN 時標明 `no PIN · any key unlocks`。
 - `Ctrl-C`、`Ctrl-Z`、`Ctrl-\` 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。進程只在三種情況結束：PIN 正確、無 PIN 時任意鍵、終端機消失。
 - 沒設 PIN、或 config 讀不到，一律 fail open：saver 照常顯示、狀態列說明原因、任何鍵結束。
@@ -142,40 +142,43 @@ locku pin reset
 ## 設定畫面
 
 ```
-╔═[1] locku════════════╗╭─[2] clock   unsaved────────────────────────────────╮
-║ Profiles             ║│ Property                   Value                   │
-║ ● clock              ║│ name                       clock                   │
-║   clock2             ║│ saver                      clock                   │
-║   runner             ║│ layout                     row                     │
-║ Savers               ║│ size                       medium                  │
-║   clock              ║│ font                       3x7                     │
-║   runner             ║│ time                       HH MM                   │
-║   bounce             ║│ date                       off                     │
-║   snake              ║│ bg                         ■ #313244  →  ■ #ff3244 │
-║   tetromino          ║│   R                        ───────────● 255        │
-║   pets               ║│   G                        ──●───────── 50         │
-║   custom             ║│   B                        ───●──────── 68         │
-║ Integration          ║│ fg                         ■ #f2b753               │
-║   tmux               ║│   R                        ──────────●─ 242        │
-║   screen             ║│   G                        ────────●─── 183        │
-║ Settings             ║│   B                        ────●─────── 83         │
-║   preference         ║│                                                    │
-╚══════════════════════╝╰────────────────────────────────────────────────────╯
- Space:menu ?:help Tab/1–2:panels q:quit
+┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
+┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
+┃   ● runner           ┃│ NAME      clock                                          │
+┃     pets             ┃│ SAVER     clock                                          │
+┃     tetromino        ┃│ LAYOUT    ◉ row                                          │
+┃     snake            ┃│           ○ column                                       │
+┃     bounce           ┃│ SIZE      ○ small                                        │
+┃     clock            ┃│           ◉ medium                                       │
+┃ SAVERS               ┃│           ○ large                                        │
+┃   clock              ┃│ FONT      ◉ 3x7                                          │
+┃   runner             ┃│           ○ 3x5                                          │
+┃   bounce             ┃│ TIME      ○ HH MM                                        │
+┃   snake              ┃│           ◉ HH MM SS                                     │
+┃   tetromino          ┃│ DATE      ○ off                                          │
+┃   pets               ┃│           ◉ YYYY-MM-DD                                   │
+┃   custom             ┃│           ○ YYYY-MMM-DD                                  │
+┃ INTEGRATION          ┃│           ○ MM-DD                                        │
+┃   tmux               ┃│           ○ MMM-DD                                       │
+┃   screen             ┃│ BG        ███ #313244                                    │
+┃ SETTINGS             ┃│ FG        ███ #F2B753                                    │
+┃   preference         ┃│                                                          │
+┗━ Enter:edit ━━━━━━━━━┛└─ Enter:edit ─────────────────────────────────────────────┘
+Space:menu ?:help Tab|1–2:panels q:quit
 ```
 
-兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，Property / Value 兩欄的表。`Tab`、`1`、`2` 在兩邊移動；`Enter` 進 `[2]` 或編輯一列；`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上是每一列的說明，在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。
+兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，一列一個值。`Tab`、`1`、`2` 在兩邊移動。`[1]` 上 `Enter` 進 `[2]`；`[2]` 上 `Enter` 編輯那一列：選項少的在原地選，多的打開清單選，開關原地切換，其他打開輸入框。`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上，按鍵後面接著每一列的說明；在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。
 
-- **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg` 各三個 RGB slider，改的是草稿，`S` 才寫檔（`R` 丟掉；有未存草稿時 `q` 先問）。其他每一列一改就寫檔。
+- **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg`，各自在顏色選擇器裡選：舊的顏色與新的並排，紅、綠、藍用 hex。每一列一設定就寫檔。
 - **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
-- **Settings › preference**——PIN（4 到 12 個字元；設定；已設時 `Enter` 先驗目前的，再選 `New PIN` 或 `Remove PIN`）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
+- **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
 
 任何 `[2]` 上 `P` 就地預覽鎖定畫面：profile 或 saver 的 `[2]` 是那一個，其他是啟用中的 profile。任意鍵回來，不驗 PIN。custom profile 的預覽把終端機整個交給程式，直到按鍵。
 
 ## tmux 與 screen
 
-Integration › tmux 與 Integration › screen 各有 `activate`（on / off）、`config file path`（要寫的檔；會提議 `~/.tmux.conf` 與 `~/.screenrc`），分隔線下面是工具自己的 key：
+Integration › tmux 與 Integration › screen 各有 `activate`（on / off）、`config file path`（要寫的檔，通常是 `~/.tmux.conf` 與 `~/.screenrc`），接著是工具自己的 key：
 
 | | tmux | screen |
 |---|---|---|
@@ -243,14 +246,14 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 | 鍵 | |
 |---|---|
-| `Tab` / `1`–`2` | 下一個面板 / 直達面板 |
-| `Enter` | `[1]` 上：這列的欄位進 `[2]`；`[2]` 上：編輯、選、切換、挑 |
+| `Tab` · `1`–`2` | 下一個面板 · 直達面板 |
+| `Enter` | `[1]` 上：這列的值進 `[2]`；`[2]` 上：編輯、選、切換 |
 | `Esc` | 關最上層的浮層 |
 | `Space` | 這裡能做什麼：這一列、這個面板，以及 `Global operation` 底下的離開 |
-| `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上是每一列的說明；浮層上是那個浮層的鍵 |
+| `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上再接著每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
-| `q` / `Ctrl-C` | 離開；有未存的顏色先問，這時再按一次 `Ctrl-C` 立刻離開 |
-| `j` / `k` · `u` / `d` · `gg` / `G` | 下 / 上 · 半頁 · 首 / 尾 |
+| `q\|Ctrl-C` | 離開 |
+| `j\|k` · `u\|d` · `gg\|G` | 下、上 · 半頁 · 首、尾 |
 
 ### `[1]` 側欄
 
@@ -265,15 +268,15 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 | 鍵 | 在 | |
 |---|---|---|
-| `Enter` | 任何一列 | rename、選、切換、挑顏色通道、設或換 PIN、改路徑或鍵、開關 `activate` |
-| `S` · `R` | profile 或 saver | 存顏色草稿 · 丟掉 |
+| `Enter` | 任何一列 | rename、選、切換、挑顏色、設或換 PIN、改路徑或鍵、開關 `activate` |
+| `n` | saver | 用這種 saver 生一個新 profile，取名 |
 
 ### 鎖定畫面
 
 | 鍵 | |
 |---|---|
 | 任何鍵 | 開 PIN 框（那個鍵不算輸入） |
-| `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 刪一字 |
+| `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 清掉打的字 |
 
 ## 你的資料放在哪
 
@@ -346,7 +349,7 @@ screen:
 
 ## terminu family
 
-locku 遵循 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh）、[webu](https://github.com/vulcanshen/webu)（網頁）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4)（tdp v0.7.4），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

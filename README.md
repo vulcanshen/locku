@@ -16,7 +16,7 @@
 
 ![demo](docs/demo.gif)
 
-`locku lock` turns the terminal into the runner at dusk; a key brings up the PIN prompt over it, a wrong PIN turns it red, the right one gives the terminal back. Then the settings screen: the runner's profile in `[2]`, the other savers previewed with `p` one after another — pets, tetromino, snake, bounce and the clock — `Space` listing what can be done on the row, and tmux under Integration.
+`locku lock` turns the terminal into the runner at dusk; a key brings up the PIN prompt over it, a wrong PIN is said so in red, the right one gives the terminal back. Then the settings screen: the runner's profile in `[2]`, the other savers previewed with `p` one after another — pets, tetromino, snake, bounce and the clock — `Space` listing what can be done on the row, and tmux under Integration.
 
 ## What you see
 
@@ -91,7 +91,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 
 Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
-**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. A Nerd Font that draws its icons two cells wide, as some made for CJK do, works too: locku asks the terminal at start. To settle it by hand, set `TERMINU__ICON_WIDTH=1` or `2`: every terminu app reads it, so once is enough for the whole family; `LOCKU__ICON_WIDTH` is locku's own and comes first. Inside another terminu app's terminal, that app sets `TERMINU__ICON_WIDTH` for locku, and locku sets it the same way for a custom saver's program.
+**A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. How many cells an icon takes, and a powerline symbol — the ends of a capsule, the arrow at the end of the cursor — depends on the font and the terminal, and locku asks the terminal at start. To settle it by hand, set `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH` to `1` or `2`: every terminu app reads them, so once is enough for the whole family; `LOCKU__ICON_WIDTH` and `LOCKU__POWERLINE_WIDTH` are locku's own and come first. Inside another terminu app's terminal, that app sets the two `TERMINU__` ones for locku, and locku sets them the same way for a custom saver's program.
 
 **A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
 
@@ -101,7 +101,7 @@ Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/uninstall.sh | sh
 ```
 
-Removes the binary, then asks — never assumes — about the settings directory. Turn `activate` off on the settings screen first, and locku's blocks are gone from your tmux.conf, screenrc and shell rc; the uninstaller does not touch those files.
+Removes the binary, then asks — never assumes — about the settings directory and the data directory, the PIN resets' log. Turn `activate` off on the settings screen first, and locku's lines are gone from your tmux.conf, screenrc and shell rc; the uninstaller does not touch those files, and says so.
 
 ## Quick start
 
@@ -113,7 +113,7 @@ locku version    # the version; locku help prints the usage
 ```
 
 1. `locku`, then **Settings › preference**, `Enter` on the PIN row, type one, 4 to 12 characters. This step is optional: with no PIN locku is a screensaver, and any key ends it.
-2. **Integration › tmux** (or **screen**): fill in `config file path` (`~/.tmux.conf` is offered), turn `activate` on, confirm. locku's block is in the file, and on the running tmux server at once.
+2. **Integration › tmux** (or **screen**): fill in `config file path` (usually `~/.tmux.conf`), check `activate`, confirm. locku's line is in the file, and its settings on the running tmux server at once.
 3. In tmux, `prefix :` then `locku` locks every client on the server. An idle session locks by itself after `lock-after-time` seconds (300 by default). Fill in a `bind-key`, `l` say, and `prefix l` locks too.
 4. Any key brings up the PIN prompt; the right PIN gives the terminal back.
 
@@ -121,8 +121,8 @@ locku version    # the version; locku help prints the usage
 
 ## The lock screen
 
-- Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` deletes a digit.
-- A wrong PIN turns the border red for a second and swallows every key. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
+- Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` clears what was typed.
+- A wrong PIN says `wrong PIN` and swallows every key for a second. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
 - The status row reads `user@host · locked since HH:MM` (`show_status: false` hides it), and says `no PIN · any key unlocks` when there is none.
 - `Ctrl-C`, `Ctrl-Z` and `Ctrl-\` are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock comes back up. The process ends in three cases only: the right PIN, any key with no PIN set, the terminal going away.
 - No PIN set, or a config file that cannot be read, fails open: the saver shows, the status row says why, any key ends it.
@@ -142,40 +142,43 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 ## The settings screen
 
 ```
-╔═[1] locku════════════╗╭─[2] clock   unsaved────────────────────────────────╮
-║ Profiles             ║│ Property                   Value                   │
-║ ● clock              ║│ name                       clock                   │
-║   clock2             ║│ saver                      clock                   │
-║   runner             ║│ layout                     row                     │
-║ Savers               ║│ size                       medium                  │
-║   clock              ║│ font                       3x7                     │
-║   runner             ║│ time                       HH MM                   │
-║   bounce             ║│ date                       off                     │
-║   snake              ║│ bg                         ■ #313244  →  ■ #ff3244 │
-║   tetromino          ║│   R                        ───────────● 255        │
-║   pets               ║│   G                        ──●───────── 50         │
-║   custom             ║│   B                        ───●──────── 68         │
-║ Integration          ║│ fg                         ■ #f2b753               │
-║   tmux               ║│   R                        ──────────●─ 242        │
-║   screen             ║│   G                        ────────●─── 183        │
-║ Settings             ║│   B                        ────●─────── 83         │
-║   preference         ║│                                                    │
-╚══════════════════════╝╰────────────────────────────────────────────────────╯
- Space:menu ?:help Tab/1–2:panels q:quit
+┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
+┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
+┃   ● runner           ┃│ NAME      clock                                          │
+┃     pets             ┃│ SAVER     clock                                          │
+┃     tetromino        ┃│ LAYOUT    ◉ row                                          │
+┃     snake            ┃│           ○ column                                       │
+┃     bounce           ┃│ SIZE      ○ small                                        │
+┃     clock            ┃│           ◉ medium                                       │
+┃ SAVERS               ┃│           ○ large                                        │
+┃   clock              ┃│ FONT      ◉ 3x7                                          │
+┃   runner             ┃│           ○ 3x5                                          │
+┃   bounce             ┃│ TIME      ○ HH MM                                        │
+┃   snake              ┃│           ◉ HH MM SS                                     │
+┃   tetromino          ┃│ DATE      ○ off                                          │
+┃   pets               ┃│           ◉ YYYY-MM-DD                                   │
+┃   custom             ┃│           ○ YYYY-MMM-DD                                  │
+┃ INTEGRATION          ┃│           ○ MM-DD                                        │
+┃   tmux               ┃│           ○ MMM-DD                                       │
+┃   screen             ┃│ BG        ███ #313244                                    │
+┃ SETTINGS             ┃│ FG        ███ #F2B753                                    │
+┃   preference         ┃│                                                          │
+┗━ Enter:edit ━━━━━━━━━┛└─ Enter:edit ─────────────────────────────────────────────┘
+Space:menu ?:help Tab|1–2:panels q:quit
 ```
 
-Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, as a Property / Value table. `Tab`, `1` and `2` move between them; `Enter` goes into `[2]` or edits a row; `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — what each row means on preference's, tmux's or screen's `[2]`, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.
+Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, one value a row. `Tab`, `1` and `2` move between them. `Enter` on `[1]` goes into `[2]`; on `[2]` it edits the row: a choice of a few is picked where it is drawn, more open a list to choose from, a switch flips, the rest open a box to type in. `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — on preference's, tmux's or screen's `[2]` followed by what each row means, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in.
 
-- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg` as three RGB sliders each, a draft until `S` saves it (`R` drops it, and `q` asks first while one is unsaved). Everything else is written the moment it changes.
+- **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
-- **Settings › preference** — the PIN (4 to 12 characters; set it; once set, `Enter` asks the current one and offers `New PIN` or `Remove PIN`), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
+- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
 ## tmux and screen
 
-Integration › tmux and Integration › screen each have `activate` (on / off), `config file path` (the file to write; `~/.tmux.conf` and `~/.screenrc` are offered) and, under a rule, the tool's own keys:
+Integration › tmux and Integration › screen each have `activate` (on / off), `config file path` (the file to write, usually `~/.tmux.conf` or `~/.screenrc`) and then the tool's own keys:
 
 | | tmux | screen |
 |---|---|---|
@@ -243,14 +246,14 @@ A new shell has it. A screen already running gets it once detached and attached 
 
 | Key | |
 |---|---|
-| `Tab` / `1`–`2` | next panel / this panel |
-| `Enter` | on `[1]`: the row's fields, in `[2]`; on `[2]`: edit, choose, toggle, pick |
+| `Tab` · `1`–`2` | the next panel · that panel |
+| `Enter` | on `[1]`: the row's values, in `[2]`; on `[2]`: edit, choose, toggle |
 | `Esc` | close the top popup |
 | `Space` | what can be done here: the row, the panel, and — under `Global operation` — quitting |
-| `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, what each row means; on a popup, that popup's keys |
+| `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, then what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
-| `q` / `Ctrl-C` | quit; asks first when colours are unsaved, and a second `Ctrl-C` then leaves at once |
-| `j` / `k` · `u` / `d` · `gg` / `G` | down / up · half a page · first / last |
+| `q\|Ctrl-C` | quit |
+| `j\|k` · `u\|d` · `gg\|G` | down, up · half a page · first, last |
 
 ### `[1]` sidebar
 
@@ -265,15 +268,15 @@ A new shell has it. A screen already running gets it once detached and attached 
 
 | Key | On | |
 |---|---|---|
-| `Enter` | any row | rename, choose, toggle, pick a colour channel, set or change the PIN, edit a path or a key, turn `activate` |
-| `S` · `R` | a profile or a saver | save the colour draft · drop it |
+| `Enter` | any row | rename, choose, toggle, pick a colour, set or change the PIN, edit a path or a key, turn `activate` |
+| `n` | a saver | new profile of this kind, under a name |
 
 ### The lock screen
 
 | Key | |
 |---|---|
 | any key | open the PIN prompt (the key is not input) |
-| `Enter` · `Esc` · `Backspace` | submit · back to the saver · delete a digit |
+| `Enter` · `Esc` · `Backspace` | submit · back to the saver · clear what was typed |
 
 ## Where your data lives
 
@@ -346,7 +349,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows the [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh) and [webu](https://github.com/vulcanshen/webu) (the web).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4) (tdp v0.7.4), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

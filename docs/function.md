@@ -206,7 +206,7 @@ saver 預設值（2026-09-24，使用者定案）：每種 saver 在 config 的 
 | pets | animals cats、count 3、scene outdoor；沒有 bg / fg（2026-10-07；animals 與 scene 2026-10-08） |
 | custom | command 空；沒有 bg / fg（2026-09-25） |
 
-`[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`）。
+`[2]` 在 saver 上除了說明還把預設值列出來，跟 profile 同一套列與操作（options popup、RGB slider 草稿、`S` / `R`；2026-10-18 起是原地的 radio 或 select、顏色的 color picker，見 96）。
 
 ### 5.3 畫布渲染器
 
@@ -263,7 +263,7 @@ runner 的畫法（2026-09-24）：場景是整塊板，k 從 3 往下取第一�
 - **按鍵 → PIN 框疊在動畫上**（使用者定案：底下的畫面要繼續動，跟其他 saver 的板子在 prompt 底下照常 tick 一樣）：程式不停、輸出不停。鎖定畫面的 PIN prompt 以一個沒有 renderer 的 Bubble Tea 程式跑，只透過 callback 把框的幾行交給 `screen` writer 畫在終端機正中央；框開著時程式每送出一段輸出，writer 就在後面補畫一次框——前後以 DECSC / DECRC 保存與還原游標與屬性、整段包在一次 synchronised update（`?2026`）裡——所以終端機看到的永遠是「這一幀加框」，程式察覺不到、也沒有一幀被丟掉。沒有 locku 的底色、不切 screen。同一套 prompt 狀態（wrong、cooldown、timeout）。
 - **框收起**（Esc 或逾時）：writer 把框佔過的最大矩形以終端機自己的顏色清空；接著只對**閒置 ≥ 500 ms 沒畫過東西的程式**送一個 SIGWINCH 要它重畫（curses 程式收到就整頁重畫），一直在畫的程式不送——它自己會把那塊填回來，而且 curses 程式被要求重畫會從頭來過（2026-09-25 以 cmatrix 實測：閃一下、雨從頂端重來）。PIN 對了殺程式、結束。沒設 PIN 時第一個鍵就結束（以啟動時讀到的 config 為準）。tty 消失：殺程式、結束、tmux 旗不清。
 - **程式結束**（使用者定案）：鎖不退。畫面換成 locku 的點陣板，字用 clock 的 3x7 字型，large → medium → small 依尺寸退階，放不下就純文字單色；狀態列紅字寫原因。板子照實寫 **`EXIT <code>`**：`EXIT` 四個字母金色（預設 fg），數字 0 綠、其他 peach——板子因此第一次有兩種亮色，畫布多一個 accent；exit 0 → `EXIT 0`（狀態列 `custom saver exited 0`）；exit 非 0 → `EXIT 3`（狀態列 `custom saver: exit 3 · boom`，接 stderr 最後一行；找不到指令是 `EXIT 127`）；被訊號殺 → 跟 shell 一樣 128 + 訊號號碼，`EXIT 139`（狀態列 `custom saver: killed: segmentation fault`）；沒填 command 或起不來 → `NONE` 整個紅字（狀態列 `custom saver: no command` / 錯誤原因）。都不重啟、PIN 照常。
-- **沒有 fg / bg**（使用者）：畫面是程式的，顏色設定沒意義；`[2]` 沒有色票列、沒有草稿與 Save / Reset，檔案裡也不寫；結束時的板子底用預設色（surface0）。
+- **沒有 fg / bg**（使用者）：畫面是程式的，顏色設定沒意義；`[2]` 沒有色票列、沒有草稿與 Save / Reset（2026-10-18 起沒有 bg / fg 兩列），檔案裡也不寫；結束時的板子底用預設色（surface0）。
 - **preview**：設定畫面把終端機交給程式（Bubble Tea 的 exec），跑同一套 pty 與 writer，任意鍵殺掉回來；程式結束或沒填指令就回到畫面內、以板子上的字預覽。全域 `P` 在 profile / saver 的 `[2]` 上是那一個、在其他 `[2]` 上是啟用中的 profile、在 `[1]` 上什麼都不做（`p` 才是預覽游標那列）。
 - 否決的替代方案與同日的修訂史在決定 35、38。驗收：`e2e/custom_lock.py` 與 `internal/custom`、`internal/ui` 的測試，見 §12。
 
@@ -286,9 +286,9 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`（不帶 `-S` / `-t`）。原�
 裸指令 `locku` 開一個 TUI，只做設定：
 
 - 設定或更改 PIN：輸入兩次確認，已有 PIN 時先驗舊的。
-- 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24）。
+- 清除 PIN：回到無 PIN 模式，需先驗舊的；驗過之後在 `New PIN` / `Remove PIN` 選單選 Remove，Enter 立即生效、不再 confirm（2026-09-24）。2026-10-18 起選單拿掉：驗過之後開「新的 PIN」框，現有的 PIN 是 8 顆灰點，`Backspace` 再 `Enter` 就是沒有 PIN，一樣不再 confirm；直接 `Enter` 保留（components/input/password，見 96）。
 - saver 預設值：每種 saver 的 `[2]` 列出它的預設值，可改，只影響之後新增的 profile（5.2）；`p` 用預設值預覽。
-- profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，runner 的 participants、character、scene、background，custom 的 command，snake 與 tetromino 的 speed，bounce 的 speed、time，pets 的 animals、count、scene；clock 再有 bg / fg 兩個顏色（runner 2026-10-07 前也有），各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。custom、runner、bounce、snake、tetromino 與 pets 沒有顏色，也就沒有草稿與 `S` / `R`。
+- profile 管理：new（從一種 saver）、duplicate、rename、delete、編輯參數（5.2）：clock 的 layout、size、font、time、date，runner 的 participants、character、scene、background，custom 的 command，snake 與 tetromino 的 speed，bounce 的 speed、time，pets 的 animals、count、scene；clock 再有 bg / fg 兩個顏色（runner 2026-10-07 前也有），各以 R G B 三個 slider 設定（webu slider 作法，數字清單不打字），config 存 hex。顏色走草稿：滑桿改的是草稿，`S` 才寫檔、`R` 丟掉草稿，其餘欄位立即寫檔（2026-09-24：使用者調歪過一次調不回來）。2026-10-18 起改成 color picker：old 與 new 並排、R G B 用 hex 選，`Choose` 就寫檔、`Esc` 不改，草稿與 `S` / `R` 拿掉（一列一個值的 panel 沒有送出，見 96、LK5）。custom、runner、bounce、snake、tetromino 與 pets 沒有顏色。
 - preference：啟用中的 profile（`profile`）、show_status、`pin_prompt_timeout`、`wrong_pin_attempts` / `wrong_pin_attempt_cooldown`。設為啟用在這裡，或側欄 profile 列按 `a`（2026-09-25，使用者：不必每次到 preference 切）。
 - Integration（2026-09-25，使用者定案）：側欄第三個區塊，`tmux` 與 `screen` 各一項，`[2]` 的列：
   - **`activate`**（`on` / `off`）：區塊在不在 `config file path` 那個檔案裡、區塊讀的 locku 自己的檔案在不在（2026-10-08），每次畫都讀檔。Enter → confirm → 執行：on 把設定寫進 locku 自己的檔案、把讀它的一行（區塊）寫進檔案（tmux 有 server 在跑就把 locku 的檔案 `source-file` 進去；screen 連 shell rc 一起寫、跑著的 session 即時 `screen -X`），off 把區塊拿掉、刪掉 locku 的檔案（tmux server 上的、跑著的 screen session 上的一併拿掉）；路徑沒填時 disabled（2026-09-26 起只變暗，tdp M6）。
@@ -300,7 +300,7 @@ argv[0] 為 `SCREEN-LOCK` 時視同 `locku lock`（不帶 `-S` / `-t`）。原�
   - **開一次，之後隨設即得**（使用者定案）：`activate` on 時任何一列改動就直接重寫 locku 自己的檔案（使用者的檔案不再動，2026-10-08）、tmux 整份套到 server、screen 送進跑著的 session；`config file path` 改路徑就把區塊從舊檔拿掉、寫進新檔，清空就拿掉；做完 toast 一行結果。off 就只寫 config.yaml，activate 仍由使用者開。兩個純方案各有硬傷：純隨設即得會在路徑打錯時生檔、也不能先填好再開；純按鈕會 stale——改了 lock-after-time 檔案裡還是舊值。
 - 每個 `[2]`——profile、saver、tmux / screen、preference——第一列都是表頭 `Property` / `Value`，側欄區塊標題的 Blue，不可停（2026-09-25，使用者：所有 panel 2 都給標題列）。
 - 每一列的意思在 `?`：focus 在 preference 或 tmux / screen 的 `[2]` 時，help **只有**那個面板的說明（自動換行），沒有鍵的清單；screen 多一條講 LOCKPRG 住在 shell rc；其他地方的 `?` 是鍵（2026-09-25）。
-- 預覽：不驗 PIN，任意鍵回設定畫面（2026-09-25，PIN 是 `locku lock` 的事）。`[2]` 在 profile / saver 上 `P` 是那一個（帶顏色草稿）、在 preference / tmux / screen 上是啟用中的 profile；`[1]` 上 `p` 是游標那列，`P` 不作用。custom 的預覽把終端機交給程式（5.5）。
+- 預覽：不驗 PIN，任意鍵回設定畫面（2026-09-25，PIN 是 `locku lock` 的事）。`[2]` 在 profile / saver 上 `P` 是那一個（帶顏色草稿；2026-10-18 起沒有草稿）、在 preference / tmux / screen 上是啟用中的 profile；`[1]` 上 `p` 是游標那列，`P` 不作用。custom 的預覽把終端機交給程式（5.5）。
 - 寫出 `~/.config/locku/config.yaml`，權限 600。
 
 TUI 的版面與按鍵放 ui.md / ux.md。
@@ -514,7 +514,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 ## 9. 技術選型
 
-- Go，Bubble Tea + Lipgloss，與 kbu / filu / sshu / webu 同棧；`rmhubbert/bubbletea-overlay` 疊 popup。
+- Go，Bubble Tea + Lipgloss，與 kbu / filu / sshu / webu 同棧；`rmhubbert/bubbletea-overlay` 疊 popup。2026-10-18 起設定畫面建在家族的 lib terminu-go（v0.1.13）上，寬度、淡化、探測也用它的，bubbletea-overlay 拿掉（見 96）。
 - `golang.org/x/crypto/bcrypt`（PIN）、`gopkg.in/yaml.v3`（config，先解析成樹再改名舊 key）。
 - 2026-09-25 加入：`creack/pty`——custom saver 的程式跑在 locku 開的 pty 上（5.5）、`locku pin reset` 的 `su` 也在 pty 上（4.5）；`charmbracelet/x/term`——raw mode、尺寸、`ReadPassword`；`charmbracelet/x/ansi`——疊框時算每行的顯示寬；`muesli/cancelreader`——custom 鎖上可以取消的按鍵讀取，PIN prompt 的程式接手終端機時沒有一個 read 擋在前面。
 - 無 cgo，`CGO_ENABLED=0` 靜態編譯。
@@ -685,6 +685,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 95. （2026-10-08，使用者定案）runner 的小貓加上眼睛（使用者：小貓沒有眼睛）：十張角色圖只有它沒標 `e`，夜晚只有外框（決定 67 那時就記下了）。眼睛不能直接放進原本的圖：頭只有耳朵下面那一列，眼睛的正上方就是兩耳之間的空隙；白天眼睛是天空色的洞，會跟那個空隙連成頭頂的一道凹口，看不出是眼睛（夜晚的金色照樣看得到）。照大貓縮小，頭加高一列、眼睛上下左右都是身體，圖從 8 × 6 變 8 × 7（我的建議，使用者選；另一個選項是維持 8 × 6、眼睛放在那一列）。仍不比小暴龍（10）高，跳躍弧與時窗不用動。`TestRunnerEyes` 原本就守「眼睛被身體圍住」，小貓的眼睛數從 0 改成 1。
 
+96. （2026-10-18，terminu 的交代、user 授權照做）整個重構到 tdp v0.7.4 與 terminu-go v0.1.13。設定畫面建在 lib 上（`internal/settings`）：locku 只登記 panel、欄位、動作與 popup，畫面、Space menu、`?`、hint、footer、confirm、toast、splash、`Esc` 一次一層、淡化與開關動畫都是 lib 的；舊的 `internal/ui` 設定畫面程式全刪。鎖定畫面照舊自己畫，PIN 框照 lib 畫 password 解鎖樣式的方式畫（lib 的 input 只能從它的 App 開，LK1）。跟著 tdp 改掉的：五個以內的選項在原地選（radio），超過五個開 select；開關（`show_status`、`activate`）是 checkbox；顏色是 color picker，草稿、`S` / `R`、`unsaved` 拿掉（LK5）；改 PIN 是驗過目前的再開「新的 PIN」框，灰點代表現有的、`Backspace` 再 `Enter` 拿掉，`New PIN` / `Remove PIN` 選單拿掉，三步一步關了才開下一步（LK7）；number 清空不再是預設（LK8）；New 與 Duplicate 的名字不預填、寫在說明列（LK4）；New 之後 focus 留在 `[1]`（LK2）；離開不問（沒有沒存的東西）。鎖定畫面的 PIN 框：寬 45（hint `Enter:unlock Backspace:clear Esc:cancel`）、連框 9 列、多一列說明 `The PIN`、標題 `UNLOCK`（LK6；取代 2026-10-07 的 7 列與 94 的 31 欄）；`Backspace` 一次清掉整個 PIN；貼上的控制字元照樣是點、`Enter` 時擋下，錯誤列 `PIN can't have control characters`（取代 94 的 `no line breaks or tabs`）；錯誤時框維持層色、只有錯誤列是紅的，錯誤留到下一次 `Enter`；開關動畫是家族的（拉線 4 格、停 1 格、展開 4 格，每格 32 ms）；超時收起不再在標題寫 `closing`。寬度、淡化、探測都是 lib 的：powerline 符號也量（`LOCKU__POWERLINE_WIDTH`、`TERMINU__POWERLINE_WIDTH`，custom 的程式也拿到），淡化用終端機自己回報的 16 色；鎖定畫面拿掉 bubbletea renderer 補的 `ESC [ K`（icon 佔兩格時它擦掉最後一欄）。`?` 在 preference、tmux、screen 的 `[2]` 上是 key reference，每列的說明接在最後一節（LK3；2026-09-26、09-27 的偏離不在了）。repo 照 tdp project 的範本（family.mk、release.yml、goreleaser、install / uninstall、version.go、.gitignore），CHANGELOG 的新版本標題寫成 `## vX.Y.Z — tdp vA.B.C`。等 tdp 或 lib 的 LK1–LK8 見 dev-remarks 的「已知的牆」與 `locku-terminu-fix.md`。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。
@@ -702,7 +704,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 - 渲染器在 80×24、120×40、200×60 下對 `HH MM` 各選到預期的 k（large：2 / 3 / 3）；152×39 medium 配 `HH MM SS` + `YYYY-MM-DD` 是時間 2 倍、日期 1 倍帶年；130×24 只畫時間；column 配日期是兩欄、日期左時間右；30×8 退化為一般文字。
 - 內容變更只動有變的像素，以 shuffle 揭露，沒變的像素輸出不變。
 - profile name 重複被擋。
-- 顏色任一 channel 改動進草稿、`S` 寫檔，Preview 反映；手改 config 的非法 hex 視同預設。
+- 顏色任一 channel 改動進草稿、`S` 寫檔，Preview 反映；手改 config 的非法 hex 視同預設。（2026-10-18 起：color picker 選好就寫檔，`internal/settings` 的 `TestEveryRowIsTheTerminal` 開著它量寬度。）
 - config 不存在時進入無 PIN 模式：saver 照常顯示、標明未設定 PIN、任何按鍵結束。
 - 設定 TUI 寫出的 config 能被 `locku lock` 讀取。
 - LOCKPRG 指向 locku 本體時，screen `lockscreen` 進入鎖定而不是設定 TUI。

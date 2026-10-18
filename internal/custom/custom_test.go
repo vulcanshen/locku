@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	terminu "github.com/vulcanshen/terminu-go"
+
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
@@ -255,6 +257,21 @@ func TestProgramIsToldTheIconWidth(t *testing.T) {
 		}
 		p.Kill()
 	}
+	// And how wide a powerline symbol is, as the lib measured it (tdp E5).
+	icon, powerline := terminu.IconWidth(), terminu.PowerlineWidth()
+	terminu.SetIconWidth(icon, 2)
+	t.Cleanup(func() { terminu.SetIconWidth(icon, powerline) })
+	t.Setenv("TERMINU__POWERLINE_WIDTH", "9")
+	out := &sink{}
+	p, err := Start(`printf '%s|<%s>' "$(env | grep -c '^TERMINU__POWERLINE_WIDTH=')" "$TERMINU__POWERLINE_WIDTH"; sleep 30`, 1, out, 80, 24)
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "1|<2>", func() bool { return strings.Contains(out.String(), "|<") })
+	if s := out.String(); !strings.Contains(s, "1|<2>") {
+		t.Errorf("the powerline width: the program saw %q", s)
+	}
+	p.Kill()
 }
 
 // While the prompt is up the terminal brackets a paste, so that a line

@@ -31,6 +31,7 @@ import (
 	"github.com/charmbracelet/x/term"
 	"github.com/creack/pty"
 	"github.com/muesli/cancelreader"
+	terminu "github.com/vulcanshen/terminu-go"
 
 	"github.com/vulcanshen/locku/internal/saver"
 	"github.com/vulcanshen/locku/internal/termreply"
@@ -96,17 +97,21 @@ type Proxy struct {
 // keeps the pty: a terminal, to the program.
 //
 // iconCells is how many cells an icon takes on the terminal, and the
-// program is told it in TERMINU__ICON_WIDTH: the family's word to a family
-// app run on our pty (tdp D6, v0.1.22, 2026-09-29). Its own probe cannot
-// find out — what it asks goes out to the terminal, and the answer comes
-// back to locku, whose key reader drops it. Set after our own environment,
-// it is the one the program sees: exec keeps the last of a name.
+// program is told it in TERMINU__ICON_WIDTH, and how many a powerline
+// symbol takes, as the lib measured it, in TERMINU__POWERLINE_WIDTH: the
+// family's word to a family app run on our pty (tdp E5; the powerline one
+// from 2026-10-18). Its own probe cannot find out — what it asks goes out
+// to the terminal, and the answer comes back to locku, whose key reader
+// drops it. Set after our own environment, they are the ones the program
+// sees: exec keeps the last of a name.
 func Start(command string, iconCells int, out io.Writer, cols, rows int) (*Proxy, error) {
 	if strings.TrimSpace(command) == "" {
 		return nil, errors.New("no command")
 	}
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Env = append(os.Environ(), "TERMINU__ICON_WIDTH="+strconv.Itoa(iconCells))
+	cmd.Env = append(os.Environ(),
+		terminu.FamilyIconWidth+"="+strconv.Itoa(iconCells),
+		terminu.FamilyPowerlineWidth+"="+strconv.Itoa(terminu.PowerlineWidth()))
 	pr, pw, err := os.Pipe()
 	if err != nil {
 		return nil, err

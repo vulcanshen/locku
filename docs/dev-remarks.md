@@ -1,7 +1,8 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）；
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4)（tdp v0.7.4），設定畫面建在家族的 lib
+[terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上（2026-10-18 起，照 terminu 的交代整個重構）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -17,7 +18,8 @@
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格（icon 畫成兩格的字型上只有方塊，仍是兩格，見下面 icon 的實際寬度），暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。各 size 需要的終端機尺寸表在 README「你會看到什麼」。
 - **狀態列**：`user@host · locked since HH:MM`（`show_status` 可關）→ config error → `no PIN · any key unlocks` → custom 的結束原因，這個順序，超過終端機寬度從尾端截掉。已知的邊角（2026-09-25）：hostname 很長加窄終端時被截的是尾端的 `no PIN` / custom note——GitHub 的 macOS runner hostname 62 字元沒有點，狀態列在 80 欄放不下，`internal/ui` 的測試在 `TestMain` 把 `whoami` 固定成 `user@host`。是設計決定，未改。
 
-- **icon 的實際寬度（2026-09-29，tdp D6）。** 有的 Nerd Font（給 CJK 用的）icon 讓游標前進兩格，lipgloss 與 x/ansi 算一格，框就歪。`ui.DetectIconWidth()` 照 filu：在第一欄印一個 icon（跟 filu 一樣用 nf-fa-folder；用點陣板的方塊的話，custom saver 的 e2e 會把它當成畫在程式上的底）、送 CPR（`\e[6n`）問游標在哪，200 ms 內沒回答就當一格；探測之前先看 `LOCKU__ICON_WIDTH`、再看 `TERMINU__ICON_WIDTH`（只收 1、2，有值就不探測；tdp D6 v0.1.22）——跑在別的家族 app 的 PTY 裡時，CPR 是外層 app 的終端模擬器回答的，icon 一律量成一格，所以由開 PTY 的 app 把自己用的格數放在 `TERMINU__ICON_WIDTH` 傳下來。locku 自己開 PTY 的只有 custom saver：`custom.Start()` / `Preview()` 收 `ui.IconCells()`，在程式的環境最後加上 `TERMINU__ICON_WIDTH`（外面帶進來的同名變數被它蓋掉，exec 同名取最後一個）。程式自己探測量不到：它問的送到真的終端機，回答回到 locku、被讀鍵那層丟掉。`internal/login` 的 `su` 不是畫面，不用給。`locku`（設定畫面）與 `locku lock` 各探一次；鎖上放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——探測自己讀完回答，逾時才到的回答被 `DropPending` 清掉，就算漏進鎖裡，`termreply` 也把以 `R` 結尾的 CSI 當回報丟掉，不會叫出 PIN 框或解鎖。量寬度只走 `width.go`：`dispW()`（x/ansi 的寬度加上每個 icon 多的格數）、`clipANSI()`、`dispCutLeft()`、`compositeDisp()`（取代 `overlay.Composite`；比畫面寬或高的框從 0 開始、超出畫面的切掉，寬高都比畫面大也一樣切——overlay 是原樣回傳——2026-09-29，tdp D6 v0.1.21；照搬的當天先是照 overlay 只畫中間，filu 的版本在這裡會 panic）、`centerDisp()`（取代 `lipgloss.Place`）、`joinH()`（取代 `lipgloss.JoinHorizontal`）。custom saver 的 PIN 框在 `internal/custom` 貼，那邊看不到 icon 寬度，所以框寬由 ui 量好連框一起給（`Overlay(box, w)`），框也先在 ui 照 `compositeDisp()` 的規則切到畫面大小——那邊整個框照寫，超出最後一列的會一列一列疊在最後一列上。一格時畫面一個位元組都不變（改之前後把各種大小的畫面印出來比過）。
+- **設定畫面建在 terminu-go 上（2026-10-18）。** `internal/settings` 只登記：一個 `Screen`、兩個 `Panel`——`[1]` 是 `List`（`Row.Group` 分成 Profiles / Savers / Integration / Settings，啟用中的 profile 在格子裡畫 Green `●`），`[2]` 是 `Values`（一列一個 `Field`）——`[1]` 的 `OnMove` 換 `[2]` 的內容、label、動作與 `?` 最後一節，`Values.OnMove` 換 `[2]` 的 `Enter` 那一列。Space menu、`?`、hint、footer、confirm、toast、splash、`Esc` 一次一層、淡化與開關動畫都是 lib 從這份登記畫的，locku 不再有自己的 popup 疊（之前 `internal/ui` 的 app.go、actions.go、spacemenu.go、helppopup.go、popup.go……全刪）。欄位：五個以內的選項畫成原地的 radio（`Field.Options`），超過五個（`participants`、profile 多於五個時的 `profile`）開 `Select`；開關（`show_status`、`activate`）是單一選項的 checkbox；顏色是 `PickColor`；PIN 是 `PasswordInput` 的解鎖樣式；只顯示的列（saver 的說明、profile 的 saver）是停用的 `Field`，cursor 跳過。每個值在 popup 的 `Done` 裡改 config、`config.Save`、`refresh()` 重建兩邊的列（失敗退回並 toast）。預覽用 `tea.Exec` 把終端機交出去：`previewRun.Run()` 在同一個 tty 上跑 `ui.RunPreview`（一個自己的 Bubble Tea 程式，任意鍵 `tea.Quit`），custom 跑 `custom.Preview`，結束了再跑字的板子。
+- **icon 的實際寬度（tdp E5；2026-10-18 起是 lib 的）。** 設定畫面的 `App.Run` 與鎖定畫面的 `ui.DetectIconWidth()` 都是 lib 的 `terminu.Probe("locku")`：icon 與 powerline 符號各量各的，`LOCKU__ICON_WIDTH` / `LOCKU__POWERLINE_WIDTH` → `TERMINU__ICON_WIDTH` / `TERMINU__POWERLINE_WIDTH` → CPR 探測；同時用 OSC 4 問 16 色的調色盤給淡化用。鎖上照舊放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——逾時才到的回答被清掉，就算漏進鎖裡，`termreply` 也把終端機的回報丟掉，不會叫出 PIN 框或解鎖。`internal/ui` 的寬度只剩幾個轉給 lib 的函式（`width.go`：`dispW` = `terminu.Width`、`truncate`、`clipANSI` = `terminu.Cut`），框疊到板子上用 `terminu.Composite`，淡化用 `terminu.DimLines`（`dim.go`）。custom saver 的程式在 `custom.Start()` 拿到兩個 `TERMINU__` 變數（外面帶進來的同名變數被蓋掉，exec 同名取最後一個；powerline 的從 2026-10-18）。bubbletea v1 的 renderer 會在它量起來比終端機窄的列後面補 `ESC [ K`（icon 算一格），icon 佔兩格時會擦掉最後一格：lib 的 `App` 在輸出那層拿掉它，鎖定畫面自己開 program，所以 `ui.ScreenOutput` 照抄一份（`output.go`，TODO(lib LK1)）。2026-09-29 到 2026-10-17 是 locku 自己照 filu 搬的 `width.go`、`dim.go`、`iconwidth_unix.go`。
 
 ### 程式碼目錄
 
@@ -32,7 +34,8 @@ locku/
 │   ├── setup/          整合寫檔：locku 自己的 locku.tmux.conf / locku.screenrc，使用者檔案裡讀它的一行受管區塊（跑著的 tmux server 整份 source-file），shell rc 的 LOCKPRG
 │   ├── termreply/      鎖定時從讀到的輸入拿掉終端機的回答（OSC、DCS、CSI 回報），只留按鍵；鎖開始時清空已在等的輸入（2026-09-28）
 │   ├── tmux/           鎖定中對 tmux 立 / 清 @locked 旗
-│   ├── ui/             渲染器（font / canvas / reveal）、鎖定畫面、PIN prompt、設定 TUI 與浮層
+│   ├── settings/       設定畫面：在 terminu-go 上登記 panel、欄位、動作、popup；預覽（2026-10-18）
+│   ├── ui/             鎖定畫面：渲染器（font / canvas / reveal）、PIN 框（照 lib 的樣子自己畫，LK1）、預覽程式
 │   └── version/        版本字串（goreleaser 以 ldflags 注入，本機 build 是 dev）
 ├── e2e/                pty 端到端：tmux_attach.py、custom_lock.py、screen_lock.py
 └── docs/               function.md、ui.md、ux.md、dev-remarks.md、icon.svg、social-preview.png、demo.gif、savers/（README 每種 saver 的靜態圖）
@@ -43,15 +46,21 @@ locku/
 - **非安全邊界。** 另開一條 SSH 就能 kill。定位是螢幕保護與防誤觸，config 缺失或損毀一律 fail open。攔不到的東西（function.md §0.1、§2.3）：ssh 的 `~.`、Linux VT 切換、另一條 SSH 的 `tmux attach -d` / `kill -9`、終端機模擬器自身的快捷鍵。
 - **驗證只有自家 PIN**，bcrypt 存 config；PAM 留 `auth: pam` 擴充位，shadow 不做。錯誤 PIN 固定 1 秒 debounce，連續錯誤鎖定可設定、預設關。
 - **saver 是 class、profile 是 object（2026-09-24 定案）。** 七種 saver：clock、runner（2026-10-07 前叫 dino）、bounce、snake（2026-10-06）、tetromino（2026-10-07）、pets（2026-10-07），與 custom——你自己的程式（2026-09-25）；profile 是設定好、有名字的一份，config 裡 `profile` 指向的就是它，鎖定畫面顯示的也是它。新增 profile 從一種 saver 按 `n`，profile 的 saver 建立後不改。dino 是 Chrome 離線小恐龍遊戲當螢幕保護：地面與仙人掌向左捲、暴龍自己跳過去，無限循環、隨機障礙、隨機跳躍、不會死，不記分也不畫時間；參數只有 runner（big / small 一隻大或小暴龍，big-big / small-small / small-big / big-small 兩隻一前一後、名字就是畫面由左到右的順序、各自跳各自的；2026-09-25 定案，舊的 trex / two-trex 自動轉）、character（t-rex、cat、rabbit、horse、ghost，2026-10-06）、scene（grassland 仙人掌，或 desert 金字塔）、bg / fg，沒有 size，畫布自己取塞得下的最大倍率；每 70 ms 一幀。clock 的 layout row / column（直排把 `HH` / `MM` / `SS` 拆行，字大好幾倍）、size small / medium / large（一個字型像素 1 / 2 / 3 格見方）、font 3x7 / 3x5、time `HH MM` / `HH MM SS`（24 時制，不畫冒號、以空白分組）、date off 或四選一、bg / fg 兩色；沒有任何自由輸入；可 duplicate / rename / delete。
-- **顏色是每個 saver 自己的**，bg / fg 各三個 RGB slider，webu 的數字清單作法，不打字；滑桿用該通道自己的顏色畫（R 列 `#RR0000`），改的是草稿，`S` 才寫檔、`R` 丟掉，`q` 遇到未存草稿先問。custom 沒有顏色；bounce、snake、tetromino 與 pets 的顏色是它們自己的，也沒有（2026-10-06，`saver.Coloured`）。
+- **顏色是每個 saver 自己的**，bg / fg 各一個 color picker（lib 的 `PickColor`：old 與 new 並排、R G B 用 hex 從 select 選），選好就寫檔，跟其他每一個值一樣（2026-10-18；之前是三條 RGB slider 改草稿、`S` 寫檔、`R` 丟掉、`[2]` 標題接 `unsaved`，`q` 遇到未存草稿先問——tdp 的一列一個值沒有送出，草稿就是送出，見 LK5）。custom 沒有顏色；bounce、snake、tetromino 與 pets 的顏色是它們自己的，也沒有（2026-10-06，`saver.Coloured`）。
 - **bounce：反彈框（2026-10-06）。** `internal/saver/bounce.go`。框是時間的 3x5 字加 2 px 留白加 2 px 框線（`bounceBorder`，2026-10-07 前 1 px）：`HH:MM` 25 × 13 px、`HH:MM:SS` 35 × 13 px，用 `time.Time{}.Format(layout)` 的寬度算；速度是 `bounceSpeeds`（名稱跟 snake 共用 `saver.Speeds`，normal 每秒 10 px），`Next` 照它；點陣字留在 ui，`NewBounce` 收一個 `spell`（ui 的 `spell(faceShort, …)`，跟 clock 畫在板子上的逐像素相同，有測試）與取時間的函式，所以 `Game` 介面不用帶時間。每軸 `bounceAxis`：走 1 px，到 0 或 span 就反向並回報碰到；兩軸同一幀都碰到是角落，開始閃（`flash` 幀數 = 顏色數 × 2，每幀下一色），只有一軸是換一個不同的隨機色。場景比框小的那一軸 span ≤ 0 就不動、不算碰到，否則窄終端會每幀換色。resize 時框留在原處、塞不下就靠邊。
 - **tetromino：自己玩的俄羅斯方塊（2026-10-07）。** `internal/saver/tetromino.go`。場地以方塊為單位（2 × 2 px），是完整的長方形；`reset` 用場景扣掉外框（四邊 1 px，`tetroEdge`）與右邊小框的 7 px（`tetroBoxW` 加 1 px 框）算出 `cols × rows`，外框在場景左上角。接下來的方塊是 `queue`，個數是外框高度放得下的整格數（`reset` 算，`come` 從前面拿、從袋子補到後面）；欄貼在場地外框的右邊、共用那條線：`Draw` 畫每格上面一條橫線、最後一格下面一條、最右邊一條直線到最後一格為止，最後一格下面到外框底部整塊塗外框灰（2026-10-07），預覽一格 1 px（`preview`）。`open`：場地外與堆疊擋住，場地上面的隱藏列整排開著（方塊進場用）。方塊的轉向在各自的框裡順時針轉（`tetroTurns`，O 只有一個）。一步 = 轉一次或橫移一格（或都不做）、再往下一格或不往下（`step`）。`choose` 從進場位置 BFS 走遍所有走得到的位置，停得住的（再往下不行）用 `worth` 評分取最高；`route` 從目標倒著 BFS，記每個位置還差幾步，`toward` 每一步挑剛好少一步的那個，偏好「轉向或往目標橫移、同時往下」，所以會斜著走、也一定走得到（鑽到懸空的下面也是）。`worth` 只有兩項：落點高度（兩倍的高度、整數）與洞（一個 4），滿列先拿掉再算；試過常見的四項（總高、洞、凹凸、消行）會堆在角落，Dellacherie 的六項正常，但一項一項拿掉量下來只有這兩項有作用。消行與結束不照速度：`Next` 在 `going` 或 `over` 時回 40 ms，長度用 `frames(d)` 換算；消行先 0.28 秒全白，`wiped` 用「離較近那端的距離」分圈、從中間往外；結束時 `drawEnd` 依幀數把外框高度裡從上面算起的幾列、所有亮著的格子換成外框的灰（那時亮著的只有方塊與本來就灰的外框），5 秒掃到底，之後才在整個場景的正中間畫 END（UI 傳進來的 `spell`，跟 bounce 一樣用 3x5，直接畫在灰色上），再 2 秒 `reset`。測試守著：轉向、7 個一袋、外框與那一欄的位置（逐像素比）、欄裡依序是接下來的方塊且置中、格數跟著高度、拿走一個其他往上挪、3000 步裡每一步最多動一格不往上、不重疊、堆疊最高 7 列洞最多 5 個（實測 5 列、0–1 個）、消行逐幀、鑽到懸空的下面、評分滿列先拿掉、有選擇時不選結局、結束時逐幀變灰到第幾列、顏色不變、END 的像素、速度、同 seed 同局、太小不畫。2026-10-07 前只顯示 next 與 next next，起先在場地左上、右上角的盒子裡，場地是盒子剩下的倒 T 形，小場地常堆到頂（function.md 決定 73、76）。
 - **pets：室外的貓（2026-10-07）。** `internal/saver/pets.go`。室外在 `reset` 時擺一次（`furnish`）：地面一條草線與零星草叢；地上的東西先算寬度（`tree`：樹冠的高、寬、頂，樹枝從最低一根往上、兩側輪流，各自的長度，樹兩邊各伸多遠；`stump`：寬與高），至少一棵樹，`spread` 把剩下的空隙隨機分，再 `putTree`（樹幹、樹冠的橢圓與葉影、樹枝各一個 ledge、樹幹兩側各一個 climb，`trunk` 標記，爬到那側最高的樹枝或樹冠下）與 `putStump`。背景不在 `room` 裡：`Shade` 回一個 `Look`，`Ground` 是每一列的顏色（`petBackdrop` 的色標之間用 `mix` 內插），畫布照 runner 的天空那樣逐列上色。貓所在的地方是 `petPlace`：ledge 是一條線，貓的中點範圍 `lo..hi`，可以懸出端點 2 px；climb 是樹幹的一側，貓的腳的列範圍。`join` 把跳得到的連起來：往上最高 `petJump`，從 B 的旁邊起跳（貓身不在 B 底下）、落在近的那端；往下或平著，從 A 的端點跳、落在 A 外面；兩者橫向不超過 `petReach`；樹幹跟每個橫向夠近的 ledge 也連（`feet = max(L.at, C.lo)`），樹幹的腳由 `mount` 連到地面。`way` 是 Dijkstra：節點是起點、終點與每條連結的兩端，同一個地方上的移動每 px 2 幀、跳是它自己的幀數（`leap`：拋物線，頂點比較高的那端再高 2 px，`k = |dy| + 4 + √(8|dy| + 16)`）。`reach` 是從地面到得了的地方，`pick` 從裡面挑、避開別隻貓一隻貓寬。貓的圖朝右，`petBlit` 翻面；圖上的記號 `#` 毛、`s` 條紋、`w` 胸口與腳掌、`x` 黑白貓多出來的白、`e` 眼睛，各是 `petCoats` 那隻的一個墨（`petCoat(c)`，每隻 5 個）。測試守著：樹與樹樁的像素（golden）、每個室外的完整性（草線、至少一棵樹、上下兩個 ledge 之間留得下坐著的貓、樹幹的範圍、每個地方都到得了）、背景的漸層、跳的高度與距離與「不從底下穿過」、走最快的路、步調、坐與睡的圖與 z、樹的數量、高度與樹枝長短有變化；mutation 逐處改壞全部變紅。之後要加別的動物：圖、大小、能力（會不會爬、跳多高多遠、步調）與花色收成一份「種類」，連結記下是爬還是跳、多高多遠，`way` 與 `reach` 依種類跳過做不到的；設定多一個選動物的屬性，沒寫就是貓，不用升 config 版本。
 - **snake：貪食蛇（2026-10-06）。** `internal/saver/snake.go`。`hamilton(cw, ch)` 造環：列數偶數就從第二欄起來回走、最後沿第一欄回去；列數奇數就轉 90 度；兩邊都奇數就丟最後一欄（測試掃過 1–12 × 1–12）。不撞自己只靠一個不變量：沿著環，身體依序在頭後面，頭前面到尾巴之間全空；抄近路距離 < 到尾巴的距離就維持得住（測試每一步驗：尾巴往前經過每一節到頭、再到尾巴，剛好一圈）。近路的上限 `min(到尾巴 − 蛇長 − 3, 到果子)`，蛇過半盤時這個值自然小於 0，所以參考作法（John Tapsell 的 Nokia snake AI）裡「過半不抄」與「果子後空間大時少抄」兩條拿掉。退路是環上的下一格：空的，或尾巴（同一步會讓開）。格距 3 px（`snakePitch`）：節點之間兩格連線，並排兩段之間兩列暗格；頭（`head()` 挑形狀：吃到的那一步是張嘴 `snakeOpen`——頭在果子那格，上顎三格、下顎兩格夾住它，節點畫成果子的顏色（包的位置是 `snakeBitten` = −2，下一步 +2 成 0 就是吞嚥，吞嚥時果子畫在頭的節點，頭的四周沒有別的（2026-10-07 前頭頂後面還有 `snakeGulp` 鼓起的一格，`Draw` 把 −2 夾成 0，張嘴那一步也畫了它，使用者回報後整個拿掉；測試把使用者畫的閉嘴、張嘴、吞進去寫成字串，連外圍一圈暗格逐格比對）；在身體裡時果子就是那一節的節點，旁邊什麼都不畫——2026-10-07 前身體繞著它鼓起：直線 `snakeLump` 3 格、轉角 `round(i)` 從外側繞 5 格、尾巴 `snakeEnd` 2 格與 `snakeFade` 1 格，使用者看過實機後拿掉；測試在 20 個時間點把果子輪流放進頭以外的每一節，確認它四周 8 格只有兩段連線是亮的）；下一步的 `move()` 就是果子是碰到 `snakeTouch`——朝果子（`way(頭, 果子)`，可能轉彎）推進一格、鼻尖貼著果子，身後連線交給身體畫；其他是閉嘴 `snakeHead`——鼻尖、節點、連線、頭頂；頭那一節的節點由形狀畫，所以 `Draw` 不點第 0 節的節點（上一版張嘴時它是嘴）；下唇在線的另一側，四周留的 1 px 也是給它的）畫在節點旁的空處、只凸出 1 px，跟並排的另一段之間還有一列暗，`turn` 依方向翻轉或轉 90 度——頭頂只用到頭自己往那一側的連線位置（頭的另一節在背後，那條連線不會亮）與節點之間永遠暗的內格；下巴是往前那條連線的第一格，也一定是暗的，它上面那格（嘴）是內格。格子四周各留 1 px（`reset` 的 `ox` / `oy`）。包是身體上的位置（`lumps`，0 是頭；蛇走的時候位置不變，所以跟著身體走），各自計時（`wait`），每 `snakeDigest`（一秒）往後一節；在尾巴再一秒就丟掉、蛇換成它的顏色、`grow++`，同一個 `Step` 裡尾巴就不動（2026-10-07 前中間還有一拍 `gone`）；`Step` 有 `grow` 時尾巴不動，但下一步是尾巴那一格時照走（頭不會撞上），延後再長。一節一顆：咬到的那一步 `Step` 先把嘴裡那顆加進 `lumps` 再呼叫 `queue()`——嘴裡那顆算在第 0 節，由後往前把擋路的往後推一節；推出尾巴的那顆當場是身體（蛇換色、`grow++`），而且這發生在尾巴的取捨之前，所以同一步就長；`digest` 裡一秒到了、下一節還被前一顆佔著的原地等（`wait` 留在 1，下一步再試）——被推過的豆子走在自己的節拍前面，會在尾巴被後面那顆追上。2026-10-07 前推擠在下一步的 `digest`、推到尾巴就停，豆子會疊在尾巴（使用者回報）；測試每一步檢查豆子的位置由舊到新嚴格遞減。測試有一條守恆：身長 + `grow` + 肚子裡的豆子數 = 3 + 吃到的數。顏色跟 bounce 共用 `ownColours`（`game.go`），另加開局的白色 `snakeWhite`：顏色編號 `len(ownColours)`，`Inks()` 接在十色後面，`fresh()` 的 `used` 多一格把它佔住，所以果子不會是白的；每個包帶著自己的顏色（`lump{at, colour}`），`digest` 讓包跑過尾巴時把蛇換成它的顏色；新果子的顏色由 `fresh()` 抽，避開蛇與所有包的顏色，十色用完才退回 `otherColour`；速度（`speed`，五段名稱，`snakeSpeeds` 換成每秒 5 / 7 / 10 / 14 / 20 格，不認得的當 `normal`）決定 `frame`；填滿停的 3 秒與果子的閃爍是時間，`frames()` 換成步數，最少 1。第一版（同日）是 2 px 格距、bg / fg 兩色、沒有頭；第二版頭是 3 × 3 帶眼睛（使用者：太大）、包留在吞下的那一格；第三版平常收下巴、吃時下巴往前伸（使用者：怪怪的）；預設色先是 Nokia 淡綠當底（vhs 實拍整面亮牆）再改深綠當底，加換色後整個拿掉。
-- **設定畫面的細節**：`[1]` 的 `P` 無效（`p` 才是游標那列），profile 列 `a` 直接設為啟用（決定 41，2026-09-25）；每個 `[2]` 第一列是 `Property` / `Value` 表頭；標題是家族的 powerline 膠囊——`[2]` 名字（草稿未存接黃色 `unsaved`，只有 focus 時亮）、`[1] locku`，沒有種類 tag、沒有底部 hint；`config file path` 是唯二的自由輸入，webu 的提議作法：框裡 dim 顯示目前值（沒有就是 `~/.tmux.conf` / `~/.screenrc`），`Tab` 接手編輯、`Backspace` 拒絕、沒碰就 Enter 不改；`activate` 是「區塊在不在檔案裡」，Enter 後 confirm 才寫，路徑沒填就 disabled 並說明；區塊只碰 `# >>> locku >>>` … `# <<< locku <<<`，每行尾巴 `# locku`，冪等；preview 不驗 PIN。
+- **設定畫面的細節**：`[1]` 的 `P` 無效（`p` 才是游標那列），profile 列 `a` 直接設為啟用（決定 41，2026-09-25）；每個 `[2]` 第一列是 `Property` / `Value` 表頭（lib 畫成 Overlay0）；panel 的膠囊是 lib 的 `[1] LOCKU`、`[2] <名字>`；`config file path` 的框是 lib 的 text：有值時是灰字提議（`Tab` 接手、`Backspace` 拒絕、沒碰就 `Enter` 不改），沒有值時沒有提議、說明列寫通常是哪個檔（2026-10-18；之前沒有值時提議 `~/.tmux.conf` / `~/.screenrc`，tdp 的灰字只能是舊值）；`activate` 是「區塊在不在檔案裡」，每次重畫都重讀，勾它先 confirm 才寫，路徑沒填就停用；區塊只碰 `# >>> locku >>>` … `# <<< locku <<<`，每行尾巴 `# locku`，冪等；preview 不驗 PIN。PIN：沒有時 `Set PIN` 打兩次；有時 `Change PIN` 先驗目前的，再開「新的 PIN」框，框裡是 8 顆灰點代表現有的——直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉（2026-10-18；之前驗完選 `New PIN` / `Remove PIN`）；三步是一步關了才開下一步（LK7）。
 - **Enter = 進 `[2]` / 編輯 / 送出，Esc 只做取消，`X` 刪除，`d` 是半頁。** 畫布上任何鍵只開 prompt，第一個鍵不算輸入。
 - **config 有版本（2026-10-07）。** `config.ConfigVersion`（1）。`LoadFile` 先把檔解析成樹，`versionOf` 讀頂層的 `version`（沒有就是 0），小於 1 才跑 `carryOver`（0 → 1：2026-09-24、09-25 的改名與 dino → runner），decode、`sanitized` 之後，版本小於現行的就用 `SaveFile` 整份寫回；`SaveFile` 一律寫成現行版本，所以 `version` 永遠是檔案的第一個 key。下一次格式要變：加一個 1 → 2 的轉換接在 `carryOver` 後面、只對小於 2 的檔做，`ConfigVersion` 加一。測試守著：0 讀完寫回、再讀不動；1 的舊名不轉、不寫回；2 照讀不寫回、存檔寫成 1；讀不了的檔不寫回。家族裡 locku 是第一個做 config 版本的。
-- **環境變數照家族的 `LOCKU__NAME`（2026-09-29，tdp D6）。** app 名後兩個底線：`LOCKU__CONFIG`（設定目錄）、`LOCKU__DATA`（資料目錄）、`LOCKU__ICON_WIDTH`、測試用的 `LOCKU__DUMP`。舊名 `LOCKU_CONFIG`、`LOCKU_DATA`（v0.1.3 已發佈）不再讀、不留相容（user 裁定），CHANGELOG 寫了新舊對照；`uninstall.sh` 與三個 e2e 腳本一起改。
+- **環境變數照家族的 `LOCKU__NAME`（2026-09-29，tdp E2）。** app 名後兩個底線：`LOCKU__CONFIG`（設定目錄）、`LOCKU__DATA`（資料目錄）、`LOCKU__ICON_WIDTH`、`LOCKU__POWERLINE_WIDTH`（2026-10-18，lib 讀）。舊名 `LOCKU_CONFIG`、`LOCKU_DATA`（v0.1.3 已發佈）不再讀、不留相容（user 裁定），CHANGELOG 寫了新舊對照；`uninstall.sh` 與三個 e2e 腳本一起改。
+- **暫定（2026-10-18，重構時自己定的，等 user 確認）。** tdp 交給 app 的地方：
+  - 離開不問：沒有沒存的東西（顏色草稿拿掉之後），`App.Quit` 是 nil，`q` 直接離開（K9：離開流程由 app 決定；之前有未存草稿才問）。
+  - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`；設定畫面的 PIN 框標題 `SET PIN` / `CHANGE PIN`，鎖定畫面的是 `UNLOCK`（glyph 沿用 `nf-fa-lock`）、說明列 `The PIN`。
+  - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
+  - 色票的 hex 寫大寫（`███ #F2B753`），跟 color picker 裡一樣；config 裡照舊存小寫。
+  - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
 
 ## 已否決，不要重提
 
@@ -65,6 +74,9 @@ tmux 預設的 `bind L`（跟使用者既有熱鍵撞，改 command alias；要�
 custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都要驗；改直通）、custom 程式的自動重啟（不干涉生命週期）、黑畫面加紅字（用板子）、結束的字叫 COMPLETED / ERROR 再叫 DONE / ERROR（改直接寫退出碼）、PIN 框下面凍住畫面加 locku 的底色（框下面沒有動畫）、框收起時真的縮一欄再放回去逼程式重畫（改成不凍畫面就不用補畫）、對正在畫的程式送 SIGWINCH（cmatrix 會閃一下從頭來）、tmux 即時套用維護一份跟區塊平行的指令清單（改整塊 `source-file`）、整合設定整塊寫進使用者的檔案（改寫進 locku 自己的檔案、使用者的檔案只放讀它的一行，2026-10-08）、用 `if-shell` 判斷 locku 的檔案在不在（`source-file -q` 就是，不必每次開 sh）、shell rc 的 LOCKPRG 也搬進 locku 的檔案（一行搬出去不會變少）、鎖定畫面上的忘記密碼入口、恢復碼、清空 `pin_hash` 當 reset、`[1]` 上的全域 `P`（`p` 才是游標那列）、原生 Windows。
 
 ## 已知的牆與未做
+
+- **等 tdp 或 lib 的地方（2026-10-18，回報 terminu，程式裡標 `TODO(tdp LK<n>)` / `TODO(lib LK<n>)`）**：LK1 鎖定畫面借不到 lib 的 input（PIN 框照 lib 的樣子自己畫，`ScreenOutput` 照抄）；LK2 lib 沒辦法從程式換 focus（New / Duplicate 之後 focus 留在 `[1]`）；LK3 設定 panel 的每列說明放在哪（暫放 key reference 最後一節）；LK4 新東西的名字提議（寫在說明列）；LK5 顏色先預覽再存（草稿拿掉了）；LK6 鎖定畫面的 PIN 框從 7 列變 9 列；LK7 多步驟的輸入不能保留上一步；LK8 number 框清空不再是預設值。逐條在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。
+- **偶發的測試**：`TestBounceLockWearsItsOwnColours`（`internal/ui`）在 `make check` 整包 `-race` 跑時偶爾失敗（`the box did not move`），單獨跑十次都過；2026-10-18 重構時遇到，跟重構無關，未查。
 
 - **平台**：macOS 與 Linux（WSL 可）。不支援 Windows：鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品（2026-09-25，使用者定案）。
 - **狀態列在窄終端被截**：hostname 很長加窄終端時，被截的是尾端的 `no PIN` / custom note（見「運作方式」的狀態列），是設計決定，未改。
@@ -111,28 +123,17 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   終端機換成鎖定畫布的樣子，`q`、`Space`、`?`、`Ctrl-C` 都只是「回來」。預覽顯示的就是鎖定畫布，
   鎖定畫布上任何鍵只有一個意義（叫出 PIN 框），預覽上任何鍵也只有一個意義（回來）；若 `q` 在預覽上
   是離開，使用者從預覽回不來而是整個 app 關掉。
-- **preference、tmux、screen 的 `[2]` 上，`?` 是每一列的說明，不是 key reference（K6、M4；2026-09-26，使用者定案；
-  2026-09-27 對照 tdp v0.1.4 改寫）。** tdp v0.1.2 起 `?` 只讀：panel 上是 key reference（這個 panel 能按的鍵與
-  core key）。這三個 `[2]` 上，字典取代 key reference——一樣唯讀、可以捲動，只是內容換成每一列設定的意思。
-  locku 只有兩個 panel，這三個 `[2]` 上使用者要的是「這一列設定是什麼意思」——`lock` 要講兩種範圍、
-  screen 要講 LOCKPRG 住在 shell rc——寫不進 M5 的單行說明。在這裡放 key reference，等於把真正需要的資訊擠掉，
-  換成換個 panel 就看得到的東西：這三個 `[2]` 的動作（各列的 `Enter`、`[P] Preview`）都在 Space menu 裡，離開在
-  Space menu 的 `Global operation` 與 `q`，core key 在 `[1]` 與其他 `[2]` 的 `?`。其他 panel 的 `?` 照 K6、M4。
-  字典的左欄是設定名稱、不是鍵，所以維持 Subtext1，不跟 key reference 的鍵一起變 Blue（2026-09-29，tdp D2）；
-  說明裡提到的鍵照 M5 加方括號（`[Enter] turns it`），tmux / screen 自己的鍵照它們的寫法（`C-a x`）。
+- **鎖定畫面的 PIN 框是 locku 自己畫的（E8；2026-10-18）。** E8 說畫面的規定 lib 給的，用 lib 的 app 自己不另外做。鎖定畫面是全螢幕的板子、沒有 panel 也沒有 footer，lib 的 input 只能從 `App` 打開、`App` 一定畫 footer；PIN 框還要有 lib 的 `PasswordInput` 沒有的連錯冷卻、錯一次吞鍵一秒、逾時收起、疊在 custom 程式的畫面上。所以 `internal/ui/pinprompt.go` 照 lib 的畫法（components/input/password 的解鎖樣式、layout/popup 的框、標題膠囊、hint、錯誤列、開關動畫）自己畫一份，輸出層的 `ScreenOutput` 也照抄。回報成 LK1；lib 有入口就換掉。
 - **custom saver 的 PIN prompt 底下不變暗（F8；2026-09-28，使用者定案）。** F8 要最上層以外的一切都 dim，但這時底下是使用者自己的程式的畫面：
   程式的輸出直接送到終端機，locku 只在上面畫框（`internal/custom` 的 screen writer），手上沒有那張畫面的副本。要 dim 就得在 locku 裡放
   一個終端機模擬器重畫程式的畫面——2026-09-25 否決過（多一個依賴、忠實度與效能都要驗）；使用者也定過「框之外什麼都不畫」。
   一般 saver 的畫布照 F8 淡化：畫好的畫面每個顏色各自往 base 淡化（`dimANSI`）。同樣的淡化其實可以套在程式送出的輸出串流上，但只有
   PIN 框打開之後程式重畫的格子會變暗，靜態的畫面可能一直不變——仍不做（2026-09-28，使用者：維持偏離）。
-- **PIN 框不跟每個 popup 一樣寬（F7；2026-10-08，使用者定案）。** F7 要每個 popup 都是 `min(terminal 寬 − 2, 120)`。
-  PIN 最多 12 字，點點那列最寬 25 欄；框跟著終端機拉到 120 欄，裡面只有中間一小段有東西。鎖定畫面與設定畫面的三個 PIN 框
-  框內固定 29 欄、連框線 31（左右各留 2 欄；奇數，點點打到第幾個字都在正中間），終端機比這個窄才照 F7（`pinInnerW`）。
-  設定畫面的 PIN 框疊在比它寬的框上，下層的左右邊界露出來；層次照 F8 用明暗分。理由與算法見 `function.md` 決定 94。
+（2026-10-18 以前還有兩條，已經不是偏離了：preference、tmux、screen 的 `[2]` 上 `?` 只有每列的說明、不是 key reference——lib 的 `?` 一定是 key reference，說明接在最後一節，見 LK3；PIN 框比 F7 窄（框內 29 欄）——現在照 F7 算，45 欄。）
 
 ## 設計文件導讀
 
-三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 41 條。
+三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 96 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
@@ -142,7 +143,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 | [`icon.svg`](icon.svg) | 圖示：黑底方塊上家族的方塊字 mark，深藍 U 包住金色的 L、O、C、K；splash 照它畫 | — |
 | [`social-preview.png`](social-preview.png) | GitHub 的 social preview：icon 在上、下面 Tiny5 字樣 `locku`，`/social-preview locku` 產生（2026-10-08） | — |
 
-Go、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)、浮層用 [bubbletea-overlay](https://github.com/rmhubbert/bubbletea-overlay)、custom saver 的程式與登入密碼驗證用 [creack/pty](https://github.com/creack/pty)、`charmbracelet/x/term` 與 `charmbracelet/x/ansi`、`muesli/cancelreader`、PIN 用 `golang.org/x/crypto/bcrypt`、config 用 `gopkg.in/yaml.v3`。色系 catppuccin-mocha。
+Go、[terminu-go](https://github.com/vulcanshen/terminu-go)（設定畫面、寬度、淡化、探測，2026-10-18）、[Bubble Tea](https://github.com/charmbracelet/bubbletea) 與 [Lip Gloss](https://github.com/charmbracelet/lipgloss)（鎖定畫面）、custom saver 的程式與登入密碼驗證用 [creack/pty](https://github.com/creack/pty)、`charmbracelet/x/term` 與 `charmbracelet/x/ansi`、`muesli/cancelreader`、PIN 用 `golang.org/x/crypto/bcrypt`、config 用 `gopkg.in/yaml.v3`。色系 catppuccin-mocha。
 
 ## 建置與開發
 
@@ -158,19 +159,23 @@ make install    # → $GOBIN；make uninstall 移除
 `go install …@latest` 也能裝，但版本字串只由 goreleaser 的 ldflags 注入，這樣裝出來的 `locku version` 是 `dev`。`make` 列出所有 target。
 
 ```bash
-make check                                       # fmt-check + vet + go test -race
-LOCKU__DUMP=1 go test ./internal/ui -run TestDump -v   # 印出各種尺寸的畫面
+make check                                       # fmt-check + vet + go test -race；有 go.work 時再加 check-lib
+make check-lib                                   # 關掉 go.work，照 go.mod 的 terminu-go 版本編譯與測試
 make lock                                        # 編譯並鎖住這個終端機
 make e2e                                         # 端到端：真的 tmux（e2e/tmux_attach.py，自己的 TMUX_TMPDIR）、custom saver（e2e/custom_lock.py）、真的 screen（e2e/screen_lock.py，自己的 SCREENDIR）；不碰你的 server 與 session
 make gif                                         # 重錄 docs/demo.gif，見下方「demo gif」
 make shots                                       # 重拍 docs/savers/*.png，見下方「saver 的靜態圖」
 ```
 
-TUI 行為全部用 programmatic model test 驗證（不需要 tty）；`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix d、prefix c、Ctrl-C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
+家族共用的 target 在 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改），`Makefile` 只設 `BINARY := locku`、include 它，locku 自己的 `lock`、`e2e`、`shots` 放在最後一段（2026-10-18）。開發時用不進版控的 `go.work` 接本機的 lib：`go work init . ../terminu-go`；go.mod 寫的是發布過的 tag（v0.1.13），不用 `replace`。`make tidy`、`make snapshot`、`check-lib` 都關掉 `go.work`，跟 CI 一樣。
+
+頂層目錄裡範本以外的：`e2e/`（python 的 pty 端到端）、`CLAUDE.md`（一行指向 2026-10-18 的重構交代）。
+
+TUI 行為全部用 programmatic model test 驗證（不需要 tty）：設定畫面的測試（`internal/settings/settings_test.go` 的 `driver`）照 Bubble Tea 那樣餵訊息給 lib 的 `App`、把回來的指令跑完（popup 的動畫也是），再看 `App.Frame()` 與寫出去的 config.yaml，比一個 popup 的動畫長的計時器（toast）不等；`TestEveryRowIsTheTerminal` 在五種尺寸、icon 一格與兩格、每一種 popup 開著時量每一列的寬（L4、E5），四十秒上下。`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix d、prefix c、Ctrl-C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
 
 任何看狀態列文字的 ui 測試都要固定 `whoami`（`lockscreen_test.go` 的 `TestMain`），原因見「運作方式」的狀態列那條。
 
-`V` 的 splash 彩蛋就是 `docs/icon.svg`，一格對一格（2026-09-26）：第一版在 icon 出現前一天畫，裡面是一個自創的掛鎖，icon 進來後沒跟上。`splash_test.go` 的 `TestSplashIsTheIcon` 直接讀 icon.svg 比對 `logoPixels`，icon 改了 splash 沒跟就失敗。揭露順序：底色 → L、O、C、K 由外往內 → 深藍 U 由下往上。
+`V` 的 splash 彩蛋就是 `docs/icon.svg`，一格對一格（2026-09-26）：第一版在 icon 出現前一天畫，裡面是一個自創的掛鎖，icon 進來後沒跟上。2026-10-18 起是 lib 的 `NewSplash`：`internal/settings/icon.svg` 是 `docs/icon.svg` 的副本（`go:embed` 讀不到 `docs/`），`TestIconIsTheDocsIcon` 守住兩份一樣，icon 改了就要複製過去。揭露照 tdp S5：底 → 金色的 L、O、C、K（svg 裡註解的順序）→ 深藍 U 由下往上，下面是名稱、版本、`A screensaver with a PIN, for the terminal` 與作者。
 
 ### demo gif（2026-09-26；2026-10-07 重錄）
 
@@ -188,8 +193,8 @@ README 的「What you see」每種 saver 一節，各配一張靜態圖 `docs/sa
 
 畫面是隨機的，`make shots` 一次拍七張，挑過才進版控：runner 要有一棟完整的樓在跑者右邊；snake、tetromino 要沒有殘影。VHS 的畫面（headless 瀏覽器裡的 xterm.js）偶爾會在預覽開始後留著設定畫面左上角幾個字，snake、tetromino 的上面幾列不會再畫，殘影就一直留著；custom 偶爾整張是空的。同樣的按鍵節奏在 tmux 裡試 40 次都沒有殘影——tmux 記的是 locku 實際寫出的內容——所以是 VHS 顯示的問題，不是 locku 的（2026-10-08）。
 
-README「The settings screen」那張 ASCII 圖是 tmux 擷取的真畫面（78 × 21，三個 profile、clock 的 bg 有一份 R 拉到 255 的草稿、焦點在 `[1]`），Nerd Font 的符號換成純文字：標題膠囊的兩端換成那個 panel 的邊框線、膠囊之間的分隔換成空格、色票換成 `■`，每列都是 78 欄（2026-10-08；之前的圖漏了膠囊兩端，最上面那條邊框短了 5 欄，Savers 也只列了兩種）。
+README「The settings screen」那張 ASCII 圖是 tmux 擷取的真畫面（84 × 23，demo 的 profile、cursor 在 clock、焦點在 `[1]`；2026-10-18 換成 lib 畫的樣子），Nerd Font 的符號換成純文字：膠囊的兩端換成空格、radio 換成 `◉` / `○`，每列 84 欄（2026-10-08 那張是舊的設定畫面，78 × 21）。
 
 ## 發布
 
-發版走家族的流程：push 一個 `v*` tag，GitHub Actions（`.github/workflows/release.yml`）在 ubuntu 與 macOS 跑 `go test -race`，過了 goreleaser 打包四個平台的 tarball 與 checksums、更新 vulcanshen/homebrew-tap 的 `locku.rb`，release notes 是 `CHANGELOG.md` 對應的那一節。CHANGELOG 只記 binary 行為的變動；純文件、打包、CI 的改動不記。
+發版走家族的流程（tdp project 的「發布」）：`make check` → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push。GitHub Actions（`.github/workflows/release.yml`，範本）在 ubuntu 與 macOS 跑 `go test -race`，過了 goreleaser 打包四個平台的 tarball 與 checksums、更新 vulcanshen/homebrew-tap 的 `locku.rb`，再用 CHANGELOG 那一節蓋過 release 的內文（awk 認 `$2 == tag`，所以標題開頭一定是 tag）。v0.2.7 以前的標題照當時的寫法（`## [0.2.7] - 2026-10-08`），不改。CHANGELOG 只記使用者感覺得到的變動；純文件、打包、CI 的改動不記。

@@ -12,7 +12,7 @@ Each release names the version of terminu design (tdp) it follows.
 - After New or Duplicate the cursor is on the new profile and the focus stays in `[1]`. Quitting leaves at once.
 - The lock's PIN box is drawn as the library draws a PIN box: 45 columns wide, nine rows, the title `UNLOCK` and the prompt `The PIN` over the dots; an error leaves the frame its colour and stays on the error row until the next `Enter`. `Backspace` clears the whole PIN. A control character pasted into it is refused with `PIN can't have control characters`, where it said `no line breaks or tabs`.
 - Where a Nerd Font icon takes two cells, the lock's last column is no longer erased. Powerline symbols are measured as well as icons (`LOCKU__POWERLINE_WIDTH`, `TERMINU__POWERLINE_WIDTH`), and dimming fades the terminal's own sixteen colours, which it asks for, instead of xterm's.
-- The repository takes the terminu family templates of tdp v0.7.4 as they are: `family.mk` with the Makefile including it, the release workflow, `.goreleaser.yaml`, `install.sh`, `uninstall.sh`, `internal/version` and `.gitignore`. `make check` turns on `check-lib` when a `go.work` is there; the release notes are this file's section under the tag's own heading; the uninstaller asks about `~/.locku` (the PIN resets' log) as well as the settings.
+- The uninstaller asks about the data directory, `~/.locku` with the PIN resets' log, as well as the settings, and says at the end that the lines `activate` wrote are left in your files.
 
 ## [0.2.7] - 2026-10-08
 ### Fixed

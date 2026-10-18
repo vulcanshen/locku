@@ -4,6 +4,10 @@
 > 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp D3）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)。
+> 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
+> 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§3.2、ux §2.3）、預覽、整合寫什麼檔。
+
 ---
 
 ## §1 兩個畫面
@@ -235,47 +239,32 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，遮罩，框內 29 欄、連框線 31 欄（2026-10-08，使用者定案，決定 94：PIN 最多 12 字，12 個點點與之間的空格、游標，左右各留 2 欄；奇數，點點打到第幾個字都在正中間；終端機比它窄時照 tdp F7——偏離 F7，見 dev-remarks；2026-09-28 起跟每個 popup 一樣寬，之前固定 48 欄）、置中，連上下框 7 列、點點在正中間那列（2026-10-07，見圖；之前框內上下各留一列）；`●` 之間空一格，從框的橫向中央開始、向兩側長；終端機窄到放不下時，放不下的從前面截掉、游標那端留在畫面上（2026-09-28；當時 PIN 最多 64 字、整列 129 欄，比 120 的上限寬）；設定畫面的三個 PIN 框同一個畫法（2026-09-24：原本 32 欄、靠左、不空格） | 唯一的 popup |
+| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。locku 自己畫、照 lib 的畫法（lib 的 input 只能從它的 App 開，LK1；2026-10-18）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 9 列：留白、說明列 `The PIN`（Overlay0）、空一列、點點、空一列、錯誤列（Red，置中）、留白；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
-點點底下隔一列空白是**錯誤列**，打開時就在、平常空白（2026-09-28，tdp F7、K3；之前錯誤寫在 title）。連上下框 7 列：兩列空白、點點、一列空白、錯誤列貼著下框，點點因此在正中間（2026-10-07，使用者定案：錯誤列原本緊接在點點底下、再下面一列空白，點點比正中間高一列。使用者先提錯誤改用另開的 note popup 顯示，但 tdp F7 明寫錯誤列留在框裡、不另開 popup，因此不採用；我提的兩種——錯誤列兼當下方空白的 5 列、錯誤列緊接點點的 7 列——使用者改用這個排法）。五個狀態，框的大小都不變（第五個，值裡有換行或 Tab，在圖下）：
+四個狀態，框的大小都不變：
 
 ```
-╭ PIN ────────────────────────╮     idle：layer 色
-│                             │
-│                             │
-│           ● ● ● ●           │     點點，正中間
-│                             │
-│                             │     錯誤列，空白
-╰──── Enter:unlock Esc:back ──╯
+┏━ UNLOCK━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     idle：層色
+┃                                           ┃
+┃ The PIN                                   ┃     說明列
+┃                                           ┃
+┃                 ● ● ● █                   ┃     點點；游標在下一顆的位置
+┃                                           ┃
+┃                                           ┃     錯誤列，空白
+┃                                           ┃
+┗━ Enter:unlock Backspace:clear Esc:cancel ━┛
 
-╭ PIN ────────────────────────╮     wrong：Red，1 秒，點點清空，吞輸入
-│                             │
-│                             │
-│                             │
-│                             │
-│          wrong PIN          │
-╰─────────────────────────────╯
-
-╭ PIN ────────────────────────╮     lockout：Red，倒數，吞輸入，Esc 仍可回 saver
-│                             │
-│                             │
-│                             │
-│                             │
-│      try again in 27 s      │
-╰─────────────────────────────╯
-
-╭ PIN · closing ──────────────╮     pin_prompt_timeout 到：正常關閉動畫回 saver；不是錯誤，留在 title
+┃                 wrong PIN                 ┃     wrong：1 秒吞掉所有鍵、點點清空、hint 拿掉；錯誤留到下一次 Enter
+┃             try again in 27 s             ┃     lockout：倒數，吞掉 Esc 以外的鍵，hint 只剩 Esc:cancel
+┃     PIN can't have control characters     ┃     值裡有貼上的控制字元：不比對、不算一次連錯，點點留著
 ```
 
-值裡有換行或 Tab（貼上的，§3.1）時 Enter 不比對、不算一次連錯：錯誤列 `no line breaks or tabs`（2026-10-08；之前 `PIN can't have line breaks or tabs`）、邊框 Red、點點留著，
-下一鍵恢復（2026-10-06）。
-
-設定畫面的三個 PIN 框（`current PIN`、`new PIN`、`confirm PIN`）同一個畫法，錯誤列也一樣置中。
-
-終端機比框小（寬不到 12 或高不到 6）時，框從左上角開始畫、超出畫面的切掉：上框與標題永遠看得到（2026-09-29，tdp D6；之前鎖定畫布上是畫中間，custom saver 上超出最後一列的會疊在最後一列）。
-
-錯誤與 lockout 的 Red 是 override 色（tdp D2），不參與層級。
+- `Backspace` 一次清掉打的全部（components/input/password；2026-10-17 以前一次刪一字）。
+- 錯誤時框與標題維持層色，只有錯誤列是 Red（components/layout/popup 的錯誤列；2026-10-17 以前邊框變紅）。錯誤只在 `Enter` 檢查時改（input/README），之間打字不清掉。
+- 貼上的控制字元（`\n`、`\t`、`\x1b`……）一個都不丟、照樣畫成點，`Enter` 時擋下（input/README；2026-10-17 以前只收換行與 Tab、錯誤寫 `no line breaks or tabs`）。按 `Ctrl` 組合打出來的不進值。
+- `pin_prompt_timeout` 到：照常的收起動畫回 saver，標題不再寫 `· closing`。
+- 終端機比框小：框最高是畫面高度 − 2、寬是畫面寬 − 2（F7），置中，超出畫面的切掉（E5）。
 
 ---
 
