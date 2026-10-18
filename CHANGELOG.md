@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+Each release names the version of terminu design (tdp) it follows.
+
+## Unreleased
+
+- The repository takes the terminu family templates of tdp v0.7.4 as they are: `family.mk` with the Makefile including it, the release workflow, `.goreleaser.yaml`, `install.sh`, `uninstall.sh`, `internal/version` and `.gitignore`. `make check` turns on `check-lib` when a `go.work` is there; the release notes are this file's section under the tag's own heading; the uninstaller asks about `~/.locku` (the PIN resets' log) as well as the settings.
 
 ## [0.2.7] - 2026-10-08
 ### Fixed

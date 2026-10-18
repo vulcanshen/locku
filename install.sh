@@ -1,17 +1,31 @@
 #!/bin/sh
-# locku installer for macOS / Linux (unix-only — on Windows use WSL).
+# locku installer for macOS / Linux.
 # Usage: curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
+#
+# terminu family template (tdp project/install.sh). Replace locku; set
+# WINDOWS; the blocks marked "app's own" are the app's, the rest stays as it is.
 
 set -e
 
-REPO="vulcanshen/locku"
+APP="locku"
+REPO="vulcanshen/$APP"
+# yes when the app ships a Windows build and an install.ps1.
+WINDOWS="no"
 
 # Detect OS
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$OS" in
   linux*)  OS="linux" ;;
   darwin*) OS="darwin" ;;
-  *) echo "Error: locku is unix-only (no Windows build — use WSL). Unsupported OS: $OS"; exit 1 ;;
+  *)
+    echo "Error: unsupported OS: $OS."
+    if [ "$WINDOWS" = "yes" ]; then
+      echo "On Windows, run in PowerShell:"
+      echo "  irm https://raw.githubusercontent.com/$REPO/main/install.ps1 | iex"
+    else
+      echo "$APP is unix-only (no Windows build — use WSL)."
+    fi
+    exit 1 ;;
 esac
 
 # Detect architecture
@@ -21,6 +35,9 @@ case "$ARCH" in
   aarch64|arm64) ARCH="arm64" ;;
   *) echo "Error: unsupported architecture: $ARCH"; exit 1 ;;
 esac
+
+# --- app's own: checks before the download (none by default) ---
+# --- end of the app's own ---
 
 # Get latest version
 echo "Fetching latest release..."
@@ -34,7 +51,7 @@ else
   INSTALL_DIR="$HOME/.local/bin"
 fi
 
-FILENAME="locku_${VERSION}_${OS}_${ARCH}.tar.gz"
+FILENAME="${APP}_${VERSION}_${OS}_${ARCH}.tar.gz"
 DOWNLOAD_URL="https://github.com/$REPO/releases/download/v${VERSION}/$FILENAME"
 
 # Download
@@ -48,12 +65,12 @@ tar xzf "$TMPDIR/$FILENAME" -C "$TMPDIR"
 
 # Install
 mkdir -p "$INSTALL_DIR"
-cp "$TMPDIR/locku" "$INSTALL_DIR/locku"
-chmod +x "$INSTALL_DIR/locku"
+cp "$TMPDIR/$APP" "$INSTALL_DIR/$APP"
+chmod +x "$INSTALL_DIR/$APP"
 rm -rf "$TMPDIR"
 
 echo ""
-echo "locku $VERSION installed to $INSTALL_DIR"
+echo "$APP $VERSION installed to $INSTALL_DIR"
 
 # Check if install dir is in PATH
 case ":$PATH:" in
@@ -66,10 +83,10 @@ case ":$PATH:" in
     ;;
 esac
 
+# --- app's own: what to know, and what to run first ---
 echo ""
-echo "NOTE: locku draws the lock screen with Nerd Font glyphs. Use a Nerd Font"
-echo "      terminal profile (https://www.nerdfonts.com) or the board's pixels"
-echo "      will render as boxes."
+echo "NOTE: $APP draws with Nerd Font glyphs. Use a Nerd Font terminal"
+echo "      profile (https://www.nerdfonts.com) or they render as boxes."
 echo ""
-echo "Run 'locku' to set a PIN and, under Integration, turn activate on to wire"
-echo "it into tmux and screen; 'locku lock' locks this terminal now."
+echo "Run '$APP' to start."
+# --- end of the app's own ---

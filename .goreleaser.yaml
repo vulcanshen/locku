@@ -1,3 +1,7 @@
+# terminu family template (tdp project/goreleaser.yaml), copied to an app's
+# .goreleaser.yaml. Replace locku with the app's name and fill the lines
+# marked "app:". An app with a Windows build uncomments the lines marked
+# "Windows"; nothing else changes.
 version: 2
 
 project_name: locku
@@ -10,12 +14,14 @@ builds:
     flags:
       - -trimpath
     ldflags:
+      # internal/version.Version takes the tag without its v; the app prints
+      # it with the v (internal/version.Display).
       - -s -w -X github.com/vulcanshen/locku/internal/version.Version={{.Version}}
     goos:
-      # unix-first, like the rest of the u-family — no windows target: the
-      # lock owns a Unix tty in raw mode, and tmux / screen are Unix.
+      # unix-first: no Windows build unless the app needs one.
       - linux
       - darwin
+      # - windows   # Windows
     goarch:
       - amd64
       - arm64
@@ -23,40 +29,54 @@ builds:
 archives:
   - formats:
       - tar.gz
+    # format_overrides:   # Windows
+    #   - goos: windows
+    #     formats:
+    #       - zip
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
 
 checksum:
   name_template: "checksums.txt"
 
+# The release notes come from CHANGELOG.md (.github/workflows/release.yml).
 changelog:
   disable: true
 
-# A formula, not a cask, like kbu / filu / sshu / webu: a formula binary is
-# never stamped com.apple.quarantine, so an unsigned binary runs clean.
-#
-# No dependencies: a single static binary. It drives whatever tty it is
-# given; tmux and screen are what call it, not what it needs.
+# A formula, not a cask: a formula binary is never stamped
+# com.apple.quarantine, so an unsigned binary runs clean.
 brews:
   - repository:
       owner: vulcanshen
       name: homebrew-tap
-      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a
-      # release run by hand takes the shell's; the workflow hands it a
-      # PAT when one is set, since the built-in token cannot write to the
-      # tap repository.
+      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a release
+      # run by hand takes the shell's; the workflow hands it the PAT in
+      # ACTION_TOKEN when one is set, since the built-in token cannot write
+      # to the tap repository.
       token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/locku"
-    description: "screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty: an LED-board clock, a dino run, or a program of your own; any key asks for the PIN"
+    # app: one line, what the app is, ending in (u-family).
+    description: "locku: a screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty"
+    # app: what to run first, where the settings and data live, the Nerd
+    # Font requirement, the platforms.
     caveats: |
-      `locku` is the settings screen: the PIN, the savers and their
-      profiles, and Integration › tmux / screen — turn `activate` on
-      there and locku writes its block into ~/.tmux.conf (applied to a
-      running server too) or ~/.screenrc plus your shell rc (LOCKPRG).
-      Without a PIN the lock is a screensaver that any key ends. A PIN
-      forgotten: `locku pin reset`, from any shell of your own.
+      Run `locku` to start: the settings screen, for the PIN, the savers
+      and their profiles, and Integration › tmux / screen — turn
+      `activate` on there and locku writes one line into your tmux.conf,
+      or your screenrc and shell rc (LOCKPRG). Without a PIN the lock is
+      a screensaver that any key ends. A PIN forgotten: `locku pin reset`,
+      from any shell of your own. The settings are in ~/.config/locku,
+      the PIN resets' log in ~/.locku.
 
-      A Nerd Font terminal profile is required: the board's pixels are
-      Nerd Font glyphs. macOS and Linux (WSL too); Windows is not
-      supported.
+      A Nerd Font terminal profile is required. macOS and Linux (WSL too).
+    # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/locku", "version"
+
+# scoops:   # Windows
+#   - repository:
+#       owner: vulcanshen
+#       name: scoop-bucket
+#       token: "{{ .Env.GITHUB_TOKEN }}"
+#     homepage: "https://github.com/vulcanshen/locku"
+#     # app: the same line as the brews description above.
+#     description: "locku: a screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty"
