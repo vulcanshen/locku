@@ -229,6 +229,9 @@ func swatch(hex string) string {
 
 // colour is one of a profile's two colours, chosen in the color picker:
 // old and new side by side, Esc leaves the old (components/input/color-picker).
+// Until 2026-10-18 the colours were a draft (user, 2026-09-24): R, G and B
+// sliders on [2], [S] Save, [R] Reset, [P] previewing the draft.
+// TODO(tdp LK5): previewing a colour before it is written.
 func (s *Settings) colour(label, hex string, set func(string) tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label, Value: func() string { return swatch(hex) },
 		Edit: func() tea.Cmd {
@@ -243,7 +246,9 @@ func switchField(label string, on bool) *terminu.Field {
 }
 
 // number is a whole number of 0 or more, edited in a number box; zeroOff
-// shows 0 as "0 (off)".
+// shows 0 as "0 (off)". An empty box is not a number (components/input/number):
+// the prompt says the default, to type (until 2026-10-18 empty was the default).
+// TODO(tdp LK8): an empty number box as "the default".
 func (s *Settings) number(label, prompt string, value int, zeroOff bool, set func(int) tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label,
 		Value: func() string {

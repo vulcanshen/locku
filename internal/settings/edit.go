@@ -33,6 +33,9 @@ func oneKeyErr(name, example string) error { return errors.New(name + " must be 
 // or none: the box shows the PIN that is there as eight grey dots, and
 // Backspace on them, then Enter, leaves no PIN (components/input/password;
 // until 2026-10-18 a menu after the current PIN offered New PIN or Remove PIN).
+// TODO(lib LK7): each step was its own box over the one before (Rules F1:
+// a step a popup, the source kept); a lib input closes as its Done runs,
+// so the next step opens over [2], and Esc there leaves the whole change.
 func (s *Settings) editPIN() tea.Cmd {
 	if !s.cfg.HasPIN() {
 		return s.newPIN("Set PIN", false)

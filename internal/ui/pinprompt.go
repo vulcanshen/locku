@@ -26,6 +26,10 @@ import (
 // swallows keys, the cooling-off, the timeout — so the box is drawn here, the
 // lib's way.
 //
+// TODO(tdp LK6): the box was seven rows, the dots in its very middle, no
+// prompt (user, 2026-10-07); the one-line input's skeleton has a prompt, so
+// nine.
+//
 // Its states, the box never changing size:
 //
 //	idle        the prompt, the dots, Enter:unlock Backspace:clear Esc:cancel
