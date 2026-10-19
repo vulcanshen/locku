@@ -1,9 +1,9 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.2)（tdp v0.8.2；2026-10-19 照重構回報的定案跟上），設定畫面與鎖定畫面的
-PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.2.1 的（2026-10-18 起照 terminu 的交代整個重構，
-2026-10-19 升到 v0.2.0、再到 v0.2.1）；
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.3)（tdp v0.8.3；2026-10-19 照重構回報的定案跟上），設定畫面與鎖定畫面的
+PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.2.2 的（2026-10-18 起照 terminu 的交代整個重構，
+2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---

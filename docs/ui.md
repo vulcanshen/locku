@@ -4,7 +4,7 @@
 > 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp D3）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** lib 是 v0.2.1、照 [tdp v0.8.2](https://github.com/vulcanshen/terminu/tree/v0.8.2)，鎖定畫面的 PIN 框也是 lib 的。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** lib 是 v0.2.2、照 [tdp v0.8.3](https://github.com/vulcanshen/terminu/tree/v0.8.3)，鎖定畫面的 PIN 框也是 lib 的。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框在 lib 的框之外 locku 自己加的（§3.2、ux §2.3）、預覽、整合寫什麼檔。
 

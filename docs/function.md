@@ -514,7 +514,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 ## 9. 技術選型
 
-- Go，Bubble Tea + Lipgloss，與 kbu / filu / sshu / webu 同棧；`rmhubbert/bubbletea-overlay` 疊 popup。2026-10-18 起設定畫面建在家族的 lib terminu-go（v0.1.13）上，寬度、淡化、探測也用它的，bubbletea-overlay 拿掉（見 96）；2026-10-19 升到 v0.2.0，鎖定畫面也在它的 App 上，PIN 框是它的（見 98），同日再到 v0.2.1（見 99）。
+- Go，Bubble Tea + Lipgloss，與 kbu / filu / sshu / webu 同棧；`rmhubbert/bubbletea-overlay` 疊 popup。2026-10-18 起設定畫面建在家族的 lib terminu-go（v0.1.13）上，寬度、淡化、探測也用它的，bubbletea-overlay 拿掉（見 96）；2026-10-19 升到 v0.2.0，鎖定畫面也在它的 App 上，PIN 框是它的（見 98），同日再到 v0.2.1（見 99）、v0.2.2。
 - `golang.org/x/crypto/bcrypt`（PIN）、`gopkg.in/yaml.v3`（config，先解析成樹再改名舊 key）。
 - 2026-09-25 加入：`creack/pty`——custom saver 的程式跑在 locku 開的 pty 上（5.5）、`locku pin reset` 的 `su` 也在 pty 上（4.5）；`charmbracelet/x/term`——raw mode、尺寸、`ReadPassword`；`charmbracelet/x/ansi`——疊框時算每行的顯示寬；`muesli/cancelreader`——custom 鎖上可以取消的按鍵讀取，PIN prompt 的程式接手終端機時沒有一個 read 擋在前面。
 - 無 cgo，`CGO_ENABLED=0` 靜態編譯。
@@ -691,7 +691,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 98. （2026-10-19，terminu 通知 terminu-go v0.2.0（tdp v0.8.1）發版；照 97 等 lib 的定案做完）go.mod 只升這一次。鎖定畫面在 lib 的 App 上：`App.Canvas` 畫板子與狀態列，PIN 框是 lib 的 `PasswordInput`（解鎖樣式、連錯冷卻用 `PausedUntil` 在錯誤列倒數），App 外面留 locku 自己的：每個鍵重讀 PIN、沒有 PIN 或預覽時任何鍵結束、錯一次吞鍵一秒並清掉點點（§4.4 的 debounce）、`pin_prompt_timeout`、`Ctrl-C` 不離開（LK1、LK9）；custom saver 從 lib 畫的畫面切出框來疊。設定畫面：PIN 三步疊起來，`Esc` 退一步，做完一起關（LK7，lib 的 `Stay`）；New、Duplicate 灰字提議沒人用的名字，建好後 cursor 在新的、focus 到 `[2]`（LK4、LK2；tdp S6、S19）；`config file path` 空著時灰字提議通常的檔（tdp S6，推得出來的）；數字框可以空，空的就是預設值，打字列下面有單位 `seconds`（LK8、S47；config.yaml 每個鍵都存數字，所以寫回預設的數，不是空的）；寫檔失敗時 error popup 疊在框上、值還在（LK10，lib 的 `Commit`）；`?` 最前面是「每一列」一節（LK3，`Field.Desc`；screen 的 LOCKPRG 併進 activate 那列）；成功的訊息是 Success toast；Space menu 上的動作預設留著 menu（T1），進 `[2]`、預覽、刪除清掉它（`Action.Clear`）。最低尺寸：設定畫面 40×15（color picker 36×11 整個放得進 `[2]`），鎖定畫面與預覽 1×1（tdp L1；理由在 dev-remarks 的設計決定）。`locku-terminu-fix.md` 三條都修好，拿掉。新回報 terminu：LK17（`Stay` 的一步沒改就按 `Enter` 只關這一步）、LK18（「每一列」的長說明照 key reference 從尾端截）。
 
-99. （2026-10-19，terminu 通知 terminu-go v0.2.1（tdp v0.8.2）發版，這一輪最後一次升級）改 PIN 時在 `NEW PIN` 的灰點上直接 `Enter`（保留舊的）結束整串，`CURRENT PIN` 一起收掉（LK17，lib 的 `PasswordInput.Unchanged`）；`?` 的「每一列」長說明在右欄折行，讀得完（LK18，user 定 A，lib 做，locku 的字不改）。tdp v0.8.2 的清單欄寬（`Column.Shrink`）locku 用不到：`[1]` 沒有表頭、只有一欄。順手：`[2]` 上停用的列（例：沒有檔案時的 `activate`）`Enter` 照樣登記 locku 自己的說明、畫成停用色（tdp M6：說明維持原本那句；之前是 lib 的 `this option`）。
+99. （2026-10-19，terminu 通知 terminu-go v0.2.1（tdp v0.8.2）發版，這一輪最後一次升級）改 PIN 時在 `NEW PIN` 的灰點上直接 `Enter`（保留舊的）結束整串，`CURRENT PIN` 一起收掉（LK17，lib 的 `PasswordInput.Unchanged`）；`?` 的「每一列」長說明在右欄折行，讀得完（LK18，user 定 A，lib 做，locku 的字不改）。tdp v0.8.2 的清單欄寬（`Column.Shrink`）locku 用不到：`[1]` 沒有表頭、只有一欄。順手：`[2]` 上停用的列（例：沒有檔案時的 `activate`）`Enter` 照樣登記 locku 自己的說明、畫成停用色（tdp M6：說明維持原本那句；之前是 lib 的 `this option`）。同日再升 terminu-go v0.2.2（tdp v0.8.3）：單行輸入框太長的說明列折行、清單框邊那一欄照它的截法加 `…`，都是 lib 的，locku 的程式不用改。
 
 ## 11. 待決清單
 
