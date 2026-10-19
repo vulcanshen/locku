@@ -4,9 +4,9 @@
 > 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp D3）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98）** lib 是 v0.2.0、照 [tdp v0.8.1](https://github.com/vulcanshen/terminu/tree/v0.8.1)，鎖定畫面的 PIN 框也是 lib 的。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
-> 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§3.2、ux §2.3）、預覽、整合寫什麼檔。
+> 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框在 lib 的框之外 locku 自己加的（§3.2、ux §2.3）、預覽、整合寫什麼檔。
 
 ---
 
@@ -239,23 +239,26 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。locku 自己畫、照 lib 的畫法（lib 的 input 只能從它的 App 開，LK1；2026-10-18）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：留白、點點、空一列、錯誤列（Red，置中）、留白，沒有說明列——要輸入什麼由標題講（2026-10-19，tdp S36；2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
-| PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
+| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。lib 的 `PasswordInput`，開在 lib 的 App 上，板子是它的畫布（`App.Canvas`；2026-10-19，LK1；2026-10-18 到 10-19 是 locku 照 lib 的畫法自己畫的）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：兩列留白、點點（正中間那列）、空一列、錯誤列（Red，置中），沒有說明列——要輸入什麼由標題講（tdp S36；2026-10-19 自己畫的那一版是留白、點點、空一列、錯誤列、留白，2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
+| PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央（lib 把框畫在空白的畫布上，locku 切出框的那一塊，2026-10-19）、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
 四個狀態，框的大小都不變：
 
 ```
 ┏━ UNLOCK━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     idle：層色；沒有說明列
 ┃                                           ┃
-┃                 ● ● ● █                   ┃     點點；游標在下一顆的位置
+┃                                           ┃
+┃                 ● ● ● █                   ┃     點點在正中間那列；游標在下一顆的位置
 ┃                                           ┃
 ┃                                           ┃     錯誤列，空白
-┃                                           ┃
 ┗━ Enter:unlock Backspace:clear Esc:cancel ━┛
 
-┃                 wrong PIN                 ┃     wrong：1 秒吞掉所有鍵、點點清空、hint 拿掉；錯誤留到下一次 Enter
-┃             try again in 27 s             ┃     lockout：倒數，吞掉 Esc 以外的鍵，hint 只剩 Esc:cancel
-┃     PIN can't have control characters     ┃     值裡有貼上的控制字元：不比對、不算一次連錯，點點留著
+┃                 wrong PIN                 ┃     wrong：1 秒吞掉所有鍵、點點清空；錯誤留到下一次 Enter
+┃             try again in 27 s             ┃     lockout：倒數，吞掉 Esc 以外的鍵（lib 的 PausedUntil）；點點留到冷卻結束才清
+┃     PIN can't have control characters     ┃     值裡有貼上的控制字元：不比對、不算一次連錯，點點留著（lib 擋的）
+
+hint 一直是 lib 的三組（2026-10-19 起）：tdp M6 讓 hint 只列現在按得了的鍵是 app 可以選的，lib 的框一律全列；2026-10-19 以前
+wrong 的那一秒拿掉 hint、lockout 只剩 `Esc:cancel`。
 ```
 
 - `Backspace` 一次清掉打的全部（components/input/password；2026-10-17 以前一次刪一字）。

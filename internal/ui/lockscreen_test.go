@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/vulcanshen/locku/internal/config"
@@ -16,7 +17,8 @@ import (
 
 // A lock at a fixed moment, sized 80×24, with pin set (or none when ""),
 // showing a plain medium clock — HH MM in the tall face, no date —
-// whatever the saver's defaults are today.
+// whatever the saver's defaults are today; the box does not time out but
+// where a test says so.
 // The status row's user@host is pinned for every test here: the row is
 // clipped to the terminal's width, and the machine's own name decided
 // whether the words a test looks for were still on it (GitHub's macOS
@@ -26,13 +28,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-func testLock(t *testing.T, pin string, tweak func(*config.Config)) LockModel {
+func testLock(t *testing.T, pin string, tweak func(*config.Config)) *LockModel {
 	t.Helper()
 	// No file: the lock keeps the hash it was made with (the file is
 	// read at every key, when there is one).
 	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	cfg := config.Default()
 	cfg.Profiles[0].Size, cfg.Profiles[0].Font, cfg.Profiles[0].Time, cfg.Profiles[0].Date = "medium", "3x7", "HH MM", "off"
+	cfg.PINPromptTimeout = 0
 	if pin != "" {
 		h, err := bcrypt.GenerateFromPassword([]byte(pin), bcrypt.MinCost)
 		if err != nil {
@@ -56,18 +59,90 @@ var (
 	keyEsc   = tea.KeyMsg{Type: tea.KeyEsc}
 )
 
-// openPrompt presses a key and runs the opening animation through.
-func openPrompt(t *testing.T, m LockModel) LockModel {
+// drive hands msg to m as Bubble Tea would, through Update, and feeds the
+// messages its commands give back in again — the box's animation among
+// them — leaving a timer slower than a frame's; it reports whether the
+// lock quit.
+func drive(m *LockModel, msg tea.Msg) bool {
+	_, cmd := m.Update(msg)
+	return runCmd(m, cmd)
+}
+
+func runCmd(m *LockModel, cmd tea.Cmd) bool {
+	if cmd == nil {
+		return false
+	}
+	ch := make(chan tea.Msg, 1)
+	go func() { ch <- cmd() }()
+	select {
+	case msg := <-ch:
+		switch msg := msg.(type) {
+		case nil:
+		case tea.QuitMsg:
+			return true
+		case tea.BatchMsg:
+			quit := false
+			for _, c := range msg {
+				quit = runCmd(m, c) || quit
+			}
+			return quit
+		default:
+			return drive(m, msg)
+		}
+	case <-time.After(100 * time.Millisecond):
+	}
+	return false
+}
+
+// press types keys, each a message: "Enter", "Esc", "Backspace" by name,
+// anything else as its characters; it reports whether the lock quit.
+func press(m *LockModel, keys ...string) bool {
+	quit := false
+	for _, k := range keys {
+		msg := keyRunes(k)
+		switch k {
+		case "Enter":
+			msg = keyEnter
+		case "Esc":
+			msg = keyEsc
+		case "Backspace":
+			msg = tea.KeyMsg{Type: tea.KeyBackspace}
+		}
+		quit = drive(m, msg) || quit
+	}
+	return quit
+}
+
+// typed types pin a character at a time, then Enter.
+func typed(m *LockModel, pin string) bool {
+	for _, r := range pin {
+		press(m, string(r))
+	}
+	return press(m, "Enter")
+}
+
+// screen is the lock as the terminal shows it, without its colours.
+func screen(m *LockModel) string { return ansi.Strip(m.View()) }
+
+// dots is how many characters the box holds.
+func dots(m *LockModel) int { return strings.Count(screen(m), "●") }
+
+// pastHold lets the second of "wrong" go by on the lock's clock.
+func pastHold(m *LockModel) {
+	now := m.now()
+	m.now = func() time.Time { return now.Add(wrongHold) }
+	drive(m, heldOverMsg{})
+}
+
+// openPrompt presses a key and lets the box open.
+func openPrompt(t *testing.T, m *LockModel) *LockModel {
 	t.Helper()
-	m, _ = m.step(keyRunes("x"))
-	for i := 0; i < openFrames+1 && !m.prompt.anim.isInteractive(); i++ {
-		m, _ = m.step(AnimTickMsg{})
+	press(m, "x")
+	if v := screen(m); !m.boxUp || !strings.Contains(v, "┏") {
+		t.Fatalf("the box did not open:\n%s", v)
 	}
-	if !m.prompt.anim.isInteractive() {
-		t.Fatal("prompt did not open")
-	}
-	if len(m.prompt.value) != 0 {
-		t.Fatalf("the key that opened the prompt counted as input: %q", string(m.prompt.value))
+	if dots(m) != 0 {
+		t.Fatal("the key that opened the box counted as input")
 	}
 	return m
 }
@@ -102,96 +177,150 @@ func TestNoPINAnyKeyEnds(t *testing.T) {
 	}
 }
 
+// The box is the lib's password box in its unlock look (tdp S36, LK1):
+// UNLOCK, no prompt row, seven rows with the frame, as wide as the longest
+// PIN's dots and the hint ask, in the middle of the board.
+func TestTheBoxIsTheLibs(t *testing.T) {
+	for _, icons := range []int{1, 2} {
+		withIcons(t, icons)
+		m := openPrompt(t, testLock(t, "1234", nil))
+		var box []string
+		for _, l := range strings.Split(m.View(), "\n") {
+			if p := ansi.Strip(l); strings.ContainsAny(p, "┏┃┗") {
+				box = append(box, l)
+			}
+		}
+		if len(box) != 7 || !strings.Contains(ansi.Strip(box[6]), "Enter:unlock Backspace:clear Esc:cancel") {
+			t.Fatalf("icons %d: the box:\n%s", icons, screen(m))
+		}
+		at := (80 - pinBoxW) / 2
+		for _, r := range []string{"┏", "┃", "┗"} {
+			if l := line(m.View(), r); dispW(l[:strings.Index(l, r)]) != at {
+				t.Errorf("icons %d: the box's %s is at %d, want %d", icons, r, dispW(l[:strings.Index(l, r)]), at)
+			}
+		}
+	}
+}
+
+// pinBoxW is the box's width: the hint, Enter:unlock Backspace:clear
+// Esc:cancel, and three cells on either side.
+const pinBoxW = 45
+
 func TestWrongThenRight(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
-	m, _ = m.step(keyRunes("0000"))
-	m, cmd := m.step(keyEnter)
-	if quits(cmd) || m.prompt.state != promptWrong || len(m.prompt.value) != 0 {
-		t.Fatalf("wrong PIN: quit=%v state=%v value=%q", quits(cmd), m.prompt.state, string(m.prompt.value))
+	if quit := typed(m, "0000"); quit || !strings.Contains(screen(m), "wrong PIN") || dots(m) != 0 || m.failures != 1 {
+		t.Fatalf("wrong PIN: quit=%v dots=%d failures=%d\n%s", quit, dots(m), m.failures, screen(m))
 	}
 	// Everything is swallowed for the second, Esc included.
-	m, _ = m.step(keyRunes("1"))
-	m, _ = m.step(keyEsc)
-	if len(m.prompt.value) != 0 || !m.prompt.anim.owns() {
+	press(m, "1", "Esc")
+	if dots(m) != 0 || !m.boxUp {
 		t.Fatal("input during the wrong second was not swallowed")
 	}
-	m, _ = m.step(wrongOverMsg{gen: m.promptGen})
-	if m.prompt.state != promptIdle {
-		t.Fatal("not back to idle after the second")
-	}
-	m, _ = m.step(keyRunes("1234"))
-	_, cmd = m.step(keyEnter)
-	if !quits(cmd) {
+	pastHold(m)
+	if !typed(m, "1234") {
 		t.Error("the right PIN must end the process")
+	}
+}
+
+// Backspace clears the whole PIN (components/input/password); a pasted
+// control character is refused, and is not a wrong PIN; an Alt
+// combination types nothing (components/input/README).
+func TestTheBoxsKeys(t *testing.T) {
+	m := openPrompt(t, testLock(t, "1234", nil))
+	press(m, "1", "2", "Backspace")
+	if dots(m) != 0 {
+		t.Errorf("Backspace left %d", dots(m))
+	}
+	drive(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("12\n34"), Paste: true})
+	press(m, "Enter")
+	if v := screen(m); !strings.Contains(v, "PIN can't have control characters") || m.failures != 0 {
+		t.Errorf("a pasted line break: failures %d\n%s", m.failures, v)
+	}
+	press(m, "Backspace")
+	drive(m, tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1"), Alt: true})
+	if dots(m) != 0 {
+		t.Error("Alt-1 typed")
+	}
+}
+
+// Ctrl-C does not leave the lock, on the board, in the box, or before the
+// terminal's size is known: the lock ends by the PIN alone (§1.2).
+func TestCtrlCDoesNotLeave(t *testing.T) {
+	ctrlC := tea.KeyMsg{Type: tea.KeyCtrlC}
+	m := testLock(t, "1234", nil)
+	if drive(m, ctrlC) || !m.boxUp {
+		t.Fatal("Ctrl-C on the board must open the box, as any key")
+	}
+	if drive(m, ctrlC) || drive(m, ctrlC) || !m.boxUp {
+		t.Error("Ctrl-C in the box left it")
+	}
+	cold := NewLock(m.cfg, "")
+	if drive(cold, ctrlC) || drive(cold, ctrlC) {
+		t.Error("Ctrl-C before the size left")
 	}
 }
 
 func TestEscBackToSaverLeavesTheBoardTicking(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
 	gen := m.tickGen
-	m, _ = m.step(keyRunes("12"))
-	m, cmd := m.step(keyEsc)
-	if m.prompt.anim.phase != animClosing || cmd == nil {
-		t.Fatal("Esc did not close the prompt")
+	press(m, "1", "2", "Esc")
+	if m.boxUp || strings.Contains(screen(m), "UNLOCK") {
+		t.Fatal("Esc did not close the box")
 	}
 	if m.tickGen != gen {
 		t.Error("the board's ticks were restarted on close: they never stopped")
 	}
-	if len(m.prompt.value) != 0 {
+	if openPrompt(t, m); dots(m) != 0 {
 		t.Error("input survived Esc")
 	}
 }
 
+// The cooling-off (§4.4): the box counts it down on its error row, every
+// key but Esc swallowed (tdp S37); it is there again when the box opens
+// again, and once it is over the count starts again, the box taking a PIN.
+// On the clock: the lib counts on it.
 func TestLockout(t *testing.T) {
-	m := openPrompt(t, testLock(t, "1234", func(c *config.Config) { c.WrongPINAttempts = 2; c.WrongPINCooldown = 30 }))
-	m, _ = m.step(keyRunes("0000"))
-	m, _ = m.step(keyEnter)
-	m, _ = m.step(wrongOverMsg{gen: m.promptGen})
-	m, _ = m.step(keyRunes("0000"))
-	m, _ = m.step(keyEnter)
-	if m.prompt.state != promptLockout || !m.lockoutUntil.Equal(at.Add(30*time.Second)) {
-		t.Fatalf("no lockout after 2 wrong: state=%v until=%v", m.prompt.state, m.lockoutUntil)
+	m := testLock(t, "1234", func(c *config.Config) { c.WrongPINAttempts = 2; c.WrongPINCooldown = 1 })
+	m.now = time.Now
+	openPrompt(t, m)
+	typed(m, "0000")
+	m.held = time.Time{}
+	typed(m, "0000")
+	if !m.lockedOut() || !strings.Contains(screen(m), "try again in 1 s") {
+		t.Fatalf("no cooling-off after 2 wrong:\n%s", screen(m))
 	}
-	if !strings.Contains(m.View(), "try again in 30 s") {
-		t.Errorf("countdown missing:\n%s", m.View())
+	if typed(m, "1234") || dots(m) == 0 && !m.lockedOut() {
+		t.Fatal("a PIN got through the cooling-off")
 	}
-	// Keys are swallowed; Esc still goes back; the lockout survives a reopen.
-	m, _ = m.step(keyRunes("1234"))
-	m, cmd := m.step(keyEnter)
-	if quits(cmd) || len(m.prompt.value) != 0 {
-		t.Fatal("a PIN got through the lockout")
+	press(m, "Esc")
+	if openPrompt(t, m); !strings.Contains(screen(m), "try again in") {
+		t.Fatalf("opening the box again forgot the cooling-off:\n%s", screen(m))
 	}
-	m, _ = m.step(keyEsc)
-	for i := 0; i < openFrames+1 && m.prompt.anim.isActive(); i++ {
-		m, _ = m.step(AnimTickMsg{})
+	time.Sleep(1100 * time.Millisecond)
+	drive(m, lockoutOverMsg{})
+	if m.failures != 0 || m.lockedOut() || dots(m) != 0 {
+		t.Fatalf("the cooling-off did not end: failures %d, dots %d", m.failures, dots(m))
 	}
-	m = openPrompt(t, m)
-	if m.prompt.state != promptLockout {
-		t.Fatal("reopening the prompt forgot the lockout")
-	}
-	// When the clock passes the deadline the count starts over.
-	m.now = func() time.Time { return at.Add(31 * time.Second) }
-	m, _ = m.step(lockoutTickMsg{gen: m.promptGen})
-	if m.prompt.state != promptIdle || m.failures != 0 {
-		t.Fatalf("lockout did not end: state=%v failures=%d", m.prompt.state, m.failures)
+	if !typed(m, "1234") {
+		t.Error("the right PIN after the cooling-off must end the process")
 	}
 }
 
 func TestPromptTimeoutClosesAndKeysRearmIt(t *testing.T) {
-	m := openPrompt(t, testLock(t, "1234", nil))
-	gen := m.promptGen
-	m, _ = m.step(keyRunes("1"))
-	if m.promptGen == gen {
+	m := openPrompt(t, testLock(t, "1234", func(c *config.Config) { c.PINPromptTimeout = 30 }))
+	gen := m.idleGen
+	press(m, "1")
+	if m.idleGen == gen {
 		t.Fatal("a key must restart the idle timer")
 	}
-	// The stale timer is ignored; the live one closes the prompt.
-	m, _ = m.step(promptIdleMsg{gen: gen})
-	if !m.prompt.anim.owns() {
-		t.Fatal("a stale timeout closed the prompt")
+	// The stale timer is ignored; the live one closes the box.
+	drive(m, boxIdleMsg{gen: gen})
+	if !m.boxUp {
+		t.Fatal("a stale timeout closed the box")
 	}
-	m, _ = m.step(promptIdleMsg{gen: m.promptGen})
-	if m.prompt.anim.phase != animClosing {
-		t.Fatal("the live timeout did not close the prompt")
+	drive(m, boxIdleMsg{gen: m.idleGen})
+	if m.boxUp || strings.Contains(screen(m), "UNLOCK") {
+		t.Fatal("the live timeout did not close the box")
 	}
 }
 
@@ -210,7 +339,7 @@ func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 	if cmd == nil || m.rev == nil {
 		t.Fatal("the tick under the prompt did not move the board")
 	}
-	if !m.prompt.anim.owns() || !strings.Contains(m.View(), "UNLOCK") {
+	if !m.boxUp || !strings.Contains(screen(m), "UNLOCK") {
 		t.Error("the prompt went down with the tick")
 	}
 }
@@ -291,7 +420,7 @@ func TestViewIsExactlyTheTerminal(t *testing.T) {
 func TestResizeRedrawsWhole(t *testing.T) {
 	// The default saver asks for medium: HH MM at 2 is 36 px, which 80
 	// columns (38 px) hold.
-	scale := func(m LockModel) int {
+	scale := func(m *LockModel) int {
 		if len(m.layout.blocks) == 0 {
 			return 0
 		}
@@ -348,46 +477,33 @@ func TestTickRevealsOnlyTheChange(t *testing.T) {
 // no longer does; a file gone bad meanwhile changes nothing; a file
 // with no PIN opens at any key.
 func TestLockReadsTheFilesPINAtEveryKey(t *testing.T) {
-	m := testLock(t, "1234", nil)
-	path := filepath.Join(os.Getenv("LOCKU__CONFIG"), "config.yaml")
 	cfg := config.Default()
 	if err := cfg.SetPIN("9999"); err != nil {
 		t.Fatal(err)
 	}
-	if err := config.SaveFile(path, cfg); err != nil {
-		t.Fatal(err)
+	// lock is a lock made with 1234, its file then written by write.
+	lock := func(write func(file string) error) *LockModel {
+		m := testLock(t, "1234", nil)
+		if err := write(filepath.Join(os.Getenv("LOCKU__CONFIG"), "config.yaml")); err != nil {
+			t.Fatal(err)
+		}
+		return m
 	}
-	m = openPrompt(t, m)
-	for _, r := range "1234" {
-		m, _ = m.step(keyRunes(string(r)))
-	}
-	m, cmd := m.step(tea.KeyMsg{Type: tea.KeyEnter})
-	if quits(cmd) || m.prompt.state != promptWrong {
+	reset := func(file string) error { return config.SaveFile(file, cfg) }
+	if m := openPrompt(t, lock(reset)); typed(m, "1234") || !strings.Contains(screen(m), "wrong PIN") {
 		t.Fatal("the old PIN must not open the lock once the file holds a new one")
 	}
-	m, _ = m.step(wrongOverMsg{gen: m.promptGen})
-	open := m // the prompt, empty, ready for a PIN
-	typed := func(m LockModel, pin string) (LockModel, tea.Cmd) {
-		for _, r := range pin {
-			m, _ = m.step(keyRunes(string(r)))
-		}
-		return m.step(tea.KeyMsg{Type: tea.KeyEnter})
-	}
-	if _, cmd := typed(open, "9999"); !quits(cmd) {
+	if !typed(openPrompt(t, lock(reset)), "9999") {
 		t.Fatal("the new PIN must open the lock")
 	}
 	// A file gone bad keeps the hash the lock has.
-	if err := os.WriteFile(path, []byte("pin_hash: [not a hash\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, cmd := typed(open, "9999"); !quits(cmd) {
+	bad := func(file string) error { return os.WriteFile(file, []byte("pin_hash: [not a hash\n"), 0o600) }
+	if !typed(openPrompt(t, lock(bad)), "1234") {
 		t.Fatal("a file gone bad must change nothing")
 	}
 	// A file with no PIN: any key.
-	if err := config.SaveFile(path, config.Default()); err != nil {
-		t.Fatal(err)
-	}
-	if _, cmd := open.step(keyRunes("x")); !quits(cmd) {
+	none := func(file string) error { return config.SaveFile(file, config.Default()) }
+	if !press(lock(none), "x") {
 		t.Fatal("a file with no PIN opens at any key")
 	}
 }

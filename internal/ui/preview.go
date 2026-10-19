@@ -21,7 +21,7 @@ func RunPreviewWord(cfg config.Config, o custom.Outcome) error {
 	return runPreview(newLock(cfg, "", true).withWord(o.Word, o.Note))
 }
 
-func runPreview(m LockModel) error {
+func runPreview(m *LockModel) error {
 	_, err := tea.NewProgram(m, tea.WithAltScreen(), tea.WithOutput(ScreenOutput{os.Stdout})).Run()
 	return err
 }

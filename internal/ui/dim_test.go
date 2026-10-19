@@ -59,15 +59,3 @@ func line(v, want string) string {
 	}
 	return ""
 }
-
-// The lock fades with the lib's dimming: c × 0.45 + base × 0.55, a
-// background as a foreground, never lighter (components/color).
-func TestDimANSI(t *testing.T) {
-	got := dimANSI("\x1b[38;2;137;180;250mA\x1b[48;2;0;0;0mB")
-	if !near(fgRe, got, [3]int{78, 98, 138}) {
-		t.Errorf("blue: %q", got)
-	}
-	if !near(bgRe, got, [3]int{0, 0, 0}) {
-		t.Errorf("black must not lighten: %q", got)
-	}
-}

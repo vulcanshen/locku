@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -205,7 +206,7 @@ func TestEveryRowIsTheTerminal(t *testing.T) {
 	}
 	for _, icons := range []int{1, 2} {
 		withIcons(t, icons)
-		for _, sz := range [][2]int{{100, 30}, {80, 40}, {59, 20}, {40, 12}, {24, 8}} {
+		for _, sz := range [][2]int{{100, 30}, {80, 40}, {59, 20}, {minW, minH}} {
 			for name, step := range steps {
 				d := newDriver(t, testConfig(), sz[0], sz[1])
 				step(d)
@@ -221,6 +222,46 @@ func TestEveryRowIsTheTerminal(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// Under the least size only the name and what it needs are drawn, every
+// row the terminal's width down to 1 × 1; no key acts but Ctrl-C twice, and
+// the screen comes back as it was as the terminal grows (tdp L1, E5).
+func TestUnderTheLeastSize(t *testing.T) {
+	for _, icons := range []int{1, 2} {
+		withIcons(t, icons)
+		for _, sz := range [][2]int{{minW - 1, minH}, {minW, minH - 1}, {38, 3}, {24, 8}, {10, 2}, {5, 1}, {1, 1}} {
+			d := newDriver(t, testConfig(), sz[0], sz[1])
+			frame := d.app.Frame()
+			if len(frame) != sz[1] {
+				t.Errorf("icons %d, %v: %d rows", icons, sz, len(frame))
+			}
+			for r, l := range frame {
+				if w := terminu.Width(l); w != sz[0] {
+					t.Errorf("icons %d, %v: row %d is %d wide", icons, sz, r, w)
+					break
+				}
+			}
+			if v := d.screen(); sz[0] >= 34 && sz[1] >= 2 && !strings.Contains(v, "needs a terminal of at least 40×15") {
+				t.Errorf("icons %d, %v: no size asked for:\n%s", icons, sz, v)
+			}
+		}
+	}
+	d := newDriver(t, testConfig(), 30, 10)
+	d.press("q", "Space", "Tab")
+	if d.quit || d.app.Screen().Focused() != d.s.p1 {
+		t.Error("a key acted under the least size")
+	}
+	d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+	if !strings.Contains(d.screen(), "PROFILES") {
+		t.Errorf("the screen did not come back:\n%s", d.screen())
+	}
+	d.send(tea.WindowSizeMsg{Width: 30, Height: 10})
+	d.send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	d.send(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if !d.quit {
+		t.Error("Ctrl-C twice did not leave")
 	}
 }
 
@@ -295,13 +336,20 @@ func TestChoicesAreWrittenAtOnce(t *testing.T) {
 }
 
 // Rename follows the active profile; a taken name is refused in the box.
+// New and Duplicate offer a free name in grey, Enter on it taking it, and
+// take the user to what they made: the cursor on it, the focus in [2]
+// (tdp S6, K3, S19).
 func TestRenameDuplicateNewDelete(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(profileID("clock")).press("r", "Tab").typeText("x").press("Enter")
 	if cfg := d.saved(); cfg.Index("clockx") != 0 || cfg.Profile != "clockx" {
 		t.Errorf("renamed: %v, active %q", cfg.Index("clockx"), cfg.Profile)
 	}
-	d.press("D").typeText("clock2").press("Enter")
+	d.press("D")
+	if !strings.Contains(d.screen(), "clockx2") {
+		t.Errorf("no free name offered:\n%s", d.screen())
+	}
+	d.typeText("clock2").press("Enter")
 	if !strings.Contains(d.screen(), "Name is taken") {
 		t.Errorf("a taken name is refused in the box:\n%s", d.screen())
 	}
@@ -309,20 +357,33 @@ func TestRenameDuplicateNewDelete(t *testing.T) {
 	if d.saved().Index("clock9") < 0 {
 		t.Error("the copy was not made")
 	}
-	if r, _ := d.s.side.Current(); r.ID != profileID("clock9") {
-		t.Errorf("the cursor goes to the copy: %q", r.ID)
+	if r, _ := d.s.side.Current(); r.ID != profileID("clock9") || d.app.Screen().Focused() != d.s.p2 {
+		t.Errorf("the cursor goes to the copy, the focus to [2]: %q", r.ID)
 	}
-	d.on(saverID(saver.KindSnake)).press("n").typeText("s2").press("Enter")
-	if i := d.saved().Index("s2"); i < 0 || d.saved().Profiles[i].Saver != saver.KindSnake {
-		t.Error("the new snake profile was not made")
+	d.on(saverID(saver.KindSnake)).press("n", "Enter")
+	if i := d.saved().Index("snake2"); i < 0 || d.saved().Profiles[i].Saver != saver.KindSnake {
+		t.Error("the new snake profile was not made under the name offered")
 	}
-	d.on(profileID("s2")).press("X")
-	if !strings.Contains(d.screen(), "Delete s2?") {
+	if r, _ := d.s.side.Current(); r.ID != profileID("snake2") || d.app.Screen().Focused() != d.s.p2 {
+		t.Errorf("the cursor goes to the new profile, the focus to [2]: %q", r.ID)
+	}
+	// From the Space menu: Esc on the box comes back to the menu, and the
+	// profile made closes it (tdp T1).
+	d.press("1").on(saverID(saver.KindSnake)).press("Space", "n", "Esc")
+	if !strings.Contains(d.screen(), "Enter:run Esc:close") {
+		t.Errorf("Esc on the name goes back to the menu:\n%s", d.screen())
+	}
+	d.press("n", "Enter")
+	if v := d.screen(); strings.Contains(v, "Enter:run Esc:close") || d.saved().Index("snake3") < 0 || d.app.Screen().Focused() != d.s.p2 {
+		t.Errorf("made from the menu, the menu closes and the focus is in [2]:\n%s", v)
+	}
+	d.press("1").on(profileID("snake2")).press("X")
+	if !strings.Contains(d.screen(), "Delete snake2?") {
 		t.Fatalf("Delete asks first:\n%s", d.screen())
 	}
 	d.press("Enter")
-	if d.saved().Index("s2") >= 0 {
-		t.Error("s2 was not deleted")
+	if d.saved().Index("snake2") >= 0 {
+		t.Error("snake2 was not deleted")
 	}
 	// The active one cannot be deleted: there, dimmed, and X does nothing.
 	d.on(profileID("clockx")).press("X")
@@ -332,7 +393,9 @@ func TestRenameDuplicateNewDelete(t *testing.T) {
 }
 
 // The PIN: set with a confirmation, changed after the current one, and
-// removed with Backspace on its grey dots (components/input/password).
+// removed with Backspace on its grey dots (components/input/password). Each
+// step is a box over the one before, Esc one step back, and the last one
+// done closes them all (tdp F1, F4, T1).
 func TestPINSetChangeRemove(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(preferenceID).toField("PIN", 0).press("Enter").typeText("12").press("Enter")
@@ -343,10 +406,18 @@ func TestPINSetChangeRemove(t *testing.T) {
 	if !strings.Contains(d.screen(), "not the new PIN") {
 		t.Errorf("a different confirmation is refused:\n%s", d.screen())
 	}
-	d.press("Backspace").typeText("1234").press("Enter")
+	d.press("Esc")
+	if v := d.screen(); strings.Contains(v, "CONFIRM PIN") || !strings.Contains(v, "NEW PIN") {
+		t.Errorf("Esc on CONFIRM PIN goes back to NEW PIN:\n%s", v)
+	}
+	d.press("Enter").typeText("1234").press("Enter")
 	if !d.saved().CheckPIN("1234") {
 		t.Fatal("the PIN was not set")
 	}
+	if v := d.screen(); strings.Contains(v, "PIN━") || !strings.Contains(v, "PIN set") {
+		t.Errorf("the steps close together, and a Success toast says so:\n%s", v)
+	}
+	d.press("Esc") // the toast, which Esc takes first (tdp K4)
 	d.press("Enter").typeText("0000").press("Enter")
 	if !strings.Contains(d.screen(), "wrong PIN") {
 		t.Errorf("a wrong current PIN is refused:\n%s", d.screen())
@@ -355,18 +426,33 @@ func TestPINSetChangeRemove(t *testing.T) {
 	if !d.saved().CheckPIN("1234") {
 		t.Error("Enter on the grey dots must keep the PIN")
 	}
+	// TODO(lib LK17): Enter on the grey dots closes NEW PIN alone, as no
+	// change; CURRENT PIN is under it still, and Esc takes it away.
+	d.press("Esc")
 	d.press("Enter").typeText("1234").press("Enter", "Backspace", "Enter")
 	if d.saved().HasPIN() {
 		t.Error("Backspace, then Enter, must leave no PIN")
 	}
+	if v := d.screen(); strings.Contains(v, "PIN━") {
+		t.Errorf("the steps close together:\n%s", v)
+	}
 }
 
-// A number box writes its number; a switch flips in place (preference).
+// A number box writes its number, its unit under it, and empty is the
+// default; a switch flips in place (preference; tdp S7, S47).
 func TestNumbersAndSwitches(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
-	d.on(preferenceID).toField("pin_prompt_timeout", 0).press("Enter", "Backspace").typeText("45").press("Enter")
+	d.on(preferenceID).toField("pin_prompt_timeout", 0).press("Enter")
+	if !regexp.MustCompile(`┃ +seconds +┃`).MatchString(d.screen()) {
+		t.Errorf("no unit under the value:\n%s", d.screen())
+	}
+	d.press("Backspace").typeText("45").press("Enter")
 	if got := d.saved().PINPromptTimeout; got != 45 {
 		t.Errorf("pin_prompt_timeout %d", got)
+	}
+	d.press("Enter", "Backspace", "Enter")
+	if got := d.saved().PINPromptTimeout; got != config.Default().PINPromptTimeout {
+		t.Errorf("empty is the default: pin_prompt_timeout %d", got)
 	}
 	was := d.saved().ShowStatus
 	d.toField("show_status", 0).press("Enter")
@@ -407,10 +493,13 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 40)
 	d.on(preferenceID).press("2", "?")
 	v := d.screen()
-	for _, s := range []string{"Edit — what the lock asks for", "Preview — the lock, showing the active profile", "WHAT EACH ROW IS", "wrong_pin_attempt_cooldown"} {
+	for _, s := range []string{"Edit — what the lock asks for", "Preview — the lock, showing the active profile", "WHAT EACH ROW IS", "WRONG_PIN_ATTEMPT_COOLDOWN  seconds the cooldown lasts"} {
 		if !strings.Contains(v, s) {
 			t.Errorf("no %q in preference's keys:\n%s", s, v)
 		}
+	}
+	if strings.Index(v, "WHAT EACH ROW IS") > strings.Index(v, "ITEM OPERATION") {
+		t.Errorf("what each row is comes first (tdp S34):\n%s", v)
 	}
 	d.press("Esc").on(profileID("clock")).press("?")
 	if strings.Contains(d.screen(), "WHAT EACH ROW IS") {
@@ -457,8 +546,9 @@ func TestMenuStaysUnderWhatItOpens(t *testing.T) {
 	}
 }
 
-// A write that fails opens an error popup with the whole of it, and the
-// config is as it was (components/dialog/toast, dialog/note).
+// A write that fails opens an error popup with the whole of it over the box
+// the value came from, which keeps it, and the config is as it was
+// (components/dialog/toast, dialog/note, layout/popup).
 func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	dir := config.Dir()
@@ -467,11 +557,31 @@ func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 	}
 	t.Cleanup(func() { os.Chmod(dir, 0o700) })
 	d.on(profileID("clock2")).press("r", "Tab").typeText("x").press("Enter")
-	if v := d.screen(); !strings.Contains(v, "WRITE FAILED") {
+	if v := d.screen(); !strings.Contains(v, "RENAME FAILED: clock2") {
 		t.Errorf("an error popup:\n%s", v)
+	}
+	d.press("Esc")
+	if v := d.screen(); !strings.Contains(v, "RENAME: clock2") || !strings.Contains(v, "clock2x") {
+		t.Errorf("the box is there with the value in it:\n%s", v)
 	}
 	if d.s.cfg.Index("clock2x") >= 0 {
 		t.Error("the change stayed after the write failed")
+	}
+}
+
+// With no file set, a tool's config file path box offers the usual one in
+// grey, and Enter takes it (tdp S6).
+func TestConfigPathOffersTheUsualFile(t *testing.T) {
+	cfg := testConfig()
+	cfg.Tmux.Conf = ""
+	d := newDriver(t, cfg, 100, 30)
+	d.on(toolID("tmux")).toField("config file path", 0).press("Enter")
+	if !strings.Contains(d.screen(), "~/.tmux.conf") {
+		t.Errorf("no usual file offered:\n%s", d.screen())
+	}
+	d.press("Enter")
+	if got := d.saved().Tmux.Conf; got != "~/.tmux.conf" {
+		t.Errorf("config file path %q", got)
 	}
 }
 

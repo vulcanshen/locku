@@ -25,17 +25,15 @@ func withWidths(t *testing.T, icon, powerline int) {
 	t.Cleanup(func() { terminu.SetIconWidth(wasIcon, wasPowerline) })
 }
 
-// A box drawn for a screen larger than the one it lands on — the terminal
-// made smaller before the box is measured again — starts from the top
-// left and is cut at the screen's edges, never past them and never a
-// panic: wider, higher and both (tdp E5).
+// A box opened on a screen larger than the one it then lands on — the
+// terminal made smaller under it — is cut at the screen's edges, never past
+// them and never a panic: wider, higher and both (tdp E5).
 func TestPromptLargerThanTheScreen(t *testing.T) {
 	for _, w := range [][2]int{{1, 1}, {2, 2}} {
 		withWidths(t, w[0], w[1])
-		for _, sz := range [][2]int{{30, 24}, {80, 5}, {12, 4}} {
+		for _, sz := range [][2]int{{30, 24}, {80, 5}, {12, 4}, {1, 1}} {
 			m := openPrompt(t, testLock(t, "1234", nil))
-			m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-			m.prompt.setSize(80, 24) // the box still the size it was measured at
+			m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
 			lines := strings.Split(m.View(), "\n")
 			if len(lines) != sz[1] {
 				t.Errorf("widths %v, %v: %d rows", w, sz, len(lines))
@@ -49,58 +47,41 @@ func TestPromptLargerThanTheScreen(t *testing.T) {
 	}
 }
 
-// The lock's PIN prompt alone, and the width a custom saver is handed
-// with it: the icon in its title counted (tdp D6).
+// The width a custom saver is handed with the box: the icon in its title
+// counted (tdp D6).
 func TestPromptBoxWithIcons(t *testing.T) {
 	withIcons(t, 2)
-	m := openPrompt(t, testLock(t, "1234", nil))
-	box := strings.Split(boxText(m.prompt, m.now()), "\n")
-	want := pinBoxW
-	for r, l := range box {
-		if dispW(l) != want {
-			t.Errorf("row %d is %d wide, want %d: %q", r, dispW(l), want, ansi.Strip(l))
-		}
-	}
-	// On the board it sits in the middle, as with icons one cell: every
-	// row being as wide is not enough — a row a column off to the right
-	// is as wide too.
-	at := (80 - want) / 2
-	for _, r := range []string{"┏", "┃", "┗"} {
-		if l := line(m.View(), r); dispW(l[:strings.Index(l, r)]) != at {
-			t.Errorf("the box's %s is at %d, want %d", r, dispW(l[:strings.Index(l, r)]), at)
-		}
-	}
 	cfg := testLock(t, "1234", nil).cfg
 	var widths []int
-	p := NewLockPrompt(cfg, "", 100, 30, func(_ string, w int) { widths = append(widths, w) }, Tries{})
-	var pm tea.Model = p
-	for i := 0; i < openFrames+1; i++ {
-		pm, _ = pm.(LockModel).Update(AnimTickMsg{})
-	}
+	var box string
+	p := NewLockPrompt(cfg, "", 100, 30, func(b string, w int) { box, widths = b, append(widths, w) }, Tries{})
+	runCmd(p, p.Init())
 	if len(widths) == 0 || widths[len(widths)-1] != pinBoxW {
 		t.Errorf("the box's width for the custom saver: %v, want %d", widths, pinBoxW)
 	}
+	for r, l := range strings.Split(box, "\n") {
+		if dispW(l) != pinBoxW {
+			t.Errorf("row %d is %d wide, want %d: %q", r, dispW(l), pinBoxW, ansi.Strip(l))
+		}
+	}
 }
 
-// On a lock a few rows high the PIN prompt is no higher than the screen
-// less two (tdp F7), its top border on the screen, and nothing of it past
-// the screen's edges, on the board and over a custom saver's program alike:
-// handed on whole, the rows past the bottom would land on the last one
+// On a lock a few rows high the box is no higher than the screen allows
+// (tdp F7), its top border on the screen, and nothing of it past the
+// screen's edges, on the board and over a custom saver's program alike
 // (tdp E5).
 func TestPromptOnATinyScreen(t *testing.T) {
 	for _, sz := range [][2]int{{20, 5}, {11, 4}} {
 		m := testLock(t, "1234", nil)
-		m, _ = m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
-		m = openPrompt(t, m)
+		m.step(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+		openPrompt(t, m)
 		if v := m.View(); !strings.Contains(v, "┏") || len(strings.Split(v, "\n")) != sz[1] {
 			t.Errorf("%v on the board:\n%s", sz, ansi.Strip(v))
 		}
 		var box string
 		var w int
-		var pm tea.Model = NewLockPrompt(m.cfg, "", sz[0], sz[1], func(b string, bw int) { box, w = b, bw }, Tries{})
-		for i := 0; i < openFrames+1; i++ {
-			pm, _ = pm.(LockModel).Update(AnimTickMsg{})
-		}
+		p := NewLockPrompt(m.cfg, "", sz[0], sz[1], func(b string, bw int) { box, w = b, bw }, Tries{})
+		runCmd(p, p.Init())
 		lines := strings.Split(box, "\n")
 		if len(lines) > sz[1] || !strings.Contains(lines[0], "┏") || w > sz[0] {
 			t.Errorf("%v over a custom saver: %d rows, %d wide, the top %q", sz, len(lines), w, ansi.Strip(lines[0]))

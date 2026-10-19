@@ -74,7 +74,9 @@ func (s *Settings) itemOf(id string) item {
 // values are (user, 2026-09-24) — the active profile is set on
 // preference › profile, or with [a], not with Enter.
 func (s *Settings) sideActions() []terminu.Action {
-	edit := terminu.Action{Key: "Enter", Label: "Edit", Desc: "its values, in [2]", Scope: terminu.ItemScope, Hint: "edit",
+	// Over to [2], the preview and Delete clear the Space menu they run from:
+	// a drill-down, the terminal handed over, the item gone (tdp T1).
+	edit := terminu.Action{Key: "Enter", Label: "Edit", Desc: "its values, in [2]", Scope: terminu.ItemScope, Hint: "edit", Clear: true,
 		ToDetails: func() bool { return true }}
 	switch s.cur.kind {
 	case kindSaver:
@@ -82,7 +84,7 @@ func (s *Settings) sideActions() []terminu.Action {
 		edit.Desc = "its defaults, in [2]"
 		return []terminu.Action{
 			edit,
-			{Key: "p", Label: "preview", Desc: "the lock, showing this saver with its defaults", Scope: terminu.ItemScope,
+			{Key: "p", Label: "preview", Desc: "the lock, showing this saver with its defaults", Scope: terminu.ItemScope, Clear: true,
 				Do: func() tea.Cmd { return s.previewSaver(kind) }},
 			s.newAction(kind, terminu.ItemScope),
 		}
@@ -100,17 +102,17 @@ func (s *Settings) sideActions() []terminu.Action {
 		{Key: "a", Label: "activate", Desc: "the lock shows this profile from now on", Scope: terminu.ItemScope,
 			Disabled: func() bool { return active },
 			Do:       func() tea.Cmd { return s.change(func() { s.cfg.Profile = name }) }},
-		{Key: "p", Label: "preview", Desc: "the lock, showing this profile", Scope: terminu.ItemScope,
+		{Key: "p", Label: "preview", Desc: "the lock, showing this profile", Scope: terminu.ItemScope, Clear: true,
 			Do: func() tea.Cmd { return s.previewProfile(ref) }},
 		// A box for a name, from the Space menu, opens over it, and Esc goes
 		// back to it (tdp F4, T1: a value written back keeps its source).
-		{Key: "D", Label: "Duplicate", Desc: "a copy, under a new name", Scope: terminu.ItemScope, Stay: true,
+		{Key: "D", Label: "Duplicate", Desc: "a copy, under a new name", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd { return s.duplicate(ref) }},
-		{Key: "r", Label: "rename", Desc: "this profile", Scope: terminu.ItemScope, Stay: true,
+		{Key: "r", Label: "rename", Desc: "this profile", Scope: terminu.ItemScope,
 			Do: func() tea.Cmd { return s.rename(ref) }},
 		// The last one, or the one the lock shows: there, but not now
 		// (tdp M6). It asks first, over the menu it was run from (tdp F6, F4).
-		{Key: "X", Label: "Delete", Desc: "this profile", Scope: terminu.ItemScope,
+		{Key: "X", Label: "Delete", Desc: "this profile", Scope: terminu.ItemScope, Clear: true,
 			Disabled: func() bool { return active || len(s.cfg.Profiles) == 1 },
 			Ask: &terminu.Ask{Title: "Delete", Subject: name, Question: "Delete " + name + "?", Verb: "delete",
 				Details: []string{"config.yaml is written at once"}},
@@ -122,7 +124,7 @@ func (s *Settings) sideActions() []terminu.Action {
 // has no name, an object does; what is made is a profile, made as the
 // saver's defaults say).
 func (s *Settings) newAction(kind string, scope terminu.Scope) terminu.Action {
-	return terminu.Action{Key: "n", Label: "new", Desc: "a profile of this saver, under a name", Scope: scope, Stay: true,
+	return terminu.Action{Key: "n", Label: "new", Desc: "a profile of this saver, under a name", Scope: scope,
 		Do: func() tea.Cmd { return s.newProfile(kind) }}
 }
 
@@ -149,53 +151,56 @@ func (s *Settings) nameCheck(self int) func(string) error {
 	}
 }
 
-// newProfile asks a name for a profile of kind, made as its defaults say.
-// The free name is in the prompt: the grey suggestion is for an old value
-// only, and a new profile has none (components/input/README).
-// TODO(lib LK4): the free name offered in grey in the box, Enter on it
-// taking it (tdp S6); until then it is in the prompt.
-// TODO(lib LK2): the new profile's [2] took the focus; the lib has no way to
-// move it from code, so it stays on [1], the cursor on the new profile.
+// newProfile asks a name for a profile of kind, made as its defaults say:
+// the free name is offered in grey, Enter on it taking it (tdp S6). Made,
+// the cursor is on it and the focus in [2], to go on with its values
+// (ui.md §3.1; tdp K3, S19: the user expects to be taken to it).
 func (s *Settings) newProfile(kind string) tea.Cmd {
-	free := s.freeName(kind)
 	return s.app.Text(terminu.TextInput{Title: "New profile", Subject: kind, Glyph: glyphPencil, Name: "Name",
-		Prompt: "A name for the new " + kind + " profile; " + free + " is free", Verb: "create", Check: s.nameCheck(-1),
-		Done: func(name string) tea.Cmd {
-			cmd := s.change(func() { s.cfg.Profiles = append(s.cfg.Profiles, s.cfg.NewProfile(name, kind)) })
-			s.selectProfile(name)
-			return cmd
-		}})
+		Prompt: "A name for the new " + kind + " profile", Verb: "create", Suggest: s.freeName(kind), Check: s.nameCheck(-1),
+		Commit: func(name string) error {
+			return s.commit(func() { s.cfg.Profiles = append(s.cfg.Profiles, s.cfg.NewProfile(name, kind)) })
+		},
+		Done: s.made})
 }
 
 func (s *Settings) duplicate(ref int) tea.Cmd {
 	p := s.cfg.Profiles[ref]
-	free := s.freeName(p.Name)
 	return s.app.Text(terminu.TextInput{Title: "Duplicate", Subject: p.Name, Glyph: glyphPencil, Name: "Name",
-		Prompt: "A name for the copy of " + p.Name + "; " + free + " is free", Verb: "create", Check: s.nameCheck(-1),
-		Done: func(name string) tea.Cmd {
-			cmd := s.change(func() {
+		Prompt: "A name for the copy of " + p.Name, Verb: "create", Suggest: s.freeName(p.Name), Check: s.nameCheck(-1),
+		Commit: func(name string) error {
+			return s.commit(func() {
 				c := p
 				c.Name = name
 				s.cfg.Profiles = append(s.cfg.Profiles, c)
 			})
-			s.selectProfile(name)
-			return cmd
-		}})
+		},
+		Done: s.made})
+}
+
+// made is a new profile written: the cursor on it, and the user taken to
+// it, the focus in [2] and the Space menu it was made from closed (tdp T1:
+// Esc on the box comes back to the menu, the profile made does not).
+func (s *Settings) made(name string) tea.Cmd {
+	s.selectProfile(name)
+	return tea.Batch(s.app.CloseAll(), s.app.Focus(s.p2))
 }
 
 func (s *Settings) rename(ref int) tea.Cmd {
 	old := s.cfg.Profiles[ref].Name
 	return s.app.Text(terminu.TextInput{Title: "Rename", Subject: old, Glyph: glyphPencil, Name: "Name",
 		Prompt: "New name for " + old, Verb: "rename", Old: old, Check: s.nameCheck(ref),
-		Done: func(name string) tea.Cmd {
-			cmd := s.change(func() {
+		Commit: func(name string) error {
+			return s.commit(func() {
 				s.cfg.Profiles[ref].Name = name
 				if s.cfg.Profile == old {
 					s.cfg.Profile = name
 				}
 			})
+		},
+		Done: func(name string) tea.Cmd {
 			s.selectProfile(name)
-			return cmd
+			return nil
 		}})
 }
 
@@ -218,20 +223,18 @@ func (s *Settings) selectProfile(name string) {
 	s.refresh()
 }
 
-// edit changes what [2] is on — the profile, or the saver's defaults —
-// through f.
-func (s *Settings) edit(f func(*config.Profile)) tea.Cmd {
-	return s.change(func() {
-		switch s.cur.kind {
-		case kindProfile:
-			f(&s.cfg.Profiles[s.cur.ref])
-		case kindSaver:
-			kind := saver.Kinds[s.cur.ref]
-			p := s.cfg.Saver(kind)
-			f(&p)
-			s.cfg.SetSaver(kind, p)
-		}
-	})
+// alter changes what [2] is on — the profile, or the saver's defaults —
+// through f, in the config; writing it is the caller's.
+func (s *Settings) alter(f func(*config.Profile)) {
+	switch s.cur.kind {
+	case kindProfile:
+		f(&s.cfg.Profiles[s.cur.ref])
+	case kindSaver:
+		kind := saver.Kinds[s.cur.ref]
+		p := s.cfg.Saver(kind)
+		f(&p)
+		s.cfg.SetSaver(kind, p)
+	}
 }
 
 // subject is what [2] edits — a profile, or a saver's defaults; ok is

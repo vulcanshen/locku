@@ -17,8 +17,9 @@ var eraseRight = []byte("\x1b[K")
 // cell. Every row the lock draws is the full width (tdp L4), so the erase
 // has nothing to clear.
 //
-// TODO(lib LK1): the lib's App does this (output.go's screenOutput), for
-// its own program only; a lock program of locku's own is not the lib's.
+// The lib's App.Run does this for its own program (screenOutput); the lock
+// runs the App in a program of its own, on its own reader of keys
+// (LockInput), so it brings the same.
 type ScreenOutput struct{ *os.File }
 
 func (o ScreenOutput) Write(p []byte) (int, error) {

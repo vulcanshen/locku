@@ -4,7 +4,7 @@
 > 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）撰寫，
 > 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98）** lib 是 v0.2.0、照 [tdp v0.8.1](https://github.com/vulcanshen/terminu/tree/v0.8.1)，鎖定畫面的 PIN 框也是 lib 的。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§2.3、ui §3.2）、預覽、整合寫什麼檔。
 
@@ -175,11 +175,11 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 | 事件 | 行為 |
 |---|---|
 | saver 上任何鍵 | 開 prompt；那個鍵**不算**輸入 |
-| 字元 | 追加，最多 12（2026-10-08；之前 64）；`●` 遮罩；貼上的換行（`\r\n` 算一個）與 Tab 也收、一個一顆 `●`，其他控制字元丟掉（2026-10-06；之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來） |
-| Backspace | 刪一字（`\r\n` 整個） |
-| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN`、邊框 Red 1 秒、吞掉所有輸入、清空。值裡有換行或 Tab → 不比對、不算一次連錯：錯誤列 `no line breaks or tabs`、邊框 Red、點點留著，下一鍵恢復（2026-10-06） |
+| 字元 | 追加，最多 12（2026-10-08；之前 64）；`●` 遮罩；貼上的控制字元也收進值裡、一個一顆 `●`（2026-10-18；2026-10-06 起只收換行與 Tab，再之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來）；`Alt` 組合不打字（2026-10-18） |
+| Backspace | 一次清掉打的全部（2026-10-18，components/input/password；之前刪一字） |
+| Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN` 1 秒、吞掉所有輸入（`Esc` 也是）、點點清空，錯誤留到下一次 `Enter`。值裡有貼上的控制字元 → 不比對、不算一次連錯：錯誤列 `PIN can't have control characters`、點點留著（2026-10-18；2026-10-06 起是 `no line breaks or tabs`）。框與標題維持層色，只有錯誤列是 Red（2026-10-18；之前邊框變 Red）。2026-10-19 起框是 lib 的 `PasswordInput`，這些都照它，錯一次的那一秒是 locku 自己在框外吞鍵、清點點 |
 | Esc | 回 saver、輸入丟掉 |
-| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s`、邊框 Red 倒數（`wrong_pin_attempt_cooldown` 秒）、吞掉所有輸入；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
+| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s` 每秒倒數（`wrong_pin_attempt_cooldown` 秒；2026-10-19 起是 lib 的 `PausedUntil`，tdp S37）、吞掉 `Esc` 以外的鍵，點點留到冷卻結束才清；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中；custom：新尺寸也轉給程式的 pty |
 | custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停；框在的時候 bracketed paste 開著，貼上的換行跟其他 lock 一樣是值裡的一個換行，不是 Enter（2026-10-06） |

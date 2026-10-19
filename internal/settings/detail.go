@@ -41,7 +41,8 @@ var about = map[string]string{
 	saver.KindCustom:    "your own program, on a terminal of its own, as the saver",
 }
 
-// usualConf is where a tool's file usually is, said in the box's prompt.
+// usualConf is where a tool's file usually is: offered in grey in the box
+// while there is none (tdp S6; so until 2026-10-18, then said in the prompt).
 var usualConf = map[string]string{"tmux": "~/.tmux.conf", "screen": "~/.screenrc"}
 
 // toolIdle is each tool's own name for its idle time: the row's label,
@@ -147,52 +148,53 @@ func (s *Settings) fields() []*terminu.Field {
 // command, the speeds (user, 2026-10-06 and 2026-10-07), the pets' animals,
 // count and scene (2026-10-07, 2026-10-08).
 func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
-	set := func(f func(*config.Profile, string)) func(string) tea.Cmd {
-		return func(v string) tea.Cmd { return s.edit(func(p *config.Profile) { f(p, v) }) }
+	set := func(f func(*config.Profile, string)) func(string) {
+		return func(v string) { s.alter(func(p *config.Profile) { f(p, v) }) }
 	}
 	var out []*terminu.Field
 	switch p.Saver {
 	case saver.KindBounce:
 		out = []*terminu.Field{
-			s.choice("speed", saver.Speeds, p.Speed, set(func(p *config.Profile, v string) { p.Speed = v })),
-			s.choice("time", saver.BounceTimes, p.Time, set(func(p *config.Profile, v string) { p.Time = v })),
+			s.choice("speed", saver.Speeds, p.Speed, set(func(p *config.Profile, v string) { p.Speed = v }), nil),
+			s.choice("time", saver.BounceTimes, p.Time, set(func(p *config.Profile, v string) { p.Time = v }), nil),
 		}
 	case saver.KindSnake, saver.KindTetromino:
-		out = []*terminu.Field{s.choice("speed", saver.Speeds, p.Speed, set(func(p *config.Profile, v string) { p.Speed = v }))}
+		out = []*terminu.Field{s.choice("speed", saver.Speeds, p.Speed, set(func(p *config.Profile, v string) { p.Speed = v }), nil)}
 	case saver.KindPets:
 		counts := make([]string, len(saver.PetCounts))
 		for i, n := range saver.PetCounts {
 			counts[i] = itoa(n)
 		}
 		out = []*terminu.Field{
-			s.choice("animals", saver.PetAnimals, p.Animals, set(func(p *config.Profile, v string) { p.Animals = v })),
-			s.choice("count", counts, itoa(p.Count), set(func(p *config.Profile, v string) { p.Count, _ = strconv.Atoi(v) })),
-			s.choice("scene", saver.PetScenes, p.Scene, set(func(p *config.Profile, v string) { p.Scene = v })),
+			s.choice("animals", saver.PetAnimals, p.Animals, set(func(p *config.Profile, v string) { p.Animals = v }), nil),
+			s.choice("count", counts, itoa(p.Count), set(func(p *config.Profile, v string) { p.Count, _ = strconv.Atoi(v) }), nil),
+			s.choice("scene", saver.PetScenes, p.Scene, set(func(p *config.Profile, v string) { p.Scene = v }), nil),
 		}
 	case saver.KindCustom:
 		// The program, as sh -c runs it; none yet is said in grey.
+		command := set(func(p *config.Profile, v string) { p.Command = v })
 		out = []*terminu.Field{{Label: "command", Value: func() string { return p.Command }, Empty: "not set",
 			Edit: func() tea.Cmd {
 				return s.app.Text(terminu.TextInput{Title: "Edit", Subject: "command", Glyph: glyphConsole, Name: "command",
 					Prompt: "The program that draws, as sh -c runs it; empty for none", Verb: "save", Old: p.Command,
-					Done: set(func(p *config.Profile, v string) { p.Command = v })})
+					Commit: func(v string) error { return s.commit(func() { command(v) }) }})
 			}}}
 	case saver.KindRunner:
 		// No size: the run is drawn as large as the terminal allows
 		// (user, 2026-09-24).
 		out = []*terminu.Field{
-			s.choice("participants", saver.Participants, p.Participants, set(func(p *config.Profile, v string) { p.Participants = v })),
-			s.choice("character", saver.Characters, p.Character, set(func(p *config.Profile, v string) { p.Character = v })),
-			s.choice("scene", saver.Scenes, p.Scene, set(func(p *config.Profile, v string) { p.Scene = v })),
-			s.choice("background", saver.Backgrounds, p.Background, set(func(p *config.Profile, v string) { p.Background = v })),
+			s.choice("participants", saver.Participants, p.Participants, set(func(p *config.Profile, v string) { p.Participants = v }), nil),
+			s.choice("character", saver.Characters, p.Character, set(func(p *config.Profile, v string) { p.Character = v }), nil),
+			s.choice("scene", saver.Scenes, p.Scene, set(func(p *config.Profile, v string) { p.Scene = v }), nil),
+			s.choice("background", saver.Backgrounds, p.Background, set(func(p *config.Profile, v string) { p.Background = v }), nil),
 		}
 	default:
 		out = []*terminu.Field{
-			s.choice("layout", saver.Layouts, p.Layout, set(func(p *config.Profile, v string) { p.Layout = v })),
-			s.choice("size", saver.Sizes, p.Size, set(func(p *config.Profile, v string) { p.Size = v })),
-			s.choice("font", saver.Fonts, p.Font, set(func(p *config.Profile, v string) { p.Font = v })),
-			s.choice("time", saver.TimeFormats, p.Time, set(func(p *config.Profile, v string) { p.Time = v })),
-			s.choice("date", saver.DateFormats, p.Date, set(func(p *config.Profile, v string) { p.Date = v })),
+			s.choice("layout", saver.Layouts, p.Layout, set(func(p *config.Profile, v string) { p.Layout = v }), nil),
+			s.choice("size", saver.Sizes, p.Size, set(func(p *config.Profile, v string) { p.Size = v }), nil),
+			s.choice("font", saver.Fonts, p.Font, set(func(p *config.Profile, v string) { p.Font = v }), nil),
+			s.choice("time", saver.TimeFormats, p.Time, set(func(p *config.Profile, v string) { p.Time = v }), nil),
+			s.choice("date", saver.DateFormats, p.Date, set(func(p *config.Profile, v string) { p.Date = v }), nil),
 		}
 	}
 	// No colours: custom (user, 2026-09-25), and a saver with its own
@@ -207,19 +209,33 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 }
 
 // choice is a value out of options: a radio drawn in place for five or
-// fewer, a select past that (components/dialog/form).
-func (s *Settings) choice(label string, options []string, current string, set func(string) tea.Cmd) *terminu.Field {
+// fewer, a select past that (components/dialog/form). apply puts the one
+// chosen into the config, which is written at once; then, when given, runs
+// after.
+func (s *Settings) choice(label string, options []string, current string, apply func(string), then func() tea.Cmd) *terminu.Field {
 	at := slices.Index(options, current)
 	if len(options) <= 5 {
 		f := &terminu.Field{Label: label, Options: options, Selected: at}
-		f.OnChange = func() tea.Cmd { return set(options[f.Selected]) }
+		f.OnChange = func() tea.Cmd {
+			v := options[f.Selected]
+			return tea.Batch(s.change(func() { apply(v) }), call(then))
+		}
 		return f
 	}
 	return &terminu.Field{Label: label, Value: func() string { return current },
 		Edit: func() tea.Cmd {
 			return s.app.Select(terminu.Select{Title: label, Subject: s.detailLabel(), Glyph: glyphTag, Options: options, Selected: at,
-				Done: func(i int) tea.Cmd { return set(options[i]) }})
+				Commit: func(i int) error { return s.commit(func() { apply(options[i]) }) },
+				Done:   func(int) tea.Cmd { return call(then) }})
 		}}
+}
+
+// call runs f, when there is one.
+func call(f func() tea.Cmd) tea.Cmd {
+	if f == nil {
+		return nil
+	}
+	return f()
 }
 
 // swatch is a colour as a value shows it: a block of it, then its hex
@@ -234,11 +250,11 @@ func swatch(hex string) string {
 // sliders on [2], [S] Save, [R] Reset, [P] previewing the draft.
 // Chosen is written; [P] previews it, and the picker's old colour is there to
 // go back to (tdp S35, 2026-10-19).
-func (s *Settings) colour(label, hex string, set func(string) tea.Cmd) *terminu.Field {
+func (s *Settings) colour(label, hex string, apply func(string)) *terminu.Field {
 	return &terminu.Field{Label: label, Value: func() string { return swatch(hex) },
 		Edit: func() tea.Cmd {
 			return s.app.PickColor(terminu.ColorPicker{Title: label, Subject: s.detailLabel(), Glyph: glyphPalette, Value: terminu.Hex(hex),
-				Done: func(c terminu.Color) tea.Cmd { return set(c.String()) }})
+				Commit: func(c terminu.Color) error { return s.commit(func() { apply(c.String()) }) }})
 		}}
 }
 
@@ -247,14 +263,12 @@ func switchField(label string, on bool) *terminu.Field {
 	return &terminu.Field{Label: label, Options: []string{"on"}, Multi: true, Checked: []bool{on}}
 }
 
-// number is a whole number, least or more, edited in a number box; unit
-// follows it on the panel ("30 seconds"), and zero, when given, is what 0
-// means ("0 (off)"). An empty box is not a number (components/input/number):
-// the prompt says the default, to type (until 2026-10-18 empty was the default).
-// TODO(lib LK8): an empty box is the default again, said in grey (tdp S7).
-// TODO(lib S47): the unit under the typing row (tdp S47); the panel says it
-// already.
-func (s *Settings) number(label, prompt, unit, zero string, value, least int, set func(int) tea.Cmd) *terminu.Field {
+// number is a whole number, least or more, edited in a number box with its
+// unit under the typing row (tdp S47); on the panel the unit follows it
+// ("30 seconds"), and zero, when given, is what 0 means ("0 (off)"). An
+// empty box is the default, def, as the prompt says (tdp S7): config.yaml
+// keeps a number for every key, so the default's number is written.
+func (s *Settings) number(label, prompt, unit, zero string, value, least, def int, apply func(int), then func() tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label,
 		Value: func() string {
 			switch {
@@ -267,10 +281,13 @@ func (s *Settings) number(label, prompt, unit, zero string, value, least int, se
 		},
 		Edit: func() tea.Cmd {
 			return s.app.Number(terminu.NumberInput{Title: "Edit", Subject: label, Glyph: glyphTimer, Name: label,
-				Prompt: prompt, Verb: "save", Old: itoa(value),
+				Prompt: prompt + "; empty for the default, " + itoa(def), Verb: "save", Old: itoa(value), Unit: unit, Optional: true,
 				// Out of range is said on the error row, the value named
 				// (components/input/number).
 				Check: func(v string) error {
+					if v == "" {
+						return nil
+					}
 					n, err := strconv.Atoi(v)
 					switch {
 					case err != nil:
@@ -280,10 +297,14 @@ func (s *Settings) number(label, prompt, unit, zero string, value, least int, se
 					}
 					return nil
 				},
-				Done: func(v string) tea.Cmd {
-					n, _ := strconv.Atoi(v)
-					return set(n)
-				}})
+				Commit: func(v string) error {
+					n := def
+					if v != "" {
+						n, _ = strconv.Atoi(v)
+					}
+					return s.commit(func() { apply(n) })
+				},
+				Done: func(string) tea.Cmd { return call(then) }})
 		}}
 }
 
@@ -299,29 +320,29 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	for i, p := range s.cfg.Profiles {
 		names[i] = p.Name
 	}
-	profile := s.choice("profile", names, s.cfg.Profile, func(v string) tea.Cmd {
-		return s.change(func() { s.cfg.Profile = v })
-	})
+	profile := s.choice("profile", names, s.cfg.Profile, func(v string) { s.cfg.Profile = v }, nil)
+	profile.Desc = "the profile the lock shows"
+	pin.Desc = "what the lock asks for; with none, any key unlocks"
 	// A profile the file names but does not have is a value gone wrong:
 	// its label is Red (components/layout/panel, one value per row).
 	profile.Err = func() bool { return s.cfg.Index(s.cfg.Profile) < 0 }
 	status := switchField("show_status", s.cfg.ShowStatus)
+	status.Desc = "user@host and the time, on the lock's last row"
 	status.OnChange = func() tea.Cmd {
 		on := status.Checked[0]
 		return s.change(func() { s.cfg.ShowStatus = on })
 	}
 	def := config.Default()
-	return []*terminu.Field{
-		pin,
-		profile,
-		status,
-		s.number("pin_prompt_timeout", "Seconds without a key before the PIN box closes, 0 or more; 0 never, "+itoa(def.PINPromptTimeout)+" by default",
-			"seconds", "never", s.cfg.PINPromptTimeout, 0, func(n int) tea.Cmd { return s.change(func() { s.cfg.PINPromptTimeout = n }) }),
-		s.number("wrong_pin_attempts", "Wrong PINs in a row before a cooldown, 0 or more; 0 off, "+itoa(def.WrongPINAttempts)+" by default",
-			"", "off", s.cfg.WrongPINAttempts, 0, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINAttempts = n }) }),
-		s.number("wrong_pin_attempt_cooldown", "Seconds the cooldown lasts, 1 or more; "+itoa(def.WrongPINCooldown)+" by default",
-			"seconds", "", s.cfg.WrongPINCooldown, 1, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINCooldown = n }) }),
-	}
+	timeout := s.number("pin_prompt_timeout", "Seconds without a key before the PIN box closes, 0 or more; 0 never",
+		"seconds", "never", s.cfg.PINPromptTimeout, 0, def.PINPromptTimeout, func(n int) { s.cfg.PINPromptTimeout = n }, nil)
+	timeout.Desc = "seconds without a key before the PIN box closes; 0 never"
+	attempts := s.number("wrong_pin_attempts", "Wrong PINs in a row before a cooldown, 0 or more; 0 off",
+		"", "off", s.cfg.WrongPINAttempts, 0, def.WrongPINAttempts, func(n int) { s.cfg.WrongPINAttempts = n }, nil)
+	attempts.Desc = "wrong PINs in a row before a cooldown; 0 off"
+	cooldown := s.number("wrong_pin_attempt_cooldown", "Seconds the cooldown lasts, 1 or more",
+		"seconds", "", s.cfg.WrongPINCooldown, 1, def.WrongPINCooldown, func(n int) { s.cfg.WrongPINCooldown = n }, nil)
+	cooldown.Desc = "seconds the cooldown lasts"
+	return []*terminu.Field{pin, profile, status, timeout, attempts, cooldown}
 }
 
 // tool is the tool under the cursor and its settings.
@@ -346,58 +367,69 @@ func (s *Settings) toolFields() []*terminu.Field {
 	name, t := s.tool()
 	installed := setup.Installed(t.Conf)
 	activate := switchField("activate", installed)
+	activate.Desc = "on: the file reads locku's own, " + setup.Own(name) + ", and every row here is written into that the moment it changes; off: it does not. [Enter] turns it, after a confirm"
+	if name == tools[toolScreen] {
+		// screen has its own key for the lock, and no server: the lock is
+		// LOCKPRG in the shell's environment, so it lives in the shell rc,
+		// not the screenrc (measured 2026-09-24).
+		activate.Desc += ". It puts LOCKPRG, the lock itself — locku by its absolute path — into the shell rc too: screen reads it from the environment of the shell that started it, so a new shell has it; a screen already running takes idle and the key at once, but its lock is the shell's it was attached from until it is detached and attached again from a new shell"
+	}
 	activate.Disabled = func() bool { return t.Conf == "" }
 	activate.OnChange = func() tea.Cmd {
 		activate.Checked[0] = installed // it turns once it is done, after the confirm
 		return s.askActivate(name, !installed)
 	}
 	conf := &terminu.Field{Label: "config file path", Value: func() string { return t.Conf }, Empty: "not set", Path: true,
+		Desc: "the file locku's line, one that reads locku's own, is written into; ~/ allowed",
 		Edit: func() tea.Cmd {
 			return s.app.Text(terminu.TextInput{Title: "Edit", Subject: "config file path", Glyph: glyphFile, Name: "config file path",
-				Prompt: "The file " + name + "'s line goes into, usually " + usualConf[name] + "; empty for none", Verb: "save", Old: t.Conf,
+				Prompt: "The file " + name + "'s line goes into; empty for none", Verb: "save", Old: t.Conf, Suggest: usualConf[name],
 				Check: func(v string) error {
 					if _, ok := config.AbsPath(v); v != "" && !ok {
 						return errNotAbs
 					}
 					return nil
 				},
-				Done: func(v string) tea.Cmd {
-					cmd := s.change(func() {
+				Commit: func(v string) error {
+					return s.commit(func() {
 						nt := s.cfg.Tool(name)
 						nt.Conf = v
 						s.cfg.SetTool(name, nt)
 					})
-					return tea.Batch(cmd, s.moveConf(name, t.Conf, installed))
-				}})
+				},
+				Done: func(string) tea.Cmd { return s.moveConf(name, t.Conf, installed) }})
 		}}
 	out := []*terminu.Field{activate, conf}
 	// tmux alone chooses its lock: the server's, or this session's (user,
 	// 2026-09-25).
+	resync := func() tea.Cmd { return s.resync(name, installed) }
 	if name == tools[toolTmux] {
-		out = append(out, s.choice("lock", config.TmuxLocks, s.cfg.Tmux.Lock, func(v string) tea.Cmd {
-			cmd := s.change(func() { s.cfg.Tmux.Lock = v })
-			return tea.Batch(cmd, s.resync(name, installed))
-		}))
+		lock := s.choice("lock", config.TmuxLocks, s.cfg.Tmux.Lock, func(v string) { s.cfg.Tmux.Lock = v }, resync)
+		// About how much a lock covers — not what runs it, which is every
+		// trigger alike (user, 2026-09-25).
+		lock.Desc = "how much a lock covers. lock-server: the whole server — every client, and whoever attaches to any session while it is locked. lock-session: only the session that locked — its clients, and whoever attaches to it; the other sessions go on as they were"
+		out = append(out, lock)
 	}
-	out = append(out, s.number(toolIdle[name], "Idle seconds before "+name+" locks by itself, 0 or more; 0 never, "+itoa(config.DefaultIdle)+" by default",
-		"seconds", "off", t.Idle, 0, func(n int) tea.Cmd {
-			cmd := s.change(func() {
-				t := s.cfg.Tool(name)
-				t.Idle = n
-				s.cfg.SetTool(name, t)
-			})
-			return tea.Batch(cmd, s.resync(name, installed))
-		}))
+	idle := s.number(toolIdle[name], "Idle seconds before "+name+" locks by itself, 0 or more; 0 never",
+		"seconds", "off", t.Idle, 0, config.DefaultIdle, func(n int) {
+			t := s.cfg.Tool(name)
+			t.Idle = n
+			s.cfg.SetTool(name, t)
+		}, resync)
+	idle.Desc = "idle seconds before " + name + " locks by itself; 0 never"
+	out = append(out, idle)
 	// Each binds a key, under its own name for it, as it spells it; none
 	// is none (user, 2026-09-25).
 	prompt := "The key after " + toolPrefix[name] + " that locks, as " + name + " spells it — l, C-l; empty binds none"
 	example := "e.g. l or C-l"
+	desc := "the key after prefix that runs the lock, as tmux spells it — l, C-l, F12; empty binds none"
 	if name == tools[toolScreen] {
 		prompt = "The key after C-a that locks, as screen spells it — l, ^L; empty binds none, and C-a x locks anyway"
 		example = "e.g. l or ^L"
+		desc = "the key after C-a that runs the lock, as screen's bind spells it — l, ^L; empty binds none, and C-a x — screen's own key for it — locks anyway"
 	}
 	bind := s.bindOf(name)
-	out = append(out, &terminu.Field{Label: toolBind[name], Value: func() string { return bind }, Empty: "none",
+	out = append(out, &terminu.Field{Label: toolBind[name], Value: func() string { return bind }, Empty: "none", Desc: desc,
 		Edit: func() tea.Cmd {
 			return s.app.Text(terminu.TextInput{Title: "Edit", Subject: toolBind[name], Glyph: glyphKey, Name: toolBind[name],
 				Prompt: prompt, Verb: "save", Old: bind,
@@ -409,16 +441,16 @@ func (s *Settings) toolFields() []*terminu.Field {
 					}
 					return nil
 				},
-				Done: func(v string) tea.Cmd {
-					cmd := s.change(func() {
+				Commit: func(v string) error {
+					return s.commit(func() {
 						if name == tools[toolScreen] {
 							s.cfg.Screen.Bind = v
 						} else {
 							s.cfg.Tmux.BindKey = v
 						}
 					})
-					return tea.Batch(cmd, s.resync(name, installed))
-				}})
+				},
+				Done: func(string) tea.Cmd { return resync() }})
 		}})
 	return out
 }
@@ -438,8 +470,8 @@ func (s *Settings) detailActions() []terminu.Action {
 				}
 			}
 			// What it opens from the Space menu — a box, a list, a confirm —
-			// opens over the menu (tdp F4, T1).
-			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint, Stay: true,
+			// opens over the menu, as the lib keeps it (tdp F4, T1).
+			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
 				Do: func() tea.Cmd {
 					_, cmd := s.vals.Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
 					return cmd
@@ -450,7 +482,7 @@ func (s *Settings) detailActions() []terminu.Action {
 	case kindSaver:
 		kind := saver.Kinds[s.cur.ref]
 		out = append(out, s.newAction(kind, terminu.PanelScope),
-			terminu.Action{Key: "P", Label: "Preview", Desc: "the lock, showing this saver with its defaults", Scope: terminu.PanelScope,
+			terminu.Action{Key: "P", Label: "Preview", Desc: "the lock, showing this saver with its defaults", Scope: terminu.PanelScope, Clear: true,
 				Do: func() tea.Cmd { return s.previewSaver(kind) }})
 	case kindProfile:
 		ref := s.cur.ref
@@ -458,57 +490,13 @@ func (s *Settings) detailActions() []terminu.Action {
 		if s.cfg.Profiles[ref].Saver == saver.KindCustom {
 			desc = "the program, on the terminal, until a key"
 		}
-		out = append(out, terminu.Action{Key: "P", Label: "Preview", Desc: desc, Scope: terminu.PanelScope,
+		out = append(out, terminu.Action{Key: "P", Label: "Preview", Desc: desc, Scope: terminu.PanelScope, Clear: true,
 			Do: func() tea.Cmd { return s.previewProfile(ref) }})
 	default:
 		// Preference, a tool: the lock as it is, the active profile (user,
 		// 2026-09-24).
-		out = append(out, terminu.Action{Key: "P", Label: "Preview", Desc: "the lock, showing the active profile", Scope: terminu.PanelScope,
+		out = append(out, terminu.Action{Key: "P", Label: "Preview", Desc: "the lock, showing the active profile", Scope: terminu.PanelScope, Clear: true,
 			Do: s.previewActive})
 	}
 	return out
-}
-
-// glossary is what each row of preference's [2], or a tool's, means: the
-// last section of its ? (user, 2026-09-25 — and, 2026-09-26 and
-// 2026-09-27, in place of the key reference there; the lib puts it after
-// the keys).
-// TODO(lib LK3): the lib's own "each row" section, first in the ?, the names
-// in ordinary text (tdp S34); until then the last section, through OtherKeys.
-func (s *Settings) glossary() []terminu.KeySection {
-	switch s.cur.kind {
-	case kindPreference:
-		return []terminu.KeySection{{Title: "what each row is", Rows: []terminu.KeyRow{
-			{Key: "PIN", Desc: "what the lock asks for; with none, any key unlocks"},
-			{Key: "profile", Desc: "the profile the lock shows"},
-			{Key: "show_status", Desc: "user@host and the time, on the lock's last row"},
-			{Key: "pin_prompt_timeout", Desc: "seconds without a key before the PIN box closes; 0 never"},
-			{Key: "wrong_pin_attempts", Desc: "wrong PINs in a row before a cooldown; 0 off"},
-			{Key: "wrong_pin_attempt_cooldown", Desc: "seconds the cooldown lasts"},
-		}}}
-	case kindTool:
-		name := tools[s.cur.ref]
-		rows := []terminu.KeyRow{
-			{Key: "activate", Desc: "on: the file reads locku's own, " + setup.Own(name) + ", and every row here is written into that the moment it changes; off: it does not. [Enter] turns it, after a confirm"},
-			{Key: "config file path", Desc: "the file locku's line, one that reads locku's own, is written into; ~/ allowed"},
-		}
-		if name == tools[toolTmux] {
-			// About how much a lock covers — not what runs it, which is
-			// every trigger alike (user, 2026-09-25).
-			rows = append(rows, terminu.KeyRow{Key: "lock", Desc: "how much a lock covers. lock-server: the whole server — every client, and whoever attaches to any session while it is locked. lock-session: only the session that locked — its clients, and whoever attaches to it; the other sessions go on as they were"})
-		}
-		rows = append(rows, terminu.KeyRow{Key: toolIdle[name], Desc: "idle seconds before " + name + " locks by itself; 0 never"})
-		if name == tools[toolTmux] {
-			rows = append(rows, terminu.KeyRow{Key: "bind-key", Desc: "the key after prefix that runs the lock, as tmux spells it — l, C-l, F12; empty binds none"})
-		} else {
-			// screen has its own key for the lock, and no server: the lock
-			// is LOCKPRG in the shell's environment, so it lives in the
-			// shell rc, not the screenrc (measured 2026-09-24).
-			rows = append(rows,
-				terminu.KeyRow{Key: "bind", Desc: "the key after C-a that runs the lock, as screen's bind spells it — l, ^L; empty binds none, and C-a x — screen's own key for it — locks anyway"},
-				terminu.KeyRow{Key: "LOCKPRG", Desc: "the lock itself, locku by its absolute path: not a row, and not in this file — screen reads it from the environment of the shell that started it, so activate puts it into the shell rc, and a new shell has it; a screen already running takes idle and the key at once, but its lock is the shell's it was attached from until it is detached and attached again from a new shell"})
-		}
-		return []terminu.KeySection{{Title: "what each row is", Rows: rows}}
-	}
-	return nil
 }

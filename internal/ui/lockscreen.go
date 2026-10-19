@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/user"
@@ -16,10 +17,18 @@ import (
 )
 
 // LockModel is `locku lock` (function.md §3): the board, the status row and
-// the PIN prompt. The process IS the lock — while it runs the terminal is
+// the PIN box. The process IS the lock — while it runs the terminal is
 // locked — and there are exactly three ways out: the right PIN, any key
 // when no PIN is set, and the terminal going away (§1.2). Nothing here
 // returns tea.Quit for any other reason.
+//
+// It runs in the lib's App, which draws the board as its canvas, whole, and
+// the PIN box over it — the lib's password box in its unlock look, the
+// board dimmed under it (tdp E8; LK1, 2026-10-19: until then the box was
+// drawn here, the lib's way). The lock is not a surface (tdp K1): no key of
+// the lib's acts on it, and what the lock adds to the box — a second of
+// "wrong" that swallows every key, the timeout, the PIN read at every key —
+// is done here, around the App.
 type LockModel struct {
 	cfg     config.Config
 	problem string
@@ -44,9 +53,14 @@ type LockModel struct {
 	rev           *reveal  // the change in progress, if one is
 	tickGen       int      // a clock or reveal tick from before a change carries an older gen
 
-	prompt       pinPrompt
-	promptGen    int // likewise for the prompt's timers
-	failures     int // consecutive wrong PINs; process-lifetime (§4.4)
+	app     *terminu.App
+	boxUp   bool      // the PIN box is open, or opening
+	idleGen int       // a timeout from before a key carries an older gen
+	held    time.Time // the second of "wrong": every key swallowed till then
+	wrong   bool      // the Enter just handled found the PIN wrong
+	// failures is the wrong PINs in a row, process-lifetime (§4.4), and
+	// lockoutUntil the end of the cooling-off they led to.
+	failures     int
 	lockoutUntil time.Time
 
 	lockedAt   time.Time
@@ -59,53 +73,62 @@ type LockModel struct {
 	// gone: the terminal went away under the lock; the process ends, but
 	// nothing was unlocked — a tmux session stays marked locked.
 	gone bool
-	// promptOnly: the PIN prompt alone, for the custom saver (function.md
-	// §5.5) — up from the first frame, on a screen of the profile's
-	// colour, and when it closes the program is put back (back), not a
-	// board.
+	// promptOnly: the PIN box alone, for the custom saver (function.md
+	// §5.5) — up from the first frame, and when it closes the program is
+	// put back (back), not a board.
 	promptOnly bool
 	back       bool
 	over       bool // ended: unlocked, gone, or back — nothing more to paint
 	initCmd    tea.Cmd
-	// paint draws the prompt's box for a prompt-only lock that has no
-	// renderer of its own: the custom saver's, where the box goes over
-	// the program's frozen picture and nothing else may be drawn (user,
-	// 2026-09-25). It is given the box's width too: the program's side
-	// cannot tell how wide an icon is (tdp D6).
+	// paint draws the box for a prompt-only lock that has no renderer of
+	// its own: the custom saver's, where the box goes over the program's
+	// picture and nothing else may be drawn (user, 2026-09-25). It is given
+	// the box's width too: the program's side cannot tell how wide an icon
+	// is (tdp D6).
 	paint func(box string, w int)
 
 	now func() time.Time
 }
 
-// Messages the lock sends itself. Each carries the generation it was
-// scheduled under, so a timer from before a state change is ignored when
-// it fires.
+// Messages the lock sends itself. A tick carries the generation it was
+// scheduled under, so one from before a state change is ignored when it
+// fires.
 type (
 	clockTickMsg   struct{ gen int }
 	revealTickMsg  struct{ gen int }
-	promptIdleMsg  struct{ gen int } // pin_prompt_timeout ran out
-	wrongOverMsg   struct{ gen int } // the second of "wrong" is over
-	lockoutTickMsg struct{ gen int } // once a second while locked out
+	boxIdleMsg     struct{ gen int } // pin_prompt_timeout ran out
+	heldOverMsg    struct{}          // the second of "wrong" is over
+	lockoutOverMsg struct{}          // the cooling-off is over
 )
 
 // TTYGoneMsg says the terminal went away under the lock: read returned
 // EOF or EIO. There is nothing left to protect, and the process ends.
 type TTYGoneMsg struct{}
 
+// The box: its title says what to type (tdp S36), and it says wrong for a
+// wrong PIN, which is a second of every key swallowed, the dots cleared
+// (function.md §4.4).
+const (
+	pinTitle  = "Unlock"
+	wrongHold = time.Second
+)
+
+var errWrongPIN = errors.New("wrong PIN")
+
 // NewLock is the model for `locku lock`.
-func NewLock(cfg config.Config, problem string) LockModel { return newLock(cfg, problem, false) }
+func NewLock(cfg config.Config, problem string) *LockModel { return newLock(cfg, problem, false) }
 
 // NewLockWord is the lock for a custom saver's program that has ended
 // (function.md §5.5): the word on the board — EXIT and its code, or
 // NONE — in the clock's face at the largest size that fits, and the
 // note in red on the status row.
-func NewLockWord(cfg config.Config, problem string, word saver.Word, note string) LockModel {
+func NewLockWord(cfg config.Config, problem string, word saver.Word, note string) *LockModel {
 	return newLock(cfg, problem, false).withWord(word, note)
 }
 
 // withWord puts word on the board in place of whatever the profile
 // draws, and note on the status row.
-func (m LockModel) withWord(word saver.Word, note string) LockModel {
+func (m *LockModel) withWord(word saver.Word, note string) *LockModel {
 	m.word, m.note, m.game = word, note, nil
 	m.scale, m.face = 3, faceOf("3x7")
 	// A custom profile has no colours of its own (user, 2026-09-25): the
@@ -133,34 +156,32 @@ type Tries struct {
 }
 
 // Tries is what this lock leaves the next prompt.
-func (m LockModel) Tries() Tries { return Tries{m.failures, m.lockoutUntil} }
+func (m *LockModel) Tries() Tries { return Tries{m.failures, m.lockoutUntil} }
 
-// NewLockPrompt is the PIN prompt alone, for the custom saver: up from
-// the first frame, drawn by paint over the program's frozen picture on
-// a cols × rows screen; Esc or the timeout ends the program with Back
-// set, the right PIN with it clear. tries is where the prompt before it
-// left off.
-func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string, w int), tries Tries) LockModel {
+// NewLockPrompt is the PIN box alone, for the custom saver: up from the
+// first frame, painted by paint over the program's picture on a cols ×
+// rows screen; Esc or the timeout ends the program with Back set, the
+// right PIN with it clear. tries is where the prompt before it left off.
+func NewLockPrompt(cfg config.Config, problem string, cols, rows int, paint func(box string, w int), tries Tries) *LockModel {
 	m := newLock(cfg, problem, false)
 	m.promptOnly, m.game, m.paint = true, nil, paint
-	m.style = config.Style{BG: config.DefaultBG, FG: config.DefaultFG}
-	m.width, m.height = cols, rows
-	m.prompt.setSize(cols, rows)
 	m.failures, m.lockoutUntil = tries.failures, tries.until
-	m.initCmd = m.openPrompt()
+	m.width, m.height = cols, rows
+	m.app.Update(tea.WindowSizeMsg{Width: cols, Height: rows})
+	m.initCmd = m.openBox()
 	return m
 }
 
-// Back reports whether a prompt-only lock ended because the prompt
-// closed — the program is to be put back — rather than by the PIN.
-func (m LockModel) Back() bool { return m.back }
+// Back reports whether a prompt-only lock ended because the box closed —
+// the program is to be put back — rather than by the PIN.
+func (m *LockModel) Back() bool { return m.back }
 
-func newLock(cfg config.Config, problem string, preview bool) LockModel {
+func newLock(cfg config.Config, problem string, preview bool) *LockModel {
 	s, ok := cfg.Active()
 	if !ok && problem == "" {
 		problem = fmt.Sprintf("profile %q not found", cfg.Profile)
 	}
-	m := LockModel{
+	m := &LockModel{
 		cfg:     cfg,
 		problem: problem,
 		clock:   saver.Clock{Time: s.Time, Date: s.Date, Layout: s.Layout}.Normalized(),
@@ -168,7 +189,6 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 		face:    faceOf(s.Font),
 		style:   s.Colours(),
 		noPIN:   !cfg.HasPIN(),
-		prompt:  newPinPrompt(),
 		preview: preview,
 		now:     time.Now,
 	}
@@ -192,7 +212,21 @@ func newLock(cfg config.Config, problem string, preview bool) LockModel {
 	}
 	m.lockedAt = m.now()
 	m.user, m.host = whoami()
+	m.app = m.newApp()
 	return m
+}
+
+// newApp is the lib's app the lock runs in. It locks a terminal of any size
+// (tdp L1: the least size is the app's, and this is not a surface), and
+// Ctrl-C does not leave it: the lock ends by the PIN alone (§1.2). A key on
+// the board is the lock's (CanvasKey).
+func (m *LockModel) newApp() *terminu.App {
+	a := terminu.New("locku")
+	a.MinWidth, a.MinHeight = 1, 1
+	a.QuitFlow = func() tea.Cmd { return nil }
+	a.Canvas = m.canvas
+	a.CanvasKey = func(string, tea.KeyMsg) (bool, tea.Cmd) { return true, m.openBox() }
+	return a
 }
 
 // whoami is the status row's "user@host": the user running the lock and
@@ -212,36 +246,30 @@ var whoami = func() (string, string) {
 	return name, host
 }
 
-func (m LockModel) Init() tea.Cmd { return tea.Batch(m.clockTick(), m.initCmd) }
+func (m *LockModel) Init() tea.Cmd { return tea.Batch(m.app.Init(), m.clockTick(), m.initCmd) }
 
-func (m LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	m, cmd := m.step(msg)
+func (m *LockModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	_, cmd := m.step(msg)
 	if m.promptOnly && m.paint != nil && !m.over {
-		// Cut to the screen as a box on the board is: from the top left,
-		// what falls off goes; the program's side would put the rows past
-		// the bottom over the last one (tdp E5).
-		lines, _, _ := m.prompt.view(m.now())
-		lines = lines[:min(len(lines), max(m.height, 0))]
-		for i, l := range lines {
-			lines[i] = terminu.Cut(l, 0, m.width)
-		}
-		m.paint(strings.Join(lines, "\n"), blockWidth(lines))
+		// The box as the lib draws it over a blank screen, taken out of it:
+		// the program's picture is under it, and nothing else is drawn.
+		box := boxOf(m.app.Frame())
+		m.paint(strings.Join(box, "\n"), blockWidth(box))
 	}
 	return m, cmd
 }
 
-// step is Update with the concrete type, so the settings screen can host a
-// preview without a type assertion on every message.
-func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
+// step is Update for the tests and the preview, the model itself back so a
+// test reads as a run of steps.
+func (m *LockModel) step(msg tea.Msg) (*LockModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		m.prompt.setSize(msg.Width, msg.Height)
 		// A resize redraws whole; nothing animates (function.md §5.3).
 		m.tickGen++
 		m.rev = nil
 		m.shown = m.refit()
-		return m, m.clockTick()
+		return m, tea.Batch(m.toApp(msg), m.clockTick())
 	case TTYGoneMsg:
 		m.gone, m.over = true, true
 		return m, tea.Quit
@@ -267,42 +295,51 @@ func (m LockModel) step(msg tea.Msg) (LockModel, tea.Cmd) {
 		}
 		m.shown = m.rev.cur
 		return m, m.revealTick()
-	case AnimTickMsg:
-		return m, m.prompt.anim.tick()
-	case promptIdleMsg:
-		if msg.gen != m.promptGen || !m.prompt.anim.owns() || m.prompt.state != promptIdle {
+	case boxIdleMsg:
+		// Not while a wrong PIN is said or a cooling-off counts down: each
+		// starts the timer again when it is over.
+		if msg.gen != m.idleGen || !m.boxUp || m.holding() || m.lockedOut() {
 			return m, nil
 		}
-		return m, m.closePrompt()
-	case wrongOverMsg:
-		if msg.gen != m.promptGen || m.prompt.state != promptWrong {
+		return m, m.app.CloseAll()
+	case heldOverMsg:
+		if !m.boxUp || m.holding() {
 			return m, nil
 		}
-		m.prompt.state = promptIdle
 		return m, m.armTimeout()
-	case lockoutTickMsg:
-		if msg.gen != m.promptGen || m.prompt.state != promptLockout {
+	case lockoutOverMsg:
+		if m.lockoutUntil.IsZero() || m.lockedOut() {
 			return m, nil
 		}
-		if !m.now().Before(m.lockoutUntil) {
-			// The cooling-off is over and the count starts again (§4.4).
-			m.endLockout()
-			m.prompt.state, m.prompt.err = promptIdle, ""
-			return m, m.armTimeout()
+		// The cooling-off is over and the count starts again (§4.4); the
+		// wrong PIN that led to it goes from the box.
+		m.endLockout()
+		if !m.boxUp {
+			return m, nil
 		}
-		return m, m.lockoutTick()
+		return m, tea.Batch(m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}), m.armTimeout())
 	case tea.KeyMsg:
-		return m.key(msg)
+		return m, m.key(msg)
 	}
-	return m, nil
+	// The lib's own: the box's animation, the cooling-off's count.
+	return m, m.toApp(msg)
 }
 
-// key is every keystroke (ux.md §2.3). On the saver any key opens the
-// prompt and is not input. In the prompt: Enter checks, Esc goes back,
-// Backspace deletes, a character is appended — and while the
-// prompt says "wrong" or is locked out, keys are swallowed, Esc excepted
-// during a lockout.
-func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
+// toApp hands msg to the lib's app.
+func (m *LockModel) toApp(msg tea.Msg) tea.Cmd {
+	_, cmd := m.app.Update(msg)
+	return cmd
+}
+
+// key is every keystroke (ux.md §2.3). On the board any key opens the box
+// and is not input; in the box it is the box's, and starts the timeout
+// again — but for the second of "wrong", when every key is swallowed.
+func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
+	// Nothing is drawn before the terminal's size is known, and a key
+	// there is not one the user saw anything for.
+	if m.width <= 0 || m.height <= 0 {
+		return nil
+	}
 	// A preview is a look at the saver, not the lock: any key hands back,
 	// PIN or no PIN — the PIN is `locku lock`'s business (user,
 	// 2026-09-25). The status row still reads as the lock's would.
@@ -320,63 +357,55 @@ func (m LockModel) key(msg tea.KeyMsg) (LockModel, tea.Cmd) {
 	if m.noPIN {
 		return m.unlock()
 	}
-	if !m.prompt.anim.owns() {
-		return m, m.openPrompt()
+	if !m.boxUp {
+		return m.toApp(msg)
 	}
-	if !m.prompt.anim.isInteractive() {
-		return m, nil
+	if m.holding() {
+		return nil
 	}
-	switch m.prompt.state {
-	case promptWrong:
-		return m, nil
-	case promptLockout:
-		if msg.Type == tea.KeyEsc {
-			return m, m.closePrompt()
-		}
-		return m, nil
+	cmd := m.toApp(msg)
+	if !m.wrong {
+		// Every key restarts the idle timer, so a PIN typed slowly does
+		// not vanish halfway (function.md §3).
+		return tea.Batch(cmd, m.armTimeout())
 	}
-	switch msg.Type {
-	case tea.KeyEsc:
-		return m, m.closePrompt()
-	case tea.KeyEnter:
-		// A PIN with a control character in it — pasted — could never be
-		// set: it is not checked, and not a wrong one (components/input/README).
-		if m.prompt.hasControl() {
-			m.prompt.err = pinControlErr
-			return m, m.armTimeout()
-		}
-		return m.check()
-	case tea.KeyBackspace:
-		m.prompt.clear()
-	case tea.KeySpace:
-		m.prompt.add([]rune{' '}, msg.Paste)
-	case tea.KeyRunes:
-		// An Alt combination types nothing on a typing row
-		// (components/input/README, editing keys).
-		if !msg.Alt || msg.Paste {
-			m.prompt.add(msg.Runes, msg.Paste)
-		}
+	m.wrong = false
+	if m.lockedOut() {
+		// The box counts the cooling-off down (tdp S37), every key but Esc
+		// swallowed; when it is over the count starts again.
+		return tea.Batch(cmd, tea.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
-	// Every key restarts the idle timer, so a PIN typed slowly does not
-	// vanish halfway (function.md §3).
-	return m, m.armTimeout()
+	// A second of "wrong": the dots go — Backspace clears a password whole
+	// — and every key is swallowed, so Enter pressed again and again does
+	// not skip the word (function.md §4.4).
+	m.held = m.now().Add(wrongHold)
+	return tea.Batch(cmd, m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}),
+		tea.Tick(wrongHold, func(time.Time) tea.Msg { return heldOverMsg{} }))
 }
 
-// openPrompt puts the prompt up. The board goes on underneath it — ticking,
+func (m *LockModel) holding() bool   { return m.now().Before(m.held) }
+func (m *LockModel) lockedOut() bool { return m.now().Before(m.lockoutUntil) }
+
+// openBox puts the PIN box up. The board goes on underneath it — ticking,
 // revealing — dimmed to a backdrop (user, 2026-09-24: the colour changes,
-// the clock does not stop; until then the ticks stopped under the prompt).
-func (m *LockModel) openPrompt() tea.Cmd {
-	m.promptGen++
-	cmd := m.prompt.open()
-	if m.now().Before(m.lockoutUntil) {
-		m.prompt.state, m.prompt.until = promptLockout, m.lockoutUntil
-		return tea.Batch(cmd, m.lockoutTick())
-	}
-	if !m.lockoutUntil.IsZero() {
-		// It ran out while the prompt was down: the count starts again
-		// all the same (2026-10-06; it used to stay, and the next wrong
-		// PIN was a cooling-off again).
+// the clock does not stop).
+func (m *LockModel) openBox() tea.Cmd {
+	if !m.lockoutUntil.IsZero() && !m.lockedOut() {
+		// It ran out while the box was down: the count starts again all the
+		// same (2026-10-06; it used to stay, and the next wrong PIN was a
+		// cooling-off again).
 		m.endLockout()
+	}
+	m.boxUp = true
+	cmd := m.app.Password(terminu.PasswordInput{Title: pinTitle, Glyph: glyphLock, Name: "PIN", Verb: "unlock",
+		Unlock: true, MaxLen: config.PINMax,
+		Check: m.check,
+		// The lib counts on the clock, the lock on its own (a test's).
+		PausedUntil: func() time.Time { return time.Now().Add(m.lockoutUntil.Sub(m.now())) },
+		Done:        func(string, bool) tea.Cmd { return m.unlock() },
+		OnCancel:    m.boxClosed})
+	if m.lockedOut() {
+		cmd = tea.Batch(cmd, tea.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
 	return tea.Batch(cmd, m.armTimeout())
 }
@@ -384,54 +413,50 @@ func (m *LockModel) openPrompt() tea.Cmd {
 // endLockout starts the count again once a cooling-off is over.
 func (m *LockModel) endLockout() { m.failures, m.lockoutUntil = 0, time.Time{} }
 
-// closePrompt takes it down; the board never stopped. Prompt-only, the
-// program is waiting for the screen: this lock ends, with Back.
-func (m *LockModel) closePrompt() tea.Cmd {
+// boxClosed is the box gone without the PIN — Esc, or the timeout; the
+// board never stopped. Prompt-only, the program is waiting for the
+// screen: this lock ends, with Back.
+func (m *LockModel) boxClosed() tea.Cmd {
+	m.boxUp = false
+	m.idleGen++
+	m.held = time.Time{}
 	if m.promptOnly {
 		m.back, m.over = true, true
 		return tea.Quit
 	}
-	m.promptGen++
-	return m.prompt.close()
+	return nil
 }
 
-// check is Enter in the prompt: the right PIN ends the lock at once — no
-// closing animation, the terminal is wanted back (ux.md §2.3). A wrong one
-// is a second of "wrong" with every key swallowed, or, at the configured
-// count, a lockout.
-func (m LockModel) check() (LockModel, tea.Cmd) {
-	pin := string(m.prompt.value)
-	m.prompt.value = nil
+// check is Enter in the box: the right PIN ends the lock at once — no
+// closing animation, the terminal is wanted back (ux.md §2.3); a wrong one
+// is a second of "wrong" (key), or, at the configured count, a cooling-off.
+// A PIN with a control character in it — pasted — the lib refuses before
+// it gets here: it is not a wrong one.
+func (m *LockModel) check(pin string) error {
 	if m.cfg.CheckPIN(pin) {
-		return m.unlock()
+		return nil
 	}
 	m.failures++
-	m.promptGen++
-	m.prompt.err = pinWrong
+	m.wrong = true
 	if m.cfg.WrongPINAttempts > 0 && m.failures >= m.cfg.WrongPINAttempts {
 		m.lockoutUntil = m.now().Add(time.Duration(m.cfg.WrongPINCooldown) * time.Second)
-		m.prompt.until = m.lockoutUntil
-		m.prompt.state = promptLockout
-		return m, m.lockoutTick()
 	}
-	m.prompt.state = promptWrong
-	gen := m.promptGen
-	return m, tea.Tick(wrongHold, func(time.Time) tea.Msg { return wrongOverMsg{gen} })
+	return errWrongPIN
 }
 
 // TTYGone reports whether the lock ended because the terminal went away
 // rather than because it was unlocked.
-func (m LockModel) TTYGone() bool { return m.gone }
+func (m *LockModel) TTYGone() bool { return m.gone }
 
 // unlock is the way out: the process ends, or, in a preview, the settings
 // screen takes over again.
-func (m LockModel) unlock() (LockModel, tea.Cmd) {
+func (m *LockModel) unlock() tea.Cmd {
 	if m.preview {
 		m.unlocked = true
-		return m, tea.Quit
+		return tea.Quit
 	}
 	m.over = true
-	return m, tea.Quit
+	return tea.Quit
 }
 
 // refit lays the current time out for the current size and returns the
@@ -470,7 +495,7 @@ func (m *LockModel) redraw() tea.Cmd {
 
 // clockTick is the next change of content: the clock's next minute or
 // second, or the run's next frame.
-func (m LockModel) clockTick() tea.Cmd {
+func (m *LockModel) clockTick() tea.Cmd {
 	gen := m.tickGen
 	now := m.now()
 	next := m.clock.Next(now)
@@ -483,30 +508,25 @@ func (m LockModel) clockTick() tea.Cmd {
 	return tea.Tick(next.Sub(now), func(time.Time) tea.Msg { return clockTickMsg{gen} })
 }
 
-func (m LockModel) revealTick() tea.Cmd {
+func (m *LockModel) revealTick() tea.Cmd {
 	gen := m.tickGen
 	return tea.Tick(revealStep, func(time.Time) tea.Msg { return revealTickMsg{gen} })
 }
 
-// armTimeout starts pin_prompt_timeout over; 0 means the prompt stays.
+// armTimeout starts pin_prompt_timeout over; 0 means the box stays.
 func (m *LockModel) armTimeout() tea.Cmd {
-	m.promptGen++
+	m.idleGen++
 	if m.cfg.PINPromptTimeout <= 0 {
 		return nil
 	}
-	gen := m.promptGen
+	gen := m.idleGen
 	d := time.Duration(m.cfg.PINPromptTimeout) * time.Second
-	return tea.Tick(d, func(time.Time) tea.Msg { return promptIdleMsg{gen} })
-}
-
-func (m LockModel) lockoutTick() tea.Cmd {
-	gen := m.promptGen
-	return tea.Tick(time.Second, func(time.Time) tea.Msg { return lockoutTickMsg{gen} })
+	return tea.Tick(d, func(time.Time) tea.Msg { return boxIdleMsg{gen} })
 }
 
 // inks are the board's colours: a game's own when it has them (user,
 // 2026-10-06), else the profile's ground and fg, and the accent.
-func (m LockModel) inks() []lipgloss.Color {
+func (m *LockModel) inks() []lipgloss.Color {
 	if g, ok := m.game.(saver.Inked); ok {
 		var out []lipgloss.Color
 		for _, c := range g.Inks() {
@@ -520,7 +540,7 @@ func (m LockModel) inks() []lipgloss.Color {
 // shading is the board's colours square by square, when the game's
 // are not one set (user, 2026-10-07: the runner's sky); else nil, every
 // square in its ink.
-func (m LockModel) shading() *saver.Shading {
+func (m *LockModel) shading() *saver.Shading {
 	g, ok := m.game.(saver.Graded)
 	if !ok {
 		return nil
@@ -529,39 +549,57 @@ func (m LockModel) shading() *saver.Shading {
 	return &s
 }
 
-func (m LockModel) View() string {
-	if m.width <= 0 || m.height <= 0 {
-		return ""
+// canvas is the lock as the App draws it under the box: the board and the
+// status row. Under the box the lib fades it whole, each colour its own way
+// (tdp F8, D2, 2026-09-28). A prompt-only lock draws nothing: the program's
+// picture is under its box.
+func (m *LockModel) canvas(w, h int) []string {
+	if m.promptOnly {
+		return nil
 	}
 	bg, fg := lipgloss.Color(m.style.BG), lipgloss.Color(m.style.FG)
-	// Dimmed while the box is opening or open: one closing is not the top
-	// any more, and what is under it brightens at once (components/layout/popup).
-	dimmed := m.prompt.anim.owns()
 	rows := m.height - 1
 	var out []string
 	if rows > 0 {
 		switch {
-		case m.promptOnly:
-			// The program's picture is held back; the prompt sits on the
-			// profile's ground alone.
-			out = plainRows(nil, bg, fg, m.width, rows)
 		case len(m.layout.blocks) > 0 || m.game != nil:
 			out = boardRows(m.shown, m.inks(), m.shading(), m.width)
 		default:
 			out = plainRows(m.plain, bg, fg, m.width, rows)
 		}
 	}
-	out = append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note))
-	view := strings.Join(out, "\n")
-	if dimmed {
-		// Under the prompt the lock fades whole, each colour its own way:
-		// the lit pixels, the accent, the ground, a config error's red
-		// (tdp F8, D2, 2026-09-28; the lit pixels were Overlay0, the
-		// status row stripped).
-		view = dimANSI(view)
+	return append(out, statusRow(m.width, m.cfg.ShowStatus, m.user, m.host, m.lockedAt, m.noPIN, m.problem, m.note))
+}
+
+func (m *LockModel) View() string {
+	if m.width <= 0 || m.height <= 0 {
+		return ""
 	}
-	if rows, x, y := m.prompt.view(m.now()); rows != nil {
-		view = strings.Join(terminu.Composite(strings.Split(view, "\n"), rows, x, y, m.width), "\n")
+	return m.app.View()
+}
+
+// boxOf is what the lib drew over a blank canvas, cut out of its frame: the
+// rows and the columns that are not blank.
+func boxOf(frame []string) []string {
+	top, bottom, left, right := -1, -1, 1<<30, 0
+	for i, l := range frame {
+		plain := terminu.StripStyles(l)
+		if strings.TrimSpace(plain) == "" {
+			continue
+		}
+		if top < 0 {
+			top = i
+		}
+		bottom = i
+		left = min(left, terminu.Width(plain)-terminu.Width(strings.TrimLeft(plain, " ")))
+		right = max(right, terminu.Width(strings.TrimRight(plain, " ")))
 	}
-	return view
+	if top < 0 {
+		return nil
+	}
+	out := make([]string, 0, bottom-top+1)
+	for _, l := range frame[top : bottom+1] {
+		out = append(out, terminu.Cut(l, left, right))
+	}
+	return out
 }

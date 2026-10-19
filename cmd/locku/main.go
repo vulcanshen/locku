@@ -109,7 +109,7 @@ func runLock(socket, session string) int {
 	if p, ok := cfg.Active(); ok && p.Saver == saver.KindCustom {
 		code, unlocked = runCustom(cfg, problem, p.Command)
 	} else {
-		code, unlocked = runBoard(func() ui.LockModel { return ui.NewLock(cfg, problem) })
+		code, unlocked = runBoard(func() *ui.LockModel { return ui.NewLock(cfg, problem) })
 	}
 	if unlocked {
 		tmux.SetLocked(socket, session, false)
@@ -120,7 +120,7 @@ func runLock(socket, session string) int {
 // runBoard runs a lock program on the terminal until it ends, and puts
 // it back up when it comes down for any other reason; it reports
 // whether the lock was unlocked, as against the terminal going away.
-func runBoard(model func() ui.LockModel) (code int, unlocked bool) {
+func runBoard(model func() *ui.LockModel) (code int, unlocked bool) {
 	quick := 0
 	for {
 		started := time.Now()
@@ -133,7 +133,7 @@ func runBoard(model func() ui.LockModel) (code int, unlocked bool) {
 			tea.WithOutput(ui.ScreenOutput{File: os.Stdout}),
 		)
 		if m, err := p.Run(); err == nil {
-			lm, ok := m.(ui.LockModel)
+			lm, ok := m.(*ui.LockModel)
 			return 0, !ok || !lm.TTYGone()
 		}
 		// Bubble Tea has restored the terminal; the lock goes back up. A
@@ -161,7 +161,7 @@ func runBoard(model func() ui.LockModel) (code int, unlocked bool) {
 // board comes up with the word for it, and stays until the PIN.
 func runCustom(cfg config.Config, problem, command string) (int, bool) {
 	board := func(o custom.Outcome) (int, bool) {
-		return runBoard(func() ui.LockModel { return ui.NewLockWord(cfg, problem, o.Word, o.Note) })
+		return runBoard(func() *ui.LockModel { return ui.NewLockWord(cfg, problem, o.Word, o.Note) })
 	}
 	if strings.TrimSpace(command) == "" {
 		return board(custom.NoCommand())
@@ -281,7 +281,7 @@ func runPrompt(cfg config.Config, problem string, t *custom.Terminal, tries ui.T
 	if err != nil {
 		return false, true, tries
 	}
-	lm, ok := m.(ui.LockModel)
+	lm, ok := m.(*ui.LockModel)
 	switch {
 	case !ok:
 		return true, false, tries

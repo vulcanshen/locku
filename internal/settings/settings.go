@@ -76,6 +76,7 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	s := &Settings{cfg: cfg, problem: problem, shown: item{kind: -1}}
 	a := terminu.New("locku")
 	a.QuitDesc = "leave locku"
+	a.MinWidth, a.MinHeight = minW, minH
 	splash, err := terminu.NewSplash(icon, "locku", version.Display(), intro)
 	if err != nil {
 		return nil, err
@@ -113,10 +114,14 @@ func (s *Settings) App() *terminu.App { return s.app }
 func (s *Settings) Run() error { return s.app.Run() }
 
 // sideW is [1]'s width, webu's (ui.md §1.3); narrowBelow the width under
-// which only the focused panel is drawn.
+// which only the focused panel is drawn. minW × minH is the least size
+// (tdp L1), lower than the family's 80 × 40 so a tmux pane will do: the
+// colour picker, the largest box here at 36 × 11, fits whole inside [2]'s
+// frame, under its header and over the footer (2026-10-19).
 const (
 	sideW       = 24
 	narrowBelow = 60
+	minW, minH  = 40, 15
 )
 
 func layout(w, h int) []terminu.Rect {
@@ -152,7 +157,6 @@ func (s *Settings) fill() {
 	}
 	s.vals.Fields = s.fields()
 	s.p2.Label = s.detailLabel()
-	s.p2.OtherKeys = s.glossary()
 	s.p1.Actions = s.sideActions()
 	s.p2.Actions = s.detailActions()
 }
@@ -171,27 +175,40 @@ func (s *Settings) snapshot() config.Config {
 
 // save writes config.yaml now — every change is saved the moment it is
 // made — and, when the write fails, puts the config back as it was and
-// says so (tdp F5).
+// says so (tdp F5): an action that failed, an error popup, the whole of it
+// there (components/dialog/toast, dialog/note).
 func (s *Settings) save(before config.Config) tea.Cmd {
 	defer s.refresh()
 	if err := config.Save(s.cfg); err != nil {
 		s.cfg = before
-		// An action that failed: an error popup, the whole of it there
-		// (components/dialog/toast, dialog/note).
-		// TODO(lib LK10): over the box the value came from, which has closed
-		// by now; Esc on the error popup leaves the value typed.
 		return s.app.Error("Write failed", err.Error())
 	}
 	return nil
 }
 
-// tell says text in a toast when it fits in one — three rows at most
-// (components/dialog/toast) — and in a note to read when it does not.
+// commit is change for a value typed or chosen in a box, its Commit: a
+// write that fails puts the config back and is the box's, which stays open
+// with the value in it under the error popup (components/layout/popup, the
+// action failing).
+func (s *Settings) commit(f func()) error {
+	before := s.snapshot()
+	f()
+	defer s.refresh()
+	if err := config.Save(s.cfg); err != nil {
+		s.cfg = before
+		return err
+	}
+	return nil
+}
+
+// tell says what was done in a Success toast when it fits in three rows,
+// and in a note to read when it does not: setup's report of a long path
+// is read, not glimpsed (components/dialog/toast: how many rows is the app's).
 func (s *Settings) tell(title string, lines []string) tea.Cmd {
 	text := strings.Join(lines, " · ")
 	w, _ := s.app.Size()
 	if len(terminu.Wrap(text, max(min(w-2, 120)-4, 1))) <= 3 {
-		return s.app.Toast(terminu.Info, text)
+		return s.app.Toast(terminu.Success, text)
 	}
 	return s.app.Viewer(&terminu.Viewer{Title: title, Glyph: glyphFile, Lines: lines})
 }

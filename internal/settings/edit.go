@@ -33,81 +33,76 @@ func oneKeyErr(name, example string) error { return errors.New(name + " must be 
 // or none: the box shows the PIN that is there as eight grey dots, and
 // Backspace on them, then Enter, leaves no PIN (components/input/password;
 // until 2026-10-18 a menu after the current PIN offered New PIN or Remove PIN).
-// The titles are CURRENT PIN, NEW PIN, CONFIRM PIN: an unlock box has no
-// prompt row, the title says what to type (tdp S36, 2026-10-19).
-// TODO(lib LK6): the lib v0.1.13 still draws the prompt row; it goes when
-// the lib's unlock look drops it, the prompts with it.
-// TODO(lib LK7): each step was its own box over the one before (tdp F1:
-// a step a popup, the source kept); a lib input closes as its Done runs,
-// so the next step opens over [2], and Esc there leaves the whole change.
+// Each step is its own box over the one before, Esc one step back, and the
+// last one done closes them all (tdp F1, F4, T1; 2026-10-18 to 10-19 a step
+// closed as the next opened). An unlock box has no prompt row: the titles
+// say what to type, CURRENT PIN, NEW PIN, CONFIRM PIN (tdp S36).
 func (s *Settings) editPIN() tea.Cmd {
 	if !s.cfg.HasPIN() {
-		return s.newPIN(false)
+		return s.newPIN(false, 1)
 	}
 	return s.app.Password(terminu.PasswordInput{Title: "Current PIN", Glyph: glyphLock, Name: "PIN",
-		Prompt: "The current PIN", Verb: "next", Unlock: true, MaxLen: config.PINMax,
+		Verb: "next", Unlock: true, MaxLen: config.PINMax, Stay: true,
 		Check: func(v string) error {
-			if !s.cfg.CheckPIN(v) {
+			switch {
+			case v == "":
+				return terminu.ErrEmpty
+			case !s.cfg.CheckPIN(v):
 				return errWrongPIN
 			}
 			return nil
 		},
-		Done: func(_ string, clear bool) tea.Cmd {
-			if clear {
-				return nil // nothing typed: nothing asked
-			}
-			return s.newPIN(true)
-		}})
+		Done: func(string, bool) tea.Cmd { return s.newPIN(true, 2) }})
 }
 
-// newPIN asks the new PIN; set says one is there now, which Enter on
-// nothing keeps and Backspace removes.
-func (s *Settings) newPIN(set bool) tea.Cmd {
-	prompt := "A new PIN, 4 to 12 characters"
-	if set {
-		prompt = "A new PIN, 4 to 12 characters, or none"
-	}
+// newPIN asks the new PIN, the flow's step-th box; set says one is there
+// now, which Enter on nothing keeps and Backspace removes.
+func (s *Settings) newPIN(set bool, step int) tea.Cmd {
 	return s.app.Password(terminu.PasswordInput{Title: "New PIN", Glyph: glyphLock, Name: "PIN",
-		Prompt: prompt, Verb: "next", Set: set, Unlock: true, MaxLen: config.PINMax,
+		Verb: "next", Set: set, Unlock: true, MaxLen: config.PINMax, Stay: true,
+		// Empty is no PIN: the one there removed, or none kept.
 		Check: func(v string) error {
-			if config.CheckPINLength(v) != nil {
+			if v != "" && config.CheckPINLength(v) != nil {
 				return errPINLength
 			}
 			return nil
 		},
+		Commit: func(_ string, clear bool) error {
+			if !clear {
+				return nil // written once it is typed again
+			}
+			return s.commit(s.cfg.ClearPIN)
+		},
 		Done: func(v string, clear bool) tea.Cmd {
 			if clear {
-				if !s.cfg.HasPIN() {
-					return nil
-				}
-				return tea.Batch(s.change(s.cfg.ClearPIN), s.app.Toast(terminu.Info, "PIN removed"))
+				return tea.Batch(s.app.CloseTop(step), s.app.Toast(terminu.Success, "PIN removed"))
 			}
 			s.pinNew = v
-			return s.confirmPIN()
+			return s.confirmPIN(step + 1)
 		}})
 }
 
-// confirmPIN asks the new PIN again; a different one is refused in this
-// box, and is one Esc from typing it over.
-func (s *Settings) confirmPIN() tea.Cmd {
+// confirmPIN asks the new PIN again, the flow's last box; a different one
+// is refused in this box, and is one Esc from typing it over.
+func (s *Settings) confirmPIN(step int) tea.Cmd {
 	return s.app.Password(terminu.PasswordInput{Title: "Confirm PIN", Glyph: glyphLock, Name: "PIN",
-		Prompt: "The new PIN again", Verb: "set", Unlock: true, MaxLen: config.PINMax,
+		Verb: "set", Unlock: true, MaxLen: config.PINMax, Stay: true,
 		Check: func(v string) error {
 			if v != s.pinNew {
 				return errNotNewPIN
 			}
 			return nil
 		},
-		Done: func(v string, clear bool) tea.Cmd {
+		Commit: func(v string, _ bool) error {
+			var err error
+			if cerr := s.commit(func() { err = s.cfg.SetPIN(v) }); cerr != nil {
+				return cerr
+			}
+			return err
+		},
+		Done: func(string, bool) tea.Cmd {
 			s.pinNew = ""
-			if clear {
-				return nil
-			}
-			before := s.snapshot()
-			if err := s.cfg.SetPIN(v); err != nil {
-				return s.app.Error("PIN", err.Error())
-			}
-			return tea.Batch(s.save(before), s.app.Toast(terminu.Info, "PIN set"))
+			return tea.Batch(s.app.CloseTop(step), s.app.Toast(terminu.Success, "PIN set"))
 		}})
 }
 

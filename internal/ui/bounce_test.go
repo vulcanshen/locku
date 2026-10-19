@@ -11,7 +11,7 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-func bounceLock(t *testing.T) LockModel {
+func bounceLock(t *testing.T) *LockModel {
 	t.Helper()
 	return testLock(t, "1234", func(c *config.Config) {
 		c.Profiles = []config.Profile{config.NewProfile("box", saver.KindBounce)}

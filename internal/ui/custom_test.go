@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/vulcanshen/locku/internal/config"
 	"github.com/vulcanshen/locku/internal/saver"
@@ -88,41 +88,34 @@ func TestWordLockAndPromptOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	var painted []string
-	p := NewLockPrompt(cfg, "", 100, 30, func(box string, _ int) { painted = append(painted, box) }, Tries{})
-	if p.initCmd == nil || !p.prompt.anim.isActive() || p.width != 100 {
-		t.Fatal("the prompt must be up from the first frame, at the size given")
+	prompt := func() *LockModel {
+		painted = nil
+		return NewLockPrompt(cfg, "", 100, 30, func(box string, _ int) { painted = append(painted, box) }, Tries{})
+	}
+	p := prompt()
+	if p.initCmd == nil || !p.boxUp || p.width != 100 {
+		t.Fatal("the box must be up from the first frame, at the size given")
 	}
 	// Every step paints the box, through the callback: the animation's
-	// frames, and the keys.
-	var pm tea.Model = p
-	for i := 0; i < 20 && !p.prompt.anim.isInteractive(); i++ {
-		pm, _ = pm.(LockModel).Update(AnimTickMsg{})
-		p = pm.(LockModel)
-	}
-	if len(painted) == 0 || !strings.Contains(painted[len(painted)-1], glyphLock) {
+	// frames, and the keys; the box alone, nothing of the lock under it.
+	runCmd(p, p.Init())
+	last := func() string { return ansi.Strip(painted[len(painted)-1]) }
+	if len(painted) == 0 || !strings.Contains(painted[len(painted)-1], glyphLock) || !strings.Contains(last(), "UNLOCK") {
 		t.Fatalf("the box must be painted through the callback: %d paints", len(painted))
 	}
+	if b := strings.Split(last(), "\n"); len(b) != 7 || !strings.HasPrefix(b[0], "┏") || !strings.HasPrefix(b[6], "┗") {
+		t.Errorf("the box, whole and alone:\n%s", last())
+	}
+	if v := ansi.Strip(p.View()); strings.Contains(v, "user@host") || strings.Contains(v, "no PIN") {
+		t.Errorf("a prompt-only lock draws no lock under its box:\n%s", v)
+	}
 	n := len(painted)
-	pm, _ = pm.(LockModel).Update(tea.KeyMsg{Type: tea.KeyEsc})
-	if len(painted) != n || !pm.(LockModel).Back() {
-		t.Errorf("Esc ends the prompt without painting again: %d paints, back %v", len(painted)-n, pm.(LockModel).Back())
+	if !press(p, "Esc") || len(painted) != n || !p.Back() {
+		t.Errorf("Esc ends the prompt program with Back, without painting again: %d paints, back %v", len(painted)-n, p.Back())
 	}
-	// The ground is the profile's colour alone, no clock on it: the top
-	// row is a bare ground row, faded under the prompt (tdp F8).
-	ground := dimANSI(plainRows(nil, lipgloss.Color(config.DefaultBG), lipgloss.Color(config.DefaultFG), 100, 29)[0])
-	if v := p.View(); !strings.HasPrefix(v, ground) {
-		t.Errorf("a prompt-only lock draws no board:\n%s", v)
-	}
-	esc, cmd := p.step(tea.KeyMsg{Type: tea.KeyEsc})
-	if !esc.Back() || !quits(cmd) {
-		t.Errorf("Esc must end the prompt program with Back: %v %v", esc.Back(), quits(cmd))
-	}
-	pin := p
-	for _, r := range "1234" {
-		pin, _ = pin.step(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{r}})
-	}
-	pin, cmd = pin.step(tea.KeyMsg{Type: tea.KeyEnter})
-	if pin.Back() || !quits(cmd) {
-		t.Errorf("the PIN must end the prompt program without Back: %v %v", pin.Back(), quits(cmd))
+	pin := prompt()
+	runCmd(pin, pin.Init())
+	if !typed(pin, "1234") || pin.Back() {
+		t.Errorf("the PIN must end the prompt program without Back: %v", pin.Back())
 	}
 }
