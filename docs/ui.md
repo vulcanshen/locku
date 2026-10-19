@@ -239,15 +239,13 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。locku 自己畫、照 lib 的畫法（lib 的 input 只能從它的 App 開，LK1；2026-10-18）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 9 列：留白、說明列 `The PIN`（Overlay0）、空一列、點點、空一列、錯誤列（Red，置中）、留白；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
+| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。locku 自己畫、照 lib 的畫法（lib 的 input 只能從它的 App 開，LK1；2026-10-18）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：留白、點點、空一列、錯誤列（Red，置中）、留白，沒有說明列——要輸入什麼由標題講（2026-10-19，tdp S36；2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
 四個狀態，框的大小都不變：
 
 ```
-┏━ UNLOCK━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     idle：層色
-┃                                           ┃
-┃ The PIN                                   ┃     說明列
+┏━ UNLOCK━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓     idle：層色；沒有說明列
 ┃                                           ┃
 ┃                 ● ● ● █                   ┃     點點；游標在下一顆的位置
 ┃                                           ┃

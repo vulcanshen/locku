@@ -26,10 +26,6 @@ import (
 // swallows keys, the cooling-off, the timeout — so the box is drawn here, the
 // lib's way.
 //
-// TODO(tdp LK6): the box was seven rows, the dots in its very middle, no
-// prompt (user, 2026-10-07); the one-line input's skeleton has a prompt, so
-// nine.
-//
 // Its states, the box never changing size:
 //
 //	idle        the prompt, the dots, Enter:unlock Backspace:clear Esc:cancel
@@ -51,7 +47,6 @@ const wrongHold = time.Second
 // The words on the box.
 const (
 	pinTitle      = "Unlock"
-	pinPromptText = "The PIN"
 	pinWrong      = "wrong PIN"
 	pinControlErr = "PIN can't have control characters"
 )
@@ -121,10 +116,10 @@ func (p pinPrompt) remaining(now time.Time) int {
 }
 
 // idleHint is the box's hint while it takes keys: the box has a typing
-// row only, so the hint is every key there is (Rules M3).
+// row only, so the hint is every key there is (tdp M3).
 var idleHint = []terminu.KeyHint{{Key: "Enter", Desc: "unlock"}, {Key: "Backspace", Desc: "clear"}, {Key: "Esc", Desc: "cancel"}}
 
-// hint is what can be pressed now (Rules M6: only those, in a hint):
+// hint is what can be pressed now (tdp M6: only those, in a hint):
 // nothing for the second of "wrong", Esc in a lockout.
 func (p pinPrompt) hint() []terminu.KeyHint {
 	switch p.state {
@@ -138,13 +133,13 @@ func (p pinPrompt) hint() []terminu.KeyHint {
 
 // size is the box on the screen: as wide as the longest PIN's dots ask, the
 // prompt, the title and the whole hint (layout/popup, width: known when it
-// opens), no wider than the screen allows; nine rows with its borders.
+// opens), no wider than the screen allows; seven rows with its borders.
 func (p pinPrompt) size() (w, h int) {
 	most := max(min(p.screenW-2, 120), 1)
-	need := max(2*config.PINMax-1, terminu.Width(pinPromptText)) + 4
+	need := 2*config.PINMax - 1 + 4
 	need = max(need, terminu.Width(titleCapsule(1<<20))+4)
 	need = max(need, hintWidth(idleHint)+6)
-	return min(need, most), min(9, max(p.screenH-2, 3))
+	return min(need, most), min(7, max(p.screenH-2, 3))
 }
 
 // place is where the box's top left corner goes: the middle of the screen.
@@ -163,9 +158,10 @@ func (p pinPrompt) full(now time.Time) []string {
 	if p.state == promptLockout {
 		err = "try again in " + itoa(p.remaining(now)) + " s"
 	}
+	// No prompt row: the unlock look's box is there for this one value, and
+	// the title says what it is (tdp S36, 2026-10-19; nine rows with the
+	// prompt `The PIN` from 2026-10-18).
 	body := []string{
-		padRow(terminu.Fg(terminu.Overlay0).Render(pinPromptText), inner),
-		strings.Repeat(" ", inner),
 		" " + terminu.Center(p.dots(cw), cw) + " ",
 		strings.Repeat(" ", inner),
 		" " + terminu.Center(terminu.Fg(terminu.Red).Render(terminu.Truncate(err, cw)), cw) + " ",
@@ -288,7 +284,7 @@ func frameBox(w int, color terminu.Color, title string, hint []terminu.KeyHint, 
 	return append(out, line.Render("┗━")+h+line.Render(strings.Repeat("━", fill))+line.Render("┛"))
 }
 
-// ---- the animation (Rules F2, components/layout/popup)
+// ---- the animation (tdp F2, components/layout/popup)
 
 // A popup opens in three steps — a line drawn out from the middle (four
 // frames), held (one), then opened up and down (four) — and closes the same
@@ -318,7 +314,7 @@ type popupAnimator struct {
 func (a popupAnimator) isActive() bool { return a.phase != animClosed }
 
 // owns reports whether the box still has the keys: opening or open. A
-// closing one has not (Rules F3), and an opening one swallows them
+// closing one has not (tdp F3), and an opening one swallows them
 // (isInteractive), so none lands on a half-drawn box.
 func (a popupAnimator) owns() bool { return a.phase == animOpening || a.phase == animOpen }
 

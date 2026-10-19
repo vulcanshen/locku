@@ -33,14 +33,18 @@ func oneKeyErr(name, example string) error { return errors.New(name + " must be 
 // or none: the box shows the PIN that is there as eight grey dots, and
 // Backspace on them, then Enter, leaves no PIN (components/input/password;
 // until 2026-10-18 a menu after the current PIN offered New PIN or Remove PIN).
-// TODO(lib LK7): each step was its own box over the one before (Rules F1:
+// The titles are CURRENT PIN, NEW PIN, CONFIRM PIN: an unlock box has no
+// prompt row, the title says what to type (tdp S36, 2026-10-19).
+// TODO(lib LK6): the lib v0.1.13 still draws the prompt row; it goes when
+// the lib's unlock look drops it, the prompts with it.
+// TODO(lib LK7): each step was its own box over the one before (tdp F1:
 // a step a popup, the source kept); a lib input closes as its Done runs,
 // so the next step opens over [2], and Esc there leaves the whole change.
 func (s *Settings) editPIN() tea.Cmd {
 	if !s.cfg.HasPIN() {
-		return s.newPIN("Set PIN", false)
+		return s.newPIN(false)
 	}
-	return s.app.Password(terminu.PasswordInput{Title: "Change PIN", Glyph: glyphLock, Name: "PIN",
+	return s.app.Password(terminu.PasswordInput{Title: "Current PIN", Glyph: glyphLock, Name: "PIN",
 		Prompt: "The current PIN", Verb: "next", Unlock: true, MaxLen: config.PINMax,
 		Check: func(v string) error {
 			if !s.cfg.CheckPIN(v) {
@@ -52,18 +56,18 @@ func (s *Settings) editPIN() tea.Cmd {
 			if clear {
 				return nil // nothing typed: nothing asked
 			}
-			return s.newPIN("Change PIN", true)
+			return s.newPIN(true)
 		}})
 }
 
 // newPIN asks the new PIN; set says one is there now, which Enter on
 // nothing keeps and Backspace removes.
-func (s *Settings) newPIN(title string, set bool) tea.Cmd {
+func (s *Settings) newPIN(set bool) tea.Cmd {
 	prompt := "A new PIN, 4 to 12 characters"
 	if set {
 		prompt = "A new PIN, 4 to 12 characters, or none"
 	}
-	return s.app.Password(terminu.PasswordInput{Title: title, Glyph: glyphLock, Name: "PIN",
+	return s.app.Password(terminu.PasswordInput{Title: "New PIN", Glyph: glyphLock, Name: "PIN",
 		Prompt: prompt, Verb: "next", Set: set, Unlock: true, MaxLen: config.PINMax,
 		Check: func(v string) error {
 			if config.CheckPINLength(v) != nil {
@@ -79,14 +83,14 @@ func (s *Settings) newPIN(title string, set bool) tea.Cmd {
 				return tea.Batch(s.change(s.cfg.ClearPIN), s.app.Toast(terminu.Info, "PIN removed"))
 			}
 			s.pinNew = v
-			return s.confirmPIN(title)
+			return s.confirmPIN()
 		}})
 }
 
 // confirmPIN asks the new PIN again; a different one is refused in this
 // box, and is one Esc from typing it over.
-func (s *Settings) confirmPIN(title string) tea.Cmd {
-	return s.app.Password(terminu.PasswordInput{Title: title, Glyph: glyphLock, Name: "PIN",
+func (s *Settings) confirmPIN() tea.Cmd {
+	return s.app.Password(terminu.PasswordInput{Title: "Confirm PIN", Glyph: glyphLock, Name: "PIN",
 		Prompt: "The new PIN again", Verb: "set", Unlock: true, MaxLen: config.PINMax,
 		Check: func(v string) error {
 			if v != s.pinNew {

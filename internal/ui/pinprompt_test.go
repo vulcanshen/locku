@@ -21,15 +21,15 @@ func boxText(p pinPrompt, now time.Time) string {
 const pinBoxW = 39 + 6
 
 // The PIN box is the lib's password box in its unlock look: the title's
-// capsule, the prompt, the dots in the middle, the error row, the whole
-// hint, nine rows (components/input/password, input/README).
+// capsule, no prompt row, the dots, the error row, the whole hint, seven
+// rows (components/input/password; tdp S36).
 func TestPINBoxIsTheLibs(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
 	for _, r := range "12" {
 		m, _ = m.step(keyRunes(string(r)))
 	}
 	box := strings.Split(ansi.Strip(boxText(m.prompt, m.now())), "\n")
-	if len(box) != 9 {
+	if len(box) != 7 {
 		t.Fatalf("%d rows:\n%s", len(box), strings.Join(box, "\n"))
 	}
 	for r, l := range box {
@@ -37,22 +37,22 @@ func TestPINBoxIsTheLibs(t *testing.T) {
 			t.Errorf("row %d is %d wide, want %d: %q", r, w, pinBoxW, l)
 		}
 	}
-	if !strings.Contains(box[0], "UNLOCK") || !strings.Contains(box[2], "The PIN") {
-		t.Errorf("the title and the prompt:\n%s", strings.Join(box, "\n"))
+	if !strings.Contains(box[0], "UNLOCK") || strings.Contains(strings.Join(box, "\n"), "The PIN") {
+		t.Errorf("the title, and no prompt:\n%s", strings.Join(box, "\n"))
 	}
-	if got := strings.Count(box[4], "●"); got != 2 {
-		t.Errorf("%d dots for two characters: %q", got, box[4])
+	if got := strings.Count(box[2], "●"); got != 2 {
+		t.Errorf("%d dots for two characters: %q", got, box[2])
 	}
-	if !strings.Contains(box[8], "Enter:unlock Backspace:clear Esc:cancel") {
-		t.Errorf("the hint: %q", box[8])
+	if !strings.Contains(box[6], "Enter:unlock Backspace:clear Esc:cancel") {
+		t.Errorf("the hint: %q", box[6])
 	}
 	// The dots sit in the middle, the cursor counted: "● ● █" is five
 	// cells, as far from either side.
-	row := strings.TrimSuffix(strings.TrimPrefix(box[4], "┃"), "┃")
+	row := strings.TrimSuffix(strings.TrimPrefix(box[2], "┃"), "┃")
 	left := len(row) - len(strings.TrimLeft(row, " "))
 	right := len([]rune(row)) - len([]rune(strings.TrimRight(row, " "))) - 1 // the cursor is a space
 	if d := left - right; d < -1 || d > 1 {
-		t.Errorf("the dots are %d left, %d right: %q", left, right, box[4])
+		t.Errorf("the dots are %d left, %d right: %q", left, right, box[2])
 	}
 }
 
@@ -109,7 +109,7 @@ func TestPromptOpensWithTheFamilyAnimation(t *testing.T) {
 		heights = append(heights, len(rows))
 		m, _ = m.step(AnimTickMsg{})
 	}
-	want := []int{1, 1, 1, 1, 1, 3, 5, 7, 9}
+	want := []int{1, 1, 1, 1, 1, 2, 4, 6, 7}
 	for i := range want {
 		if heights[i] != want[i] {
 			t.Fatalf("the rows frame by frame: %v, want %v", heights, want)

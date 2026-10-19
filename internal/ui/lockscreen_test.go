@@ -210,7 +210,7 @@ func TestBoardKeepsTickingUnderThePrompt(t *testing.T) {
 	if cmd == nil || m.rev == nil {
 		t.Fatal("the tick under the prompt did not move the board")
 	}
-	if !m.prompt.anim.owns() || !strings.Contains(m.View(), "PIN") {
+	if !m.prompt.anim.owns() || !strings.Contains(m.View(), "UNLOCK") {
 		t.Error("the prompt went down with the tick")
 	}
 }

@@ -232,7 +232,8 @@ func swatch(hex string) string {
 // old and new side by side, Esc leaves the old (components/input/color-picker).
 // Until 2026-10-18 the colours were a draft (user, 2026-09-24): R, G and B
 // sliders on [2], [S] Save, [R] Reset, [P] previewing the draft.
-// TODO(tdp LK5): previewing a colour before it is written.
+// Chosen is written; [P] previews it, and the picker's old colour is there to
+// go back to (tdp S35, 2026-10-19).
 func (s *Settings) colour(label, hex string, set func(string) tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label, Value: func() string { return swatch(hex) },
 		Edit: func() tea.Cmd {
@@ -246,15 +247,21 @@ func switchField(label string, on bool) *terminu.Field {
 	return &terminu.Field{Label: label, Options: []string{"on"}, Multi: true, Checked: []bool{on}}
 }
 
-// number is a whole number of 0 or more, edited in a number box; zeroOff
-// shows 0 as "0 (off)". An empty box is not a number (components/input/number):
+// number is a whole number, least or more, edited in a number box; unit
+// follows it on the panel ("30 seconds"), and zero, when given, is what 0
+// means ("0 (off)"). An empty box is not a number (components/input/number):
 // the prompt says the default, to type (until 2026-10-18 empty was the default).
-// TODO(tdp LK8): an empty number box as "the default".
-func (s *Settings) number(label, prompt string, value, least int, zeroOff bool, set func(int) tea.Cmd) *terminu.Field {
+// TODO(lib LK8): an empty box is the default again, said in grey (tdp S7).
+// TODO(lib S47): the unit under the typing row (tdp S47); the panel says it
+// already.
+func (s *Settings) number(label, prompt, unit, zero string, value, least int, set func(int) tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label,
 		Value: func() string {
-			if zeroOff && value == 0 {
-				return "0 (off)"
+			switch {
+			case value == 0 && zero != "":
+				return "0 (" + zero + ")"
+			case unit != "":
+				return itoa(value) + " " + unit // a number with its unit, in full (tdp S47)
 			}
 			return itoa(value)
 		},
@@ -309,11 +316,11 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 		profile,
 		status,
 		s.number("pin_prompt_timeout", "Seconds without a key before the PIN box closes, 0 or more; 0 never, "+itoa(def.PINPromptTimeout)+" by default",
-			s.cfg.PINPromptTimeout, 0, false, func(n int) tea.Cmd { return s.change(func() { s.cfg.PINPromptTimeout = n }) }),
+			"seconds", "never", s.cfg.PINPromptTimeout, 0, func(n int) tea.Cmd { return s.change(func() { s.cfg.PINPromptTimeout = n }) }),
 		s.number("wrong_pin_attempts", "Wrong PINs in a row before a cooldown, 0 or more; 0 off, "+itoa(def.WrongPINAttempts)+" by default",
-			s.cfg.WrongPINAttempts, 0, true, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINAttempts = n }) }),
+			"", "off", s.cfg.WrongPINAttempts, 0, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINAttempts = n }) }),
 		s.number("wrong_pin_attempt_cooldown", "Seconds the cooldown lasts, 1 or more; "+itoa(def.WrongPINCooldown)+" by default",
-			s.cfg.WrongPINCooldown, 1, false, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINCooldown = n }) }),
+			"seconds", "", s.cfg.WrongPINCooldown, 1, func(n int) tea.Cmd { return s.change(func() { s.cfg.WrongPINCooldown = n }) }),
 	}
 }
 
@@ -373,7 +380,7 @@ func (s *Settings) toolFields() []*terminu.Field {
 		}))
 	}
 	out = append(out, s.number(toolIdle[name], "Idle seconds before "+name+" locks by itself, 0 or more; 0 never, "+itoa(config.DefaultIdle)+" by default",
-		t.Idle, 0, true, func(n int) tea.Cmd {
+		"seconds", "off", t.Idle, 0, func(n int) tea.Cmd {
 			cmd := s.change(func() {
 				t := s.cfg.Tool(name)
 				t.Idle = n
@@ -466,7 +473,8 @@ func (s *Settings) detailActions() []terminu.Action {
 // last section of its ? (user, 2026-09-25 — and, 2026-09-26 and
 // 2026-09-27, in place of the key reference there; the lib puts it after
 // the keys).
-// TODO(tdp LK3): where a settings panel's "what each row is" belongs.
+// TODO(lib LK3): the lib's own "each row" section, first in the ?, the names
+// in ordinary text (tdp S34); until then the last section, through OtherKeys.
 func (s *Settings) glossary() []terminu.KeySection {
 	switch s.cur.kind {
 	case kindPreference:

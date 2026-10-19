@@ -1,7 +1,7 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4)（tdp v0.7.4），設定畫面建在家族的 lib
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.0)（tdp v0.8.0；2026-10-19 照重構回報的定案跟上），設定畫面建在家族的 lib
 [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上（2026-10-18 起，照 terminu 的交代整個重構）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
@@ -59,7 +59,6 @@ locku/
   - 離開不問：沒有沒存的東西（顏色草稿拿掉之後），`App.Quit` 是 nil，`q` 直接離開（tdp K9：離開流程由 app 決定；之前有未存草稿才問）。
   - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`；設定畫面的 PIN 框標題 `SET PIN` / `CHANGE PIN`，鎖定畫面的是 `UNLOCK`（glyph 沿用 `nf-fa-lock`）、說明列 `The PIN`。
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
-  - 色票的 hex 寫大寫（`███ #F2B753`），跟 color picker 裡一樣；config 裡照舊存小寫。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
 
 ## 已否決，不要重提
@@ -75,7 +74,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 已知的牆與未做
 
-- **等 tdp 或 lib 的地方（2026-10-18，回報 terminu，程式裡標 `TODO(tdp LK<n>)` / `TODO(lib LK<n>)`）**：LK1 鎖定畫面借不到 lib 的 input（PIN 框照 lib 的樣子自己畫，`ScreenOutput` 照抄）；LK2 lib 沒辦法從程式換 focus（New / Duplicate 之後 focus 留在 `[1]`）；LK3 設定 panel 的每列說明放在哪（暫放 key reference 最後一節）；LK4 新東西的名字提議（寫在說明列）；LK5 顏色先預覽再存（草稿拿掉了）；LK6 鎖定畫面的 PIN 框從 7 列變 9 列；LK7 多步驟的輸入不能保留上一步；LK8 number 框清空不再是預設值。還沒符合 tdp 的逐條在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。
+- **等 lib 的地方（2026-10-18 回報 terminu，2026-10-19 跟 user 定案；程式裡標 `TODO(lib LK<n>)`，等 terminu-go 第三批）**：LK1 鎖定畫面借 lib 的 PasswordInput；LK2 新建後把 focus 帶到新的 profile（tdp S19）；LK3 lib 的「每一列」一節（tdp S34）；LK4 灰字的建議名（tdp S6）；LK6 設定畫面 PIN 框的說明列拿掉（tdp S36，標題已改成 `CURRENT PIN`、`NEW PIN`、`CONFIRM PIN`）；LK7 PIN 三步疊起來；LK8 數字框可以空（tdp S7）；LK10 寫檔失敗疊在框上；LK11 捲動位置照欄位（tdp S11）；S47 輸入框的單位列（panel 上已經寫 `seconds`）。照現在、不用改的：LK5 顏色 Choose 就存（tdp S35）、LK15 hex 一律大寫（tdp S38）。2026-10-18 時的寫法：LK1 鎖定畫面借不到 lib 的 input（PIN 框照 lib 的樣子自己畫，`ScreenOutput` 照抄）；LK2 lib 沒辦法從程式換 focus（New / Duplicate 之後 focus 留在 `[1]`）；LK3 設定 panel 的每列說明放在哪（暫放 key reference 最後一節）；LK4 新東西的名字提議（寫在說明列）；LK5 顏色先預覽再存（草稿拿掉了）；LK6 鎖定畫面的 PIN 框從 7 列變 9 列；LK7 多步驟的輸入不能保留上一步；LK8 number 框清空不再是預設值。還沒符合 tdp 的逐條在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。
 - **偶發的測試**：`TestBounceLockWearsItsOwnColours`（`internal/ui`）在 `make check` 整包 `-race` 跑時偶爾失敗（`the box did not move`），單獨跑十次都過；2026-10-18 重構時遇到，跟重構無關，未查。
 
 - **平台**：macOS 與 Linux（WSL 可）。不支援 Windows：鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品（2026-09-25，使用者定案）。
@@ -114,17 +113,11 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 偏離 tdp
 
-- **鎖定畫布不套 core key（tdp K1、tdp K4、tdp K5、tdp K6、tdp M1、components/layout/screen 的「由上往下」與 footer）。** 畫布上沒有 Space menu、沒有 `?`、沒有 panel 區與 footer，數字與 `Esc` 也一樣只是任何一個鍵：
-  畫布唯一的動作是「任何鍵叫出 PIN prompt」，第一個鍵不算輸入；沒設 PIN 時任何鍵（`Esc` 也是）結束鎖，就是螢幕保護。任何鍵若有別的意義，就會讓
-  路過的人按出鎖以外的東西。tdp 只作用在 PIN prompt 這個 popup（`ux.md` §A.0）。
-- **鎖定中 `Ctrl-C` 不離開（tdp K8、tdp K9）。** 鎖的本質是「進程活著 = 鎖著」，`Ctrl-C` 能結束就等於
-  沒有鎖；ISIG 關掉，`Ctrl-C` 只是一個普通鍵（`function.md` §2.1）——畫布上叫出 PIN 框，PIN 框的打字列上不作用。設定畫面不在此列。
-- **預覽跟鎖定畫布一樣，任何鍵就回來（tdp K1、tdp K5、tdp K6、tdp K9；2026-09-26）。** 設定畫面的 `P` / `p` 把整個
-  終端機換成鎖定畫布的樣子，`q`、`Space`、`?`、`Ctrl-C` 都只是「回來」。預覽顯示的就是鎖定畫布，
-  鎖定畫布上任何鍵只有一個意義（叫出 PIN 框），預覽上任何鍵也只有一個意義（回來）；若 `q` 在預覽上
-  是離開，使用者從預覽回不來而是整個 app 關掉。
+（2026-10-19 起不再是偏離的：鎖定畫面與預覽不套 core key、鎖定中 `Ctrl-C` 不離開——tdp K1 補定：不在 TUI 裡的畫面不是 surface，
+不照 core key 表，鎖定畫面與預覽都是；鎖定畫面 PIN 框的連錯冷卻倒數寫在錯誤列——tdp S37：錯誤列可以放「值錯太多次而暫停收值」
+的倒數。）
+
 - **鎖定畫面的 PIN 框是 locku 自己畫的（tdp E8；2026-10-18）。** tdp E8 說畫面的規定 lib 給的，用 lib 的 app 自己不另外做。鎖定畫面是全螢幕的板子、沒有 panel 也沒有 footer，lib 的 input 只能從 `App` 打開、`App` 一定畫 footer；PIN 框還要有 lib 的 `PasswordInput` 沒有的連錯冷卻、錯一次吞鍵一秒、逾時收起、疊在 custom 程式的畫面上。所以 `internal/ui/pinprompt.go` 照 lib 的畫法（components/input/password 的解鎖樣式、layout/popup 的框、標題膠囊、hint、錯誤列、開關動畫）自己畫一份，輸出層的 `ScreenOutput` 也照抄。回報成 LK1；lib 有入口就換掉。
-- **鎖定畫面的 PIN 框，連錯冷卻的倒數寫在錯誤列（components/layout/popup 的錯誤列；2026-10-18 寫成偏離）。** 錯誤列只放值的錯；冷卻不是值的錯，是 `wrong_pin_attempts` 次連錯之後一段不收 PIN 的時間（function.md §4.4）。tdp 沒有給它別的位置：框的說明列說的是要輸入什麼，標題是這個框做什麼，toast 會在幾秒後走掉、而冷卻要一直倒數到結束。所以照舊寫在錯誤列（`try again in 27 s`），框的大小不變；回報成 LK9。
 - **custom saver 的 PIN prompt 底下不變暗（tdp F8；2026-09-28，使用者定案）。** tdp F8 要最上層以外的一切都 dim，但這時底下是使用者自己的程式的畫面：
   程式的輸出直接送到終端機，locku 只在上面畫框（`internal/custom` 的 screen writer），手上沒有那張畫面的副本。要 dim 就得在 locku 裡放
   一個終端機模擬器重畫程式的畫面——2026-09-25 否決過（多一個依賴、忠實度與效能都要驗）；使用者也定過「框之外什麼都不畫」。

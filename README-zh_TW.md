@@ -123,7 +123,9 @@ locku version    # 版本；locku help 印用法
 
 在裸 tty（例如一條 ssh）跑 `locku lock`，那個終端機一樣被鎖。它的 `-S` / `-t` 是 tmux 整合寫進 lock-command 的，你不用打。screen 用 `SCREEN-LOCK` 這個名字、不帶參數執行鎖，locku 認得這個名字。
 
-## 鎖定畫面
+## 使用方式
+
+### 鎖定畫面
 
 - 任何鍵開 PIN 框，那個鍵不算輸入。`Enter` 送出、`Esc` 回 saver、`Backspace` 清掉打的字。
 - 錯誤的 PIN 會寫 `wrong PIN`，並吞掉 1 秒內的所有輸入。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
@@ -133,17 +135,7 @@ locku version    # 版本；locku help 印用法
 
 **不是安全邊界。** locku 擋的是誤觸與路人，擋不住你自己帳號的另一條 session。攔不到的：ssh 的 `~.`（在 client 端處理，byte 不會過線）、Linux VT 切換（vlock 的領域，要 root）、另一條 SSH 的 `tmux attach -d` / `kill -9`、終端機模擬器自身的快捷鍵。
 
-## 忘記 PIN
-
-從你自己的任何一個 shell：
-
-```bash
-locku pin reset
-```
-
-先問 `[y/N]`，再要你的**登入密碼**——帳號是 locku 唯一的邊界——然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次。鎖定中的畫面下一鍵就認得新 PIN。之後到設定畫面換成自己要的。每次 reset，成功或被拒，都記在 `~/.locku/data` 底下，不含 PIN。
-
-## 設定畫面
+### 設定畫面
 
 ```
 ┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
@@ -180,7 +172,7 @@ Space:menu ?:help Tab|1–2:panels q:quit
 
 任何 `[2]` 上 `P` 就地預覽鎖定畫面：profile 或 saver 的 `[2]` 是那一個，其他是啟用中的 profile。任意鍵回來，不驗 PIN。custom profile 的預覽把終端機整個交給程式，直到按鍵。
 
-## tmux 與 screen
+### tmux 與 screen
 
 Integration › tmux 與 Integration › screen 各有 `activate`（on / off）、`config file path`（要寫的檔，通常是 `~/.tmux.conf` 與 `~/.screenrc`），接著是工具自己的 key：
 
@@ -244,9 +236,9 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 新開的 shell 就有。已在跑的 screen session 要 detach 後從新 shell 重新 attach 才有；在那之前那個 session 鎖到的是 screen 內建的鎖，設定畫面會說明。這些都是同一份文字，locku 寫或你手寫都一樣。
 
-## 按鍵
+### 按鍵
 
-### 到處都通
+#### 到處都通
 
 | 鍵 | |
 |---|---|
@@ -259,7 +251,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `q\|Ctrl-C` | 離開 |
 | `j\|k` · `u\|d` · `gg\|G` | 下、上 · 半頁 · 首、尾 |
 
-### `[1]` 側欄
+#### `[1]` 側欄
 
 | 鍵 | 在 | |
 |---|---|---|
@@ -268,19 +260,29 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `a` | profile | 設為啟用：鎖定畫面從此顯示這個 |
 | `D` · `r` · `X` | profile | duplicate · rename · delete（啟用中的與最後一個不能刪） |
 
-### `[2]` 明細
+#### `[2]` 明細
 
 | 鍵 | 在 | |
 |---|---|---|
 | `Enter` | 任何一列 | rename、選、切換、挑顏色、設或換 PIN、改路徑或鍵、開關 `activate` |
 | `n` | saver | 用這種 saver 生一個新 profile，取名 |
 
-### 鎖定畫面
+#### 鎖定畫面
 
 | 鍵 | |
 |---|---|
 | 任何鍵 | 開 PIN 框（那個鍵不算輸入） |
 | `Enter` · `Esc` · `Backspace` | 送出 · 回 saver · 清掉打的字 |
+
+## 忘記 PIN
+
+從你自己的任何一個 shell：
+
+```bash
+locku pin reset
+```
+
+先問 `[y/N]`，再要你的**登入密碼**——帳號是 locku 唯一的邊界——然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次。鎖定中的畫面下一鍵就認得新 PIN。之後到設定畫面換成自己要的。每次 reset，成功或被拒，都記在 `~/.locku/data` 底下，不含 PIN。
 
 ## 你的資料放在哪
 
@@ -353,7 +355,7 @@ screen:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4)（tdp v0.7.4），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.0)（tdp v0.8.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

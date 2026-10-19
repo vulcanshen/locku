@@ -152,7 +152,8 @@ func (s *Settings) nameCheck(self int) func(string) error {
 // newProfile asks a name for a profile of kind, made as its defaults say.
 // The free name is in the prompt: the grey suggestion is for an old value
 // only, and a new profile has none (components/input/README).
-// TODO(tdp LK4): a name to offer for something new.
+// TODO(lib LK4): the free name offered in grey in the box, Enter on it
+// taking it (tdp S6); until then it is in the prompt.
 // TODO(lib LK2): the new profile's [2] took the focus; the lib has no way to
 // move it from code, so it stays on [1], the cursor on the new profile.
 func (s *Settings) newProfile(kind string) tea.Cmd {

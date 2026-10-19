@@ -1,6 +1,6 @@
 # locku — 還沒符合 tdp 的地方
 
-照 tdp v0.7.4 與 terminu-go v0.1.13 逐條待修（tdp Rules E7）：違反了哪一條、在哪裡、現況、該怎麼改。2026-10-18 重構後照
+照 tdp v0.8.0 與 terminu-go v0.1.13 逐條待修（tdp E7）：違反了哪一條、在哪裡、現況、該怎麼改。2026-10-18 重構後照
 清單（`checklist/items-zh_TW.md`）對過一遍，locku 自己改得掉的都改了；剩下的三條都要等 lib，已經回報給 terminu（LK 編號）。
 全部修完就刪掉這個檔。
 

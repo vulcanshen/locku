@@ -123,7 +123,9 @@ locku version    # the version; locku help prints the usage
 
 `locku lock` on a bare tty — an ssh session, say — locks that terminal the same way. Its `-S` / `-t` flags are what the tmux integration writes into lock-command; you never type them. screen runs the lock as `SCREEN-LOCK` with no arguments at all, and locku answers to that name.
 
-## The lock screen
+## Usage
+
+### The lock screen
 
 - Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` clears what was typed.
 - A wrong PIN says `wrong PIN` and swallows every key for a second. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
@@ -133,17 +135,7 @@ locku version    # the version; locku help prints the usage
 
 **Not a security boundary.** locku keeps stray keys and passers-by off your screen; it does not keep out another session of your own account. What it cannot catch: ssh's `~.` (handled on the client side, the byte never crosses the wire), Linux VT switching (vlock's territory, needs root), `tmux attach -d` / `kill -9` from another SSH session, and the terminal emulator's own shortcuts.
 
-## Forgot the PIN
-
-From any shell of your own:
-
-```bash
-locku pin reset
-```
-
-It asks `[y/N]`, then your **login password** — your account is the one boundary locku has — and makes a new eight-digit PIN, writes it over the old one and shows it once. A lock already up takes the new PIN at its next key. Change it to one of your own on the settings screen afterwards. Every reset, done or refused, is logged under `~/.locku/data`, without the PIN.
-
-## The settings screen
+### The settings screen
 
 ```
 ┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
@@ -180,7 +172,7 @@ Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
-## tmux and screen
+### tmux and screen
 
 Integration › tmux and Integration › screen each have `activate` (on / off), `config file path` (the file to write, usually `~/.tmux.conf` or `~/.screenrc`) and then the tool's own keys:
 
@@ -244,9 +236,9 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 A new shell has it. A screen already running gets it once detached and attached again from a new shell; until then that session locks with screen's own built-in lock, which the settings screen says. It is the same text whether locku writes it or you do.
 
-## Key bindings
+### Key bindings
 
-### Everywhere
+#### Everywhere
 
 | Key | |
 |---|---|
@@ -259,7 +251,7 @@ A new shell has it. A screen already running gets it once detached and attached 
 | `q\|Ctrl-C` | quit |
 | `j\|k` · `u\|d` · `gg\|G` | down, up · half a page · first, last |
 
-### `[1]` sidebar
+#### `[1]` sidebar
 
 | Key | On | |
 |---|---|---|
@@ -268,19 +260,29 @@ A new shell has it. A screen already running gets it once detached and attached 
 | `a` | a profile | activate: the lock shows this profile from now on |
 | `D` · `r` · `X` | a profile | duplicate · rename · delete (not the active one, not the last one) |
 
-### `[2]` detail
+#### `[2]` detail
 
 | Key | On | |
 |---|---|---|
 | `Enter` | any row | rename, choose, toggle, pick a colour, set or change the PIN, edit a path or a key, turn `activate` |
 | `n` | a saver | new profile of this kind, under a name |
 
-### The lock screen
+#### The lock screen
 
 | Key | |
 |---|---|
 | any key | open the PIN prompt (the key is not input) |
 | `Enter` · `Esc` · `Backspace` | submit · back to the saver · clear what was typed |
+
+## Forgot the PIN
+
+From any shell of your own:
+
+```bash
+locku pin reset
+```
+
+It asks `[y/N]`, then your **login password** — your account is the one boundary locku has — and makes a new eight-digit PIN, writes it over the old one and shows it once. A lock already up takes the new PIN at its next key. Change it to one of your own on the settings screen afterwards. Every reset, done or refused, is logged under `~/.locku/data`, without the PIN.
 
 ## Where your data lives
 
@@ -353,7 +355,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.7.4) (tdp v0.7.4), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.0) (tdp v0.8.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 
