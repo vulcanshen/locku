@@ -459,8 +459,19 @@ func (s *Settings) toolFields() []*terminu.Field {
 // under the cursor, then the panel's — Preview, and New on a saver.
 func (s *Settings) detailActions() []terminu.Action {
 	var out []terminu.Action
-	if f := s.vals.Current(); f != nil && !(f.Disabled != nil && f.Disabled()) {
-		hint := s.vals.EnterHint()
+	if f := s.vals.Current(); f != nil {
+		// What Enter does, by the row's kind; a row that cannot be changed
+		// now — activate with no file — keeps its own words, in the
+		// disabled colour (tdp M6), and one only shown has none.
+		hint := "edit"
+		switch {
+		case len(f.Options) > 0 && f.Multi:
+			hint = "toggle"
+		case len(f.Options) > 0:
+			hint = "choose"
+		case f.Edit == nil:
+			hint = ""
+		}
 		label := map[string]string{"edit": "Edit", "choose": "Choose", "toggle": "Toggle"}[hint]
 		if label != "" {
 			desc := fieldDesc[f.Label]
@@ -471,7 +482,7 @@ func (s *Settings) detailActions() []terminu.Action {
 			}
 			// What it opens from the Space menu — a box, a list, a confirm —
 			// opens over the menu, as the lib keeps it (tdp F4, T1).
-			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint,
+			out = append(out, terminu.Action{Key: "Enter", Label: label, Desc: desc, Scope: terminu.ItemScope, Hint: hint, Disabled: f.Disabled,
 				Do: func() tea.Cmd {
 					_, cmd := s.vals.Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
 					return cmd

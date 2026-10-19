@@ -426,9 +426,9 @@ func TestPINSetChangeRemove(t *testing.T) {
 	if !d.saved().CheckPIN("1234") {
 		t.Error("Enter on the grey dots must keep the PIN")
 	}
-	// TODO(lib LK17): Enter on the grey dots closes NEW PIN alone, as no
-	// change; CURRENT PIN is under it still, and Esc takes it away.
-	d.press("Esc")
+	if v := d.screen(); strings.Contains(v, "PIN━") {
+		t.Errorf("Enter on the grey dots ends the change, CURRENT PIN too:\n%s", v)
+	}
 	d.press("Enter").typeText("1234").press("Enter", "Backspace", "Enter")
 	if d.saved().HasPIN() {
 		t.Error("Backspace, then Enter, must leave no PIN")
@@ -504,6 +504,14 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 	d.press("Esc").on(profileID("clock")).press("?")
 	if strings.Contains(d.screen(), "WHAT EACH ROW IS") {
 		t.Error("a profile's keys have no glossary")
+	}
+	// A long meaning folds in its column, read to its end (tdp v0.8.2,
+	// LK18); activate with no file keeps its own words, disabled (tdp M6).
+	d.press("Esc").on(toolID("tmux")).press("2", "?")
+	for _, s := range []string{"go on as they were", "Toggle — locku's line in the file, or not"} {
+		if !strings.Contains(d.screen(), s) {
+			t.Errorf("no %q in tmux's keys:\n%s", s, d.screen())
+		}
 	}
 }
 

@@ -1,9 +1,9 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.1)（tdp v0.8.1；2026-10-19 照重構回報的定案跟上），設定畫面與鎖定畫面的
-PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.2.0 的（2026-10-18 起照 terminu 的交代整個重構，
-2026-10-19 升到 v0.2.0）；
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.2)（tdp v0.8.2；2026-10-19 照重構回報的定案跟上），設定畫面與鎖定畫面的
+PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.2.1 的（2026-10-18 起照 terminu 的交代整個重構，
+2026-10-19 升到 v0.2.0、再到 v0.2.1）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -90,13 +90,12 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 已知的牆與未做
 
-- **等 lib 或 tdp 的地方（2026-10-19 回報 terminu；程式裡標 `TODO(lib LK<n>)`）**：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
-  （保留舊的）時，lib 只關掉這一步、不呼叫 `Done`，底下的 `CURRENT PIN` 又露出來，要再按 `Esc`（terminu 2026-10-19：lib 缺的接口，
-  沒改值就關是對的，要讓 app 知道「這一步沒改」，收進 v0.2.0 之後的修正版）；LK18 `?` 的「每一列」照 key reference 的規則從尾端截，
-  tmux 的 `lock`、screen 的 `activate`（LOCKPRG）這種長的說明在 80 欄裡只看得到前半（user 2026-10-19 定 A：「每一列」那一節的說明在右欄照家族的折行規則折，名稱欄不動，按鍵的
-  各節照舊截；下一版 tdp 與 terminu-go 修正版做，locku 的字不用改）。
-  2026-10-18 回報的 LK1–LK11 與
-  S47 都在 terminu-go v0.2.0（第三批）做了，`locku-terminu-fix.md` 修完拿掉（2026-10-19）。
+- **等 lib 或 tdp 的地方**：沒有了（2026-10-19）。2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
+  `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
+  （保留舊的）時，lib 只關掉這一步、不告訴 app，底下的 `CURRENT PIN` 又露出來——`PasswordInput.Unchanged` 收掉整串（沒改值就關是對的，
+  K3-8；lib 缺的是讓 app 知道「這一步沒改」）；LK18 `?` 的「每一列」照 key reference 的規則從尾端截，tmux 的 `lock`、screen 的
+  `activate`（LOCKPRG）這種長的說明在 80 欄裡只看得到前半——user 2026-10-19 定 A，那一節的說明在右欄折行，名稱欄不動、按鍵的各節照舊截，
+  locku 的字沒改。
 - **偶發的測試**：`TestBounceLockWearsItsOwnColours`（`internal/ui`）在 `make check` 整包 `-race` 跑時偶爾失敗（`the box did not move`），單獨跑十次都過；2026-10-18 重構時遇到，跟重構無關，未查。
 
 - **平台**：macOS 與 Linux（WSL 可）。不支援 Windows：鎖站在 tty、pty、`su` 與 tmux / screen 上，原生移植是另一個產品（2026-09-25，使用者定案）。
@@ -148,7 +147,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 設計文件導讀
 
-三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 98 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
+三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 99 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|

@@ -73,6 +73,9 @@ func (s *Settings) newPIN(set bool, step int) tea.Cmd {
 			}
 			return s.commit(s.cfg.ClearPIN)
 		},
+		// Enter on the grey dots keeps the PIN: this box is closing, and the
+		// steps under it go with it.
+		Unchanged: func() tea.Cmd { return s.app.CloseTop(step - 1) },
 		Done: func(v string, clear bool) tea.Cmd {
 			if clear {
 				return tea.Batch(s.app.CloseTop(step), s.app.Toast(terminu.Success, "PIN removed"))
