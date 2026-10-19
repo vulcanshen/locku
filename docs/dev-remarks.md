@@ -93,7 +93,8 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 - **等 lib 或 tdp 的地方（2026-10-19 回報 terminu；程式裡標 `TODO(lib LK<n>)`）**：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
   （保留舊的）時，lib 只關掉這一步、不呼叫 `Done`，底下的 `CURRENT PIN` 又露出來，要再按 `Esc`（terminu 2026-10-19：lib 缺的接口，
   沒改值就關是對的，要讓 app 知道「這一步沒改」，收進 v0.2.0 之後的修正版）；LK18 `?` 的「每一列」照 key reference 的規則從尾端截，
-  tmux 的 `lock`、screen 的 `activate`（LOCKPRG）這種長的說明在 80 欄裡只看得到前半（terminu 2026-10-19：要問 user，先照現在）。
+  tmux 的 `lock`、screen 的 `activate`（LOCKPRG）這種長的說明在 80 欄裡只看得到前半（user 2026-10-19 定 A：「每一列」那一節的說明在右欄照家族的折行規則折，名稱欄不動，按鍵的
+  各節照舊截；下一版 tdp 與 terminu-go 修正版做，locku 的字不用改）。
   2026-10-18 回報的 LK1–LK11 與
   S47 都在 terminu-go v0.2.0（第三批）做了，`locku-terminu-fix.md` 修完拿掉（2026-10-19）。
 - **偶發的測試**：`TestBounceLockWearsItsOwnColours`（`internal/ui`）在 `make check` 整包 `-race` 跑時偶爾失敗（`the box did not move`），單獨跑十次都過；2026-10-18 重構時遇到，跟重構無關，未查。
