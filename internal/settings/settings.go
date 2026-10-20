@@ -21,6 +21,7 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/saver"
 	"github.com/vulcanshen/locku/internal/version"
 )
 
@@ -190,7 +191,7 @@ func (s *Settings) save(before config.Config) tea.Cmd {
 // write that fails puts the config back and is the box's, which stays open
 // with the value in it under the error popup (components/layout/popup, the
 // action failing).
-func (s *Settings) commit(f func()) error {
+func (s *Settings) commit(what string, f func()) error {
 	before := s.snapshot()
 	f()
 	defer s.refresh()
@@ -198,7 +199,34 @@ func (s *Settings) commit(f func()) error {
 		s.cfg = before
 		return err
 	}
+	s.done(what)
 	return nil
+}
+
+// done puts what was done, once it is written, in the App Log (tdp F5:
+// the app's actions and their results); "" when a toast says it already.
+func (s *Settings) done(what string) {
+	if what != "" {
+		s.app.Log(terminu.Success, what)
+	}
+}
+
+// wrote is a value set, as the App Log says it: "profile clock › bg:
+// #F2B753".
+func (s *Settings) wrote(label, value string) string {
+	where := "preference"
+	switch s.cur.kind {
+	case kindProfile:
+		where = "profile " + s.cfg.Profiles[s.cur.ref].Name
+	case kindSaver:
+		where = saver.Kinds[s.cur.ref] + " defaults"
+	case kindTool:
+		where = tools[s.cur.ref]
+	}
+	if value == "" {
+		value = "none"
+	}
+	return where + " › " + label + ": " + value
 }
 
 // tell says what was done in a Success toast when it fits in three rows,
@@ -210,14 +238,20 @@ func (s *Settings) tell(title string, lines []string) tea.Cmd {
 	if len(terminu.Wrap(text, max(min(w-2, 120)-4, 1))) <= 3 {
 		return s.app.Toast(terminu.Success, text)
 	}
+	s.done(title + ": " + text) // a toast logs itself, a note does not
 	return s.app.Viewer(&terminu.Viewer{Title: title, Glyph: glyphFile, Lines: lines})
 }
 
-// change runs f on the config and saves it.
-func (s *Settings) change(f func()) tea.Cmd {
+// change runs f on the config and saves it; what is what was done, for
+// the App Log once it is written.
+func (s *Settings) change(what string, f func()) tea.Cmd {
 	before := s.snapshot()
 	f()
-	return s.save(before)
+	cmd := s.save(before)
+	if cmd == nil {
+		s.done(what)
+	}
+	return cmd
 }
 
 func (s *Settings) onMsg(msg tea.Msg) tea.Cmd {

@@ -177,7 +177,7 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 			Edit: func() tea.Cmd {
 				return s.app.Text(terminu.TextInput{Title: "Edit", Subject: "command", Glyph: glyphConsole, Name: "command",
 					Prompt: "The program that draws, as sh -c runs it; empty for none", Verb: "save", Old: p.Command,
-					Commit: func(v string) error { return s.commit(func() { command(v) }) }})
+					Commit: func(v string) error { return s.commit(s.wrote("command", v), func() { command(v) }) }})
 			}}}
 	case saver.KindRunner:
 		// No size: the run is drawn as large as the terminal allows
@@ -218,14 +218,14 @@ func (s *Settings) choice(label string, options []string, current string, apply 
 		f := &terminu.Field{Label: label, Options: options, Selected: at}
 		f.OnChange = func() tea.Cmd {
 			v := options[f.Selected]
-			return tea.Batch(s.change(func() { apply(v) }), call(then))
+			return tea.Batch(s.change(s.wrote(label, v), func() { apply(v) }), call(then))
 		}
 		return f
 	}
 	return &terminu.Field{Label: label, Value: func() string { return current },
 		Edit: func() tea.Cmd {
 			return s.app.Select(terminu.Select{Title: label, Subject: s.detailLabel(), Glyph: glyphTag, Options: options, Selected: at,
-				Commit: func(i int) error { return s.commit(func() { apply(options[i]) }) },
+				Commit: func(i int) error { return s.commit(s.wrote(label, options[i]), func() { apply(options[i]) }) },
 				Done:   func(int) tea.Cmd { return call(then) }})
 		}}
 }
@@ -238,23 +238,24 @@ func call(f func() tea.Cmd) tea.Cmd {
 	return f()
 }
 
-// swatch is a colour as a value shows it: a block of it, then its hex
-// (components/input/color-picker, the value).
-func swatch(hex string) string {
-	return terminu.Fg(terminu.Hex(hex)).Render("███") + terminu.Fg(terminu.Text).Render(" "+strings.ToUpper(hex))
-}
-
 // colour is one of a profile's two colours, chosen in the color picker:
 // old and new side by side, Esc leaves the old (components/input/color-picker).
 // Until 2026-10-18 the colours were a draft (user, 2026-09-24): R, G and B
 // sliders on [2], [S] Save, [R] Reset, [P] previewing the draft.
 // Chosen is written; [P] previews it, and the picker's old colour is there to
 // go back to (tdp S35, 2026-10-19).
+//
+// The value is a block of the colour, then its hex, upper case: the lib's
+// spans for it (components/input/color-picker, the value; tdp S38).
 func (s *Settings) colour(label, hex string, apply func(string)) *terminu.Field {
-	return &terminu.Field{Label: label, Value: func() string { return swatch(hex) },
+	c := terminu.Hex(hex)
+	return &terminu.Field{Label: label, Value: func() string { return terminu.HexText(c) },
+		Styled: func() []terminu.Span { return terminu.ColorSpans(c) },
 		Edit: func() tea.Cmd {
 			return s.app.PickColor(terminu.ColorPicker{Title: label, Subject: s.detailLabel(), Glyph: glyphPalette, Value: terminu.Hex(hex),
-				Commit: func(c terminu.Color) error { return s.commit(func() { apply(c.String()) }) }})
+				Commit: func(c terminu.Color) error {
+					return s.commit(s.wrote(label, terminu.HexText(c)), func() { apply(c.String()) })
+				}})
 		}}
 }
 
@@ -302,7 +303,7 @@ func (s *Settings) number(label, prompt, unit, zero string, value, least, def in
 					if v != "" {
 						n, _ = strconv.Atoi(v)
 					}
-					return s.commit(func() { apply(n) })
+					return s.commit(s.wrote(label, itoa(n)), func() { apply(n) })
 				},
 				Done: func(string) tea.Cmd { return call(then) }})
 		}}
@@ -330,7 +331,7 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	status.Desc = "user@host and the time, on the lock's last row"
 	status.OnChange = func() tea.Cmd {
 		on := status.Checked[0]
-		return s.change(func() { s.cfg.ShowStatus = on })
+		return s.change(s.wrote("show_status", map[bool]string{true: "on", false: "off"}[on]), func() { s.cfg.ShowStatus = on })
 	}
 	def := config.Default()
 	timeout := s.number("pin_prompt_timeout", "Seconds without a key before the PIN box closes, 0 or more; 0 never",
@@ -391,7 +392,7 @@ func (s *Settings) toolFields() []*terminu.Field {
 					return nil
 				},
 				Commit: func(v string) error {
-					return s.commit(func() {
+					return s.commit(s.wrote("config file path", v), func() {
 						nt := s.cfg.Tool(name)
 						nt.Conf = v
 						s.cfg.SetTool(name, nt)
@@ -442,7 +443,7 @@ func (s *Settings) toolFields() []*terminu.Field {
 					return nil
 				},
 				Commit: func(v string) error {
-					return s.commit(func() {
+					return s.commit(s.wrote(toolBind[name], v), func() {
 						if name == tools[toolScreen] {
 							s.cfg.Screen.Bind = v
 						} else {

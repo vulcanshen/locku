@@ -71,7 +71,7 @@ func (s *Settings) newPIN(set bool, step int) tea.Cmd {
 			if !clear {
 				return nil // written once it is typed again
 			}
-			return s.commit(s.cfg.ClearPIN)
+			return s.commit("", s.cfg.ClearPIN) // the toast says it
 		},
 		// Enter on the grey dots keeps the PIN: this box is closing, and the
 		// steps under it go with it.
@@ -98,7 +98,7 @@ func (s *Settings) confirmPIN(step int) tea.Cmd {
 		},
 		Commit: func(v string, _ bool) error {
 			var err error
-			if cerr := s.commit(func() { err = s.cfg.SetPIN(v) }); cerr != nil {
+			if cerr := s.commit("", func() { err = s.cfg.SetPIN(v) }); cerr != nil {
 				return cerr
 			}
 			return err

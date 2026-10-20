@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/vulcanshen/locku/internal/saver"
 )
@@ -320,6 +321,22 @@ func TestPlainTextCarriesTheLines(t *testing.T) {
 	joined := strings.Join(out, "\n")
 	if !strings.Contains(joined, "21 05") || !strings.Contains(joined, "09-24") {
 		t.Errorf("text missing:\n%s", joined)
+	}
+}
+
+// What comes from outside — a custom saver's stderr, a file's error, the
+// host — is drawn by name where it has a control character, nothing of it
+// sent to the terminal as it is (components, control characters).
+func TestStatusRowDrawsControlCharactersByName(t *testing.T) {
+	s := statusRow(160, true, "u\tser", "host", at, false, "line 1:\x1b[2J", "custom saver: exit 3 · boom\x1b[31m\nred")
+	if strings.ContainsAny(s, "\t\n\r") || strings.Contains(s, "\x1b[2J") || dispW(s) != 160 {
+		t.Fatalf("a control character reaches the terminal, or the row is not 160 wide (%d): %q", dispW(s), s)
+	}
+	plain := ansi.Strip(s)
+	for _, name := range []string{`u\tser`, `line 1:\x1b[2J`, `boom\x1b[31m\nred`} {
+		if !strings.Contains(plain, name) {
+			t.Errorf("no %q in %q", name, plain)
+		}
 	}
 }
 

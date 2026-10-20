@@ -577,6 +577,24 @@ func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 	}
 }
 
+// The App Log, `!` on a panel, has what was done: each value written, each
+// profile made, renamed or deleted (tdp F5, K1); the footer offers it.
+func TestAppLogSaysWhatWasDone(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	if !strings.Contains(d.screen(), "!:log") {
+		t.Errorf("the footer has no !:log:\n%s", d.screen())
+	}
+	d.on(profileID("clock2")).press("r", "Tab").typeText("x").press("Enter")
+	d.on(preferenceID).toField("pin_prompt_timeout", 0).press("Enter", "Backspace").typeText("45").press("Enter")
+	d.press("!")
+	v := d.screen()
+	for _, s := range []string{"profile clock2 renamed clock2x", "preference › pin_prompt_timeout: 45", "OK"} {
+		if !strings.Contains(v, s) {
+			t.Errorf("no %q in the App Log:\n%s", s, v)
+		}
+	}
+}
+
 // With no file set, a tool's config file path box offers the usual one in
 // grey, and Enter takes it (tdp S6).
 func TestConfigPathOffersTheUsualFile(t *testing.T) {

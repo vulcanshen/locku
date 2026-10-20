@@ -453,6 +453,10 @@ func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int) []string {
 // statusRow is the last row (function.md §5.4, ui.md §1.2): who is locked
 // out of what, since when — and, whatever show says, whether there is a
 // PIN at all, and whether the file could be read. Exactly cols wide.
+// What comes from outside — the user and host, a file's error, a custom
+// saver's stderr — is drawn as a short text is: a control character by its
+// name in Red, the row's colour going on after it (components, control
+// characters; tdp v0.9.0).
 func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN bool, problem, note string) string {
 	var b strings.Builder
 	plainW := 0
@@ -460,7 +464,8 @@ func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN
 		if plainW > 0 {
 			s = " · " + s
 		}
-		b.WriteString(lipgloss.NewStyle().Foreground(c).Render(s))
+		s = terminu.Escape(s)
+		b.WriteString(terminu.Fg(terminu.Hex(string(c))).Render(s))
 		plainW += dispW(s)
 	}
 	if show {
