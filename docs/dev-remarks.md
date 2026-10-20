@@ -64,7 +64,8 @@ locku/
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
   - `input_tab_width`（2026-10-20）：家族的設定 key（tdp E3），預設 4，是 preference 的 `[2]` 的一列（config.yaml 的每個 key 都是一列），
     lib 在啟動時讀，改了下次啟動起生效。locku 拿來讀的字只有 App Log 與 setup 報告的 note，幾乎不會有 Tab；清單 E3-11 寫「都要」，
-    所以照做。
+    所以照做。（LK20 已定，terminu 2026-10-20 轉達：只有 App Log 用不到 `input_tab_width`，那一列要拿掉；等 tdp 下一版寫進去、
+    terminu 通知再改。）
   - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`profile clock › bg: #F2B753`）、profile 的新增、
     複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記）、MOVE ASIDE 之後重寫的 config.yaml，等級 OK
     或 INFO；PIN 的設定與拿掉有 Success toast，不另記。
@@ -113,7 +114,10 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   `Tricky: true`：名字裡的顏色碼是資料的，照規範畫成名字，不算漏改（LK21：v0.4.0 的 Check 沒辦法關這項檢查，2026-10-20 先把
   顏色碼拆出去另外測，v0.4.1 加了 `Tricky`，同日併回）。鎖定畫面不是 surface，不走 Check；它的計時器照樣改用 `App.Tick`。
 - **等 lib 或 tdp 的地方**：LK19 locku 的 profiles 算設定還是資料（tdp v0.9.0 E3 把「使用者寫給 app 用的清單」劃成資料，例子是
-  hostu 的 profiles），2026-10-20 回報 terminu，等 user 定；之前照現在，留在 config.yaml，寫在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
+  hostu 的 profiles），2026-10-20 回報 terminu；同日已定（terminu 轉達）：算資料，要搬到資料目錄，等 tdp 下一版寫進去、terminu
+  通知再搬；之前照現在，留在 config.yaml，寫在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。LK20 同時定了（見上面的暫定）。
+  `locku pin reset` 自己讀登入密碼交給 `su` 驗證：terminu 2026-10-20 說 tdp terminal-24（要提權時）管的是 app 寫系統檔要提權，
+  命令列上驗證身分不在範圍裡，是 locku 自己的決定，照現在。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
   （保留舊的）時，lib 只關掉這一步、不告訴 app，底下的 `CURRENT PIN` 又露出來——`PasswordInput.Unchanged` 收掉整串（沒改值就關是對的，
   K3-8；lib 缺的是讓 app 知道「這一步沒改」）；LK18 `?` 的「每一列」照 key reference 的規則從尾端截，tmux 的 `lock`、screen 的
