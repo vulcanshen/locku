@@ -1,7 +1,7 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0)（tdp v0.9.0；2026-10-20 起照 terminu 的升級交代跟上），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.1)（tdp v0.9.1；2026-10-20 起照 terminu 的升級交代跟上），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
 v0.4.0，再到 v0.4.1）；
@@ -62,10 +62,6 @@ locku/
   - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`，鎖定畫面的 PIN 框沿用 `nf-fa-lock`。（PIN 框的標題是 tdp S36 定的：設定畫面 `CURRENT PIN`、`NEW PIN`、`CONFIRM PIN`，鎖定畫面 `UNLOCK`，都沒有說明列。）
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
-  - `input_tab_width`（2026-10-20）：家族的設定 key（tdp E3），預設 4，是 preference 的 `[2]` 的一列（config.yaml 的每個 key 都是一列），
-    lib 在啟動時讀，改了下次啟動起生效。locku 拿來讀的字只有 App Log 與 setup 報告的 note，幾乎不會有 Tab；清單 E3-11 寫「都要」，
-    所以照做。（LK20 已定，terminu 2026-10-20 轉達：只有 App Log 用不到 `input_tab_width`，那一列要拿掉；等 tdp 下一版寫進去、
-    terminu 通知再改。）
   - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`profile clock › bg: #F2B753`）、profile 的新增、
     複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記）、MOVE ASIDE 之後重寫的 config.yaml，等級 OK
     或 INFO；PIN 的設定與拿掉有 Success toast，不另記。
@@ -113,9 +109,15 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   以下再拉回來，每一幀驗 L4、控制字元，與「被畫成字的顏色碼」（`Driver.ColourCodes`：locku 自己的顏色漏在字裡）。刁鑽值那份設
   `Tricky: true`：名字裡的顏色碼是資料的，照規範畫成名字，不算漏改（LK21：v0.4.0 的 Check 沒辦法關這項檢查，2026-10-20 先把
   顏色碼拆出去另外測，v0.4.1 加了 `Tricky`，同日併回）。鎖定畫面不是 surface，不走 Check；它的計時器照樣改用 `App.Tick`。
-- **等 lib 或 tdp 的地方**：LK19 locku 的 profiles 算設定還是資料（tdp v0.9.0 E3 把「使用者寫給 app 用的清單」劃成資料，例子是
-  hostu 的 profiles），2026-10-20 回報 terminu；同日已定（terminu 轉達）：算資料，要搬到資料目錄，等 tdp 下一版寫進去、terminu
-  通知再搬；之前照現在，留在 config.yaml，寫在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。LK20 同時定了（見上面的暫定）。
+- **profiles 是資料（tdp E3 v0.9.1；2026-10-20，user 定 LK19）。** `~/.locku/data/profiles.yaml`（`config.ProfilesPath`），
+  `profile:` 與 `savers:` 照舊在 config.yaml。`config.Load` 讀兩個檔；profiles.yaml 還沒有時照舊用 config.yaml 的 `profiles:`
+  （`legacy`），`Save` 也照舊寫回 config.yaml，直到設定畫面啟動時 `MoveProfiles` 搬過去（Info toast；搬不動就拿掉剛寫的
+  profiles.yaml、照舊用舊位置、error popup 寫兩個路徑）。兩邊都有時用 profiles.yaml 的，config.yaml 的（`left`）照原樣寫回、error popup
+  請使用者合併。profiles.yaml 讀不了時（`lost`）絕不寫回它：設定畫面開 MOVE ASIDE，鎖定畫面用預設的 clock、PIN 照樣要。兩個檔分開寫，
+  `Save` 先寫 profiles.yaml 再寫 config.yaml，後者寫不進去時前者已經改了（只在磁碟滿、沒權限時）。測試一律把 `LOCKU__DATA` 指到
+  暫存目錄：`Save` 現在會寫資料目錄。e2e 的 custom 也照新的位置寫 profile。
+- **等 lib 或 tdp 的地方**：沒有了（2026-10-20）。LK19 照上一條做了；LK20（只有 App Log 的 app 不算用到 `input_tab_width`）也定了，
+  那一列與 config 的 key 拿掉（2026-10-20 先加上的，沒發過版）。
   `locku pin reset` 自己讀登入密碼交給 `su` 驗證：terminu 2026-10-20 說 tdp terminal-24（要提權時）管的是 app 寫系統檔要提權，
   命令列上驗證身分不在範圍裡，是 locku 自己的決定，照現在。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
@@ -174,7 +176,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 設計文件導讀
 
-三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 100 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
+三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 101 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|

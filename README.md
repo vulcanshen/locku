@@ -97,7 +97,7 @@ Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
 
 ### The first start
 
-There is no setup step. The first `locku` opens the settings screen on the defaults — one clock profile, the active one, and no PIN — and `~/.config/locku/config.yaml` is written the first time something is changed there. It asks the terminal at start how wide its icons are, which takes a moment on a terminal that does not answer. Until a PIN is set, `locku lock` is a plain screensaver: its status row says `no PIN · any key unlocks`, and any key ends it. Nothing goes into tmux, screen or your shell rc until `activate` is turned on.
+There is no setup step. The first `locku` opens the settings screen on the defaults — one clock profile, the active one, and no PIN — and `~/.config/locku/config.yaml`, with `~/.locku/data/profiles.yaml` for the profiles, is written the first time something is changed there. It asks the terminal at start how wide its icons are, which takes a moment on a terminal that does not answer. Until a PIN is set, `locku lock` is a plain screensaver: its status row says `no PIN · any key unlocks`, and any key ends it. Nothing goes into tmux, screen or your shell rc until `activate` is turned on.
 
 ### Uninstall
 
@@ -168,7 +168,7 @@ Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. A copy, or a new profile, is offered a free name in grey — `Enter` takes it — and once made you are in its `[2]`. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
-- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`, `input_tab_width`.
+- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
@@ -289,16 +289,43 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 
 | | What | Where |
 |---|---|---|
-| settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU__CONFIG` names it outright) |
-| data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU__DATA`) |
+| settings | `config.yaml` — the PIN's hash, the profile in use, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU__CONFIG` names it outright) |
+| data | `profiles.yaml` — your profiles; `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU__DATA`) |
 
-No history, no cache, no session; the App Log (`!`) lives only while the settings screen is open. `config.yaml` is written atomically, mode 0600, and can be edited by hand. If it cannot be read — broken YAML, a value of the wrong kind, a `pin_hash` that is not a hash — the settings screen offers to move it aside as `config.yaml.bak` (`.bak.1`, … if that is taken; nothing is overwritten) and start on the defaults, or to leave, the reason printed; the lock goes on as with no PIN, the reason on its status row. It says its `version`: a file from an older locku is converted the first time it is read, and written back in full, saying the new one.
+No history, no cache, no session; the App Log (`!`) lives only while the settings screen is open. `config.yaml` is written atomically, mode 0600, and can be edited by hand. If it cannot be read — broken YAML, a value of the wrong kind, a `pin_hash` that is not a hash — the settings screen offers to move it aside as `config.yaml.bak` (`.bak.1`, … if that is taken; nothing is overwritten) and start on the defaults, or to leave, the reason printed; the lock goes on as with no PIN, the reason on its status row. `profiles.yaml` that cannot be read is offered to be moved aside the same way; the lock shows the default clock then, its PIN still asked. Profiles an older locku kept in `config.yaml` are moved to `profiles.yaml` the first time the settings screen starts, and it says so; if both files have profiles, those in `profiles.yaml` are used and the others are left in `config.yaml` for you to merge. `config.yaml` says its `version`: a file from an older locku is converted the first time it is read, and written back in full, saying the new one.
 
 ```yaml
 version: 1                # the file's shape; locku writes it
 auth: pin                 # the only check there is; pam is reserved
 pin_hash: "$2a$10$..."    # bcrypt; empty or missing = no PIN, any key unlocks
 profile: clock            # the active profile
+savers:                   # each kind's defaults: what a new profile starts as
+  clock: { saver: clock, layout: row, size: large, font: 3x5, time: "HH MM SS", date: YYYY-MM-DD, bg: "#313244", fg: "#f2b753" }
+  runner: { saver: runner, participants: big, character: t-rex, scene: grassland, background: time-shifting }
+  bounce: { saver: bounce, time: "HH:MM", speed: normal }
+  snake: { saver: snake, speed: normal }
+  tetromino: { saver: tetromino, speed: normal }
+  pets: { saver: pets, scene: outdoor, animals: cats, count: 3 }
+  custom: { saver: custom, command: "" }
+show_status: true               # the user@host · locked since row
+pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
+wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
+wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
+tmux:
+  conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
+  lock-after-time: 300
+  bind-key: ""
+  lock: lock-server             # lock-server / lock-session
+screen:
+  conf: "~/.screenrc"
+  idle: 300
+  bind: ""
+```
+
+`profiles.yaml`, in the data directory:
+
+```yaml
+version: 1
 profiles:
   - name: clock
     saver: clock          # clock / runner / bounce / snake / tetromino / pets / custom; fixed once made
@@ -318,28 +345,6 @@ profiles:
   - name: matrix
     saver: custom
     command: "cmatrix -b" # run through sh -c; no colours of its own
-savers:                   # each kind's defaults: what a new profile starts as
-  clock: { saver: clock, layout: row, size: large, font: 3x5, time: "HH MM SS", date: YYYY-MM-DD, bg: "#313244", fg: "#f2b753" }
-  runner: { saver: runner, participants: big, character: t-rex, scene: grassland, background: time-shifting }
-  bounce: { saver: bounce, time: "HH:MM", speed: normal }
-  snake: { saver: snake, speed: normal }
-  tetromino: { saver: tetromino, speed: normal }
-  pets: { saver: pets, scene: outdoor, animals: cats, count: 3 }
-  custom: { saver: custom, command: "" }
-show_status: true               # the user@host · locked since row
-pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
-wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
-wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
-input_tab_width: 4              # spaces a tab takes in text to read, the App Log; from the next start
-tmux:
-  conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
-  lock-after-time: 300
-  bind-key: ""
-  lock: lock-server             # lock-server / lock-session
-screen:
-  conf: "~/.screenrc"
-  idle: 300
-  bind: ""
 ```
 
 ## Limits
@@ -357,7 +362,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0) (tdp v0.9.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.1) (tdp v0.9.1), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

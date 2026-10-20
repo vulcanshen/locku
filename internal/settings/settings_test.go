@@ -32,7 +32,8 @@ type driver struct {
 func newDriver(t *testing.T, cfg config.Config, w, h int) *driver {
 	t.Helper()
 	t.Setenv("LOCKU__CONFIG", t.TempDir())
-	t.Setenv("PATH", t.TempDir()) // no tmux, no screen: the files only
+	t.Setenv("LOCKU__DATA", t.TempDir()) // the profiles, and nothing of the user's
+	t.Setenv("PATH", t.TempDir())        // no tmux, no screen: the files only
 	if err := config.Save(cfg); err != nil {
 		t.Fatal(err)
 	}
@@ -613,6 +614,94 @@ func TestUnreadableConfigIsMovedAside(t *testing.T) {
 				t.Errorf("Esc: kept %q, quit %v", kept, d.quit)
 			}
 		}
+	}
+}
+
+// started is the settings screen on the files as they are on disk, its
+// start run through; dirs are pointed at temporary ones first.
+func started(t *testing.T) *driver {
+	t.Helper()
+	s, err := New(config.Load())
+	if err != nil {
+		t.Fatal(err)
+	}
+	d := &driver{t: t, s: s, app: s.App()}
+	d.send(tea.WindowSizeMsg{Width: 120, Height: 30})
+	d.run(d.app.Init())
+	return d
+}
+
+// tempDirs points the config and data directories, and PATH, at
+// temporary ones.
+func tempDirs(t *testing.T) {
+	t.Helper()
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
+	t.Setenv("LOCKU__DATA", t.TempDir())
+	t.Setenv("PATH", t.TempDir())
+}
+
+// The profiles are data (tdp E3; user, 2026-10-20): a config.yaml from
+// before has them moved out, the first time, to profiles.yaml, a toast
+// saying from where to where.
+func TestProfilesMoveToTheirOwnFile(t *testing.T) {
+	tempDirs(t)
+	if err := config.SaveFile(config.Path(), testConfig()); err != nil {
+		t.Fatal(err)
+	}
+	d := started(t)
+	if v := d.screen(); !strings.Contains(v, "Profiles moved from") {
+		t.Errorf("no toast:\n%s", v)
+	}
+	ps, _ := os.ReadFile(config.ProfilesPath())
+	cf, _ := os.ReadFile(config.Path())
+	if !strings.Contains(string(ps), "name: clock2") || strings.Contains(string(cf), "profiles:") {
+		t.Errorf("profiles.yaml:\n%s\nconfig.yaml:\n%s", ps, cf)
+	}
+	// Profiles in both places: an error popup with both paths.
+	if err := os.WriteFile(config.Path(), append(cf, []byte("profiles:\n  - name: old\n    saver: clock\n")...), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if v := started(t).screen(); !strings.Contains(v, "merged by hand") {
+		t.Errorf("no word of the profiles in both places:\n%s", v)
+	}
+}
+
+// A profiles.yaml that cannot be read is moved aside as a config.yaml is,
+// the PIN in config.yaml kept; and a config.yaml moved aside leaves the
+// profiles as they were (tdp E3).
+func TestUnreadableProfilesAreMovedAside(t *testing.T) {
+	tempDirs(t)
+	cfg := testConfig()
+	if err := cfg.SetPIN("1234"); err != nil {
+		t.Fatal(err)
+	}
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	bad := []byte("profiles: [not yaml\n")
+	if err := os.WriteFile(config.ProfilesPath(), bad, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	d := started(t)
+	if v := d.screen(); !strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "profiles.yaml.bak") {
+		t.Fatalf("no MOVE ASIDE:\n%s", v)
+	}
+	d.press("Enter")
+	kept, _ := os.ReadFile(config.ProfilesPath() + ".bak")
+	now, problem := config.Load()
+	if string(kept) != string(bad) || !now.CheckPIN("1234") || now.Index("clock") < 0 || len(now.Profiles) != 1 {
+		t.Errorf("kept %q, the PIN %v, profiles %d (%q)", kept, now.CheckPIN("1234"), len(now.Profiles), problem)
+	}
+	// config.yaml moved aside: the profiles are not written over.
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config.Path(), []byte("show_status: [1]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	started(t).press("Enter")
+	if now, _ := config.Load(); now.Index("clock2") < 0 {
+		t.Error("moving config.yaml aside lost the profiles")
 	}
 }
 

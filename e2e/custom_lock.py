@@ -18,17 +18,23 @@ work = tempfile.mkdtemp(prefix="locku-e2e-custom-")
 cfgDir = os.path.join(work, "cfg")
 os.makedirs(cfgDir)
 cfgFile = os.path.join(cfgDir, "config.yaml")
+dataDir = os.path.join(work, "data")
+os.makedirs(dataDir)
+profilesFile = os.path.join(dataDir, "profiles.yaml")  # the profiles are data (tdp E3, 2026-10-20)
 env = {"HOME": work, "PATH": os.environ["PATH"], "TERM": "xterm-256color", "SHELL": "/bin/sh",
-       "LOCKU__CONFIG": cfgDir, "USER": os.environ.get("USER", "u")}
+       "LOCKU__CONFIG": cfgDir, "LOCKU__DATA": dataDir, "USER": os.environ.get("USER", "u")}
 MARK = "LOCKU-E2E-MARK"
 PIXEL = "\uf0c8".encode()   # the board's cell: nf-fa-square, written as its code point (tdp E4)
 PROMPT = "\uf023".encode()  # the PIN prompt's lock: nf-fa-lock
 
 
 def config(command, pin_hash=None, extra=""):
-    """A file whose active profile is a custom saver running command."""
+    """Files whose active profile is a custom saver running command: the
+    profile in profiles.yaml, which one is active in config.yaml."""
+    with open(profilesFile, "w") as f:
+        f.write('profiles:\n  - name: run\n    saver: custom\n    command: ' + repr(command) + '\n')
     with open(cfgFile, "w") as f:
-        f.write('profile: run\nprofiles:\n  - name: run\n    saver: custom\n    command: ' + repr(command) + '\n')
+        f.write('profile: run\n')
         if pin_hash:
             f.write('pin_hash: ' + repr(pin_hash) + '\n')
         f.write(extra)

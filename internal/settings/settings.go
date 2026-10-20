@@ -13,6 +13,8 @@ package settings
 
 import (
 	_ "embed"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -78,27 +80,13 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a := terminu.New("locku")
 	a.QuitDesc = "leave locku"
 	a.MinWidth, a.MinHeight = minW, minH
-	a.InputTabWidth = cfg.InputTabWidth
 	splash, err := terminu.NewSplash(icon, "locku", version.Display(), intro)
 	if err != nil {
 		return nil, err
 	}
 	a.Splash = splash
 	a.OnMsg = s.onMsg
-	a.Start = func() tea.Cmd {
-		// A config.yaml that cannot be read is not gone on with: the next
-		// write would put the defaults over it. Moved aside it is kept
-		// whole, as config.yaml.bak; Esc leaves, the reason on stderr
-		// (tdp E3, when it cannot be read; until 2026-10-20 an error popup
-		// over the defaults).
-		if err := config.Unreadable(); err != nil {
-			return s.app.MoveAside(config.Path(), err, s.fresh)
-		}
-		if s.problem != "" {
-			return s.app.Error("config.yaml", s.problem)
-		}
-		return nil
-	}
+	a.Start = s.start
 	s.app = a
 	s.side = &terminu.List{OnMove: func(r terminu.Row) tea.Cmd { s.moved(r.ID); return nil }}
 	s.vals = &terminu.Values{}
@@ -117,16 +105,67 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	return s, nil
 }
 
-// fresh is a new config.yaml in the place of one moved aside: the
-// defaults, written now (tdp E3).
-func (s *Settings) fresh() tea.Cmd {
-	s.cfg, s.problem = config.Default(), ""
-	if err := config.Save(s.cfg); err != nil {
-		return s.app.Error("Write failed", err.Error())
+// start is what the settings screen sees to as it starts, in order. A file
+// of locku's that cannot be read — config.yaml, profiles.yaml — is not
+// gone on with: the next write would put the defaults over it. Moved aside
+// it is kept whole, as <name>.bak; Esc leaves, the reason on stderr (tdp
+// E3, when it cannot be read; until 2026-10-20 an error popup over the
+// defaults). Then the profiles move to their own file, the first time, and
+// what is wrong in the files is said.
+func (s *Settings) start() tea.Cmd {
+	if err := config.Unreadable(); err != nil {
+		return s.app.MoveAside(config.Path(), err, s.fresh("config.yaml"))
 	}
-	s.app.Log(terminu.Info, "config.yaml made anew, with the defaults")
-	s.refresh()
+	if err := config.UnreadableProfiles(); err != nil {
+		return s.app.MoveAside(config.ProfilesPath(), err, s.fresh("profiles.yaml"))
+	}
+	var said tea.Cmd
+	if s.problem != "" {
+		said = s.app.Error("config.yaml", s.problem)
+	}
+	return tea.Batch(s.moveProfiles(), said)
+}
+
+// fresh is name made anew once the one that could not be read is moved
+// aside: the files read again, the defaults in its place, written now —
+// the other file as it was — and the rest of the start (tdp E3).
+func (s *Settings) fresh(name string) func() tea.Cmd {
+	return func() tea.Cmd {
+		s.cfg, s.problem = config.Load()
+		if err := config.Save(s.cfg); err != nil {
+			return s.app.Error("Write failed", err.Error())
+		}
+		s.app.Log(terminu.Info, name+" made anew, with the defaults")
+		s.refresh()
+		return s.start()
+	}
+}
+
+// moveProfiles moves the profiles out of config.yaml into their own file,
+// the first time (tdp E3, when the place changes): a toast says from where
+// to where. One that cannot be made, and profiles in both places, open an
+// error popup with both paths.
+func (s *Settings) moveProfiles() tea.Cmd {
+	from, to := tilde(config.Path()), tilde(config.ProfilesPath())
+	if s.cfg.Both() {
+		return s.app.Error("Profiles", "The profiles are in "+to+", and in "+from+" too: "+to+"'s are used, "+from+"'s left there to be merged by hand.")
+	}
+	moved, err := config.MoveProfiles(&s.cfg)
+	switch {
+	case err != nil:
+		return s.app.Error("Profiles", "The profiles could not be moved from "+from+" to "+to+": "+err.Error()+". They stay in "+from+".")
+	case moved:
+		return s.app.Toast(terminu.Info, "Profiles moved from "+from+" to "+to)
+	}
 	return nil
+}
+
+// tilde is path with the home directory written ~.
+func tilde(path string) string {
+	if home, err := os.UserHomeDir(); err == nil && strings.HasPrefix(path, home+string(filepath.Separator)) {
+		return "~" + path[len(home):]
+	}
+	return path
 }
 
 // App is the lib's app: what Run runs, and what the tests drive.

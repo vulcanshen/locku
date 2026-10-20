@@ -79,7 +79,6 @@ var fieldDesc = map[string]string{
 	"pin_prompt_timeout":         "seconds until the PIN box closes; 0 never",
 	"wrong_pin_attempts":         "wrong PINs before a cooldown; 0 off",
 	"wrong_pin_attempt_cooldown": "the cooldown, in seconds",
-	"input_tab_width":            "spaces a tab takes in text to read",
 	"activate":                   "locku's line in the file, or not",
 	"config file path":           "the file locku's line goes into",
 	"lock":                       "the whole server, or one session",
@@ -344,11 +343,7 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	cooldown := s.number("wrong_pin_attempt_cooldown", "Seconds the cooldown lasts, 1 or more",
 		"seconds", "", s.cfg.WrongPINCooldown, 1, def.WrongPINCooldown, func(n int) { s.cfg.WrongPINCooldown = n }, nil)
 	cooldown.Desc = "seconds the cooldown lasts"
-	// The family's key (tdp E3); the lib takes it as it starts.
-	tab := s.number("input_tab_width", "Spaces a tab takes in text to read, 1 or more; from the next start",
-		"spaces", "", s.cfg.InputTabWidth, 1, def.InputTabWidth, func(n int) { s.cfg.InputTabWidth = n }, nil)
-	tab.Desc = "the spaces a tab takes in text to read — the App Log, a setup report — from the next start"
-	return []*terminu.Field{pin, profile, status, timeout, attempts, cooldown, tab}
+	return []*terminu.Field{pin, profile, status, timeout, attempts, cooldown}
 }
 
 // tool is the tool under the cursor and its settings.

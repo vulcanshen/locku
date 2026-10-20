@@ -208,16 +208,6 @@ func TestOldRunnerNamesAreCarriedOver(t *testing.T) {
 	}
 }
 
-// input_tab_width is the family's key (tdp E3): 4 when the file has none,
-// or none that is a width; what the file says otherwise.
-func TestInputTabWidth(t *testing.T) {
-	for body, want := range map[string]int{"show_status: true\n": 4, "input_tab_width: 0\n": 4, "input_tab_width: -2\n": 4, "input_tab_width: 8\n": 8} {
-		if cfg, _ := LoadFile(write(t, body)); cfg.InputTabWidth != want {
-			t.Errorf("%q: input_tab_width %d, want %d", body, cfg.InputTabWidth, want)
-		}
-	}
-}
-
 // Why a file cannot be read, for the settings screen's MOVE ASIDE (tdp
 // E3): nothing when it is fine or not there, the YAML's own words, the
 // hash.
@@ -315,6 +305,7 @@ func TestNewPINIsEightDigits(t *testing.T) {
 func TestLoadPINHash(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", t.TempDir())
 	if _, ok := LoadPINHash(); ok {
 		t.Error("no file must not read as anything")
 	}

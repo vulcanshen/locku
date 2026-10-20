@@ -175,11 +175,14 @@ const ConfigVersion = 1
 // Config is config.yaml, one field per key.
 type Config struct {
 	// Version is the file's shape: ConfigVersion when locku writes it.
-	Version  int       `yaml:"version"`
-	Auth     string    `yaml:"auth"`
-	PINHash  string    `yaml:"pin_hash"`
-	Profile  string    `yaml:"profile"`
-	Profiles []Profile `yaml:"profiles"`
+	Version int    `yaml:"version"`
+	Auth    string `yaml:"auth"`
+	PINHash string `yaml:"pin_hash"`
+	Profile string `yaml:"profile"`
+	// Profiles are data, in profiles.yaml (ProfilesPath): a list the user
+	// writes for locku (tdp E3; user, 2026-10-20). config.yaml has them only
+	// until they are moved (MoveProfiles), or left there beside profiles.yaml's.
+	Profiles []Profile `yaml:"profiles,omitempty"`
 	// Savers is each saver's defaults, by kind: what a profile of it is
 	// made as from now on, and what [p] on the saver previews (user,
 	// 2026-09-24). Changing one changes no profile already made. Before
@@ -190,13 +193,17 @@ type Config struct {
 	PINPromptTimeout int                `yaml:"pin_prompt_timeout"`
 	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
-	// InputTabWidth is the family's input_tab_width (tdp E3): the spaces a
-	// tab takes in text to read, the App Log and a setup report's note
-	// (2026-10-20, tdp v0.9.0: every app has an App Log).
-	InputTabWidth int `yaml:"input_tab_width"`
 	// The tools that run locku as their screensaver, each its own.
 	Tmux   Tmux   `yaml:"tmux"`
 	Screen Screen `yaml:"screen"`
+
+	// Where the profiles were read from (Load): legacy, config.yaml, before
+	// they are moved; left, config.yaml's own, left there when profiles.yaml
+	// has its own, for the user to merge (tdp E3); lost, profiles.yaml could
+	// not be read, and is never written over.
+	legacy bool
+	left   []Profile
+	lost   bool
 }
 
 // NewProfile is a profile called name of the saver kind as the program
@@ -253,7 +260,6 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
-		InputTabWidth:    4,
 		Tmux:             Tmux{LockAfterTime: DefaultIdle, Lock: LockServer},
 		Screen:           Screen{Idle: DefaultIdle},
 	}
@@ -303,12 +309,6 @@ func Dir() string {
 
 // Path is the file itself.
 func Path() string { return filepath.Join(Dir(), "config.yaml") }
-
-// Load reads config.yaml. The note is what the status row says when the
-// file could not be honoured — "" when it was, or when there is no file,
-// which is the ordinary state of a machine that has never run `locku`.
-// The Config returned is always usable.
-func Load() (Config, string) { return LoadFile(Path()) }
 
 // unreadable is config.yaml that cannot be read: reason is why, as the
 // settings screen's MOVE ASIDE says it; note is how the lock's status row
@@ -368,31 +368,45 @@ func readFile(path string) (Config, int, error) {
 	return cfg, version, nil
 }
 
-// LoadFile is Load on a given path.
+// LoadFile is config.yaml at path alone: its own profiles, when it still
+// has them, else the default one.
 func LoadFile(path string) (Config, string) {
+	cfg, note, _, _ := loadFile(path)
+	return cfg, note
+}
+
+// loadFile is LoadFile, and whether the file had profiles of its own, and
+// whether it could be read at all (a missing file can).
+func loadFile(path string) (cfg Config, note string, had, ok bool) {
 	cfg, version, err := readFile(path)
 	var u unreadable
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		return Default(), ""
+		return Default(), "", false, true
 	case errors.As(err, &u):
-		return Default(), u.note
+		return Default(), u.note, false, false
 	}
+	had = cfg.Profiles != nil
 	if cfg.Profiles == nil {
 		cfg.Profiles = Default().Profiles
 	}
 	if cfg.Profile == "" {
 		cfg.Profile = Default().Profile
 	}
-	cfg, note := cfg.sanitized()
+	cfg, note = cfg.sanitized()
 	if version < ConfigVersion {
 		// Brought to this version, the file is written over in its shape
-		// and says so (user, 2026-10-07: a config migration). One that
-		// cannot be written is read the same way again the next time.
+		// and says so (user, 2026-10-07: a config migration), the profiles
+		// it had and no others. One that cannot be written is read the same
+		// way again the next time.
 		cfg.Version = ConfigVersion
-		_ = SaveFile(path, cfg)
+		c := cfg
+		if !had {
+			c.Profiles = nil
+		}
+		_ = SaveFile(path, c)
 	}
-	return cfg, note
+	return cfg, note, had, true
 }
 
 // versionOf is the version a parsed file says it is: 0 when it says
@@ -720,9 +734,6 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.WrongPINCooldown <= 0 {
 		cfg.WrongPINCooldown = Default().WrongPINCooldown
 	}
-	if cfg.InputTabWidth <= 0 {
-		cfg.InputTabWidth = Default().InputTabWidth
-	}
 	for _, n := range []string{"tmux", "screen"} {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
 	}
@@ -865,23 +876,26 @@ func CheckPINLength(pin string) error {
 // ClearPIN goes back to a screensaver.
 func (cfg *Config) ClearPIN() { cfg.PINHash = "" }
 
-// Save writes cfg to Path.
-func Save(cfg Config) error { return SaveFile(Path(), cfg) }
-
-// SaveFile writes cfg to path atomically — a temp file beside it, then a
-// rename — with mode 0600, since the file carries the PIN's hash (ui.md
-// §6). The directory is made when it is not there.
+// SaveFile writes cfg to path, its profiles too when it has them, as
+// writeAtomic does.
 func SaveFile(path string, cfg Config) error {
 	cfg.Version = ConfigVersion
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return err
 	}
+	return writeAtomic(path, data)
+}
+
+// writeAtomic writes data to path atomically — a temp file beside it, then
+// a rename — with mode 0600, since config.yaml carries the PIN's hash (ui.md
+// §6). The directory is made when it is not there.
+func writeAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return err
 	}
-	tmp, err := os.CreateTemp(dir, ".config.yaml.*")
+	tmp, err := os.CreateTemp(dir, "."+filepath.Base(path)+".*")
 	if err != nil {
 		return err
 	}
