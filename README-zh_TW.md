@@ -168,7 +168,7 @@ Space:menu ?:help Tab|1–2:panels q:quit
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。複製或新增時框裡用灰字提議一個沒人用的名字，直接 `Enter` 就用它，建好後直接進它的 `[2]`。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg`，各自在顏色選擇器裡選：舊的顏色與新的並排，紅、綠、藍用 hex。每一列一設定就寫檔。
 - **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
-- **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉；每一步疊在上一步上面，`Esc` 退回上一步）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
+- **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉；每一步疊在上一步上面，`Esc` 退回上一步）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`、`input_tab_width`。
 
 任何 `[2]` 上 `P` 就地預覽鎖定畫面：profile 或 saver 的 `[2]` 是那一個，其他是啟用中的 profile。任意鍵回來，不驗 PIN。custom profile 的預覽把終端機整個交給程式，直到按鍵。
 
@@ -248,6 +248,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `Space` | 這裡能做什麼：這一列、這個面板，以及 `Global operation` 底下的離開 |
 | `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上再接著每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
+| `!` | App Log：locku 這次開著時做了什麼——寫進去的每一個值、新增／改名／刪除的 profile、出現過的每一則訊息——以及出了什麼錯；有沒看過的錯誤時 footer 寫 `!:1 error` |
 | `q\|Ctrl-C` | 離開 |
 | `j\|k` · `u\|d` · `gg\|G` | 下、上 · 半頁 · 首、尾 |
 
@@ -291,7 +292,7 @@ locku pin reset
 | 設定 | `config.yaml`——PIN 的 hash、profile、各 saver 的預設值、整合設定 | `~/.config/locku`（有設 `$XDG_CONFIG_HOME` 就是 `$XDG_CONFIG_HOME/locku`；`$LOCKU__CONFIG` 直接指定） |
 | 資料 | `pin-resets.log`——每次 `locku pin reset`，不含 PIN | `~/.locku/data`（`$LOCKU__DATA`） |
 
-無 history、無 cache、無 session。`config.yaml` 原子寫入、mode 0600，可以手改。檔案會標明自己的 `version`：舊版 locku 的檔第一次被讀到時就轉成新格式，整份寫回並標上新的版本。
+無 history、無 cache、無 session；App Log（`!`）只在設定畫面開著時存在。`config.yaml` 原子寫入、mode 0600，可以手改。讀不了時（YAML 壞了、值的型別不對、`pin_hash` 不是 hash），設定畫面一開就問要不要把它移到旁邊成 `config.yaml.bak`（已經有了就是 `.bak.1`……，什麼都不蓋掉）、用預設值重新開始，或是離開並印出原因；鎖定畫面照沒有 PIN 處理，原因寫在狀態列。檔案會標明自己的 `version`：舊版 locku 的檔第一次被讀到時就轉成新格式，整份寫回並標上新的版本。
 
 ```yaml
 version: 1                # 檔案格式的版本，locku 自己寫
@@ -329,6 +330,7 @@ show_status: true               # user@host · locked since 那一列
 pin_prompt_timeout: 30          # 幾秒沒按鍵框收起；0 永不收起
 wrong_pin_attempts: 0           # 連錯幾次進冷卻；0 關
 wrong_pin_attempt_cooldown: 30  # 冷卻秒數
+input_tab_width: 4              # 拿來讀的字（App Log）裡一個 Tab 佔幾格；下次啟動起生效
 tmux:
   conf: "~/.tmux.conf"          # config file path；空 = activate 打不開
   lock-after-time: 300
@@ -355,7 +357,7 @@ screen:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.3)（tdp v0.8.3），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0)（tdp v0.9.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

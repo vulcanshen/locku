@@ -693,6 +693,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 99. （2026-10-19，terminu 通知 terminu-go v0.2.1（tdp v0.8.2）發版，這一輪最後一次升級）改 PIN 時在 `NEW PIN` 的灰點上直接 `Enter`（保留舊的）結束整串，`CURRENT PIN` 一起收掉（LK17，lib 的 `PasswordInput.Unchanged`）；`?` 的「每一列」長說明在右欄折行，讀得完（LK18，user 定 A，lib 做，locku 的字不改）。tdp v0.8.2 的清單欄寬（`Column.Shrink`）locku 用不到：`[1]` 沒有表頭、只有一欄。順手：`[2]` 上停用的列（例：沒有檔案時的 `activate`）`Enter` 照樣登記 locku 自己的說明、畫成停用色（tdp M6：說明維持原本那句；之前是 lib 的 `this option`）。同日再升 terminu-go v0.2.2（tdp v0.8.3）：單行輸入框太長的說明列折行、清單框邊那一欄照它的截法加 `…`，都是 lib 的，locku 的程式不用改。
 
+100. （2026-10-20，terminu 統籌的升級：tdp v0.9.0、terminu-go v0.4.0，接上 tdptest；user 不在、不問）v0.4.0 還沒打 tag，先用 `go.work` 接本機的 terminu-go 做，go.mod 等 tag。設定畫面：App Log（`!`，footer 常駐 `!:log`）記寫進去的每個值、profile 的增刪改與啟用、長的 setup 報告；config.yaml 讀不了時啟動開 MOVE ASIDE（`Enter` 留成 `.bak`、寫預設值，`Esc` 離開、原因到 stderr），之前是預設值上一個 error popup；值與格子的顏色改用 lib 的 `Styled`（綠點、色票），不再塞顏色碼；`input_tab_width`（家族 key，預設 4）是 preference 的一列，暫定；型別錯的原因寫第一個具體的錯。鎖定畫面不在 TUI 裡：讀不了照舊 fail open；狀態列外面來的字照 tdp 的控制字元畫成紅色的名字；計時器改用 `App.Tick`。`tdp_test.go` 用 tdptest 走第一次啟動與一份全是刁鑽值的 config。profiles 算設定還是資料回報 LK19，等 user，先不搬。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。

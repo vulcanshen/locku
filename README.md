@@ -168,7 +168,7 @@ Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. A copy, or a new profile, is offered a free name in grey — `Enter` takes it — and once made you are in its `[2]`. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
-- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
+- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`, `input_tab_width`.
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
@@ -248,6 +248,7 @@ A new shell has it. A screen already running gets it once detached and attached 
 | `Space` | what can be done here: the row, the panel, and — under `Global operation` — quitting |
 | `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, then what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
+| `!` | the App Log: what locku has done this run — each value written, each profile made, renamed or deleted, every message it showed — and what went wrong; the footer says `!:1 error` until it is read |
 | `q\|Ctrl-C` | quit |
 | `j\|k` · `u\|d` · `gg\|G` | down, up · half a page · first, last |
 
@@ -291,7 +292,7 @@ It asks `[y/N]`, then your **login password** — your account is the one bounda
 | settings | `config.yaml` — the PIN's hash, the profiles, the savers' defaults, the integration | `~/.config/locku` (`$XDG_CONFIG_HOME/locku` when set; `$LOCKU__CONFIG` names it outright) |
 | data | `pin-resets.log` — every `locku pin reset`, without the PIN | `~/.locku/data` (`$LOCKU__DATA`) |
 
-No history, no cache, no session. `config.yaml` is written atomically, mode 0600, and can be edited by hand. It says its `version`: a file from an older locku is converted the first time it is read, and written back in full, saying the new one.
+No history, no cache, no session; the App Log (`!`) lives only while the settings screen is open. `config.yaml` is written atomically, mode 0600, and can be edited by hand. If it cannot be read — broken YAML, a value of the wrong kind, a `pin_hash` that is not a hash — the settings screen offers to move it aside as `config.yaml.bak` (`.bak.1`, … if that is taken; nothing is overwritten) and start on the defaults, or to leave, the reason printed; the lock goes on as with no PIN, the reason on its status row. It says its `version`: a file from an older locku is converted the first time it is read, and written back in full, saying the new one.
 
 ```yaml
 version: 1                # the file's shape; locku writes it
@@ -329,6 +330,7 @@ show_status: true               # the user@host · locked since row
 pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
 wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
 wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
+input_tab_width: 4              # spaces a tab takes in text to read, the App Log; from the next start
 tmux:
   conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
   lock-after-time: 300
@@ -355,7 +357,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.3) (tdp v0.8.3), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0) (tdp v0.9.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

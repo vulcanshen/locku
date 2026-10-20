@@ -1,9 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.8.3)（tdp v0.8.3；2026-10-19 照重構回報的定案跟上），設定畫面與鎖定畫面的
-PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.2.2 的（2026-10-18 起照 terminu 的交代整個重構，
-2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2）；
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0)（tdp v0.9.0；2026-10-20 起照 terminu 的升級交代跟上），設定畫面與鎖定畫面的
+PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
+2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 起照 v0.4.0 改，v0.4.0 還沒打 tag，先用 `go.work` 接本機的 terminu-go、go.mod 還是
+v0.2.2，所以 `make check` 的 `check-lib` 暫時過不了）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -61,6 +62,12 @@ locku/
   - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`，鎖定畫面的 PIN 框沿用 `nf-fa-lock`。（PIN 框的標題是 tdp S36 定的：設定畫面 `CURRENT PIN`、`NEW PIN`、`CONFIRM PIN`，鎖定畫面 `UNLOCK`，都沒有說明列。）
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
+  - `input_tab_width`（2026-10-20）：家族的設定 key（tdp E3），預設 4，是 preference 的 `[2]` 的一列（config.yaml 的每個 key 都是一列），
+    lib 在啟動時讀，改了下次啟動起生效。locku 拿來讀的字只有 App Log 與 setup 報告的 note，幾乎不會有 Tab；清單 E3-11 寫「都要」，
+    所以照做。
+  - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`profile clock › bg: #F2B753`）、profile 的新增、
+    複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記）、MOVE ASIDE 之後重寫的 config.yaml，等級 OK
+    或 INFO；PIN 的設定與拿掉有 Success toast，不另記。
 
 - **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40，app 可以調低。設定畫面是 40×15（`internal/settings`
   的 `minW`、`minH`）：locku 常在 tmux 切出來的小窗格裡開；設定畫面最大的框是 color picker（36×11），40×15 時整個放得進 `[2]` 的框裡，
@@ -90,7 +97,21 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 已知的牆與未做
 
-- **等 lib 或 tdp 的地方**：沒有了（2026-10-19）。2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
+- **讀不了時（tdp E3；2026-10-20）。** config.yaml 讀不了——檔案讀不到、YAML 壞了、值的型別不對、`pin_hash` 不是 bcrypt——
+  設定畫面啟動時開 lib 的 `MoveAside`：`Enter` 改名成 `config.yaml.bak`（`.bak.1`……由 lib 挑）、在原位置寫一份預設值，`Esc` 離開，
+  `Run` 回傳的原因由 main 照錯誤印到 stderr。`config.Unreadable` 是判斷，`LoadFile` 照舊回傳狀態列那句話（`readFile` 共用）；型別錯
+  寫第一個具體的錯（`line 1: cannot unmarshal …`），不寫只有標題的 `yaml: unmarshal errors:`。鎖定畫面不在 TUI 裡，照舊 fail open
+  （function.md §0.1：config 缺失或損毀一律 fail open），它不寫檔，不會蓋掉使用者的東西；`locku pin reset` 照舊拒絕、要使用者先修，
+  也不會蓋掉。只是內容的提醒（`no profiles`、`profile "x" not found`）照舊是 error popup。
+- **控制字元（tdp v0.9.0 components「控制字元」；2026-10-20）。** 名字與短字交給 lib 畫，locku 不再把顏色碼塞進字裡：`[1]` 啟用中的
+  profile 的綠點是 `Row.Styled`（字照樣在 `Cells` 給篩選用），顏色的值是 `Field.Styled` 加 lib 的 `ColorSpans`／`HexText`（locku 的
+  `swatch` 拿掉）。鎖定畫面的狀態列是 locku 自己畫在 Canvas 上的，外面來的字——user@host、config 的錯、custom 程式的 stderr——先過
+  `terminu.Escape`、再用 lib 的 `Style` 上色（lipgloss 遇到裡面的 reset 不會接回原本的顏色）。
+- **tdptest（2026-10-20）。** `internal/settings/tdp_test.go`：`tdptest.Check` 走第一次啟動，另一次先放一份全是 `tdptest.Tricky` 的
+  config.yaml（profile 名、custom 的 command、tmux 的路徑與鍵）再走；每個畫面開 Space menu、global operation、App Log、`?`，最低尺寸
+  以下再拉回來，每一幀驗 L4 與控制字元。鎖定畫面不是 surface，不走 Check；它的計時器照樣改用 `App.Tick`。
+- **等 lib 或 tdp 的地方**：LK19 locku 的 profiles 算設定還是資料（tdp v0.9.0 E3 把「使用者寫給 app 用的清單」劃成資料，例子是
+  hostu 的 profiles），2026-10-20 回報 terminu，等 user 定；之前照現在，留在 config.yaml，寫在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
   （保留舊的）時，lib 只關掉這一步、不告訴 app，底下的 `CURRENT PIN` 又露出來——`PasswordInput.Unchanged` 收掉整串（沒改值就關是對的，
   K3-8；lib 缺的是讓 app 知道「這一步沒改」）；LK18 `?` 的「每一列」照 key reference 的規則從尾端截，tmux 的 `lock`、screen 的
@@ -147,7 +168,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 設計文件導讀
 
-三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 99 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
+三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 100 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
