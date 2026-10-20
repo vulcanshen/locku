@@ -85,6 +85,14 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a.Splash = splash
 	a.OnMsg = s.onMsg
 	a.Start = func() tea.Cmd {
+		// A config.yaml that cannot be read is not gone on with: the next
+		// write would put the defaults over it. Moved aside it is kept
+		// whole, as config.yaml.bak; Esc leaves, the reason on stderr
+		// (tdp E3, when it cannot be read; until 2026-10-20 an error popup
+		// over the defaults).
+		if err := config.Unreadable(); err != nil {
+			return s.app.MoveAside(config.Path(), err, s.fresh)
+		}
 		if s.problem != "" {
 			return s.app.Error("config.yaml", s.problem)
 		}
@@ -106,6 +114,18 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 		s.moved(r.ID)
 	}
 	return s, nil
+}
+
+// fresh is a new config.yaml in the place of one moved aside: the
+// defaults, written now (tdp E3).
+func (s *Settings) fresh() tea.Cmd {
+	s.cfg, s.problem = config.Default(), ""
+	if err := config.Save(s.cfg); err != nil {
+		return s.app.Error("Write failed", err.Error())
+	}
+	s.app.Log(terminu.Info, "config.yaml made anew, with the defaults")
+	s.refresh()
+	return nil
 }
 
 // App is the lib's app: what Run runs, and what the tests drive.

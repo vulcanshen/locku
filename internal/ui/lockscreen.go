@@ -373,14 +373,14 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	if m.lockedOut() {
 		// The box counts the cooling-off down (tdp S37), every key but Esc
 		// swallowed; when it is over the count starts again.
-		return tea.Batch(cmd, tea.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
+		return tea.Batch(cmd, m.app.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
 	// A second of "wrong": the dots go — Backspace clears a password whole
 	// — and every key is swallowed, so Enter pressed again and again does
 	// not skip the word (function.md §4.4).
 	m.held = m.now().Add(wrongHold)
 	return tea.Batch(cmd, m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}),
-		tea.Tick(wrongHold, func(time.Time) tea.Msg { return heldOverMsg{} }))
+		m.app.Tick(wrongHold, func(time.Time) tea.Msg { return heldOverMsg{} }))
 }
 
 func (m *LockModel) holding() bool   { return m.now().Before(m.held) }
@@ -405,7 +405,7 @@ func (m *LockModel) openBox() tea.Cmd {
 		Done:        func(string, bool) tea.Cmd { return m.unlock() },
 		OnCancel:    m.boxClosed})
 	if m.lockedOut() {
-		cmd = tea.Batch(cmd, tea.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
+		cmd = tea.Batch(cmd, m.app.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
 	return tea.Batch(cmd, m.armTimeout())
 }
@@ -505,12 +505,12 @@ func (m *LockModel) clockTick() tea.Cmd {
 	if m.word != "" {
 		next = m.word.Next(now)
 	}
-	return tea.Tick(next.Sub(now), func(time.Time) tea.Msg { return clockTickMsg{gen} })
+	return m.app.Tick(next.Sub(now), func(time.Time) tea.Msg { return clockTickMsg{gen} })
 }
 
 func (m *LockModel) revealTick() tea.Cmd {
 	gen := m.tickGen
-	return tea.Tick(revealStep, func(time.Time) tea.Msg { return revealTickMsg{gen} })
+	return m.app.Tick(revealStep, func(time.Time) tea.Msg { return revealTickMsg{gen} })
 }
 
 // armTimeout starts pin_prompt_timeout over; 0 means the box stays.
@@ -521,7 +521,7 @@ func (m *LockModel) armTimeout() tea.Cmd {
 	}
 	gen := m.idleGen
 	d := time.Duration(m.cfg.PINPromptTimeout) * time.Second
-	return tea.Tick(d, func(time.Time) tea.Msg { return boxIdleMsg{gen} })
+	return m.app.Tick(d, func(time.Time) tea.Msg { return boxIdleMsg{gen} })
 }
 
 // inks are the board's colours: a game's own when it has them (user,

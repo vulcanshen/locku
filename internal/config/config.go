@@ -305,15 +305,34 @@ func Path() string { return filepath.Join(Dir(), "config.yaml") }
 // The Config returned is always usable.
 func Load() (Config, string) { return LoadFile(Path()) }
 
-// LoadFile is Load on a given path.
-func LoadFile(path string) (Config, string) {
+// unreadable is config.yaml that cannot be read: reason is why, as the
+// settings screen's MOVE ASIDE says it; note is how the lock's status row
+// has said it since 2026-09-24.
+type unreadable struct{ note, reason string }
+
+func (u unreadable) Error() string { return u.reason }
+
+// Unreadable is why config.yaml cannot be read — the file, its YAML, its
+// shape, a pin_hash that is not bcrypt — nil when it can, or is not there
+// (tdp E3, when it cannot be read: the cause makes no difference).
+func Unreadable() error {
+	_, _, err := readFile(Path())
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
+}
+
+// readFile is the file at path decoded, and the version it says it is; an
+// unreadable when it cannot be read, os.ErrNotExist when it is not there.
+func readFile(path string) (Config, int, error) {
 	cfg := Default()
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return cfg, ""
+		return cfg, 0, err
 	}
 	if err != nil {
-		return Default(), "config unreadable: " + err.Error()
+		return cfg, 0, unreadable{"config unreadable: " + err.Error(), err.Error()}
 	}
 	// The document is read as a tree first, so the keys from before
 	// 2026-09-24 can be renamed in place and one decode reads either
@@ -322,7 +341,7 @@ func LoadFile(path string) (Config, string) {
 	// first so an absent one is told from a present one.
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return Default(), "config.yaml: " + firstLine(err.Error())
+		return cfg, 0, unreadable{"config.yaml: " + firstLine(err.Error()), firstLine(err.Error())}
 	}
 	version := versionOf(&doc)
 	if version < 1 {
@@ -331,15 +350,28 @@ func LoadFile(path string) (Config, string) {
 	cfg.Version, cfg.Profile, cfg.Profiles, cfg.Savers = version, "", nil, nil
 	if doc.Kind != 0 {
 		if err := doc.Decode(&cfg); err != nil {
-			return Default(), "config.yaml: " + firstLine(err.Error())
+			return cfg, 0, unreadable{"config.yaml: " + firstLine(err.Error()), firstLine(err.Error())}
 		}
 	}
 	// A pin_hash that is not bcrypt could never match anything: that is a
 	// lock with no key, and the file is treated as absent (function.md §4.3).
 	if cfg.PINHash != "" {
 		if _, err := bcrypt.Cost([]byte(cfg.PINHash)); err != nil {
-			return Default(), "pin_hash is not a bcrypt hash"
+			return cfg, 0, unreadable{"pin_hash is not a bcrypt hash", "pin_hash is not a bcrypt hash"}
 		}
+	}
+	return cfg, version, nil
+}
+
+// LoadFile is Load on a given path.
+func LoadFile(path string) (Config, string) {
+	cfg, version, err := readFile(path)
+	var u unreadable
+	switch {
+	case errors.Is(err, os.ErrNotExist):
+		return Default(), ""
+	case errors.As(err, &u):
+		return Default(), u.note
 	}
 	if cfg.Profiles == nil {
 		cfg.Profiles = Default().Profiles

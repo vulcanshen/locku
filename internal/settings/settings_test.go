@@ -577,6 +577,45 @@ func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 	}
 }
 
+// A config.yaml that cannot be read is offered to be moved aside at the
+// start: Enter keeps it whole as config.yaml.bak and starts on the
+// defaults, Esc leaves (tdp E3).
+func TestUnreadableConfigIsMovedAside(t *testing.T) {
+	for _, key := range []string{"Enter", "Esc"} {
+		dir := t.TempDir()
+		t.Setenv("LOCKU__CONFIG", dir)
+		t.Setenv("LOCKU__DATA", t.TempDir())
+		t.Setenv("PATH", t.TempDir())
+		bad := []byte("profiles: [not yaml\n")
+		if err := os.WriteFile(config.Path(), bad, 0o600); err != nil {
+			t.Fatal(err)
+		}
+		s, err := New(config.Load())
+		if err != nil {
+			t.Fatal(err)
+		}
+		d := &driver{t: t, s: s, app: s.App()}
+		d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
+		d.run(d.app.Init())
+		if v := d.screen(); !strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "config.yaml can't be read") || !strings.Contains(v, "config.yaml.bak") {
+			t.Fatalf("no MOVE ASIDE:\n%s", v)
+		}
+		d.press(key)
+		kept, _ := os.ReadFile(filepath.Join(dir, "config.yaml.bak"))
+		_, problem := config.Load()
+		switch key {
+		case "Enter":
+			if string(kept) != string(bad) || problem != "" || d.quit {
+				t.Errorf("Enter: kept %q, the new one %q, quit %v", kept, problem, d.quit)
+			}
+		case "Esc":
+			if kept != nil || !d.quit {
+				t.Errorf("Esc: kept %q, quit %v", kept, d.quit)
+			}
+		}
+	}
+}
+
 // The App Log, `!` on a panel, has what was done: each value written, each
 // profile made, renamed or deleted (tdp F5, K1); the footer offers it.
 func TestAppLogSaysWhatWasDone(t *testing.T) {
