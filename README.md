@@ -168,7 +168,7 @@ Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. A copy, or a new profile, is offered a free name in grey — `Enter` takes it — and once made you are in its `[2]`. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
-- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`.
+- **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`, `input_tab_width`.
 
 `P` on any `[2]` previews the lock in place: a profile's or a saver's `[2]` shows that one, any other the active profile. Any key comes back, and no PIN is asked. A custom profile's preview hands the terminal to the program until a key.
 
@@ -311,6 +311,7 @@ show_status: true               # the user@host · locked since row
 pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
 wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
 wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
+input_tab_width: 4              # spaces a tab takes in text to read, a long setup report; from the next start
 tmux:
   conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
   lock-after-time: 300

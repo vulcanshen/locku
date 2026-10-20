@@ -116,8 +116,10 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   請使用者合併。profiles.yaml 讀不了時（`lost`）絕不寫回它：設定畫面開 MOVE ASIDE，鎖定畫面用預設的 clock、PIN 照樣要。兩個檔分開寫，
   `Save` 先寫 profiles.yaml 再寫 config.yaml，後者寫不進去時前者已經改了（只在磁碟滿、沒權限時）。測試一律把 `LOCKU__DATA` 指到
   暫存目錄：`Save` 現在會寫資料目錄。e2e 的 custom 也照新的位置寫 profile。
-- **等 lib 或 tdp 的地方**：沒有了（2026-10-20）。LK19 照上一條做了；LK20（只有 App Log 的 app 不算用到 `input_tab_width`）也定了，
-  那一列與 config 的 key 拿掉（2026-10-20 先加上的，沒發過版）。
+- **`input_tab_width`（tdp E3、清單 E3-11；2026-10-20）。** 家族的設定 key，預設 4，是 preference 的 `[2]` 的一列（config.yaml 的每個
+  key 都是一列），lib 在啟動時讀，改了下次啟動起生效。用到它的是 setup 報告太長時改開的 viewer（E3-11 的「viewer」）；只有 App Log
+  的 app 不算用到（tdp v0.9.1，LK20）。同日先照「只有 App Log」拿掉，terminu 更正後加回。
+- **等 lib 或 tdp 的地方**：沒有了（2026-10-20）。LK19 照上上一條做了；LK20 照上一條。
   `locku pin reset` 自己讀登入密碼交給 `su` 驗證：terminu 2026-10-20 說 tdp terminal-24（要提權時）管的是 app 寫系統檔要提權，
   命令列上驗證身分不在範圍裡，是 locku 自己的決定，照現在。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`

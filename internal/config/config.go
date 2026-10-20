@@ -193,6 +193,10 @@ type Config struct {
 	PINPromptTimeout int                `yaml:"pin_prompt_timeout"`
 	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
+	// InputTabWidth is the family's input_tab_width (tdp E3): the spaces a
+	// tab takes in text to read — the viewer a long setup report opens in,
+	// which is what makes locku use it (E3-11), and the App Log.
+	InputTabWidth int `yaml:"input_tab_width"`
 	// The tools that run locku as their screensaver, each its own.
 	Tmux   Tmux   `yaml:"tmux"`
 	Screen Screen `yaml:"screen"`
@@ -260,6 +264,7 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
+		InputTabWidth:    4,
 		Tmux:             Tmux{LockAfterTime: DefaultIdle, Lock: LockServer},
 		Screen:           Screen{Idle: DefaultIdle},
 	}
@@ -733,6 +738,9 @@ func (cfg Config) sanitized() (Config, string) {
 	}
 	if cfg.WrongPINCooldown <= 0 {
 		cfg.WrongPINCooldown = Default().WrongPINCooldown
+	}
+	if cfg.InputTabWidth <= 0 {
+		cfg.InputTabWidth = Default().InputTabWidth
 	}
 	for _, n := range []string{"tmux", "screen"} {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))

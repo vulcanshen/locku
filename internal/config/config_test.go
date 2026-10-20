@@ -228,6 +228,16 @@ func TestUnreadable(t *testing.T) {
 	}
 }
 
+// input_tab_width is the family's key (tdp E3): 4 when the file has none,
+// or none that is a width; what the file says otherwise.
+func TestInputTabWidth(t *testing.T) {
+	for body, want := range map[string]int{"show_status: true\n": 4, "input_tab_width: 0\n": 4, "input_tab_width: -2\n": 4, "input_tab_width: 8\n": 8} {
+		if cfg, _ := LoadFile(write(t, body)); cfg.InputTabWidth != want {
+			t.Errorf("%q: input_tab_width %d, want %d", body, cfg.InputTabWidth, want)
+		}
+	}
+}
+
 func TestBadValuesAreDefaults(t *testing.T) {
 	cfg, _ := LoadFile(write(t, "profiles:\n  - name: clock\n    bg: red\n    fg: \"#ABCDEF\"\nprompt_timeout: -1\nlockout_seconds: 0\n"))
 	if s := cfg.Profiles[0]; s.BG != DefaultBG || s.FG != "#abcdef" {

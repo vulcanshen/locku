@@ -168,7 +168,7 @@ Space:menu ?:help Tab|1–2:panels q:quit
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。複製或新增時框裡用灰字提議一個沒人用的名字，直接 `Enter` 就用它，建好後直接進它的 `[2]`。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg`，各自在顏色選擇器裡選：舊的顏色與新的並排，紅、綠、藍用 hex。每一列一設定就寫檔。
 - **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
-- **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉；每一步疊在上一步上面，`Esc` 退回上一步）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`。
+- **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉；每一步疊在上一步上面，`Esc` 退回上一步）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`、`input_tab_width`。
 
 任何 `[2]` 上 `P` 就地預覽鎖定畫面：profile 或 saver 的 `[2]` 是那一個，其他是啟用中的 profile。任意鍵回來，不驗 PIN。custom profile 的預覽把終端機整個交給程式，直到按鍵。
 
@@ -311,6 +311,7 @@ show_status: true               # user@host · locked since 那一列
 pin_prompt_timeout: 30          # 幾秒沒按鍵框收起；0 永不收起
 wrong_pin_attempts: 0           # 連錯幾次進冷卻；0 關
 wrong_pin_attempt_cooldown: 30  # 冷卻秒數
+input_tab_width: 4              # 拿來讀的字（太長的 setup 報告）裡一個 Tab 佔幾格；下次啟動起生效
 tmux:
   conf: "~/.tmux.conf"          # config file path；空 = activate 打不開
   lock-after-time: 300
