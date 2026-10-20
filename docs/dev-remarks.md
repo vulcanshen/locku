@@ -4,7 +4,7 @@
 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.0)（tdp v0.9.0；2026-10-20 起照 terminu 的升級交代跟上），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0）；
+v0.4.0，再到 v0.4.1）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -109,10 +109,9 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   `terminu.Escape`、再用 lib 的 `Style` 上色（lipgloss 遇到裡面的 reset 不會接回原本的顏色）。
 - **tdptest（2026-10-20）。** `internal/settings/tdp_test.go`：`tdptest.Check` 走第一次啟動，另一次先放一份全是 `tdptest.Tricky` 的
   config.yaml（profile 名、custom 的 command、tmux 的路徑與鍵）再走；每個畫面開 Space menu、global operation、App Log、`?`，最低尺寸
-  以下再拉回來，每一幀驗 L4 與控制字元。v0.4.0 的 `Check` 一律抓「被畫成字的顏色碼」（`Driver.ColourCodes`），名字裡的顏色碼照規範
-  畫成名字也會被當成 locku 漏改，所以走 `Check` 的那份不放顏色碼，顏色碼另外用 `tdptest.Start` 走、確認畫成名字
-  （`TestTrickyValuesAreDrawnByName`；2026-10-20 回報 LK21，terminu 交給 terminu-go 的下一個修正版：讓餵刁鑽值的 Check 能關掉
-  這項檢查，到時兩條併回一條）。鎖定畫面不是 surface，不走 Check；它的計時器照樣改用 `App.Tick`。
+  以下再拉回來，每一幀驗 L4、控制字元，與「被畫成字的顏色碼」（`Driver.ColourCodes`：locku 自己的顏色漏在字裡）。刁鑽值那份設
+  `Tricky: true`：名字裡的顏色碼是資料的，照規範畫成名字，不算漏改（LK21：v0.4.0 的 Check 沒辦法關這項檢查，2026-10-20 先把
+  顏色碼拆出去另外測，v0.4.1 加了 `Tricky`，同日併回）。鎖定畫面不是 surface，不走 Check；它的計時器照樣改用 `App.Tick`。
 - **等 lib 或 tdp 的地方**：LK19 locku 的 profiles 算設定還是資料（tdp v0.9.0 E3 把「使用者寫給 app 用的清單」劃成資料，例子是
   hostu 的 profiles），2026-10-20 回報 terminu，等 user 定；之前照現在，留在 config.yaml，寫在 [`locku-terminu-fix.md`](locku-terminu-fix.md)。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`
