@@ -78,6 +78,7 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a := terminu.New("locku")
 	a.QuitDesc = "leave locku"
 	a.MinWidth, a.MinHeight = minW, minH
+	a.InputTabWidth = cfg.InputTabWidth
 	splash, err := terminu.NewSplash(icon, "locku", version.Display(), intro)
 	if err != nil {
 		return nil, err

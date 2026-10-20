@@ -190,6 +190,10 @@ type Config struct {
 	PINPromptTimeout int                `yaml:"pin_prompt_timeout"`
 	WrongPINAttempts int                `yaml:"wrong_pin_attempts"`
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
+	// InputTabWidth is the family's input_tab_width (tdp E3): the spaces a
+	// tab takes in text to read, the App Log and a setup report's note
+	// (2026-10-20, tdp v0.9.0: every app has an App Log).
+	InputTabWidth int `yaml:"input_tab_width"`
 	// The tools that run locku as their screensaver, each its own.
 	Tmux   Tmux   `yaml:"tmux"`
 	Screen Screen `yaml:"screen"`
@@ -249,6 +253,7 @@ func Default() Config {
 		PINPromptTimeout: 30,
 		WrongPINAttempts: 0,
 		WrongPINCooldown: 30,
+		InputTabWidth:    4,
 		Tmux:             Tmux{LockAfterTime: DefaultIdle, Lock: LockServer},
 		Screen:           Screen{Idle: DefaultIdle},
 	}
@@ -341,7 +346,7 @@ func readFile(path string) (Config, int, error) {
 	// first so an absent one is told from a present one.
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return cfg, 0, unreadable{"config.yaml: " + firstLine(err.Error()), firstLine(err.Error())}
+		return cfg, 0, unreadable{"config.yaml: " + why(err), why(err)}
 	}
 	version := versionOf(&doc)
 	if version < 1 {
@@ -350,7 +355,7 @@ func readFile(path string) (Config, int, error) {
 	cfg.Version, cfg.Profile, cfg.Profiles, cfg.Savers = version, "", nil, nil
 	if doc.Kind != 0 {
 		if err := doc.Decode(&cfg); err != nil {
-			return cfg, 0, unreadable{"config.yaml: " + firstLine(err.Error()), firstLine(err.Error())}
+			return cfg, 0, unreadable{"config.yaml: " + why(err), why(err)}
 		}
 	}
 	// A pin_hash that is not bcrypt could never match anything: that is a
@@ -715,6 +720,9 @@ func (cfg Config) sanitized() (Config, string) {
 	if cfg.WrongPINCooldown <= 0 {
 		cfg.WrongPINCooldown = Default().WrongPINCooldown
 	}
+	if cfg.InputTabWidth <= 0 {
+		cfg.InputTabWidth = Default().InputTabWidth
+	}
 	for _, n := range []string{"tmux", "screen"} {
 		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
 	}
@@ -925,4 +933,15 @@ func firstLine(s string) string {
 		return s[:i]
 	}
 	return s
+}
+
+// why is a YAML error in one line: a decode's first error — "line 1:
+// cannot unmarshal !!seq into bool" — not its heading, "yaml: unmarshal
+// errors:", which says nothing of where.
+func why(err error) string {
+	var te *yaml.TypeError
+	if errors.As(err, &te) && len(te.Errors) > 0 {
+		return te.Errors[0]
+	}
+	return firstLine(err.Error())
 }
