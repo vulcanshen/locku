@@ -698,6 +698,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 101. （2026-10-20，tdp v0.9.1；user 定 LK19、LK20，terminu 轉達）profiles 是資料：使用者寫給 app 用的清單，就算內容是 app 怎麼運作的選項，也是資料（tdp E3）。搬到 `~/.locku/data/profiles.yaml`（`config.ProfilesPath`），`profile:`（用哪一組）與 `savers:`（每種 saver 的預設值，一種一份、不是使用者寫的清單，我的判斷）是單一的設定，留在 config.yaml。搬法照 E3「換了位置時」：設定畫面第一次啟動時搬（`config.MoveProfiles`），跳 Info toast 說從哪裡搬到哪裡；搬不動就照舊用 config.yaml、開 error popup 寫兩個路徑（剛寫的 profiles.yaml 拿掉）；兩邊都有時用 profiles.yaml 的、config.yaml 的留著並寫回、開 error popup 請使用者合併。搬之前，鎖定畫面與 `locku pin reset` 照舊在 config.yaml 讀寫，不會自己搬。profiles.yaml 讀不了時：設定畫面開 MOVE ASIDE（`Enter` 留成 `.bak`、只放預設的 clock）；鎖定畫面顯示預設的 clock、PIN 照樣要（PIN 在 config.yaml）；它不會被寫回。config.yaml 移開重來時重新讀，profiles.yaml 不會被預設值蓋掉。`input_tab_width`（決定 100）留著：只有 App Log 的 app 不算用到它（tdp v0.9.1 E3-11），但 locku 的 setup 報告太長時開的是 viewer，算用到（terminu 同日先說拿掉、再更正，拿掉之後加回）。
 
+102. （2026-10-21，tdp v0.9.2 清單 E3-18，terminu 轉達）MOVE ASIDE 按 `Enter` 之後像第一次打開一樣照常開始。locku 第一次打開不寫檔（`config.Load` 沒有檔就用預設值，profiles 也是），所以 `config.yaml` 或 `profiles.yaml` 移開之後，到第一次存檔才寫，不再當場寫一份預設值；另一個檔照舊不動。App Log 裡 `config.yaml made anew` 那一筆跟著拿掉，搬移由 lib 自己記。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。

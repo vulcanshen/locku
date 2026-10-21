@@ -115,10 +115,10 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 // what is wrong in the files is said.
 func (s *Settings) start() tea.Cmd {
 	if err := config.Unreadable(); err != nil {
-		return s.app.MoveAside(config.Path(), err, s.fresh("config.yaml"))
+		return s.app.MoveAside(config.Path(), err, s.fresh)
 	}
 	if err := config.UnreadableProfiles(); err != nil {
-		return s.app.MoveAside(config.ProfilesPath(), err, s.fresh("profiles.yaml"))
+		return s.app.MoveAside(config.ProfilesPath(), err, s.fresh)
 	}
 	var said tea.Cmd
 	if s.problem != "" {
@@ -127,19 +127,15 @@ func (s *Settings) start() tea.Cmd {
 	return tea.Batch(s.moveProfiles(), said)
 }
 
-// fresh is name made anew once the one that could not be read is moved
-// aside: the files read again, the defaults in its place, written now —
-// the other file as it was — and the rest of the start (tdp E3).
-func (s *Settings) fresh(name string) func() tea.Cmd {
-	return func() tea.Cmd {
-		s.cfg, s.problem = config.Load()
-		if err := config.Save(s.cfg); err != nil {
-			return s.app.Error("Write failed", err.Error())
-		}
-		s.app.Log(terminu.Info, name+" made anew, with the defaults")
-		s.refresh()
-		return s.start()
-	}
+// fresh is the start once the file that could not be read is moved aside:
+// as on the first start — the files read again, the defaults in its place,
+// the other file as it was, and the rest of the start. The first start
+// writes nothing, so nothing is written until the first save (tdp E3,
+// v0.9.2; until 2026-10-21 the new file was written at once).
+func (s *Settings) fresh() tea.Cmd {
+	s.cfg, s.problem = config.Load()
+	s.refresh()
+	return s.start()
 }
 
 // moveProfiles moves the profiles out of config.yaml into their own file,

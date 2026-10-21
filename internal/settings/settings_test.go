@@ -579,8 +579,9 @@ func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 }
 
 // A config.yaml that cannot be read is offered to be moved aside at the
-// start: Enter keeps it whole as config.yaml.bak and starts on the
-// defaults, Esc leaves (tdp E3).
+// start: Enter keeps it whole as config.yaml.bak and starts as on the
+// first start, on the defaults with nothing written until the first save;
+// Esc leaves (tdp E3, E3-18).
 func TestUnreadableConfigIsMovedAside(t *testing.T) {
 	for _, key := range []string{"Enter", "Esc"} {
 		dir := t.TempDir()
@@ -606,8 +607,13 @@ func TestUnreadableConfigIsMovedAside(t *testing.T) {
 		_, problem := config.Load()
 		switch key {
 		case "Enter":
-			if string(kept) != string(bad) || problem != "" || d.quit {
-				t.Errorf("Enter: kept %q, the new one %q, quit %v", kept, problem, d.quit)
+			_, made := os.Stat(config.Path())
+			if string(kept) != string(bad) || problem != "" || d.quit || !os.IsNotExist(made) {
+				t.Errorf("Enter: kept %q, the new one %q, quit %v, config.yaml written (%v)", kept, problem, d.quit, made)
+			}
+			d.on(preferenceID).toField("show_status", 0).press("Enter")
+			if _, err := os.Stat(config.Path()); err != nil {
+				t.Errorf("the first save wrote no config.yaml: %v", err)
 			}
 		case "Esc":
 			if kept != nil || !d.quit {
@@ -667,8 +673,9 @@ func TestProfilesMoveToTheirOwnFile(t *testing.T) {
 }
 
 // A profiles.yaml that cannot be read is moved aside as a config.yaml is,
-// the PIN in config.yaml kept; and a config.yaml moved aside leaves the
-// profiles as they were (tdp E3).
+// the PIN in config.yaml kept and the file as it was, profiles.yaml not
+// made until the first save; and a config.yaml moved aside leaves the
+// profiles as they were (tdp E3, E3-18).
 func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 	tempDirs(t)
 	cfg := testConfig()
@@ -682,6 +689,7 @@ func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 	if err := os.WriteFile(config.ProfilesPath(), bad, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	cf, _ := os.ReadFile(config.Path())
 	d := started(t)
 	if v := d.screen(); !strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "profiles.yaml.bak") {
 		t.Fatalf("no MOVE ASIDE:\n%s", v)
@@ -691,6 +699,14 @@ func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 	now, problem := config.Load()
 	if string(kept) != string(bad) || !now.CheckPIN("1234") || now.Index("clock") < 0 || len(now.Profiles) != 1 {
 		t.Errorf("kept %q, the PIN %v, profiles %d (%q)", kept, now.CheckPIN("1234"), len(now.Profiles), problem)
+	}
+	_, made := os.Stat(config.ProfilesPath())
+	if same, _ := os.ReadFile(config.Path()); !os.IsNotExist(made) || string(same) != string(cf) {
+		t.Errorf("before the first save: profiles.yaml written (%v), config.yaml written %v", made, string(same) != string(cf))
+	}
+	d.on(preferenceID).toField("show_status", 0).press("Enter")
+	if _, err := os.Stat(config.ProfilesPath()); err != nil {
+		t.Errorf("the first save wrote no profiles.yaml: %v", err)
 	}
 	// config.yaml moved aside: the profiles are not written over.
 	if err := config.Save(cfg); err != nil {

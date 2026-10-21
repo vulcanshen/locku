@@ -63,7 +63,7 @@ locku/
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
   - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`profile clock › bg: #F2B753`）、profile 的新增、
-    複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記）、MOVE ASIDE 之後重寫的 config.yaml，等級 OK
+    複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記），等級 OK
     或 INFO；PIN 的設定與拿掉有 Success toast，不另記。
 
 - **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40，app 可以調低。設定畫面是 40×15（`internal/settings`
@@ -95,7 +95,8 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 ## 已知的牆與未做
 
 - **讀不了時（tdp E3；2026-10-20）。** config.yaml 讀不了——檔案讀不到、YAML 壞了、值的型別不對、`pin_hash` 不是 bcrypt——
-  設定畫面啟動時開 lib 的 `MoveAside`：`Enter` 改名成 `config.yaml.bak`（`.bak.1`……由 lib 挑）、在原位置寫一份預設值，`Esc` 離開，
+  設定畫面啟動時開 lib 的 `MoveAside`：`Enter` 改名成 `config.yaml.bak`（`.bak.1`……由 lib 挑）、像第一次打開一樣照常開始：
+  第一次打開不寫檔，所以到第一次存檔才寫（tdp E3-18，v0.9.2；2026-10-21 起，之前是當場寫一份預設值），`Esc` 離開，
   `Run` 回傳的原因由 main 照錯誤印到 stderr。`config.Unreadable` 是判斷，`LoadFile` 照舊回傳狀態列那句話（`readFile` 共用）；型別錯
   寫第一個具體的錯（`line 1: cannot unmarshal …`），不寫只有標題的 `yaml: unmarshal errors:`。鎖定畫面不在 TUI 裡，照舊 fail open
   （function.md §0.1：config 缺失或損毀一律 fail open），它不寫檔，不會蓋掉使用者的東西；`locku pin reset` 照舊拒絕、要使用者先修，
