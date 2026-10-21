@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.2)（tdp v0.9.2；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.3)（tdp v0.9.3；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -95,6 +95,12 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 
 ## 已知的牆與未做
 
+- **不再用的檔（tdp E3、清單 E3-23；2026-10-21）。** 查過 CHANGELOG 與 git 歷史：沒有。config.yaml 一直在 `$LOCKU__CONFIG`、
+  `$XDG_CONFIG_HOME/locku` 或 `~/.config/locku`，`pin-resets.log` 一直在 `~/.locku/data`；`locku.tmux.conf`、`locku.screenrc`、
+  `profiles.yaml` 都還在用；profiles 從 config.yaml 搬走的是檔裡的一個 key，不是檔；舊版整段寫進使用者 tmux.conf、screenrc 的區塊在
+  使用者的檔裡，下一次寫入時由 setup 換成一行。舊的環境變數 `LOCKU_CONFIG`、`LOCKU_DATA` 指到的檔不算：要讀舊變數才知道在哪，而 app
+  讀的環境變數都要是 `LOCKU__X`（tdp E2-1）。所以不叫 lib 的 `App.NoLongerUsed`；之後哪一版不再用某個檔，就在設定畫面的 `start`
+  叫它、CHANGELOG 寫一句。
 - **讀不了時（tdp E3；2026-10-20）。** config.yaml 讀不了——檔案讀不到、YAML 壞了、值的型別不對、`pin_hash` 不是 bcrypt——
   設定畫面啟動時開 lib 的 `MoveAside`：`Enter` 改名成 `config.yaml.bak`（`.bak.1`……由 lib 挑）、像第一次打開一樣照常開始：
   第一次打開不寫檔，所以到第一次存檔才寫（tdp E3-18，v0.9.2；2026-10-21 起，之前是當場寫一份預設值），`Esc` 離開，
