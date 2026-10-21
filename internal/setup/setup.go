@@ -249,7 +249,7 @@ func writeOwn(w io.Writer, own, text string) error {
 	if err != nil {
 		return err
 	}
-	report(w, own, changed, "wrote")
+	report(w, own, changed, "Wrote")
 	return nil
 }
 
@@ -261,7 +261,7 @@ func dropOwn(w io.Writer, own string) error {
 		return nil
 	}
 	if err == nil {
-		fmt.Fprintf(w, "removed %s\n", own)
+		fmt.Fprintf(w, "Removed %s\n", own)
 	}
 	return err
 }
@@ -269,10 +269,10 @@ func dropOwn(w io.Writer, own string) error {
 func report(w io.Writer, path string, changed bool, verb string) {
 	if changed {
 		fmt.Fprintf(w, "%s %s\n", verb, path)
-	} else if verb == "wrote" {
-		fmt.Fprintf(w, "%s already up to date\n", path)
+	} else if verb == "Wrote" {
+		fmt.Fprintf(w, "Already up to date: %s\n", path)
 	} else {
-		fmt.Fprintf(w, "%s has nothing of locku's\n", path)
+		fmt.Fprintf(w, "Nothing of locku's in %s\n", path)
 	}
 }
 
@@ -454,7 +454,7 @@ func Tmux(w io.Writer, t config.Tmux) error {
 	if err != nil {
 		return err
 	}
-	report(w, path, changed, "wrote")
+	report(w, path, changed, "Wrote")
 	var undo [][]string
 	if wasKey != "" && wasKey != t.BindKey {
 		undo = append(undo, []string{"unbind-key", wasKey})
@@ -478,7 +478,7 @@ func Tmux(w io.Writer, t config.Tmux) error {
 			exec.Command(tmux, "set", "-u", "-t", id, "@locked").Run()
 		}
 	})
-	fmt.Fprintf(w, "applied to the running tmux server: prefix : locku%s locks %s, %s, attaching while locked locks\n", keySays("prefix", t.BindKey), who(t.Lock), idleSays(t.LockAfterTime))
+	fmt.Fprintf(w, "Applied to the running tmux server: prefix : locku%s locks %s, %s, attaching while locked locks\n", keySays("prefix", t.BindKey), who(t.Lock), idleSays(t.LockAfterTime))
 	return nil
 }
 
@@ -513,7 +513,7 @@ func TmuxUndo(w io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	report(w, path, changed, "removed locku's block from")
+	report(w, path, changed, "Removed locku's block from")
 	if err := dropOwn(w, own); err != nil {
 		return err
 	}
@@ -525,7 +525,7 @@ func TmuxUndo(w io.Writer, path string) error {
 		exec.Command(tmux, "set", "-u", "-t", id, "lock-command").Run()
 		exec.Command(tmux, "set", "-u", "-t", id, "@locked").Run()
 	})
-	fmt.Fprintln(w, "taken off the running tmux server too")
+	fmt.Fprintln(w, "Taken off the running tmux server too")
 	return nil
 }
 
@@ -538,7 +538,7 @@ func tmuxLive(w io.Writer, cmds [][]string) (string, bool) {
 		return "", false
 	}
 	if exec.Command(tmux, "has-session").Run() != nil {
-		fmt.Fprintln(w, "no tmux server is running: the file takes effect on the next one")
+		fmt.Fprintln(w, "No tmux server is running: the file takes effect on the next one")
 		return "", false
 	}
 	for _, args := range cmds {
@@ -654,7 +654,7 @@ func Screen(w io.Writer, s config.Screen) error {
 	if err != nil {
 		return err
 	}
-	report(w, path, changed, "wrote")
+	report(w, path, changed, "Wrote")
 
 	exe := Binary()
 	shellRC, line := shellRCLine(os.Getenv("SHELL"), exe)
@@ -662,14 +662,14 @@ func Screen(w io.Writer, s config.Screen) error {
 	if err != nil {
 		return err
 	}
-	report(w, shellRC, changed, "wrote")
+	report(w, shellRC, changed, "Wrote")
 	fmt.Fprintf(w, "LOCKPRG=%s takes effect in a new shell; a screen session already running: detach, then `screen -r` from that shell\n", exe)
 	cmds := screenSet(s)
 	if wasKey != "" && wasKey != s.Bind {
 		cmds = append([][]string{{"bind", wasKey}}, cmds...)
 	}
 	if n, ok := screenLive(w, cmds); ok {
-		fmt.Fprintf(w, "applied to %d running screen session(s): C-a x%s locks, %s — with the LOCKPRG each was attached with\n", n, keySays("C-a", s.Bind), idleSays(s.Idle))
+		fmt.Fprintf(w, "Applied to %d running screen session(s): C-a x%s locks, %s — with the LOCKPRG each was attached with\n", n, keySays("C-a", s.Bind), idleSays(s.Idle))
 	}
 	return nil
 }
@@ -688,7 +688,7 @@ func ScreenUndo(w io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	report(w, path, changed, "removed locku's block from")
+	report(w, path, changed, "Removed locku's block from")
 	if err := dropOwn(w, own); err != nil {
 		return err
 	}
@@ -697,10 +697,10 @@ func ScreenUndo(w io.Writer, path string) error {
 	if err != nil {
 		return err
 	}
-	report(w, shellRC, changed, "removed locku's block from")
+	report(w, shellRC, changed, "Removed locku's block from")
 	fmt.Fprintln(w, "LOCKPRG is gone from new shells; a shell already open still has it")
 	if n, ok := screenLive(w, screenUnset(wasKey)); ok {
-		fmt.Fprintf(w, "taken off %d running screen session(s) too\n", n)
+		fmt.Fprintf(w, "Taken off %d running screen session(s) too\n", n)
 	}
 	return nil
 }
@@ -717,7 +717,7 @@ func screenLive(w io.Writer, cmds [][]string) (int, bool) {
 	}
 	sessions := screenSessions(screen)
 	if len(sessions) == 0 {
-		fmt.Fprintln(w, "no screen session is running: the file takes effect on the next one")
+		fmt.Fprintln(w, "No screen session is running: the file takes effect on the next one")
 		return 0, false
 	}
 	for _, id := range sessions {

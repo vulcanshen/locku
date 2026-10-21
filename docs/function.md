@@ -700,6 +700,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 102. （2026-10-21，tdp v0.9.2 清單 E3-18，terminu 轉達）MOVE ASIDE 按 `Enter` 之後像第一次打開一樣照常開始。locku 第一次打開不寫檔（`config.Load` 沒有檔就用預設值，profiles 也是），所以 `config.yaml` 或 `profiles.yaml` 移開之後，到第一次存檔才寫，不再當場寫一份預設值；另一個檔照舊不動。App Log 裡 `config.yaml made anew` 那一筆跟著拿掉，搬移由 lib 自己記。
 
+103. （2026-10-21，tdp v0.9.2 清單 note-78，terminu 轉達）App Log 每一筆跟 toast 一樣大寫開頭，名稱與路徑照原樣。從變數組出來的照這樣改：寫進去的值是 `Set profile clock › bg: #F2B753`（saver 與 tool 的名字會打頭，所以動詞放前面），profile 的是 `Profile x made, of clock`、`Profile x renamed y`、`Profile x deleted`、`The lock shows x from now on`。setup 報告的句首大寫（`Wrote …`、`Removed …`、`Applied to …`、`Taken off …`、`No tmux server is running …`），以路徑打頭的兩句改成 `Already up to date: <檔>`、`Nothing of locku's in <檔>`；太長而開在 note 裡時，記的是跟 toast 同樣的字，不再接 tool 名。setup 失敗的 error popup 是 `ACTIVATE FAILED: tmux`（`DEACTIVATE`、`WRITE`、`MOVE` 同理），不再只有 tool 名。設定內容有問題的 error popup 標題是 `CONFIG`，不再是 `config.yaml`：那會被轉成 `CONFIG.YAML`，名稱被改了大小寫（tdp components-21）。toast 一字不改記進 App Log，所以每個 toast 也看過：`PIN set`、`PIN removed`、`Profiles moved from …` 本來就是大寫開頭，setup 報告的第一行一定是上面那幾句之一；沒有整句拿 Go error 的 toast。lib 自己記的 `Moved … to ….bak` 是 terminu-go v0.4.3 改的，go.mod 跟著從 v0.4.1 升到 v0.4.3（terminu 先說不用升，v0.4.3 出了之後更正；v0.4.x 之間只加 API）。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。

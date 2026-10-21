@@ -244,7 +244,7 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if !strings.Contains(string(body), "~/.tmux.conf reads this file") {
 		t.Errorf("locku's own file says nothing of who reads it:\n%s", body)
 	}
-	if !strings.Contains(out.String(), "wrote "+own) || !strings.Contains(out.String(), "wrote "+path) || !strings.Contains(out.String(), "not on PATH") {
+	if !strings.Contains(out.String(), "Wrote "+own) || !strings.Contains(out.String(), "Wrote "+path) || !strings.Contains(out.String(), "not on PATH") {
 		t.Errorf("output:\n%s", out.String())
 	}
 	if !Installed(path) {
@@ -254,7 +254,7 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if err := Tmux(&out, at(path, config.LockServer, "")); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Count(out.String(), "already up to date") != 2 {
+	if strings.Count(out.String(), "Already up to date") != 2 {
 		t.Errorf("second run:\n%s", out.String())
 	}
 	// A row changed is locku's own file's alone: the user's is not
@@ -315,14 +315,14 @@ func TestTmuxWritesAndUndoesTheFile(t *testing.T) {
 	if _, err := os.Stat(own); err == nil {
 		t.Error("locku's own file is left after undo")
 	}
-	if !strings.Contains(out.String(), "removed locku's block from") || !strings.Contains(out.String(), "removed "+own) {
+	if !strings.Contains(out.String(), "Removed locku's block from") || !strings.Contains(out.String(), "Removed "+own) {
 		t.Errorf("undo output:\n%s", out.String())
 	}
 	out.Reset()
 	if err := TmuxUndo(&out, path); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "nothing of locku's") {
+	if !strings.Contains(out.String(), "Nothing of locku's in") {
 		t.Errorf("second undo:\n%s", out.String())
 	}
 	// Undo on a file that is not there makes none.

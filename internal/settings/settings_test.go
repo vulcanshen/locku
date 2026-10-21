@@ -615,6 +615,10 @@ func TestUnreadableConfigIsMovedAside(t *testing.T) {
 			if _, err := os.Stat(config.Path()); err != nil {
 				t.Errorf("the first save wrote no config.yaml: %v", err)
 			}
+			// The lib logs the move, with a capital (terminu-go v0.4.3).
+			if v := d.press("!").screen(); !strings.Contains(v, "Moved ") || lowEntries(v) != nil {
+				t.Errorf("the move in the App Log, in lower case %q:\n%s", lowEntries(v), v)
+			}
 		case "Esc":
 			if kept != nil || !d.quit {
 				t.Errorf("Esc: kept %q, quit %v", kept, d.quit)
@@ -721,21 +725,32 @@ func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 	}
 }
 
+// lowEntries is the App Log's entries on the screen v that start in lower
+// case, where each starts with a capital, as a toast does (tdp note-78).
+func lowEntries(v string) []string {
+	return regexp.MustCompile(`\d\d:\d\d:\d\d (?:INFO|OK|WARN|ERR) +\p{Ll}.*`).FindAllString(v, -1)
+}
+
 // The App Log, `!` on a panel, has what was done: each value written, each
-// profile made, renamed or deleted (tdp F5, K1); the footer offers it.
+// profile made, renamed or deleted (tdp F5, K1); the footer offers it. Each
+// entry starts with a capital, as a toast does (tdp note-78).
 func TestAppLogSaysWhatWasDone(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	if !strings.Contains(d.screen(), "!:log") {
 		t.Errorf("the footer has no !:log:\n%s", d.screen())
 	}
 	d.on(profileID("clock2")).press("r", "Tab").typeText("x").press("Enter")
+	d.on(profileID("clock2x")).press("a")
 	d.on(preferenceID).toField("pin_prompt_timeout", 0).press("Enter", "Backspace").typeText("45").press("Enter")
 	d.press("!")
 	v := d.screen()
-	for _, s := range []string{"profile clock2 renamed clock2x", "preference › pin_prompt_timeout: 45", "OK"} {
+	for _, s := range []string{"Profile clock2 renamed clock2x", "The lock shows clock2x from now on", "Set preference › pin_prompt_timeout: 45", "OK"} {
 		if !strings.Contains(v, s) {
 			t.Errorf("no %q in the App Log:\n%s", s, v)
 		}
+	}
+	if low := lowEntries(v); low != nil {
+		t.Errorf("entries in lower case: %q", low)
 	}
 }
 

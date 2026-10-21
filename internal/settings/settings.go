@@ -122,7 +122,7 @@ func (s *Settings) start() tea.Cmd {
 	}
 	var said tea.Cmd
 	if s.problem != "" {
-		said = s.app.Error("config.yaml", s.problem)
+		said = s.app.Error("Config", s.problem)
 	}
 	return tea.Batch(s.moveProfiles(), said)
 }
@@ -262,14 +262,16 @@ func (s *Settings) commit(what string, f func()) error {
 
 // done puts what was done, once it is written, in the App Log (tdp F5:
 // the app's actions and their results); "" when a toast says it already.
+// An entry starts with a capital, as a toast does, a name or a path in it
+// kept as it is (tdp note-78, v0.9.2).
 func (s *Settings) done(what string) {
 	if what != "" {
 		s.app.Log(terminu.Success, what)
 	}
 }
 
-// wrote is a value set, as the App Log says it: "profile clock › bg:
-// #F2B753".
+// wrote is a value set, as the App Log says it: "Set profile clock › bg:
+// #F2B753", the verb first, where a saver or a tool, a name, would start it.
 func (s *Settings) wrote(label, value string) string {
 	where := "preference"
 	switch s.cur.kind {
@@ -283,7 +285,7 @@ func (s *Settings) wrote(label, value string) string {
 	if value == "" {
 		value = "none"
 	}
-	return where + " › " + label + ": " + value
+	return "Set " + where + " › " + label + ": " + value
 }
 
 // tell says what was done in a Success toast when it fits in three rows,
@@ -295,7 +297,7 @@ func (s *Settings) tell(title string, lines []string) tea.Cmd {
 	if len(terminu.Wrap(text, max(min(w-2, 120)-4, 1))) <= 3 {
 		return s.app.Toast(terminu.Success, text)
 	}
-	s.done(title + ": " + text) // a toast logs itself, a note does not
+	s.done(text) // a toast logs itself, a note does not: the toast's words
 	return s.app.Viewer(&terminu.Viewer{Title: title, Glyph: glyphFile, Lines: lines})
 }
 

@@ -128,7 +128,7 @@ func (s *Settings) askActivate(name string, on bool) tea.Cmd {
 				var out bytes.Buffer
 				err := s.install(name, &out)
 				s.refresh()
-				return s.reported(name, out, err)
+				return s.reported("Activate", name, out, err)
 			})
 	}
 	return s.app.Confirm(terminu.Ask{Title: "Deactivate", Subject: name, Verb: "deactivate",
@@ -138,7 +138,7 @@ func (s *Settings) askActivate(name string, on bool) tea.Cmd {
 			var out bytes.Buffer
 			err := s.uninstall(name, &out, t.Conf)
 			s.refresh()
-			return s.reported(name, out, err)
+			return s.reported("Deactivate", name, out, err)
 		})
 }
 
@@ -160,13 +160,14 @@ func (s *Settings) uninstall(name string, out *bytes.Buffer, conf string) error 
 	return setup.ScreenUndo(out, conf)
 }
 
-// reported is what setup printed about the tool called name: a failure in
-// an error popup, what was done before it first; else the lines, in a toast
-// when they fit, in a note when not (components/dialog/toast).
-func (s *Settings) reported(name string, out bytes.Buffer, err error) tea.Cmd {
+// reported is what setup printed about the tool called name, verb done to
+// it: a failure in an error popup, ACTIVATE FAILED: tmux, what was done
+// before it first; else the lines, in a toast when they fit, in a note when
+// not (components/dialog/toast).
+func (s *Settings) reported(verb, name string, out bytes.Buffer, err error) tea.Cmd {
 	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
 	if err != nil {
-		return s.app.Error(name, strings.TrimSpace(out.String()+"\n"+err.Error()))
+		return s.app.ErrorAbout(verb+" failed", name, strings.TrimSpace(out.String()+"\n"+err.Error()))
 	}
 	return s.tell(name, lines)
 }
@@ -181,7 +182,7 @@ func (s *Settings) resync(name string, installed bool) tea.Cmd {
 		return nil
 	}
 	var out bytes.Buffer
-	return s.reported(name, out, s.install(name, &out))
+	return s.reported("Write", name, out, s.install(name, &out))
 }
 
 // moveConf is the tool's file changed from oldConf while locku's line was
@@ -195,8 +196,8 @@ func (s *Settings) moveConf(name, oldConf string, installed bool) tea.Cmd {
 	var out bytes.Buffer
 	if oldConf != t.Conf {
 		if err := s.uninstall(name, &out, oldConf); err != nil || t.Conf == "" {
-			return s.reported(name, out, err)
+			return s.reported("Move", name, out, err)
 		}
 	}
-	return s.reported(name, out, s.install(name, &out))
+	return s.reported("Move", name, out, s.install(name, &out))
 }

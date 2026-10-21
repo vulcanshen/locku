@@ -143,7 +143,7 @@ check("and locku's own file: every line marked, the lock command absolute, the k
       "client-attached[90]" in text and 'lock-command "/' in text
       and "socket_path" in text and "locku=lock-server" in text and "bind-key l lock-server" in text
       and all("# locku" in l for l in text.splitlines() if l and not l.startswith("#")))
-check("the screen said so", b"wrote" in screen)
+check("the screen said so", b"Wrote" in screen)
 
 subprocess.run(["tmux", "-L", SOCK, "kill-server"], env=env, stderr=subprocess.DEVNULL)
 pa, fa, oa = spawn(["tmux", "-L", SOCK, "-f", conf, "new-session", "-s", "t"])
@@ -246,7 +246,7 @@ for p in (pa, pb, pe):
 screen = settings(b"G", b"k", b"k", b"2", b"\r", b"\r")
 check("deactivate from the settings screen took the block out, and locku's own file away",
       "locku" not in open(conf).read() and not os.path.exists(own))
-check("the screen said so", b"removed" in screen)
+check("the screen said so", b"Removed" in screen)
 
 print("ALL OK" if ok else "SOMETHING FAILED")
 sys.exit(0 if ok else 1)

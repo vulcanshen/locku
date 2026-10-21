@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.1)（tdp v0.9.1；2026-10-20 起照 terminu 的升級交代跟上），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.2)（tdp v0.9.2；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -62,9 +62,10 @@ locku/
   - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`，鎖定畫面的 PIN 框沿用 `nf-fa-lock`。（PIN 框的標題是 tdp S36 定的：設定畫面 `CURRENT PIN`、`NEW PIN`、`CONFIRM PIN`，鎖定畫面 `UNLOCK`，都沒有說明列。）
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
-  - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`profile clock › bg: #F2B753`）、profile 的新增、
+  - App Log 記什麼（2026-10-20，tdp F5、note「App Log」）：寫進 config.yaml 的每個值（`Set profile clock › bg: #F2B753`）、profile 的新增、
     複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記），等級 OK
-    或 INFO；PIN 的設定與拿掉有 Success toast，不另記。
+    或 INFO；PIN 的設定與拿掉有 Success toast，不另記。每一筆跟 toast 一樣大寫開頭，名稱與路徑照原樣，名稱會打頭的就把動詞
+    放前面；note 裡的 setup 報告記的是跟 toast 同樣的字（tdp note-78，v0.9.2；2026-10-21）。
 
 - **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40，app 可以調低。設定畫面是 40×15（`internal/settings`
   的 `minW`、`minH`）：locku 常在 tmux 切出來的小窗格裡開；設定畫面最大的框是 color picker（36×11），40×15 時整個放得進 `[2]` 的框裡，
@@ -100,7 +101,8 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   `Run` 回傳的原因由 main 照錯誤印到 stderr。`config.Unreadable` 是判斷，`LoadFile` 照舊回傳狀態列那句話（`readFile` 共用）；型別錯
   寫第一個具體的錯（`line 1: cannot unmarshal …`），不寫只有標題的 `yaml: unmarshal errors:`。鎖定畫面不在 TUI 裡，照舊 fail open
   （function.md §0.1：config 缺失或損毀一律 fail open），它不寫檔，不會蓋掉使用者的東西；`locku pin reset` 照舊拒絕、要使用者先修，
-  也不會蓋掉。只是內容的提醒（`no profiles`、`profile "x" not found`）照舊是 error popup。
+  也不會蓋掉。只是內容的提醒（`no profiles`、`profile "x" not found`）照舊是 error popup，標題 `CONFIG`（2026-10-21 起；之前是
+  `config.yaml`，被轉成 `CONFIG.YAML`，App Log 那一筆也以檔名開頭）。
 - **控制字元（tdp v0.9.0 components「控制字元」；2026-10-20）。** 名字與短字交給 lib 畫，locku 不再把顏色碼塞進字裡：`[1]` 啟用中的
   profile 的綠點是 `Row.Styled`（字照樣在 `Cells` 給篩選用），顏色的值是 `Field.Styled` 加 lib 的 `ColorSpans`／`HexText`（locku 的
   `swatch` 拿掉）。鎖定畫面的狀態列是 locku 自己畫在 Canvas 上的，外面來的字——user@host、config 的錯、custom 程式的 stderr——先過

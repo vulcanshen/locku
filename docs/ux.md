@@ -4,7 +4,7 @@
 > 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）撰寫，
 > 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102、103）** 照 [tdp v0.9.2](https://github.com/vulcanshen/terminu/tree/v0.9.2)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§2.3、ui §3.2）、預覽、整合寫什麼檔。
 
@@ -239,7 +239,7 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`wrote <locku 的檔> · wrote <檔> · applied to the running tmux server: …`，沒變的檔說 `already up to date` / `removed locku's block from <檔> · removed <locku 的檔> · …`，錯誤時紅色）。
+**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`Wrote <locku 的檔> · Wrote <檔> · Applied to the running tmux server: …`，沒變的檔說 `Already up to date: <檔>` / `Removed locku's block from <檔> · Removed <locku 的檔> · …`；句首大寫、名稱與路徑照原樣，2026-10-21，tdp note-78；錯誤時紅色）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、D2；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。

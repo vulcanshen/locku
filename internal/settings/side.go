@@ -105,7 +105,7 @@ func (s *Settings) sideActions() []terminu.Action {
 		{Key: "a", Label: "activate", Desc: "the lock shows this profile from now on", Scope: terminu.ItemScope,
 			Disabled: func() bool { return active },
 			Do: func() tea.Cmd {
-				return s.change("the lock shows "+name+" from now on", func() { s.cfg.Profile = name })
+				return s.change("The lock shows "+name+" from now on", func() { s.cfg.Profile = name })
 			}},
 		{Key: "p", Label: "preview", Desc: "the lock, showing this profile", Scope: terminu.ItemScope, Clear: true,
 			Do: func() tea.Cmd { return s.previewProfile(ref) }},
@@ -164,7 +164,7 @@ func (s *Settings) newProfile(kind string) tea.Cmd {
 	return s.app.Text(terminu.TextInput{Title: "New profile", Subject: kind, Glyph: glyphPencil, Name: "Name",
 		Prompt: "A name for the new " + kind + " profile", Verb: "create", Suggest: s.freeName(kind), Check: s.nameCheck(-1),
 		Commit: func(name string) error {
-			return s.commit("profile "+name+" made, of "+kind, func() { s.cfg.Profiles = append(s.cfg.Profiles, s.cfg.NewProfile(name, kind)) })
+			return s.commit("Profile "+name+" made, of "+kind, func() { s.cfg.Profiles = append(s.cfg.Profiles, s.cfg.NewProfile(name, kind)) })
 		},
 		Done: s.made})
 }
@@ -174,7 +174,7 @@ func (s *Settings) duplicate(ref int) tea.Cmd {
 	return s.app.Text(terminu.TextInput{Title: "Duplicate", Subject: p.Name, Glyph: glyphPencil, Name: "Name",
 		Prompt: "A name for the copy of " + p.Name, Verb: "create", Suggest: s.freeName(p.Name), Check: s.nameCheck(-1),
 		Commit: func(name string) error {
-			return s.commit("profile "+name+" made, a copy of "+p.Name, func() {
+			return s.commit("Profile "+name+" made, a copy of "+p.Name, func() {
 				c := p
 				c.Name = name
 				s.cfg.Profiles = append(s.cfg.Profiles, c)
@@ -196,7 +196,7 @@ func (s *Settings) rename(ref int) tea.Cmd {
 	return s.app.Text(terminu.TextInput{Title: "Rename", Subject: old, Glyph: glyphPencil, Name: "Name",
 		Prompt: "New name for " + old, Verb: "rename", Old: old, Check: s.nameCheck(ref),
 		Commit: func(name string) error {
-			return s.commit("profile "+old+" renamed "+name, func() {
+			return s.commit("Profile "+old+" renamed "+name, func() {
 				s.cfg.Profiles[ref].Name = name
 				if s.cfg.Profile == old {
 					s.cfg.Profile = name
@@ -216,7 +216,7 @@ func (s *Settings) delete(name string) tea.Cmd {
 	if i < 0 {
 		return nil
 	}
-	cmd := s.change("profile "+name+" deleted", func() { s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...) })
+	cmd := s.change("Profile "+name+" deleted", func() { s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...) })
 	// The cursor stays among the profiles: the next one, or the new last.
 	s.selectProfile(s.cfg.Profiles[min(i, len(s.cfg.Profiles)-1)].Name)
 	return cmd

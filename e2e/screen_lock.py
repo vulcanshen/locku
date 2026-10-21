@@ -140,7 +140,7 @@ check("LOCKPRG went into ~/.profile (SHELL=/bin/sh), locku by its absolute path,
       "export LOCKPRG=" + os.path.join(binDir, "locku") in prof and "# locku" in prof)
 # The toast is one line of an 80-column screen: the first words show;
 # that the running screen took it is checked on the screen itself.
-check("the screen said so", b"wrote" in shown)
+check("the screen said so", b"Wrote" in shown)
 
 # 1. C-a x, screen's own key, runs LOCKPRG: locku's board on A.
 os.write(fa, b"\x01x")
@@ -174,7 +174,7 @@ kill(pb)
 shown = settings(b"G", b"k", b"2", b"j", b"j", b"\r", b"2", b"\r")  # typing over the old value's grey suggestion
 check("idle 2 chosen on the screen is in locku's file at once", "idle 2 lockscreen" in open(own).read())
 check("and the screenrc is left as it was", open(rc).read() == users)
-check("the screen said so", b"wrote" in shown)
+check("the screen said so", b"Wrote" in shown)
 time.sleep(2.5)
 check("A locks by itself after 2 idle seconds", board(oa))
 unlock(fa)
@@ -187,7 +187,7 @@ shown = settings(b"G", b"k", b"2", b"\r", b"\r")
 check("deactivate from the settings screen took the block out of the screenrc, and locku's own file away",
       "locku" not in open(rc).read() and "startup_message off" in open(rc).read() and not os.path.exists(own))
 check("and out of ~/.profile", "LOCKPRG" not in open(profile).read())
-check("the screen said so", b"removed" in shown)
+check("the screen said so", b"Removed" in shown)
 # A may have idled into a lock again meanwhile: a key ends it either way.
 unlock(fa)
 del oa[:]
