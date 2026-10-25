@@ -647,7 +647,9 @@ func TestUnreadableConfigIsMovedAside(t *testing.T) {
 		d := &driver{t: t, s: s, app: s.App()}
 		d.send(tea.WindowSizeMsg{Width: 100, Height: 30})
 		d.run(d.app.Init())
-		if v := d.screen(); !strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "config.yaml can't be read") || !strings.Contains(v, "config.yaml.bak") {
+		// The path is a temporary one, of no fixed length, and may fold
+		// anywhere: its file is named on the question's row.
+		if v := d.screen(); !strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "can't be read") || !strings.Contains(v, "config.yaml.bak") {
 			t.Fatalf("no MOVE ASIDE:\n%s", v)
 		}
 		d.press(key)
