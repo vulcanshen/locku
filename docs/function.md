@@ -706,6 +706,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 105. （2026-10-25，user 說「對齊最新 tdp, tgo」：tdp v0.9.15、terminu-go v0.4.20）go.mod 從 v0.4.4 升到 v0.4.20，family.mk 換成 tdp 的（多了 `make dev`）。v0.9.4 到 v0.9.15 的清單逐條看過，要 locku 動的只有兩處，其他都是 lib 畫的，或 locku 沒有那個元件（比較模式、reorder、分頁、兩個以上選項的 checkbox 群組；mode 只在 lib 的 viewer 裡）。（1）多列的字一列一列給（components-30 到 32）：setup 失敗的 error popup 原本用 `\n` 接報告與 error，升到 v0.4.18 起畫成紅色的 `\n`，改成一行一個字串；tmux、screen 失敗時印的多列字，報告只放最後一列（原因），整段記進 App Log。（2）popup 開著時第一次按 `q` 不離開（K9-6）：lib 自己問 `Quit locku?`，locku 不用改，加了測試；鎖定畫面的 `QuitFlow` 什麼都不做，PIN 框開著時按 `Ctrl-C` 也不會問，測試也看這件事。dimming 改向 `#0c0c13`（color-19）是 lib 的，locku 自己不做 dimming。
 
+106. （2026-10-25，tdp v0.9.16、terminu-go v0.4.21，terminu-go 通知；照 user 同日「對齊最新」）go.mod 升到 v0.4.21。新的「被指到的 panel」（panel-151 到 153，`List.Points`）是 app 的選擇，只用在清單的一列代表畫面上另一個 panel 時；locku 的 `[1]` 每一列的細節都在同一個 `[2]`，沒有哪一列代表自己的 panel，所以不設 `Points`，畫法照舊。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。
