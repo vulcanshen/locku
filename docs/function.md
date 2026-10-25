@@ -704,6 +704,8 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 
 104. （2026-10-21，tdp v0.9.3、terminu-go v0.4.4，terminu 轉達）go.mod 升到 v0.4.4。MOVE ASIDE 的問句由 lib 畫，改成 `Move it to <name>.bak and start fresh?`；locku 的測試與文件沒有比對舊問句的。lib 自己送開關動畫與 toast 的計時，locku 照舊回傳每個 command。不再用的檔（清單 E3-23）：沒有，所以不叫 `App.NoLongerUsed`，CHANGELOG 也沒有要寫的；查法與為什麼舊環境變數指的檔不算，見 dev-remarks「不再用的檔」。
 
+105. （2026-10-25，user 說「對齊最新 tdp, tgo」：tdp v0.9.15、terminu-go v0.4.20）go.mod 從 v0.4.4 升到 v0.4.20，family.mk 換成 tdp 的（多了 `make dev`）。v0.9.4 到 v0.9.15 的清單逐條看過，要 locku 動的只有兩處，其他都是 lib 畫的，或 locku 沒有那個元件（比較模式、reorder、分頁、兩個以上選項的 checkbox 群組；mode 只在 lib 的 viewer 裡）。（1）多列的字一列一列給（components-30 到 32）：setup 失敗的 error popup 原本用 `\n` 接報告與 error，升到 v0.4.18 起畫成紅色的 `\n`，改成一行一個字串；tmux、screen 失敗時印的多列字，報告只放最後一列（原因），整段記進 App Log。（2）popup 開著時第一次按 `q` 不離開（K9-6）：lib 自己問 `Quit locku?`，locku 不用改，加了測試；鎖定畫面的 `QuitFlow` 什麼都不做，PIN 框開著時按 `Ctrl-C` 也不會問，測試也看這件事。dimming 改向 `#0c0c13`（color-19）是 lib 的，locku 自己不做 dimming。
+
 ## 11. 待決清單
 
 無。2026-09-24 全部定案。

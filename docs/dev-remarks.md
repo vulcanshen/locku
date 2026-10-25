@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.3)（tdp v0.9.3；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.9.15)（tdp v0.9.15；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -66,6 +66,11 @@ locku/
     複製、改名、刪除與啟用、太長而開在 note 裡的 setup 報告（短的是 toast，lib 自己記），等級 OK
     或 INFO；PIN 的設定與拿掉有 Success toast，不另記。每一筆跟 toast 一樣大寫開頭，名稱與路徑照原樣，名稱會打頭的就把動詞
     放前面；note 裡的 setup 報告記的是跟 toast 同樣的字（tdp note-78，v0.9.2；2026-10-21）。
+  - 多列的字一列一列給（tdp components-30 到 32，v0.9.15；2026-10-25）：app 自己的字不放 `\n`，lib 會把它畫成紅色的 `\n`。
+    setup 失敗的 error popup 是報告的每一行加上 error，一行一個字串（之前用 `\n` 接成一段，升到 terminu-go v0.4.18 起就是紅的）。
+    tmux、screen 失敗時印的字是外來的：報告（toast 的字）只放最後一列、也就是原因，整段收在 `setup.Report` 的 `Whole`，
+    `reported` 在報告之後記進 App Log（`Output of tmux source-file: …`，App Log 是拿來讀的內容，換行照原樣分列）。`reported`
+    收 `*setup.Report`：之前傳值，`s.reported(name, out, s.install(name, &out))` 裡 `out` 與 `install` 誰先求值 Go 沒有規定。
 
 - **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40，app 可以調低。設定畫面是 40×15（`internal/settings`
   的 `minW`、`minH`）：locku 常在 tmux 切出來的小窗格裡開；設定畫面最大的框是 color picker（36×11），40×15 時整個放得進 `[2]` 的框裡，
@@ -215,6 +220,7 @@ make install    # → $GOBIN；make uninstall 移除
 ```bash
 make check                                       # fmt-check + vet + go test -race；有 go.work 時再加 check-lib
 make check-lib                                   # 關掉 go.work，照 go.mod 的 terminu-go 版本編譯與測試
+make dev                                         # 編譯再跑 ./locku，讀真正的設定與資料（family.mk，tdp v0.9.4 加的）
 make lock                                        # 編譯並鎖住這個終端機
 make e2e                                         # 端到端：真的 tmux（e2e/tmux_attach.py，自己的 TMUX_TMPDIR）、custom saver（e2e/custom_lock.py）、真的 screen（e2e/screen_lock.py，自己的 SCREENDIR）；不碰你的 server 與 session
 make gif                                         # 重錄 docs/demo.gif，見下方「demo gif」

@@ -1,7 +1,6 @@
 package settings
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"strings"
@@ -125,26 +124,26 @@ func (s *Settings) askActivate(name string, on bool) tea.Cmd {
 			Details:  []string{"The rows here go into " + own + ", which it reads; " + then + ". From then on a change here is written at once."},
 			Question: "Write locku's line into " + t.Conf + "?"},
 			func() tea.Cmd {
-				var out bytes.Buffer
+				var out setup.Report
 				err := s.install(name, &out)
 				s.refresh()
-				return s.reported("Activate", name, out, err)
+				return s.reported("Activate", name, &out, err)
 			})
 	}
 	return s.app.Confirm(terminu.Ask{Title: "Deactivate", Subject: name, Verb: "deactivate",
 		Details:  []string{"The file is rewritten at once, and " + own + " removed."},
 		Question: "Take locku's line out of " + t.Conf + "?"},
 		func() tea.Cmd {
-			var out bytes.Buffer
+			var out setup.Report
 			err := s.uninstall(name, &out, t.Conf)
 			s.refresh()
-			return s.reported("Deactivate", name, out, err)
+			return s.reported("Deactivate", name, &out, err)
 		})
 }
 
 // install writes the tool's settings as its rows say — onto a running
 // tmux server, or running screens, too — reporting into out.
-func (s *Settings) install(name string, out *bytes.Buffer) error {
+func (s *Settings) install(name string, out *setup.Report) error {
 	if name == tools[toolTmux] {
 		return setup.Tmux(out, s.cfg.Tmux)
 	}
@@ -153,23 +152,36 @@ func (s *Settings) install(name string, out *bytes.Buffer) error {
 
 // uninstall takes the tool's line out of the file at conf, and off a
 // running tmux server or running screens, reporting into out.
-func (s *Settings) uninstall(name string, out *bytes.Buffer, conf string) error {
+func (s *Settings) uninstall(name string, out *setup.Report, conf string) error {
 	if name == tools[toolTmux] {
 		return setup.TmuxUndo(out, conf)
 	}
 	return setup.ScreenUndo(out, conf)
 }
 
-// reported is what setup printed about the tool called name, verb done to
+// reported is what setup reported about the tool called name, verb done to
 // it: a failure in an error popup, ACTIVATE FAILED: tmux, what was done
-// before it first; else the lines, in a toast when they fit, in a note when
-// not (components/dialog/toast).
-func (s *Settings) reported(verb, name string, out bytes.Buffer, err error) tea.Cmd {
-	lines := strings.Split(strings.TrimSpace(out.String()), "\n")
-	if err != nil {
-		return s.app.ErrorAbout(verb+" failed", name, strings.TrimSpace(out.String()+"\n"+err.Error()))
+// before it first, a row each (tdp components: the app's own text has no
+// line break; until 2026-10-25 one message joined with \n); else the lines,
+// in a toast when they fit, in a note when not (components/dialog/toast).
+// A program's output of several lines, of which the report has the last,
+// goes whole into the App Log after them (tdp components-32). out is a
+// pointer, read once setup has written it.
+func (s *Settings) reported(verb, name string, out *setup.Report, err error) tea.Cmd {
+	var lines []string
+	if text := strings.TrimSpace(out.String()); text != "" {
+		lines = strings.Split(text, "\n")
 	}
-	return s.tell(name, lines)
+	var cmd tea.Cmd
+	if err != nil {
+		cmd = s.app.ErrorAbout(verb+" failed", name, append(lines, err.Error())...)
+	} else {
+		cmd = s.tell(name, lines)
+	}
+	for _, all := range out.Whole {
+		s.app.Log(terminu.Info, "Output of "+all)
+	}
+	return cmd
 }
 
 // resync is the other half of activate (user, 2026-09-25: turn it on
@@ -181,8 +193,8 @@ func (s *Settings) resync(name string, installed bool) tea.Cmd {
 	if !installed {
 		return nil
 	}
-	var out bytes.Buffer
-	return s.reported("Write", name, out, s.install(name, &out))
+	var out setup.Report
+	return s.reported("Write", name, &out, s.install(name, &out))
 }
 
 // moveConf is the tool's file changed from oldConf while locku's line was
@@ -193,11 +205,11 @@ func (s *Settings) moveConf(name, oldConf string, installed bool) tea.Cmd {
 		return nil
 	}
 	t := s.cfg.Tool(name)
-	var out bytes.Buffer
+	var out setup.Report
 	if oldConf != t.Conf {
 		if err := s.uninstall(name, &out, oldConf); err != nil || t.Conf == "" {
-			return s.reported("Move", name, out, err)
+			return s.reported("Move", name, &out, err)
 		}
 	}
-	return s.reported("Move", name, out, s.install(name, &out))
+	return s.reported("Move", name, &out, s.install(name, &out))
 }

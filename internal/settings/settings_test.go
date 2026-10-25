@@ -488,6 +488,54 @@ func TestActivateTmux(t *testing.T) {
 	}
 }
 
+// With a popup open the first q does not leave (tdp K9-6): locku, which
+// leaves at once from a panel, asks Quit locku? first, Esc going back to the
+// popup and Enter leaving.
+func TestQuitWithAPopupOpenAsks(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(profileID("clock2")).press("X", "q")
+	if v := d.screen(); d.quit || !strings.Contains(v, "Quit locku?") {
+		t.Fatalf("q over the Delete confirm, quit %v:\n%s", d.quit, v)
+	}
+	d.press("Esc")
+	if v := d.screen(); d.quit || strings.Contains(v, "Quit locku?") || !strings.Contains(v, "Delete clock2?") {
+		t.Errorf("Esc did not go back to the confirm:\n%s", v)
+	}
+	if d.press("q", "Enter"); !d.quit {
+		t.Error("Enter on Quit locku? did not leave")
+	}
+}
+
+// What setup reports comes a row at a time (tdp components-30 to 32): a
+// failure's error popup has what was done and the error on rows of their
+// own, no \n of locku's drawn by its name; a program's output of several
+// lines has its last in the report and the whole in the App Log.
+func TestSetupIsReportedARowAtATime(t *testing.T) {
+	cfg := testConfig()
+	locked := t.TempDir()
+	cfg.Tmux.Conf = filepath.Join(locked, "tmux.conf")
+	d := newDriver(t, cfg, 120, 30)
+	if err := os.Chmod(locked, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(locked, 0o700) })
+	d.on(toolID("tmux")).toField("activate", 0).press("Enter", "Enter")
+	if v := d.screen(); !strings.Contains(v, "ACTIVATE FAILED: tmux") || !strings.Contains(v, "Wrote ") || strings.Contains(v, `\n`) {
+		t.Errorf("the failure, a row each:\n%s", v)
+	}
+
+	cfg.Tmux.Conf = filepath.Join(t.TempDir(), "tmux.conf")
+	d = newDriver(t, cfg, 120, 30)
+	tmux := "#!/bin/sh\n[ \"$1\" = source-file ] && { echo 'a banner'; echo 'locku.tmux.conf:3: unknown command'; exit 1; }\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(os.Getenv("PATH"), "tmux"), []byte(tmux), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	d.on(toolID("tmux")).toField("activate", 0).press("Enter", "Enter", "Esc", "!")
+	if v := d.screen(); !strings.Contains(v, "Output of tmux source-file: a banner") || !strings.Contains(v, "locku.tmux.conf:3: unknown command") || strings.Contains(v, `\n`) {
+		t.Errorf("the whole output in the App Log:\n%s", v)
+	}
+}
+
 // The keys of [2] are its Enter and its panel's, and preference's and a
 // tool's then say what each row is (user, 2026-09-25).
 func TestDetailKeysAndGlossary(t *testing.T) {

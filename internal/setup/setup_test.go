@@ -510,3 +510,28 @@ func TestShellQuote(t *testing.T) {
 		t.Error(shellQuote("/Users/a b/locku"))
 	}
 }
+
+// A program that fails printing several lines has its last, the reason,
+// in the report, which a toast shows, and the whole in the Report's Whole,
+// for the App Log (tdp components-32).
+func TestAProgramsLinesAreNotAllInTheReport(t *testing.T) {
+	h := t.TempDir()
+	t.Setenv("HOME", h)
+	t.Setenv("LOCKU__CONFIG", filepath.Join(h, ".config", "locku"))
+	bin := t.TempDir()
+	t.Setenv("PATH", bin)
+	tmux := "#!/bin/sh\n[ \"$1\" = source-file ] && { echo 'a banner'; echo 'locku.tmux.conf:3: unknown command'; exit 1; }\nexit 0\n"
+	if err := os.WriteFile(filepath.Join(bin, "tmux"), []byte(tmux), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var r Report
+	if err := Tmux(&r, config.Tmux{Conf: filepath.Join(h, ".tmux.conf"), LockAfterTime: 300, Lock: config.LockServer}); err != nil {
+		t.Fatal(err)
+	}
+	if s := r.String(); !strings.Contains(s, "tmux source-file: locku.tmux.conf:3: unknown command\n") || strings.Contains(s, "banner") {
+		t.Errorf("the report:\n%s", s)
+	}
+	if len(r.Whole) != 1 || r.Whole[0] != "tmux source-file: a banner\nlocku.tmux.conf:3: unknown command" {
+		t.Errorf("the whole: %q", r.Whole)
+	}
+}

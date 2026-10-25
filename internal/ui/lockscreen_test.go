@@ -244,7 +244,9 @@ func TestTheBoxsKeys(t *testing.T) {
 }
 
 // Ctrl-C does not leave the lock, on the board, in the box, or before the
-// terminal's size is known: the lock ends by the PIN alone (§1.2).
+// terminal's size is known: the lock ends by the PIN alone (§1.2). Nor does
+// it ask Quit locku?, which the lib asks with a popup open (tdp K9-6): the
+// lock's QuitFlow does nothing.
 func TestCtrlCDoesNotLeave(t *testing.T) {
 	ctrlC := tea.KeyMsg{Type: tea.KeyCtrlC}
 	m := testLock(t, "1234", nil)
@@ -253,6 +255,9 @@ func TestCtrlCDoesNotLeave(t *testing.T) {
 	}
 	if drive(m, ctrlC) || drive(m, ctrlC) || !m.boxUp {
 		t.Error("Ctrl-C in the box left it")
+	}
+	if strings.Contains(screen(m), "Quit") {
+		t.Errorf("Ctrl-C in the box asked to quit:\n%s", screen(m))
 	}
 	cold := NewLock(m.cfg, "")
 	if drive(cold, ctrlC) || drive(cold, ctrlC) {

@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-- The settings screen is built on terminu-go, the family's library, and follows tdp v0.9.3: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
+- The settings screen is built on terminu-go, the family's library, and follows tdp v0.9.15: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
 - On `[2]` a choice of five or fewer is a radio drawn in place, `Enter` on the option picks it; more — `participants`, a long list of profiles — opens a select you can type to filter; `show_status` and `activate` are checkboxes.
 - `bg` and `fg` are chosen in a colour picker, the old colour and the new side by side, R, G and B in hex, and written when chosen, as every other value is. The colour draft, its `[S]` Save and `[R]` Reset and the `unsaved` chip are gone.
 - Changing the PIN asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it. The `New PIN` / `Remove PIN` menu is gone. Each step opens over the one before, and `Esc` goes back a step.
@@ -15,6 +15,8 @@ Each release names the version of terminu design (tdp) it follows.
 - What the Space menu opens — a box for a name, the Delete confirm, a value's list — opens over it, and `Esc` goes back to the menu.
 - A number out of its range is refused in its box with why, `wrong_pin_attempt_cooldown must be 1 or more`, where 0 became 30 without a word and a number too long was dropped. A `profile` the file names but does not have is shown with its label in red.
 - A write that fails, and a tmux or screen setup that fails, open an error popup with the whole message, where a toast cut it short; over the box the value was typed in, which keeps it. A setup report too long for a toast opens in a note to read; one that fits, and `PIN set`, `PIN removed`, are green.
+- When tmux or screen fails printing several lines, the setup's message has the last one, the reason, and the App Log all of them.
+- With a popup open, `q` asks `Quit locku?` before leaving, `Esc` going back to the popup; from a panel it still leaves at once.
 - `?` on preference's, tmux's and screen's `[2]` lists the keys, after a first section on what each row means, where it was the meanings alone.
 - `!` on a panel opens the App Log: what locku has done this run — each value written, each profile made, renamed, deleted or made active, every message it showed — and what went wrong, newest last; the footer says `!:log`, or `!:1 error` until it is read.
 - A `config.yaml` that cannot be read opens, at the start of the settings screen, a question: move it aside as `config.yaml.bak` and start on the defaults, or leave with the reason printed. It used to open on the defaults with an error over them, and the next change wrote the defaults over the file. Its reason is the line that is wrong, `line 1: cannot unmarshal …`, where it said `yaml: unmarshal errors:`.

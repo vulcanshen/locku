@@ -11,6 +11,7 @@
 package setup
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -276,6 +277,31 @@ func report(w io.Writer, path string, changed bool, verb string) {
 	}
 }
 
+// Report is what setup did, a line each, for a toast or a note to show;
+// Whole is a program's output that ran over several lines, the report
+// having only its last, the reason: several lines from outside are not put
+// whole into short text, the whole goes to the App Log (tdp components,
+// control characters; 2026-10-25).
+type Report struct {
+	bytes.Buffer
+	Whole []string
+}
+
+// said reports what a program printed as it failed, after what: all of it
+// when it is one line, else its last, and the whole into w's Whole when w
+// is a Report.
+func said(w io.Writer, what string, out []byte) {
+	all := strings.TrimSpace(string(out))
+	reason := all
+	if i := strings.LastIndexByte(all, '\n'); i >= 0 {
+		reason = strings.TrimSpace(all[i+1:])
+		if r, ok := w.(*Report); ok {
+			r.Whole = append(r.Whole, what+": "+all)
+		}
+	}
+	fmt.Fprintf(w, "%s: %s\n", what, reason)
+}
+
 // The tmux side (function.md §6.2). The lock is the whole server's by
 // default, as a screensaver is the whole machine's (user, 2026-09-24):
 // `locku` locks every client on the server, and while locku has the
@@ -395,7 +421,7 @@ func bound(lines []string) (key, lock string) {
 // of commands kept in step with it).
 func sourceOwn(w io.Writer, tmux, own string) {
 	if out, err := exec.Command(tmux, "source-file", own).CombinedOutput(); err != nil {
-		fmt.Fprintf(w, "tmux source-file: %s\n", strings.TrimSpace(string(out)))
+		said(w, "tmux source-file", out)
 	}
 }
 
@@ -543,7 +569,7 @@ func tmuxLive(w io.Writer, cmds [][]string) (string, bool) {
 	}
 	for _, args := range cmds {
 		if out, err := exec.Command(tmux, args...).CombinedOutput(); err != nil {
-			fmt.Fprintf(w, "tmux %s: %s\n", strings.Join(args, " "), strings.TrimSpace(string(out)))
+			said(w, "tmux "+strings.Join(args, " "), out)
 		}
 	}
 	return tmux, true
@@ -724,7 +750,7 @@ func screenLive(w io.Writer, cmds [][]string) (int, bool) {
 		for _, args := range cmds {
 			argv := append([]string{"-S", id, "-X"}, args...)
 			if out, err := exec.Command(screen, argv...).CombinedOutput(); err != nil {
-				fmt.Fprintf(w, "screen %s: %s\n", strings.Join(argv, " "), strings.TrimSpace(string(out)))
+				said(w, "screen "+strings.Join(argv, " "), out)
 			}
 		}
 	}
