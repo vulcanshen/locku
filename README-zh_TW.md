@@ -363,7 +363,7 @@ profiles:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.10.1)（tdp v0.10.1），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.10.2)（tdp v0.10.2），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

@@ -4,7 +4,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-- The settings screen is built on terminu-go, the family's library, and follows tdp v0.10.1: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
+- The settings screen is built on terminu-go, the family's library, and follows tdp v0.10.2: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
 - On `[2]` a choice of five or fewer is a radio drawn in place, `Enter` on the option picks it; more — `participants`, a long list of profiles — opens a select you can type to filter; `show_status` and `activate` are checkboxes.
 - `bg` and `fg` are chosen in a colour picker, the old colour and the new side by side, R, G and B in hex, and written when chosen, as every other value is. The colour draft, its `[S]` Save and `[R]` Reset and the `unsaved` chip are gone.
 - Changing the PIN asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it. The `New PIN` / `Remove PIN` menu is gone. Each step opens over the one before, and `Esc` goes back a step.
