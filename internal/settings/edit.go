@@ -13,7 +13,7 @@ import (
 )
 
 // The values' errors, on the box's error row, the value named
-// (components/input/README).
+// (tdp popup.7).
 var (
 	errNameEmpty = errors.New("Name can't be empty")
 	errNameTaken = errors.New("Name is taken")
@@ -30,12 +30,12 @@ func oneKeyErr(name, example string) error { return errors.New(name + " must be 
 // editPIN is Enter on the PIN row. With none set, a new one and its
 // confirmation; with one set, the current one first, then a new one —
 // or none: the box shows the PIN that is there as eight grey dots, and
-// Backspace on them, then Enter, leaves no PIN (components/input/password;
+// Backspace on them, then Enter, leaves no PIN (tdp password.4;
 // until 2026-10-18 a menu after the current PIN offered New PIN or Remove PIN).
 // Each step is its own box over the one before, Esc one step back, and the
 // last one done closes them all (tdp F1, F4, T1; 2026-10-18 to 10-19 a step
 // closed as the next opened). An unlock box has no prompt row: the titles
-// say what to type, CURRENT PIN, NEW PIN, CONFIRM PIN (tdp S36).
+// say what to type, CURRENT PIN, NEW PIN, CONFIRM PIN (tdp password.2).
 func (s *Settings) editPIN() tea.Cmd {
 	if !s.cfg.HasPIN() {
 		return s.newPIN(false, 1)
@@ -161,11 +161,11 @@ func (s *Settings) uninstall(name string, out *setup.Report, conf string) error 
 
 // reported is what setup reported about the tool called name, verb done to
 // it: a failure in an error popup, ACTIVATE FAILED: tmux, what was done
-// before it first, a row each (tdp components: the app's own text has no
+// before it first, a row each (tdp components.5: the app's own text has no
 // line break; until 2026-10-25 one message joined with \n); else the lines,
-// in a toast when they fit, in a note when not (components/dialog/toast).
+// in a toast when they fit, in a note when not (tdp toast.2).
 // A program's output of several lines, of which the report has the last,
-// goes whole into the App Log after them (tdp components-32). out is a
+// goes whole into the App Log after them (tdp components.5). out is a
 // pointer, read once setup has written it.
 func (s *Settings) reported(verb, name string, out *setup.Report, err error) tea.Cmd {
 	var lines []string

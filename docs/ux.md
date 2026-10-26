@@ -4,7 +4,7 @@
 > 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）撰寫，
 > 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107）** 照 [tdp v0.10.1](https://github.com/vulcanshen/terminu/tree/v0.10.1)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§2.3、ui §3.2）、預覽、整合寫什麼檔。
 
@@ -94,13 +94,13 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 | splash 彩蛋 | `V`（不揭露） |
 
 全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl-C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl-C` 也只是一個
-按鍵（ISIG 已關，`function.md` §2.1；偏離 tdp，見 dev-remarks）。
+按鍵（ISIG 已關，`function.md` §2.1；鎖定畫布與預覽不在 TUI 裡，不照 core key 表，tdp K1）。
 
 `?` 打開最前端那個 surface 的 key reference：唯讀、可以捲動，沒有游標、不能執行（2026-09-27，tdp K6、M4；之前 panel 上是可執行的 `?` menu）。內容看 focus 在哪：
 
 - **popup 上**：只有這個 popup 的鍵——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；global operation popup 是 `j/k`、Enter、方括號裡的字母、`Esc` 回到 Space menu；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
-- **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；現在不能執行的照樣列出、變暗——鍵與說明都暗——跟 Space menu 一樣，2026-09-29，tdp v0.1.14 M6；之前列出但照亮）；再是 `everywhere`：core key 與導覽鍵。鍵 Blue、說明 Text，幾個鍵做同一件事用 `/`、範圍用 `–`（`q/Ctrl-C`、`Tab/1–2`；2026-09-29，tdp M5、D2；之前鍵是 Subtext1、用 ` · ` 分隔）。框跟每個 popup 一樣寬（tdp F7，2026-09-28；之前依最長的說明，舊 D4），說明太長就在框裡折行。再按 `?` 關掉。
-- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；偏離 tdp K6、M4，理由見 dev-remarks）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
+- **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；現在不能執行的照樣列出、變暗——鍵與說明都暗——跟 Space menu 一樣，2026-09-29，tdp v0.1.14 M6；之前列出但照亮）；再是 `everywhere`：core key 與導覽鍵。鍵 Blue、說明 Text，幾個鍵做同一件事用 `/`、範圍用 `–`（`q/Ctrl-C`、`Tab/1–2`；2026-09-29，tdp M5、color.2；之前鍵是 Subtext1、用 ` · ` 分隔）。框跟每個 popup 一樣寬（tdp F7，2026-09-28；之前依最長的說明，舊 D4），說明太長就在框裡折行。再按 `?` 關掉。
+- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；當時不照 tdp K6、M4，理由見 dev-remarks；2026-10-19 起照 tdp note.5，「每一列」一節在 key reference 最前面）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind、screen 的 LOCKPRG 住在哪的說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；左欄是設定名稱、不是鍵，維持 Subtext1，不跟 key reference 的鍵一起變 Blue（2026-09-29）；鍵的清單也一樣換行。
 
 ---
@@ -115,7 +115,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | 值 Yellow | 還沒設：`not set`；畫布 `no PIN` |
 | Red | 錯：input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）、`config error` |
 | 值 Mauve | 可以改的值 |
-| dim | 唯讀（type、色票）、menu 裡 disabled 的列、key reference 裡現在不能按的鍵（2026-09-29，tdp M6）、menu 的 region header；有浮層開著時，最上層以外的一切照原色淡化（2026-09-28，tdp F8、D2） |
+| dim | 唯讀（type、色票）、menu 裡 disabled 的列、key reference 裡現在不能按的鍵（2026-09-29，tdp M6）、menu 的 region header；有浮層開著時，最上層以外的一切照原色淡化（2026-09-28，tdp F8、color.4） |
 | 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態：`[2]` 的 ` · unsaved`、PIN prompt 的 ` · closing`；input 的錯誤不在這裡，在框內的錯誤列（2026-09-28，tdp F7、K3） |
 | 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
 | R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`） |
@@ -176,10 +176,10 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 |---|---|
 | saver 上任何鍵 | 開 prompt；那個鍵**不算**輸入 |
 | 字元 | 追加，最多 12（2026-10-08；之前 64）；`●` 遮罩；貼上的控制字元也收進值裡、一個一顆 `●`（2026-10-18；2026-10-06 起只收換行與 Tab，再之前只收可列印字元，貼 `x\ny` 得 `xy`，少一個字也看不出來）；`Alt` 組合不打字（2026-10-18） |
-| Backspace | 一次清掉打的全部（2026-10-18，components/input/password；之前刪一字） |
+| Backspace | 一次清掉打的全部（2026-10-18，tdp password.4；之前刪一字） |
 | Enter | 比對：對 → 立刻結束進程（exit 0，不等關閉動畫）；錯 → 錯誤列 `wrong PIN` 1 秒、吞掉所有輸入（`Esc` 也是）、點點清空，錯誤留到下一次 `Enter`。值裡有貼上的控制字元 → 不比對、不算一次連錯：錯誤列 `PIN can't have control characters`、點點留著（2026-10-18；2026-10-06 起是 `no line breaks or tabs`）。框與標題維持層色，只有錯誤列是 Red（2026-10-18；之前邊框變 Red）。2026-10-19 起框是 lib 的 `PasswordInput`，這些都照它，錯一次的那一秒是 locku 自己在框外吞鍵、清點點 |
 | Esc | 回 saver、輸入丟掉 |
-| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s` 每秒倒數（`wrong_pin_attempt_cooldown` 秒；2026-10-19 起是 lib 的 `PausedUntil`，tdp S37）、吞掉 `Esc` 以外的鍵，點點留到冷卻結束才清；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
+| 連錯 `wrong_pin_attempts` 次（0 = 關） | 錯誤列 `try again in N s` 每秒倒數（`wrong_pin_attempt_cooldown` 秒；2026-10-19 起是 lib 的 `PausedUntil`，tdp popup.7）、吞掉 `Esc` 以外的鍵，點點留到冷卻結束才清；Esc 仍可回 saver，再開 prompt 倒數繼續，custom saver 也是（2026-10-06）；冷卻在 prompt 收起時結束，再開就歸零（2026-10-06） |
 | `pin_prompt_timeout` 秒沒按鍵（0 = 永不） | 關閉動畫回 saver、輸入丟掉；每次按鍵重算 |
 | resize | prompt 重新置中；custom：新尺寸也轉給程式的 pty |
 | custom saver（2026-09-25）：saver 上任何鍵 | 開 prompt，框疊在程式還在動的畫面上，程式不停、輸出不停；框在的時候 bracketed paste 開著，貼上的換行跟其他 lock 一樣是值裡的一個換行，不是 Enter（2026-10-06） |
@@ -226,22 +226,22 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 ## §5 浮層行為
 
-沿用 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
+沿用 terminu family 的 popup 慣例（tdp popup）：一個 popup 一個檔一個 animator、`Esc` 只在 `closeTop` 一處解析、
 `Space` 只開關 Space menu（2026-09-26，tdp K5）、正在關閉的浮層不握鍵盤，也不再理會 `Esc`——toast 也一樣，關到一半再按 `Esc`，關的是下面那層（2026-09-26，tdp F3）。
 
-**最上層以外全部變暗**（2026-09-28，tdp F8、v0.1.9）：有浮層開著時，只有最上面那層是亮的——它就是接鍵、`Esc` 關的那層（用同一個 `owns()` 判斷，tdp D3）。底下的面板、footer、底下的浮層，每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、D2，v0.1.11–v0.1.12）：膠囊、cursor bar、色票、`unsaved` 的黃都還在，只是變暗；浮層的邊框是它自己層色淡化後的樣子，看得出第幾層。（同日稍早的第一版是去掉顏色、全部改用 Overlay0 重畫，邊框往 base 混一半；膠囊、cursor bar、色票因此不見，tdp v0.1.11 起明文禁止。）最上層開始關的那一刻，底下那層就亮回來（跟鍵盤交回去同一刻）；關閉中的框以暗色畫完動畫。toast 不算一層：不會讓底下變暗，自己也永遠照原色。
+**最上層以外全部變暗**（2026-09-28，tdp F8、v0.1.9）：有浮層開著時，只有最上面那層是亮的——它就是接鍵、`Esc` 關的那層（用同一個 `owns()` 判斷，tdp F8）。底下的面板、footer、底下的浮層，每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、color.4，v0.1.11–v0.1.12）：膠囊、cursor bar、色票、`unsaved` 的黃都還在，只是變暗；浮層的邊框是它自己層色淡化後的樣子，看得出第幾層。（同日稍早的第一版是去掉顏色、全部改用 Overlay0 重畫，邊框往 base 混一半；膠囊、cursor bar、色票因此不見，tdp v0.1.11 起明文禁止。）最上層開始關的那一刻，底下那層就亮回來（跟鍵盤交回去同一刻）；關閉中的框以暗色畫完動畫。toast 不算一層：不會讓底下變暗，自己也永遠照原色。
 
 **從 menu 開出的框疊在 menu 上**（2026-09-26，tdp F4、T1）：Space menu 或 global operation popup 裡選了會開下一個框的列（confirm、名字或數字的輸入框、選項清單），menu 留在底下、框疊上去；`Esc` 取消框就回到 menu，**完成**（confirm 接受、輸入送出、選定一個值）才把整疊清掉。PIN 那串（current PIN → New / Remove → new PIN → confirm）每一步是自己的框、一層疊一層，整串做完才清；中途 `Esc` 退一步，退完第一步回到 menu（2026-09-28，tdp v0.1.9 F1；之前中途 `Esc` 取消整串）。不開下一個框的列（Edit、Activate、預覽……）照舊，執行後 menu 關掉；預覽把整個畫面換掉，回來時 menu 不留。之前選了任何一列 menu 都先關，取消 confirm 回到的是 panel。global operation popup 開在 Space menu 上，它的列執行完、沒開出下一個框時，兩層一起清掉（2026-09-27）。
 
-**離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、D3）：有未存顏色時 `q`、`Ctrl-C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl-C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
+**離開的 confirm 是自己的浮層**（2026-09-27，tdp K9、confirm）：有未存顏色時 `q`、`Ctrl-C` 或 `[q]uit` 開的 confirm 不借共用的 confirm，疊在整疊最上面；按鍵路由、`closeTop`、繪製三處都把它放在其他浮層之上，只有它自己的 `?` help 在它上面。底下正在回答的問題原樣留著：在 Delete / activate 的 confirm 上按 `q`，`Esc` 後原本的問題還在；在輸入框裡按 `Ctrl-C`，`Enter` 是離開、不是送出輸入框，打的字也不進輸入框；在 `?` 上按 `q`，confirm 畫在 help 上面。之前它借共用的 confirm：蓋掉原本的問題、`Enter` 送出底下的輸入框、被 help 蓋住。
 
 層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28；2026-09-27 起五層，之前三層）。
 
 **先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`Wrote <locku 的檔> · Wrote <檔> · Applied to the running tmux server: …`，沒變的檔說 `Already up to date: <檔>` / `Removed locku's block from <檔> · Removed <locku 的檔> · …`；句首大寫、名稱與路徑照原樣，2026-10-21，tdp note-78；錯誤時紅色）。
+**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`Wrote <locku 的檔> · Wrote <檔> · Applied to the running tmux server: …`，沒變的檔說 `Already up to date: <檔>` / `Removed locku's block from <檔> · Removed <locku 的檔> · …`；句首大寫、名稱與路徑照原樣，2026-10-21，tdp note.7；錯誤時紅色）。
 
-**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、D2；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（偏離，見 dev-remarks）；`q` 在畫布與 prompt
+**鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、color.4；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（鎖定中的畫面不在 TUI 裡，由 app 自行決定，tdp P5；見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。
 
 ---

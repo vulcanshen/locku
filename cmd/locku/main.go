@@ -97,7 +97,7 @@ func runLock(socket, session string) int {
 	// away leaves the mark, and the next client in meets the lock.
 	tmux.SetLocked(socket, session, true)
 	// How wide an icon is, for the board's pixels and the prompt's title
-	// (tdp D6): asked before the pending input goes, so an answer that
+	// (tdp E5): asked before the pending input goes, so an answer that
 	// comes after its 200 ms goes with it.
 	ui.DetectIconWidth()
 	// What is already waiting on the terminal came before the lock:

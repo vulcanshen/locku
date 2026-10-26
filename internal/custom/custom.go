@@ -428,7 +428,7 @@ func (s *screen) Resized(cols, rows int) {
 // screen, each at its own position, and returns the rectangle they took.
 // Nothing outside the lines is touched. The width comes from the one who
 // drew the box: an icon in its title takes two cells with some fonts,
-// which only the ui knows (tdp D6, 2026-09-29; measured here until then).
+// which only the ui knows (tdp E5, 2026-09-29; measured here until then).
 // A box larger than the screen — drawn for the size before a resize —
 // starts at the top left and what falls off is cut, never written past
 // the screen's edge, where the terminal would wrap it onto the next row

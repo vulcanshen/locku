@@ -157,7 +157,7 @@ func (s *Settings) nameCheck(self int) func(string) error {
 }
 
 // newProfile asks a name for a profile of kind, made as its defaults say:
-// the free name is offered in grey, Enter on it taking it (tdp S6). Made,
+// the free name is offered in grey, Enter on it taking it (tdp input.6). Made,
 // the cursor is on it and the focus in [2], to go on with its values
 // (ui.md §3.1; tdp K3, S19: the user expects to be taken to it).
 func (s *Settings) newProfile(kind string) tea.Cmd {

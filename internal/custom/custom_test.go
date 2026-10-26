@@ -186,7 +186,7 @@ func TestOverlayTouchesOnlyItsBox(t *testing.T) {
 		t.Errorf("nothing to paint: %d,%d %dx%d", top, left, w, h)
 	}
 	// The width is the drawer's: an icon two cells wide is one to x/ansi
-	// (tdp D6), so the box is centred and cleared by what it was given.
+	// (tdp E5), so the box is centred and cleared by what it was given.
 	if _, left, w, _ := paintBox(&out, 80, 24, "[ab]\n[cd]", 6); w != 6 || left != 37 {
 		t.Errorf("the width given: at %d, %d wide", left, w)
 	}
@@ -241,7 +241,7 @@ func TestTheBoxNeverCutsASequence(t *testing.T) {
 
 // The program is told how wide an icon is, once, over whatever locku was
 // given: a family app on locku's pty cannot ask the terminal, whose answer
-// comes back to locku (tdp D6, v0.1.22).
+// comes back to locku (tdp E5, since tdp v0.1.22).
 func TestProgramIsToldTheIconWidth(t *testing.T) {
 	t.Setenv("TERMINU__ICON_WIDTH", "9") // from outside: replaced, not doubled
 	for _, cells := range []int{1, 2} {

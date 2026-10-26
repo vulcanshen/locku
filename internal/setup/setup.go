@@ -280,8 +280,8 @@ func report(w io.Writer, path string, changed bool, verb string) {
 // Report is what setup did, a line each, for a toast or a note to show;
 // Whole is a program's output that ran over several lines, the report
 // having only its last, the reason: several lines from outside are not put
-// whole into short text, the whole goes to the App Log (tdp components,
-// control characters; 2026-10-25).
+// whole into short text, the whole goes to the App Log (tdp components.5,
+// 2026-10-25).
 type Report struct {
 	bytes.Buffer
 	Whole []string

@@ -313,7 +313,7 @@ func TestEachSaverHasItsRows(t *testing.T) {
 }
 
 // A radio drawn in place takes effect on Enter and is in the file at once;
-// a choice of more than five is a select (components/dialog/form).
+// a choice of more than five is a select (tdp form.5).
 func TestChoicesAreWrittenAtOnce(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(profileID("clock")).toField("layout", 1).press("Enter")
@@ -339,7 +339,7 @@ func TestChoicesAreWrittenAtOnce(t *testing.T) {
 // Rename follows the active profile; a taken name is refused in the box.
 // New and Duplicate offer a free name in grey, Enter on it taking it, and
 // take the user to what they made: the cursor on it, the focus in [2]
-// (tdp S6, K3, S19).
+// (tdp input.6, K3).
 func TestRenameDuplicateNewDelete(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(profileID("clock")).press("r", "Tab").typeText("x").press("Enter")
@@ -394,7 +394,7 @@ func TestRenameDuplicateNewDelete(t *testing.T) {
 }
 
 // The PIN: set with a confirmation, changed after the current one, and
-// removed with Backspace on its grey dots (components/input/password). Each
+// removed with Backspace on its grey dots (tdp password.4). Each
 // step is a box over the one before, Esc one step back, and the last one
 // done closes them all (tdp F1, F4, T1).
 func TestPINSetChangeRemove(t *testing.T) {
@@ -440,7 +440,7 @@ func TestPINSetChangeRemove(t *testing.T) {
 }
 
 // A number box writes its number, its unit under it, and empty is the
-// default; a switch flips in place (preference; tdp S7, S47).
+// default; a switch flips in place (preference; tdp number.4, number.2).
 func TestNumbersAndSwitches(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(preferenceID).toField("pin_prompt_timeout", 0).press("Enter")
@@ -488,7 +488,7 @@ func TestActivateTmux(t *testing.T) {
 	}
 }
 
-// With a popup open the first q does not leave (tdp K9-6): locku, which
+// With a popup open the first q does not leave (tdp K9): locku, which
 // leaves at once from a panel, asks Quit locku? first, Esc going back to the
 // popup and Enter leaving.
 func TestQuitWithAPopupOpenAsks(t *testing.T) {
@@ -506,7 +506,7 @@ func TestQuitWithAPopupOpenAsks(t *testing.T) {
 	}
 }
 
-// What setup reports comes a row at a time (tdp components-30 to 32): a
+// What setup reports comes a row at a time (tdp components.5): a
 // failure's error popup has what was done and the error on rows of their
 // own, no \n of locku's drawn by its name; a program's output of several
 // lines has its last in the report and the whole in the App Log.
@@ -548,7 +548,7 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 		}
 	}
 	if strings.Index(v, "WHAT EACH ROW IS") > strings.Index(v, "ITEM OPERATION") {
-		t.Errorf("what each row is comes first (tdp S34):\n%s", v)
+		t.Errorf("what each row is comes first (tdp note.5):\n%s", v)
 	}
 	d.press("Esc").on(profileID("clock")).press("?")
 	if strings.Contains(d.screen(), "WHAT EACH ROW IS") {
@@ -565,7 +565,7 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 }
 
 // A number out of its range is said on the error row, the value named,
-// and the box stays (components/input/number).
+// and the box stays (tdp number.4).
 func TestNumberOutOfRangeIsSaid(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	d.on(preferenceID).toField("wrong_pin_attempt_cooldown", 0).press("Enter", "Backspace").typeText("0").press("Enter")
@@ -605,7 +605,7 @@ func TestMenuStaysUnderWhatItOpens(t *testing.T) {
 
 // A write that fails opens an error popup with the whole of it over the box
 // the value came from, which keeps it, and the config is as it was
-// (components/dialog/toast, dialog/note, layout/popup).
+// (tdp toast.2, note.6, popup.7).
 func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	dir := config.Dir()
@@ -629,7 +629,7 @@ func TestWriteFailureIsAnErrorPopup(t *testing.T) {
 // A config.yaml that cannot be read is offered to be moved aside at the
 // start: Enter keeps it whole as config.yaml.bak and starts as on the
 // first start, on the defaults with nothing written until the first save;
-// Esc leaves (tdp E3, E3-18).
+// Esc leaves (tdp E3, checklist E3-18).
 func TestUnreadableConfigIsMovedAside(t *testing.T) {
 	for _, key := range []string{"Enter", "Esc"} {
 		dir := t.TempDir()
@@ -729,7 +729,7 @@ func TestProfilesMoveToTheirOwnFile(t *testing.T) {
 // A profiles.yaml that cannot be read is moved aside as a config.yaml is,
 // the PIN in config.yaml kept and the file as it was, profiles.yaml not
 // made until the first save; and a config.yaml moved aside leaves the
-// profiles as they were (tdp E3, E3-18).
+// profiles as they were (tdp E3, checklist E3-18).
 func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 	tempDirs(t)
 	cfg := testConfig()
@@ -776,14 +776,14 @@ func TestUnreadableProfilesAreMovedAside(t *testing.T) {
 }
 
 // lowEntries is the App Log's entries on the screen v that start in lower
-// case, where each starts with a capital, as a toast does (tdp note-78).
+// case, where each starts with a capital, as a toast does (tdp note.7).
 func lowEntries(v string) []string {
 	return regexp.MustCompile(`\d\d:\d\d:\d\d (?:INFO|OK|WARN|ERR) +\p{Ll}.*`).FindAllString(v, -1)
 }
 
 // The App Log, `!` on a panel, has what was done: each value written, each
 // profile made, renamed or deleted (tdp F5, K1); the footer offers it. Each
-// entry starts with a capital, as a toast does (tdp note-78).
+// entry starts with a capital, as a toast does (tdp note.7).
 func TestAppLogSaysWhatWasDone(t *testing.T) {
 	d := newDriver(t, testConfig(), 100, 30)
 	if !strings.Contains(d.screen(), "!:log") {
@@ -805,7 +805,7 @@ func TestAppLogSaysWhatWasDone(t *testing.T) {
 }
 
 // With no file set, a tool's config file path box offers the usual one in
-// grey, and Enter takes it (tdp S6).
+// grey, and Enter takes it (tdp input.6).
 func TestConfigPathOffersTheUsualFile(t *testing.T) {
 	cfg := testConfig()
 	cfg.Tmux.Conf = ""
@@ -821,7 +821,7 @@ func TestConfigPathOffersTheUsualFile(t *testing.T) {
 }
 
 // A profile the file names but does not have is a value gone wrong: the
-// profile row's label is Red (components/layout/panel).
+// profile row's label is Red (tdp panel.12).
 func TestMissingProfileIsRed(t *testing.T) {
 	cfg := testConfig()
 	cfg.Profile = "ghost-profile"

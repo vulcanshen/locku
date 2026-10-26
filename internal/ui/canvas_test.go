@@ -289,7 +289,7 @@ func TestSceneFitsAndPaints(t *testing.T) {
 func TestRowsAreExactlyTheTerminalWide(t *testing.T) {
 	bg, fg := lipgloss.Color("#313244"), lipgloss.Color("#f2b753")
 	// Once more with icons two cells wide: a pixel is then the glyph
-	// alone, still two cells (tdp D6, L4).
+	// alone, still two cells (tdp E5, L4).
 	for _, cells := range []int{1, 2} {
 		withIcons(t, cells)
 		for _, cols := range []int{80, 81, 40, 7} {

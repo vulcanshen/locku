@@ -48,7 +48,7 @@ func TestPromptLargerThanTheScreen(t *testing.T) {
 }
 
 // The width a custom saver is handed with the box: the icon in its title
-// counted (tdp D6).
+// counted (tdp E5).
 func TestPromptBoxWithIcons(t *testing.T) {
 	withIcons(t, 2)
 	cfg := testLock(t, "1234", nil).cfg

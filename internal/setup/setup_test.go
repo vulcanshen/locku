@@ -513,7 +513,7 @@ func TestShellQuote(t *testing.T) {
 
 // A program that fails printing several lines has its last, the reason,
 // in the report, which a toast shows, and the whole in the Report's Whole,
-// for the App Log (tdp components-32).
+// for the App Log (tdp components.5).
 func TestAProgramsLinesAreNotAllInTheReport(t *testing.T) {
 	h := t.TempDir()
 	t.Setenv("HOME", h)

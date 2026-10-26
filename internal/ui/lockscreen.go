@@ -84,7 +84,7 @@ type LockModel struct {
 	// its own: the custom saver's, where the box goes over the program's
 	// picture and nothing else may be drawn (user, 2026-09-25). It is given
 	// the box's width too: the program's side cannot tell how wide an icon
-	// is (tdp D6).
+	// is (tdp E5).
 	paint func(box string, w int)
 
 	now func() time.Time
@@ -105,7 +105,7 @@ type (
 // EOF or EIO. There is nothing left to protect, and the process ends.
 type TTYGoneMsg struct{}
 
-// The box: its title says what to type (tdp S36), and it says wrong for a
+// The box: its title says what to type (tdp password.2), and it says wrong for a
 // wrong PIN, which is a second of every key swallowed, the dots cleared
 // (function.md §4.4).
 const (
@@ -371,7 +371,7 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	}
 	m.wrong = false
 	if m.lockedOut() {
-		// The box counts the cooling-off down (tdp S37), every key but Esc
+		// The box counts the cooling-off down (tdp popup.7), every key but Esc
 		// swallowed; when it is over the count starts again.
 		return tea.Batch(cmd, m.app.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
@@ -551,7 +551,7 @@ func (m *LockModel) shading() *saver.Shading {
 
 // canvas is the lock as the App draws it under the box: the board and the
 // status row. Under the box the lib fades it whole, each colour its own way
-// (tdp F8, D2, 2026-09-28). A prompt-only lock draws nothing: the program's
+// (tdp F8, color.4, 2026-09-28). A prompt-only lock draws nothing: the program's
 // picture is under its box.
 func (m *LockModel) canvas(w, h int) []string {
 	if m.promptOnly {

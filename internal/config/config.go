@@ -195,7 +195,7 @@ type Config struct {
 	WrongPINCooldown int                `yaml:"wrong_pin_attempt_cooldown"`
 	// InputTabWidth is the family's input_tab_width (tdp E3): the spaces a
 	// tab takes in text to read — the viewer a long setup report opens in,
-	// which is what makes locku use it (E3-11), and the App Log.
+	// which is what makes locku use it (tdp E3, checklist E3-11), and the App Log.
 	InputTabWidth int `yaml:"input_tab_width"`
 	// The tools that run locku as their screensaver, each its own.
 	Tmux   Tmux   `yaml:"tmux"`
@@ -297,7 +297,7 @@ func (cfg Config) NewProfile(name, kind string) Profile {
 
 // Dir is where config.yaml lives: $LOCKU__CONFIG, else $XDG_CONFIG_HOME/locku,
 // else ~/.config/locku (ui.md §6). The name is the family's, APP__NAME
-// (tdp D6, 2026-09-29); the old LOCKU_CONFIG is not read (user).
+// (tdp E2, 2026-09-29); the old LOCKU_CONFIG is not read (user).
 func Dir() string {
 	if d := os.Getenv("LOCKU__CONFIG"); d != "" {
 		return d
@@ -860,7 +860,7 @@ func LoadPINHash() (hash string, ok bool) {
 
 // DataDir is where locku keeps what is not configuration — the log of
 // PIN resets: $LOCKU__DATA, or ~/.locku/data (user, 2026-09-25; LOCKU_DATA
-// until 2026-09-29, not read now — tdp D6).
+// until 2026-09-29, not read now — tdp E2).
 func DataDir() string {
 	if d := os.Getenv("LOCKU__DATA"); d != "" {
 		return d

@@ -1,10 +1,10 @@
 # locku — UI
 
 > 本文件講**版面與 surface**：兩個畫面、popup、色帶、chrome、存檔。按鍵語意與流程在 `ux.md`，
-> 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp D3）撰寫，
+> 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp popup）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107）** 照 [tdp v0.10.1](https://github.com/vulcanshen/terminu/tree/v0.10.1)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框在 lib 的框之外 locku 自己加的（§3.2、ux §2.3）、預覽、整合寫什麼檔。
 
@@ -198,7 +198,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ### 2.3 鎖定畫布
 
 單一職責：畫內容與狀態列。所有按鍵（含 Ctrl 組合，`function.md` §2.1）只做一件事：開 PIN popup；
-無 PIN 模式則結束進程。PIN popup 開著時整個畫布連最底下的狀態列一起淡化，當 backdrop：每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、D2，v0.1.11–v0.1.12）——亮格、accent、暗格、`config error` 的紅各自淡化，不收成同一個灰；很暗的暗格（例：`#000000`）比 base 暗，維持原色（2026-09-28，使用者：跟設定畫面同一個做法；同日稍早是亮格與狀態列改 Overlay0、暗格不變，更早是亮格 Surface2、狀態列不變）；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格（偏離 tdp F8，2026-09-28，見 dev-remarks）；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
+無 PIN 模式則結束進程。PIN popup 開著時整個畫布連最底下的狀態列一起淡化，當 backdrop：每個顏色——前景與背景——各自往 base 淡化：`c × 0.45 + base × 0.55`，比原色亮就維持原色（tdp F8、color.4，v0.1.11–v0.1.12）——亮格、accent、暗格、`config error` 的紅各自淡化，不收成同一個灰；很暗的暗格（例：`#000000`）比 base 暗，維持原色（2026-09-28，使用者：跟設定畫面同一個做法；同日稍早是亮格與狀態列改 Overlay0、暗格不變，更早是亮格 Surface2、狀態列不變）；saver 照常 tick、揭露照常動（修訂 2026-09-24：原本停 tick、一次重畫不再動，使用者要的是背景變色但不停）。custom saver（`function.md` §5.5）：畫布是程式的畫面，PIN prompt 的框直接疊在還在動的畫面上——沒有 backdrop、沒有變色，因為底下沒有 locku 的格（2026-09-28，見 dev-remarks；鎖定中的畫面不在 TUI 裡，tdp F8 不管這裡，由 app 自行決定，tdp P5）；框收起時它佔過的位置清掉，畫面自己補回來（2026-09-25）。
 
 ---
 
@@ -206,8 +206,8 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
 
-全部走 terminu family 的 popup 慣例（tdp D3）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
-下邊框（`鍵:說明`，項目之間一格，2026-09-29，tdp M5；放不下從尾端整組丟，不截在項目中間，跟 footer 一樣，2026-09-29，tdp D3）、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
+全部走 terminu family 的 popup 慣例（tdp popup）：一個 popup 一個檔一個 animator、title = glyph + 文字、hint 嵌
+下邊框（`鍵:說明`，項目之間一格，2026-09-29，tdp M5；放不下從尾端整組丟，不截在項目中間，跟 footer 一樣，2026-09-29，tdp popup.1）、`Esc` 只在 `closeTop` 一處解析、動畫 8 × 16 ms。層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28，tdp v0.1.9 F1：PIN 的每一步各自一層；2026-09-27 起五層，2026-09-26 起三層，之前兩層）。離開的 confirm 是自己的 popup（`quitAsk`），疊在最上面。
 
 ### 3.1 設定畫面
 
@@ -215,7 +215,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 |---|---|---|
 | Space menu | menu | `[1]` saver / profile 的 item region；`[2]` 欄位的 item region；`[2]` 在 profile 或 saver 上另有 panel region（Preview / Save / Reset，saver 再加 New）— item 與 panel region 一律有 header，只剩一個也有（2026-09-27，tdp M2）；最後一條分隔線下是 `Global operation` 一列，不加 header（2026-09-28，tdp v0.1.7 M2） |
 | global operation popup | menu | Space menu 最後一列 `Global operation` 開出，疊在 Space menu 上；目前只有 `[q]uit`（2026-09-27，tdp M4） |
-| `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（偏離） |
+| `?` help | note | 這裡的按鍵，唯讀、可捲動（tdp K6）；現在不能按的鍵照樣列出、變暗，跟 Space menu 的列一樣（2026-09-29，tdp M6）；preference、tmux、screen 的 `[2]` 上是每一列的說明（2026-10-19 起照 tdp note.5：key reference 最前面是「每一列」一節） |
 | input | input | **邊框寫型別**（`name`、`number`、`path`），框內是欄位名與值；Enter 可能被拒的框在值底下留一列**錯誤列**，打開時就在、平常空白，被拒時寫一句紅字（`name is taken`、`a whole number, 0 or more`），框的高度不變（2026-09-28，tdp F7、K3；之前錯誤寫在邊框尾綴 `name · taken`）；每個框都留，`command` 也是（2026-10-06：值裡有換行或 Tab 每個框都不收；之前 `command` 送出不會被拒，不留）；預填目前值——值直接在框裡、游標在尾端、可以接著改，不是 dim 的提議（提議只有 config file path，`ux.md` §2.1）；清空 = 預設值；new profile 的 `name` 預填 saver 自己的名字、被用了就加號碼 |
 | PIN input | input，遮罩 | 邊框 `current PIN`、`new PIN`、`confirm PIN`；**畫法與鎖定畫布的 PIN prompt 完全相同**（§3.2）：跟每個 popup 一樣寬、上下留一列、`●` 之間空一格、從中央向兩側長（2026-09-24，使用者要求解鎖與設定一樣；寬度 2026-09-28 起照 tdp F7，之前 48 欄） |
 | options | menu | layout / size / font / time / date / participants / character / scene / background / speed / animals / count / profile 的清單；R G B 的 0–255 清單 10 列一窗；current PIN 之後的 `New PIN` / `Remove PIN`（2026-09-24） |
@@ -228,7 +228,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
 一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
 
-值裡的換行與 Tab（2026-10-06，terminu 定案，之後寫進 tdp components 的 input）：貼上的換行（`\r\n` 算一個，單獨的 `\n`、`\r`
+值裡的換行與 Tab（2026-10-06，terminu 定案，之後寫進 tdp input.8）：貼上的換行（`\r\n` 算一個，單獨的 `\n`、`\r`
 也各算一個）與 Tab 留在值裡，畫成 Red 的 `\n`、`\t`，佔 2 格，跟手打的 `\`、`n` 分得開；從前面截掉時整個留或整個去，不切開。
 其他控制字元丟掉。PIN 框照樣一個一顆 `●`，不露出 `\n`。`Backspace` 一次刪掉整個。值裡有換行或 Tab 時每個框的 Enter 都不收，
 錯誤列寫 `<邊框的型別> can't have line breaks or tabs`（`name`、`number`、`path`、`key`、`command`）；PIN 框寫 `no line breaks or tabs`（2026-10-08；之前寫 `PIN can't have line breaks or tabs`，放不進變窄的 PIN 框），
@@ -239,7 +239,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` �
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，password 的解鎖樣式（components/input/password） | 唯一的 popup。lib 的 `PasswordInput`，開在 lib 的 App 上，板子是它的畫布（`App.Canvas`；2026-10-19，LK1；2026-10-18 到 10-19 是 locku 照 lib 的畫法自己畫的）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：兩列留白、點點（正中間那列）、空一列、錯誤列（Red，置中），沒有說明列——要輸入什麼由標題講（tdp S36；2026-10-19 自己畫的那一版是留白、點點、空一列、錯誤列、留白，2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
+| PIN prompt | input，password 的解鎖樣式（tdp password.2） | 唯一的 popup。lib 的 `PasswordInput`，開在 lib 的 App 上，板子是它的畫布（`App.Canvas`；2026-10-19，LK1；2026-10-18 到 10-19 是 locku 照 lib 的畫法自己畫的）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：兩列留白、點點（正中間那列）、空一列、錯誤列（Red，置中），沒有說明列——要輸入什麼由標題講（tdp password.2；2026-10-19 自己畫的那一版是留白、點點、空一列、錯誤列、留白，2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央（lib 把框畫在空白的畫布上，locku 切出框的那一塊，2026-10-19）、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
 四個狀態，框的大小都不變：
@@ -261,9 +261,9 @@ hint 一直是 lib 的三組（2026-10-19 起）：tdp M6 讓 hint 只列現在�
 wrong 的那一秒拿掉 hint、lockout 只剩 `Esc:cancel`。
 ```
 
-- `Backspace` 一次清掉打的全部（components/input/password；2026-10-17 以前一次刪一字）。
-- 錯誤時框與標題維持層色，只有錯誤列是 Red（components/layout/popup 的錯誤列；2026-10-17 以前邊框變紅）。錯誤只在 `Enter` 檢查時改（input/README），之間打字不清掉。
-- 貼上的控制字元（`\n`、`\t`、`\x1b`……）一個都不丟、照樣畫成點，`Enter` 時擋下（input/README；2026-10-17 以前只收換行與 Tab、錯誤寫 `no line breaks or tabs`）。按 `Ctrl` 組合打出來的不進值。
+- `Backspace` 一次清掉打的全部（tdp password.4；2026-10-17 以前一次刪一字）。
+- 錯誤時框與標題維持層色，只有錯誤列是 Red（tdp popup.7 的錯誤列；2026-10-17 以前邊框變紅）。錯誤只在 `Enter` 檢查時改（tdp input.1），之間打字不清掉。
+- 貼上的控制字元（`\n`、`\t`、`\x1b`……）一個都不丟、照樣畫成點，`Enter` 時擋下（tdp input.8；2026-10-17 以前只收換行與 Tab、錯誤寫 `no line breaks or tabs`）。按 `Ctrl` 組合打出來的不進值。
 - `pin_prompt_timeout` 到：照常的收起動畫回 saver，標題不再寫 `· closing`。
 - 終端機比框小：框最高是畫面高度 − 2、寬是畫面寬 − 2（tdp F7），置中，超出畫面的切掉（tdp E5）。
 
@@ -275,20 +275,20 @@ wrong 的那一秒拿掉 hint、lockout 只剩 `Esc:cancel`。
 
 | 色帶 | 意思 | 值 |
 |---|---|---|
-| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24）；hint、footer 與 key reference 裡的鍵（2026-09-29，tdp D2） | `#89b4fa` |
+| Blue | focus：焦點面板邊框；側欄的區塊標題（修訂 2026-09-24）；hint、footer 與 key reference 裡的鍵（2026-09-29，tdp color.2） | `#89b4fa` |
 | Surface2 | unfocused 面板邊框（2026-09-28 以前也是 PIN prompt 的 backdrop；現在畫布照原色淡化） | `#585b70` |
 | Green | 使用者足跡：啟用中的 profile `●`、PIN `set`、toggle `on`、activate `on`；custom 板子上 `EXIT 0` 的 0（2026-09-25） | `#a6e3a1` |
 | Mauve | 可填的：`[2]` 的值 | `#cba6f7` |
 | saver 的 fg | 點陣板亮格，使用者可改 | 預設 gold `#f2b753` |
 | saver 的 bg | 點陣板暗格，使用者可改 | 預設 surface0 `#313244` |
 | Overlay0 | 狀態列、hint 與 footer 的冒號與說明、唯讀的 type 列與色票列 | `#6c7086` |
-| 淡化（dim） | 有浮層開著時，最上層以外的一切——面板、footer、底下的浮層、鎖定畫布與狀態列——每個顏色（前景與背景）各自 `c × 0.45 + base × 0.55`，比原色亮就維持原色；沒有顏色的字給淡化後的 Text（2026-09-28，tdp F8、D2；`internal/ui/dim.go`，照 filu 的參考實作） | tdp D2 |
+| 淡化（dim） | 有浮層開著時，最上層以外的一切——面板、footer、底下的浮層、鎖定畫布與狀態列——每個顏色（前景與背景）各自 `c × 0.45 + base × 0.55`，比原色亮就維持原色；沒有顏色的字給淡化後的 Text（2026-09-28，tdp F8、color.4；`internal/ui/dim.go`，照 filu 的參考實作） | tdp color.4 |
 | Peach | custom 板子上非 0 的結束碼（`EXIT 3` 的 3）（2026-09-25） | `#fab387` |
 | Yellow（warn） | `not set`（PIN、command、config file path）、`no PIN · any key unlocks`、`unsaved` | override |
 | Red（error） | input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）與那時的邊框、`config error`；custom 板子上的 `NONE` 與狀態列的結束原因（2026-09-25） | override |
-| popup layer scale | 浮層邊框，四階，第四層起同色；不是最上層時是自己層色淡化後的樣子（2026-09-28，tdp F8、D2） | tdp D2 |
+| popup layer scale | 浮層邊框，四階，第四層起同色；不是最上層時是自己層色淡化後的樣子（2026-09-28，tdp F8、color.3） | tdp color.3 |
 
-focus 二態照 tdp D2：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
+focus 二態照 tdp panel.1：雙線 `╔═╗` + Blue ↔ 圓角細線 `╭─╮` + Surface2，零位移。畫布沒有焦點概念，
 Blue 不出現在那裡。
 
 ---
@@ -300,12 +300,12 @@ Blue 不出現在那裡。
 | Border title chain | 家族的 powerline 膠囊鏈（2026-09-25，取代 ` · ` 分隔的純文字：sshu `panelChip`、filu `singleChip`、webu `tabChain` 都是膠囊）：`[1] locku` 一顆；`[2]` 左上角 `[2] <名字>`（邊框色底、深色字），顏色草稿未存時接一顆 `unsaved`（focus 時 Yellow，沒 focus 整條 Surface2）；沒有種類、沒有狀態、沒有 config 路徑（使用者：分類資訊多餘，狀態是 `activate` 列）；膠囊字緊貼圓頭 cap、不留空白（同 sshu / filu），接縫兩側各一格、底色不同是左邊那顆的實心斜切、相同是 canvas 色細斜線；寬度不夠先丟 `unsaved` | 無 |
 | Panel tab bar | 無 | 無 |
 | Border hint | 無 | 無 |
-| footer | `Space:menu ?:help Tab/1–2:panels q:quit`，跟 hint 同一個寫法（2026-09-29，tdp M5、D1；之前是 `space menu   ? help   tab/1-2 panels   q quit`）；太窄從右邊整組丟 | 無 |
+| footer | `Space:menu ?:help Tab/1–2:panels q:quit`，跟 hint 同一個寫法（2026-09-29，tdp M5、screen.2；之前是 `space menu   ? help   tab/1-2 panels   q quit`）；太窄從右邊整組丟 | 無 |
 
 custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 框，沒有 locku 的任何 chrome（2026-09-25）。
 
 **Nerd Font 是設計、必裝**，與家族相同：畫布像素就是 nf-fa-square。字型在使用者本機的終端機模擬器，
-經 SSH 不受影響。有的字型（給 CJK 用的）把 icon 畫成兩格：啟動時用 CPR 量游標前進幾格（先看 `LOCKU__ICON_WIDTH`、再看家族共用的 `TERMINU__ICON_WIDTH`，有值就不量；2026-09-29，tdp D6 v0.1.22），所有量寬度的地方——補空白、截斷、框線、疊浮層、並排面板、置中 splash——只走 `internal/ui/width.go` 的 `dispW()` 那一組；兩格時一個像素只畫方塊、不接空白，仍是兩格（2026-09-29，tdp D6；filu 的 `width.go` 是參考實作）。`docs/icon.svg` 沿用 terminu family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
+經 SSH 不受影響。有的字型（給 CJK 用的）把 icon 畫成兩格：啟動時用 CPR 量游標前進幾格（先看 `LOCKU__ICON_WIDTH`、再看家族共用的 `TERMINU__ICON_WIDTH`，有值就不量；2026-09-29，tdp E5，tdp v0.1.22 起），所有量寬度的地方——補空白、截斷、框線、疊浮層、並排面板、置中 splash——只走 `internal/ui/width.go` 的 `dispW()` 那一組；兩格時一個像素只畫方塊、不接空白，仍是兩格（2026-09-29，tdp E5；filu 的 `width.go` 是參考實作）。`docs/icon.svg` 沿用 terminu family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
 
 ---
 

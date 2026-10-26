@@ -41,7 +41,7 @@ const (
 func gap(k int) int { return (k + 1) / 2 }
 
 // pixelCell is one pixel on the terminal, two cells: the glyph and its
-// space, or the glyph alone where it takes two (tdp D6, 2026-09-29).
+// space, or the glyph alone where it takes two (tdp E5, 2026-09-29).
 func pixelCell() string { return pixelGlyph + spaces(2-terminu.IconWidth()) }
 
 // board is the pixel grid: w pixels across (half the columns), h down (the
@@ -475,7 +475,7 @@ func statusRow(cols int, show bool, user, host string, lockedAt time.Time, noPIN
 		add("config error: "+problem, warnColor)
 	}
 	if noPIN {
-		// Peach, a warning: worth knowing, nothing broken (components/color;
+		// Peach, a warning: worth knowing, nothing broken (tdp color.2;
 		// Yellow until 2026-10-18, which is a mode's).
 		add("no PIN · any key unlocks", peachColor)
 	}

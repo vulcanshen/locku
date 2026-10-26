@@ -8,7 +8,7 @@
 // are, then Integration's tmux and screen, then preference (user,
 // 2026-09-24 and 2026-09-25). [2] is the details of the item under [1]'s
 // cursor, one value a row, each written to config.yaml the moment it is
-// set (components/layout/panel, one value per row).
+// set (tdp panel.12).
 package settings
 
 import (
@@ -188,7 +188,7 @@ func layout(w, h int) []terminu.Rect {
 }
 
 // moved is [1]'s cursor coming to the row id: [2] follows it at once
-// (components/layout/panel, details).
+// (tdp panel.13).
 func (s *Settings) moved(id string) {
 	s.cur = s.itemOf(id)
 	s.fill()
@@ -234,7 +234,7 @@ func (s *Settings) snapshot() config.Config {
 // save writes config.yaml now — every change is saved the moment it is
 // made — and, when the write fails, puts the config back as it was and
 // says so (tdp F5): an action that failed, an error popup, the whole of it
-// there (components/dialog/toast, dialog/note).
+// there (tdp toast.2, note.6).
 func (s *Settings) save(before config.Config) tea.Cmd {
 	defer s.refresh()
 	if err := config.Save(s.cfg); err != nil {
@@ -246,7 +246,7 @@ func (s *Settings) save(before config.Config) tea.Cmd {
 
 // commit is change for a value typed or chosen in a box, its Commit: a
 // write that fails puts the config back and is the box's, which stays open
-// with the value in it under the error popup (components/layout/popup, the
+// with the value in it under the error popup (tdp popup.7, the
 // action failing).
 func (s *Settings) commit(what string, f func()) error {
 	before := s.snapshot()
@@ -263,7 +263,7 @@ func (s *Settings) commit(what string, f func()) error {
 // done puts what was done, once it is written, in the App Log (tdp F5:
 // the app's actions and their results); "" when a toast says it already.
 // An entry starts with a capital, as a toast does, a name or a path in it
-// kept as it is (tdp note-78, v0.9.2).
+// kept as it is (tdp note.7, v0.9.2).
 func (s *Settings) done(what string) {
 	if what != "" {
 		s.app.Log(terminu.Success, what)
@@ -290,7 +290,7 @@ func (s *Settings) wrote(label, value string) string {
 
 // tell says what was done in a Success toast when it fits in three rows,
 // and in a note to read when it does not: setup's report of a long path
-// is read, not glimpsed (components/dialog/toast: how many rows is the app's).
+// is read, not glimpsed (tdp toast.2: how many rows is the app's).
 func (s *Settings) tell(title string, lines []string) tea.Cmd {
 	text := strings.Join(lines, " · ")
 	w, _ := s.app.Size()
@@ -322,7 +322,7 @@ func (s *Settings) onMsg(msg tea.Msg) tea.Cmd {
 
 func itoa(n int) string { return strconv.Itoa(n) }
 
-// The title glyphs of the popups locku opens (components/layout/popup: the
+// The title glyphs of the popups locku opens (tdp popup.1: the
 // app's choice for an input).
 const (
 	glyphPencil  = "\U000F03EB" // nf-md-pencil

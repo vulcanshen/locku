@@ -3,7 +3,7 @@ package ui
 import "github.com/charmbracelet/lipgloss"
 
 // The lock's colours are catppuccin-mocha, like the rest of the family
-// (ui.md §4); the PIN box's are the lib's (components/color).
+// (ui.md §4); the PIN box's are the lib's (tdp color).
 //
 // The board's two colours are NOT here: they are the user's data
 // (Settings › style, config.Style), read at draw time. Their defaults —

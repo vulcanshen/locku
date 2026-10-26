@@ -9,8 +9,8 @@ import (
 
 // Under the PIN box the lock fades whole, each colour its own way: the lit
 // pixels, the ground, the status row with a config error's red — the lib's
-// fading, as on the settings screen (tdp F8, D2; user, 2026-09-28). As the
-// box starts to close the lock is itself again (components/layout/popup).
+// fading, as on the settings screen (tdp F8, color.4; user, 2026-09-28). As the
+// box starts to close the lock is itself again (tdp popup.3).
 func TestPromptDimsTheLock(t *testing.T) {
 	colours(t)
 	m := testLock(t, "1234", nil)

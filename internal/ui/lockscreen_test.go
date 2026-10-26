@@ -177,7 +177,7 @@ func TestNoPINAnyKeyEnds(t *testing.T) {
 	}
 }
 
-// The box is the lib's password box in its unlock look (tdp S36, LK1):
+// The box is the lib's password box in its unlock look (tdp password.2, LK1):
 // UNLOCK, no prompt row, seven rows with the frame, as wide as the longest
 // PIN's dots and the hint ask, in the middle of the board.
 func TestTheBoxIsTheLibs(t *testing.T) {
@@ -222,9 +222,9 @@ func TestWrongThenRight(t *testing.T) {
 	}
 }
 
-// Backspace clears the whole PIN (components/input/password); a pasted
+// Backspace clears the whole PIN (tdp password.4); a pasted
 // control character is refused, and is not a wrong PIN; an Alt
-// combination types nothing (components/input/README).
+// combination types nothing (tdp input.4).
 func TestTheBoxsKeys(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
 	press(m, "1", "2", "Backspace")
@@ -245,7 +245,7 @@ func TestTheBoxsKeys(t *testing.T) {
 
 // Ctrl-C does not leave the lock, on the board, in the box, or before the
 // terminal's size is known: the lock ends by the PIN alone (§1.2). Nor does
-// it ask Quit locku?, which the lib asks with a popup open (tdp K9-6): the
+// it ask Quit locku?, which the lib asks with a popup open (tdp K9): the
 // lock's QuitFlow does nothing.
 func TestCtrlCDoesNotLeave(t *testing.T) {
 	ctrlC := tea.KeyMsg{Type: tea.KeyCtrlC}
@@ -281,7 +281,7 @@ func TestEscBackToSaverLeavesTheBoardTicking(t *testing.T) {
 }
 
 // The cooling-off (§4.4): the box counts it down on its error row, every
-// key but Esc swallowed (tdp S37); it is there again when the box opens
+// key but Esc swallowed (tdp popup.7); it is there again when the box opens
 // again, and once it is over the count starts again, the box taking a PIN.
 // On the clock: the lib counts on it.
 func TestLockout(t *testing.T) {

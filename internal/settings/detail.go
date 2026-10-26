@@ -26,7 +26,7 @@ import (
 // except `profiles` and `savers`, which ARE panel [1].
 //
 // A choice of five or fewer is a radio drawn in place, more a select; a
-// switch is a checkbox (components/dialog/form, input/radio, input/checkbox).
+// switch is a checkbox (tdp form.5, radio, checkbox).
 // What is only shown — a saver's description, a profile's saver — is a
 // disabled row: there, not to be changed, the cursor passes it by.
 
@@ -42,7 +42,7 @@ var about = map[string]string{
 }
 
 // usualConf is where a tool's file usually is: offered in grey in the box
-// while there is none (tdp S6; so until 2026-10-18, then said in the prompt).
+// while there is none (tdp input.6; so until 2026-10-18, then said in the prompt).
 var usualConf = map[string]string{"tmux": "~/.tmux.conf", "screen": "~/.screenrc"}
 
 // toolIdle is each tool's own name for its idle time: the row's label,
@@ -210,7 +210,7 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 }
 
 // choice is a value out of options: a radio drawn in place for five or
-// fewer, a select past that (components/dialog/form). apply puts the one
+// fewer, a select past that (tdp form.5). apply puts the one
 // chosen into the config, which is written at once; then, when given, runs
 // after.
 func (s *Settings) choice(label string, options []string, current string, apply func(string), then func() tea.Cmd) *terminu.Field {
@@ -240,14 +240,14 @@ func call(f func() tea.Cmd) tea.Cmd {
 }
 
 // colour is one of a profile's two colours, chosen in the color picker:
-// old and new side by side, Esc leaves the old (components/input/color-picker).
+// old and new side by side, Esc leaves the old (tdp color-picker.2).
 // Until 2026-10-18 the colours were a draft (user, 2026-09-24): R, G and B
 // sliders on [2], [S] Save, [R] Reset, [P] previewing the draft.
 // Chosen is written; [P] previews it, and the picker's old colour is there to
-// go back to (tdp S35, 2026-10-19).
+// go back to (tdp color-picker.2, 2026-10-19).
 //
 // The value is a block of the colour, then its hex, upper case: the lib's
-// spans for it (components/input/color-picker, the value; tdp S38).
+// spans for it (tdp color-picker.4).
 func (s *Settings) colour(label, hex string, apply func(string)) *terminu.Field {
 	c := terminu.Hex(hex)
 	return &terminu.Field{Label: label, Value: func() string { return terminu.HexText(c) },
@@ -260,15 +260,15 @@ func (s *Settings) colour(label, hex string, apply func(string)) *terminu.Field 
 		}}
 }
 
-// switchField is an on / off: a checkbox drawn in place (components/input/checkbox).
+// switchField is an on / off: a checkbox drawn in place (tdp checkbox.1).
 func switchField(label string, on bool) *terminu.Field {
 	return &terminu.Field{Label: label, Options: []string{"on"}, Multi: true, Checked: []bool{on}}
 }
 
 // number is a whole number, least or more, edited in a number box with its
-// unit under the typing row (tdp S47); on the panel the unit follows it
+// unit under the typing row (tdp number.2); on the panel the unit follows it
 // ("30 seconds"), and zero, when given, is what 0 means ("0 (off)"). An
-// empty box is the default, def, as the prompt says (tdp S7): config.yaml
+// empty box is the default, def, as the prompt says (tdp number.4): config.yaml
 // keeps a number for every key, so the default's number is written.
 func (s *Settings) number(label, prompt, unit, zero string, value, least, def int, apply func(int), then func() tea.Cmd) *terminu.Field {
 	return &terminu.Field{Label: label,
@@ -277,7 +277,7 @@ func (s *Settings) number(label, prompt, unit, zero string, value, least, def in
 			case value == 0 && zero != "":
 				return "0 (" + zero + ")"
 			case unit != "":
-				return itoa(value) + " " + unit // a number with its unit, in full (tdp S47)
+				return itoa(value) + " " + unit // a number with its unit, in full (tdp input.10)
 			}
 			return itoa(value)
 		},
@@ -285,7 +285,7 @@ func (s *Settings) number(label, prompt, unit, zero string, value, least, def in
 			return s.app.Number(terminu.NumberInput{Title: "Edit", Subject: label, Glyph: glyphTimer, Name: label,
 				Prompt: prompt + "; empty for the default, " + itoa(def), Verb: "save", Old: itoa(value), Unit: unit, Optional: true,
 				// Out of range is said on the error row, the value named
-				// (components/input/number).
+				// (tdp number.4).
 				Check: func(v string) error {
 					if v == "" {
 						return nil
@@ -314,7 +314,7 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	pin := &terminu.Field{Label: "PIN", Empty: "not set", Edit: s.editPIN,
 		Value: func() string {
 			if s.cfg.HasPIN() {
-				return "••••••••" // set: eight, whatever its length (components/input/password)
+				return "••••••••" // set: eight, whatever its length (tdp password.3)
 			}
 			return ""
 		}}
@@ -326,7 +326,7 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	profile.Desc = "the profile the lock shows"
 	pin.Desc = "what the lock asks for; with none, any key unlocks"
 	// A profile the file names but does not have is a value gone wrong:
-	// its label is Red (components/layout/panel, one value per row).
+	// its label is Red (tdp panel.12).
 	profile.Err = func() bool { return s.cfg.Index(s.cfg.Profile) < 0 }
 	status := switchField("show_status", s.cfg.ShowStatus)
 	status.Desc = "user@host and the time, on the lock's last row"

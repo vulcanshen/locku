@@ -43,7 +43,7 @@ func near(re *regexp.Regexp, l string, c [3]int) bool {
 func has(l string, c lipgloss.Color) bool   { return near(fgRe, l, hexRGB(string(c))) }
 func hasBG(l string, c lipgloss.Color) bool { return near(bgRe, l, hexRGB(string(c))) }
 
-// dimmed is c faded as components/color has it.
+// dimmed is c faded as tdp color.4 has it.
 func dimmed(c lipgloss.Color) lipgloss.Color {
 	h := hexRGB(string(c))
 	d := terminu.DimRGB(terminu.RGB{uint8(h[0]), uint8(h[1]), uint8(h[2])})

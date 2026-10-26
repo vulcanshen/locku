@@ -379,7 +379,7 @@ func TestHexHelpers(t *testing.T) {
 }
 
 // The variables are the family's, APP__NAME, and the old names are not
-// read (tdp D6, 2026-09-29).
+// read (tdp E2, 2026-09-29).
 func TestOldVariableNamesAreNotRead(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("LOCKU__CONFIG", "")
