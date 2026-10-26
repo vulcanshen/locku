@@ -25,6 +25,11 @@ builds:
     goarch:
       - amd64
       - arm64
+    # app: the os/arch pairs this app cannot build, each as
+    #   - goos: linux
+    #     goarch: arm64
+    # or none.
+    ignore: []
 
 archives:
   - formats:
@@ -54,10 +59,10 @@ brews:
       # to the tap repository.
       token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/locku"
-    # app: one line, what the app is, ending in (u-family).
-    description: "locku: a screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty"
+    # app: one line, what the app is, ending in (terminu family).
+    description: "locku: a screensaver with a PIN for the terminal — tmux lock-command, screen LOCKPRG, or any tty (terminu family)"
     # app: what to run first, where the settings and data live, the Nerd
-    # Font requirement, the platforms.
+    # Font and truecolor requirements, the platforms.
     caveats: |
       Run `locku` to start: the settings screen, for the PIN, the savers
       and their profiles, and Integration › tmux / screen — turn
@@ -67,7 +72,8 @@ brews:
       from any shell of your own. The settings are in ~/.config/locku,
       the PIN resets' log in ~/.locku.
 
-      A Nerd Font terminal profile is required. macOS and Linux (WSL too).
+      A Nerd Font terminal profile and a truecolor (24-bit) terminal are
+      required. macOS and Linux (WSL too).
     # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/locku", "version"
@@ -79,4 +85,4 @@ brews:
 #       token: "{{ .Env.GITHUB_TOKEN }}"
 #     homepage: "https://github.com/vulcanshen/locku"
 #     # app: the same line as the brews description above.
-#     description: "locku: a screensaver with a PIN for the terminal (u-family) — tmux lock-command, screen LOCKPRG, or any tty"
+#     description: "locku: what it is (terminu family)"
