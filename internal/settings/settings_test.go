@@ -268,8 +268,8 @@ func TestUnderTheLeastSize(t *testing.T) {
 }
 
 // [1] is the profiles, the savers, the tools and preference, in groups,
-// the active profile with its dot; the cursor starts on the active profile
-// (ui.md §1.1).
+// the active profile with its dot in the mark column, every name lined up;
+// the cursor starts on the active profile (ui.md §1.1; LK22).
 func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 	cfg := testConfig()
 	cfg.Profile = "clock2"
@@ -282,6 +282,21 @@ func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 	}
 	if !strings.Contains(v, "● clock2") || strings.Contains(v, "● clock ") {
 		t.Errorf("the dot is on the active profile alone:\n%s", v)
+	}
+	// Where each row of [1] holding name starts: clock2, the active profile;
+	// runner, a profile and a saver.
+	at := func(name string) (cols []int) {
+		for _, l := range strings.Split(v, "\n") {
+			l, _, _ = strings.Cut(l, "┃│")
+			if i := strings.Index(l, " "+name+" "); i >= 0 {
+				cols = append(cols, terminu.Width(l[:i+1]))
+			}
+		}
+		return cols
+	}
+	if active, runner := at("clock2"), at("runner"); len(active) != 1 || len(runner) != 2 ||
+		runner[0] != active[0] || runner[1] != active[0] {
+		t.Errorf("the profiles' names are not lined up with the savers': clock2 at %v, runner at %v\n%s", active, runner, v)
 	}
 	if d.s.cur.kind != kindProfile || d.s.cfg.Profiles[d.s.cur.ref].Name != "clock2" || !strings.Contains(v, "[2] CLOCK2") {
 		t.Errorf("the cursor starts on the active profile: %+v\n%s", d.s.cur, v)

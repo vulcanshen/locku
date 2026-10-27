@@ -31,16 +31,12 @@ const preferenceID = "preference"
 func (s *Settings) sideRows() []terminu.Row {
 	var rows []terminu.Row
 	for _, p := range s.cfg.Profiles {
-		// TODO(lib LK22): the dot belongs in the two cells a group's rows are
-		// drawn further in, the names lined up with the other groups' (ui.md
-		// §1.1; user, 2026-10-27). The lib keeps those cells for its own marks
-		// only, so the dot is in the text, the names two cells further in.
-		row := terminu.Row{ID: profileID(p.Name), Cells: []string{"  " + p.Name}, Group: "Profiles"}
+		row := terminu.Row{ID: profileID(p.Name), Cells: []string{p.Name}, Group: "Profiles"}
 		if p.Name == s.cfg.Profile {
-			// The dot in Green: the app's colour, given as spans (components,
-			// control characters).
-			row.Cells[0] = "● " + p.Name
-			row.Styled = [][]terminu.Span{{{Text: "●", Style: terminu.Fg(terminu.Green)}, {Text: " " + p.Name}}}
+			// The dot in Green, the app's colour, in the mark column: the two
+			// cells the group's rows are further in, the names lined up with
+			// the other groups' (tdp panel.7, panel.11; LK22, user 2026-10-27).
+			row.Flag = terminu.Span{Text: "●", Style: terminu.Fg(terminu.Green)}
 		}
 		rows = append(rows, row)
 	}

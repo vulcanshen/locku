@@ -89,7 +89,7 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a.OnMsg = s.onMsg
 	a.Start = s.start
 	s.app = a
-	s.side = &terminu.List{OnMove: func(r terminu.Row) tea.Cmd { s.moved(r.ID); return nil }}
+	s.side = &terminu.List{Flags: true, OnMove: func(r terminu.Row) tea.Cmd { s.moved(r.ID); return nil }}
 	s.vals = &terminu.Values{}
 	s.p2 = &terminu.Panel{Body: s.vals}
 	s.p1 = &terminu.Panel{Label: "locku", Body: s.side, Details: s.p2}

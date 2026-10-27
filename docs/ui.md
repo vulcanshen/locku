@@ -4,7 +4,7 @@
 > 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp popup）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110）** 照 [tdp v0.11.3](https://github.com/vulcanshen/terminu/tree/v0.11.3)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110、111）** 照 [tdp v0.11.4](https://github.com/vulcanshen/terminu/tree/v0.11.4)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框在 lib 的框之外 locku 自己加的（§3.2、ux §2.3）、預覽、整合寫什麼檔。
 
@@ -51,7 +51,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
-掛在縮排那兩格裡，名字跟其他區塊的對齊（2026-10-18 起由 lib 畫，那兩格只放得進 lib 自己的勾選，`●` 暫時寫在名字前面，profile 的名字比其他區塊多縮兩格；user 2026-10-27 定回到這個樣子，LK22 等 lib），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
+掛在縮排那兩格裡（lib 的標記欄：`List.Flags`、那一列的 `Row.Flag`，tdp panel.7、panel.11），名字跟其他區塊的對齊（2026-10-18 到 10-27 由 lib 畫時那兩格只放得進勾選，`●` 寫在名字前面，profile 的名字比其他區塊多縮兩格；LK22，user 2026-10-27 定回到這個樣子），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明加預設值；在 profile 上就是那個 profile 的欄位與顏色（custom 只有 `command`，沒有顏色列，2026-09-25）；在 tmux / screen 上是整合的列；在 `preference` 上是一般設定的列。title 是膠囊（§5）：`[2] clock`、`[2] tmux`、`[2] preference`——只有名字，不標種類、不放狀態（2026-09-25，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時接一顆黃色 `unsaved`。
 
