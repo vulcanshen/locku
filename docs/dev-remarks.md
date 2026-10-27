@@ -133,7 +133,8 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
 - **`input_tab_width`（tdp E3、清單 E3-11；2026-10-20）。** 家族的設定 key，預設 4，是 preference 的 `[2]` 的一列（config.yaml 的每個
   key 都是一列），lib 在啟動時讀，改了下次啟動起生效。用到它的是 setup 報告太長時改開的 viewer（E3-11 的「viewer」）；只有 App Log
   的 app 不算用到（tdp v0.9.1，LK20）。同日先照「只有 App Log」拿掉，terminu 更正後加回。
-- **等 lib 或 tdp 的地方**：沒有了（2026-10-20）。LK19 照上上一條做了；LK20 照上一條。
+- **等 lib 或 tdp 的地方**：2026-10-27 起一條，LK22：`[1]` 裡啟用中的 profile 的 `●` 該掛在分組縮排的那兩格裡，名字跟其他區塊對齊（ui.md §1.1；user 2026-10-27 手動測試時看到，定回到這個樣子）。lib 把分組的列往右兩格，那兩格只放 `List.Marks` 的勾選，app 自己的標記只能寫進 `Cells`，所以 `sideRows` 在每個 profile 名字前面寫 `● ` 或兩個空白，名字離框五格、其他區塊三格（2026-10-18 換到 lib 起就是這樣）；回報 terminu 請 lib 讓一列帶 app 自己的標記、畫在那兩格，之前照現在（`TODO(lib LK22)`）。
+  2026-10-20 到 10-27 之間沒有等的：LK19 照上上一條做了；LK20 照上一條。
   `locku pin reset` 自己讀登入密碼交給 `su` 驗證：terminu 2026-10-20 說 tdp terminal-24（要提權時）管的是 app 寫系統檔要提權，
   命令列上驗證身分不在範圍裡，是 locku 自己的決定，照現在。之前的都做完了（2026-10-19）：2026-10-18 回報的 LK1–LK11 與 S47 在 terminu-go v0.2.0（第三批）做了，
   `locku-terminu-fix.md` 修完拿掉；2026-10-19 回報的兩條在 v0.2.1（tdp v0.8.2）做了：LK17 改 PIN 的 `NEW PIN` 在灰點上直接 `Enter`

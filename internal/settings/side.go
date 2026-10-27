@@ -31,6 +31,10 @@ const preferenceID = "preference"
 func (s *Settings) sideRows() []terminu.Row {
 	var rows []terminu.Row
 	for _, p := range s.cfg.Profiles {
+		// TODO(lib LK22): the dot belongs in the two cells a group's rows are
+		// drawn further in, the names lined up with the other groups' (ui.md
+		// §1.1; user, 2026-10-27). The lib keeps those cells for its own marks
+		// only, so the dot is in the text, the names two cells further in.
 		row := terminu.Row{ID: profileID(p.Name), Cells: []string{"  " + p.Name}, Group: "Profiles"}
 		if p.Name == s.cfg.Profile {
 			// The dot in Green: the app's colour, given as spans (components,

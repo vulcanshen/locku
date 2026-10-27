@@ -51,7 +51,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
 **Settings** 一項：`preference`。區塊標題 Blue、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
-是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
+掛在縮排那兩格裡，名字跟其他區塊的對齊（2026-10-18 起由 lib 畫，那兩格只放得進 lib 自己的勾選，`●` 暫時寫在名字前面，profile 的名字比其他區塊多縮兩格；user 2026-10-27 定回到這個樣子，LK22 等 lib），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明加預設值；在 profile 上就是那個 profile 的欄位與顏色（custom 只有 `command`，沒有顏色列，2026-09-25）；在 tmux / screen 上是整合的列；在 `preference` 上是一般設定的列。title 是膠囊（§5）：`[2] clock`、`[2] tmux`、`[2] preference`——只有名字，不標種類、不放狀態（2026-09-25，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時接一顆黃色 `unsaved`。
 
