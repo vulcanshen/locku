@@ -105,7 +105,7 @@ There is no setup step. The first `locku` opens the settings screen on the defau
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/uninstall.sh | sh
 ```
 
-Removes the binary, then asks — never assumes — about the settings directory and the data directory, the PIN resets' log. Turn `activate` off on the settings screen first, and locku's lines are gone from your tmux.conf, screenrc and shell rc; the uninstaller does not touch those files, and says so.
+Removes the binary, then asks — never assumes — about the settings directory and the data directory, `~/.locku`, which holds your profiles and the PIN resets' log. Turn `activate` off on the settings screen first, and locku's lines are gone from your tmux.conf, screenrc and shell rc; the uninstaller does not touch those files, and says so. Installed with Homebrew: `brew uninstall locku`, which leaves both directories as they are.
 
 ## Quick start
 
@@ -140,12 +140,12 @@ locku version    # the version; locku help prints the usage
 ```
 ┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
 ┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
-┃   ● runner           ┃│ NAME      clock                                          │
-┃     pets             ┃│ SAVER     clock                                          │
-┃     tetromino        ┃│ LAYOUT    ◉ row                                          │
-┃     snake            ┃│           ○ column                                       │
-┃     bounce           ┃│ SIZE      ○ small                                        │
-┃     clock            ┃│           ◉ medium                                       │
+┃ ● runner             ┃│ NAME      clock                                          │
+┃   pets               ┃│ SAVER     clock                                          │
+┃   tetromino          ┃│ LAYOUT    ◉ row                                          │
+┃   snake              ┃│           ○ column                                       │
+┃   bounce             ┃│ SIZE      ○ small                                        │
+┃   clock              ┃│           ◉ medium                                       │
 ┃ SAVERS               ┃│           ○ large                                        │
 ┃   clock              ┃│ FONT      ◉ 3x7                                          │
 ┃   runner             ┃│           ○ 3x5                                          │
@@ -160,10 +160,10 @@ locku version    # the version; locku help prints the usage
 ┃ SETTINGS             ┃│ FG        ███ #F2B753                                    │
 ┃   preference         ┃│                                                          │
 ┗━ Enter:edit ━━━━━━━━━┛└─ Enter:edit ─────────────────────────────────────────────┘
-Space:menu ?:help Tab|1–2:panels q:quit
+Space:menu ?:help !:log Tab|1–2:panels q:quit
 ```
 
-Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, one value a row. `Tab`, `1` and `2` move between them. `Enter` on `[1]` goes into `[2]`; on `[2]` it edits the row: a choice of a few is picked where it is drawn, more open a list to choose from, a switch flips, the rest open a box to type in. `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — on preference's, tmux's or screen's `[2]` after what each row means, and on a popup that popup's keys; `q` or `Ctrl-C` quits from anywhere but a box being typed in. A number box left empty is the default. The settings screen needs a terminal of at least 40 × 15; on a smaller one it says so, and comes back as the terminal grows.
+Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, one value a row. `Tab`, `1` and `2` move between them. `Enter` on `[1]` goes into `[2]`; on `[2]` it edits the row: a choice of a few is picked where it is drawn, more open a list to choose from, a switch flips, the rest open a box to type in. `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — on preference's, tmux's or screen's `[2]` after what each row means, and on a popup that popup's keys; `q` or `Ctrl-C` quits: at once from a panel; with a popup open it asks `Quit locku?` first, and a second `Ctrl-C` leaves at once; in a box being typed in `q` is a letter, and only `Ctrl-C` asks. A number box left empty is the default. The settings screen needs a terminal of at least 40 × 15; on a smaller one it says so, `Ctrl-C` twice leaves, and it comes back as the terminal grows.
 
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. A copy, or a new profile, is offered a free name in grey — `Enter` takes it — and once made you are in its `[2]`. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
 - **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
@@ -249,7 +249,7 @@ A new shell has it. A screen already running gets it once detached and attached 
 | `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, then what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
 | `!` | the App Log: what locku has done this run — each value written, each profile made, renamed or deleted, each preview, every message it showed — and what went wrong; the footer says `!:1 error` until it is read |
-| `q\|Ctrl-C` | quit |
+| `q\|Ctrl-C` | quit; with a popup open, it asks `Quit locku?` first |
 | `j\|k` · `u\|d` · `gg\|G` | down, up · half a page · first, last |
 
 #### `[1]` sidebar
@@ -363,7 +363,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.5) (tdp v0.11.5), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0) (tdp v1.0.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

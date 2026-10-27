@@ -2,13 +2,14 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.0 — tdp v1.0.0
 
-- The settings screen is built on terminu-go, the family's library, and follows tdp v0.11.5: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
+- The settings screen is built on terminu-go, the family's library, and follows tdp v1.0.0: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
 - On `[2]` a choice of five or fewer is a radio drawn in place, `Enter` on the option picks it; more — `participants`, a long list of profiles — opens a select you can type to filter; `show_status` and `activate` are checkboxes.
 - `bg` and `fg` are chosen in a colour picker, the old colour and the new side by side, R, G and B in hex, and written when chosen, as every other value is. The colour draft, its `[S]` Save and `[R]` Reset and the `unsaved` chip are gone.
 - Changing the PIN asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it. The `New PIN` / `Remove PIN` menu is gone. Each step opens over the one before, and `Esc` goes back a step.
 - New and Duplicate offer a free name in grey, `Enter` taking it, where the box held it typed out. Quitting leaves at once.
+- A box editing a value — a name, a command, a config file path, a bind-key — shows the value in grey: typing replaces it, `Tab` takes it to change, `Backspace` then `Enter` empties it. It used to hold the value typed out, the cursor at its end. An empty config file path offers `~/.tmux.conf` or `~/.screenrc` in grey, `Enter` taking it, where `Tab` did.
 - A number box shows its unit, `seconds`, under the number.
 - The lock's PIN box is the library's PIN box: 45 columns wide, seven rows, the title `UNLOCK`, the dots on the middle row and no line of prompt; an error leaves the frame its colour and stays on the error row until the next `Enter`. `Backspace` clears the whole PIN. A control character pasted into it is refused with `PIN can't have control characters`, where it said `no line breaks or tabs`.
 - Where a Nerd Font icon takes two cells, the lock's last column is no longer erased. Powerline symbols are measured as well as icons (`LOCKU__POWERLINE_WIDTH`, `TERMINU__POWERLINE_WIDTH`), and dimming fades the terminal's own sixteen colours, which it asks for, instead of xterm's.
@@ -17,17 +18,17 @@ Each release names the version of terminu design (tdp) it follows.
 - A write that fails, and a tmux or screen setup that fails, open an error popup with the whole message, where a toast cut it short; over the box the value was typed in, which keeps it. A setup report too long for a toast opens in a note to read; one that fits, and `PIN set`, `PIN removed`, are green.
 - When tmux or screen fails printing several lines, the setup's message has the last one, the reason, and the App Log all of them.
 - Each preview is in the App Log too, once it is over: `Previewed profile clock2`, `Previewed clock defaults`.
-- With a popup open, `q` asks `Quit locku?` before leaving, `Esc` going back to the popup; from a panel it still leaves at once.
+- With a popup open, `q` or `Ctrl-C` asks `Quit locku?` before leaving, a second `Ctrl-C` leaving at once and `Esc` going back to the popup; from a panel either still leaves at once.
 - `?` on preference's, tmux's and screen's `[2]` lists the keys, after a first section on what each row means, where it was the meanings alone.
 - `!` on a panel opens the App Log: what locku has done this run — each value written, each profile made, renamed, deleted or made active, every message it showed — and what went wrong, newest last; the footer says `!:log`, or `!:1 error` until it is read.
 - A `config.yaml` that cannot be read opens, at the start of the settings screen, a question: move it aside as `config.yaml.bak` and start on the defaults, or leave with the reason printed. It used to open on the defaults with an error over them, and the next change wrote the defaults over the file. Its reason is the line that is wrong, `line 1: cannot unmarshal …`, where it said `yaml: unmarshal errors:`.
 - Your profiles are kept as data, in `~/.locku/data/profiles.yaml`, no longer in `config.yaml`, which keeps the profile in use, the savers' defaults and the rest. The first time the settings screen starts it moves them there and says so; if both files have profiles, those in `profiles.yaml` are used and the others are left in `config.yaml` for you to merge. A `profiles.yaml` that cannot be read is offered to be moved aside as a `config.yaml` is.
 - A control character in a name, a value or a message — a profile called with one, a custom saver's stderr on the lock's status row — is drawn by its name in red, `\x1b`, `\t`, not sent to the terminal.
 - `input_tab_width` in `config.yaml`, a row on preference: the spaces a tab takes in text to read, a long setup report, 4 by default.
-- The settings screen needs a terminal of at least 40 × 15; on a smaller one it says so, and comes back as the terminal grows.
+- The settings screen needs a terminal of at least 40 × 15; on a smaller one it says so, `Ctrl-C` pressed twice leaving, and comes back as the terminal grows.
 - On the lock, during a cooling-off the PIN typed stays as dots until it is over; an `Alt` combination types nothing into the PIN; the board comes back bright the moment the box starts to close; `no PIN · any key unlocks` is Peach, where it was the yellow the family keeps for a mode. Over a custom saver, the PIN box follows a resize of the terminal and is cut at its edges, where it kept its old size and wrapped onto the next rows.
 - The settings screen's PIN boxes are titled `CURRENT PIN`, `NEW PIN` and `CONFIRM PIN`. The seconds on `[2]` say so: `30 seconds`, and `0 (never)` for a `pin_prompt_timeout` of 0.
-- The uninstaller asks about the data directory, `~/.locku` with the PIN resets' log, as well as the settings, and says at the end that the lines `activate` wrote are left in your files.
+- The uninstaller asks about the data directory, `~/.locku`, with your profiles and the PIN resets' log, as well as the settings, and says at the end that the lines `activate` wrote are left in your files.
 
 ## [0.2.7] - 2026-10-08
 ### Fixed

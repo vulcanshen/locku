@@ -70,7 +70,7 @@ brews:
       or your screenrc and shell rc (LOCKPRG). Without a PIN the lock is
       a screensaver that any key ends. A PIN forgotten: `locku pin reset`,
       from any shell of your own. The settings are in ~/.config/locku,
-      the PIN resets' log in ~/.locku.
+      your profiles and the PIN resets' log in ~/.locku.
 
       A Nerd Font terminal profile and a truecolor (24-bit) terminal are
       required. macOS and Linux (WSL too).

@@ -121,7 +121,7 @@ func (s *Settings) sideActions() []terminu.Action {
 		{Key: "X", Label: "Delete", Desc: "this profile", Scope: terminu.ItemScope, Clear: true,
 			Disabled: func() bool { return active || len(s.cfg.Profiles) == 1 },
 			Ask: &terminu.Ask{Title: "Delete", Subject: name, Question: "Delete " + name + "?", Verb: "delete",
-				Details: []string{"config.yaml is written at once"}},
+				Details: []string{"profiles.yaml is written at once"}},
 			Do: func() tea.Cmd { return s.delete(name) }},
 	}
 }

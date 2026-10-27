@@ -4,7 +4,7 @@
 > 版面與 surface 在 `ui.md`，功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）撰寫，
 > 章節編號對齊 webu（沿用 VTP 時期的分章，各章標出對應的 tdp 條目）；每條決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110、111）** 照 [tdp v0.11.5](https://github.com/vulcanshen/terminu/tree/v0.11.5)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110–112）** 照 [tdp v1.0.0](https://github.com/vulcanshen/terminu/tree/v1.0.0)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框（§2.3、ui §3.2）、預覽、整合寫什麼檔。
 
@@ -41,39 +41,37 @@
 
 三個 region，順序固定：`item operation`、`panel operation`、global（2026-09-26，tdp M2）；沒東西的 region 連標題一起不出現，
 兩個 region 之間一條分隔線。item 與 panel 兩區一律有標題，只剩其中一區也有（2026-09-27，tdp M2）；global 那一列**不加標題**，只用分隔線跟上面隔開——`global operation` 標題底下只有一列 `Global operation`，是同一句話講兩次（2026-09-28，tdp v0.1.7 M2；之前三區都有標題）。global 在每個 Space menu 的最後，**固定一列** `Global operation`（沒有熱鍵）：Enter 開出 global operation popup，疊在 Space menu 上，列出全部全域動作，目前只有 `[q]uit`；`Esc` 回到 Space menu，`Space` 在它上面不作用（2026-09-27，tdp M4；使用者：locku 也走 `Space` → `Global operation` → `[q]uit`）。之前 `[q]uit` 直接列在每個 Space menu 的 global 區。menu 本身 `j`/`k` 走（環繞）、
-`u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是 `[2]` 在
-profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25）。
+`u`/`d` 半窗、`gg`/`G` 首尾、Enter 執行、letter hotkey 在 menu 裡也有效。有 panel operation 的是每個 `[2]`：`[P] Preview`，saver 的 `[2]` 再加 `[n] New`（2026-10-18 起；2026-09-24 到 10-17
+profile / saver 上還有顏色草稿的 Save / Reset）。tmux / screen 的開關是 `[2]` 第一列 `activate` 的 Enter（2026-09-25）。
 
 **`[1]` 側欄**
 
 | cursor 在 | item operation |
 |---|---|
-| saver（class：clock、runner、bounce、snake、tetromino、pets、custom） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，預填 saver 的名字、用了就加號碼；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
-| profile | `[Enter] Edit`（焦點送到 `[2]`）、`[a] Activate`（鎖定畫面改用這個 profile：`●` 移過去、立刻寫檔；已啟用的 disabled；2026-09-25，使用者：不必每次到 preference 切）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，預填原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled） |
-| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：activate、config file path，分隔線下工具自己的 key） |
+| saver（class：clock、runner、bounce、snake、tetromino、pets、custom） | `[Enter] Edit`（焦點送到 `[2]`：說明與預設值）、`[p] Preview`（用預設值跑一個臨時 profile）、`[n] New`（name popup，灰字建議 saver 的名字、用了就加號碼，沒碰就 `Enter` 用它——2026-10-19 起，tdp input.6，2026-10-18 那天寫在說明列，之前預填；確認後以預設值生一個這種 saver 的 profile、cursor 移過去、焦點送到 `[2]`）（2026-09-24） |
+| profile | `[Enter] Edit`（焦點送到 `[2]`）、`[a] Activate`（鎖定畫面改用這個 profile：`●` 移過去、立刻寫檔；已啟用的 disabled；2026-09-25，使用者：不必每次到 preference 切）、`[p] Preview`（鎖定畫布顯示這個 profile，不改啟用）、`[D]uplicate`（name popup，灰字建議原名加號碼，2026-10-19 起；之前預填原名加 `2`）、`[r]ename`（name popup）、`[X] Delete`（confirm；最後一個或啟用中 disabled） |
+| tmux / screen（Integration，2026-09-25） | `[Enter] Edit`（焦點送到 `[2]`：activate、config file path，再來是工具自己的 key；2026-10-17 以前兩者之間有分隔線） |
 | preference | `[Enter] Edit`（焦點送到 `[2]`） |
 
 **`[2]` 明細**
 
 | cursor 在 | item operation | panel operation |
 |---|---|---|
-| saver 的說明列 | 唯讀，不可停 | saver 上：`[n] New`、`[P] Preview`（用預設值）、`[S] Save`、`[R] Reset`（預設值的顏色草稿） |
-| name | `[Enter] Rename` | profile 上：`[P] Preview`（這個 profile，帶草稿）、`[S] Save`、`[R] Reset`（顏色草稿；沒草稿時 disabled） |
+| saver 的說明列 | 唯讀，不可停 | saver 上：`[n] New`、`[P] Preview`（用預設值）（2026-10-17 以前還有 `[S] Save`、`[R] Reset`：預設值的顏色草稿） |
+| name | `[Enter] Edit`（hint `this profile`，開 Rename 的框；2026-10-17 以前是 `[Enter] Rename`） | profile 上：`[P] Preview`（這個 profile）（2026-10-17 以前帶草稿，還有 `[S] Save`、`[R] Reset`：顏色草稿，沒草稿時 disabled） |
 | saver | 唯讀，不可停（profile 的 class；2026-09-24 定案） | 同上 |
-| layout / size / font / time / date / participants / character / scene / background | `[Enter] Choose`（runner 的列只有 participants / character / scene / background；pets 的 scene hint 是 `where they are`、只列 `outdoor`（2026-10-08）；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
-| command（custom） | `[Enter] Edit`（2026-09-25） | custom 上只有 `[P] Preview`（把終端機交給程式，任意鍵回來）：沒有顏色就沒有 Save / Reset |
-| bg / fg 色票列 | 唯讀，不可停 | 同上 |
-| R / G / B | `[Enter] Pick`（進草稿） | 同上 |
-| PIN | 未設：`[Enter] Set PIN`；已設：`[Enter] Change PIN`（current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
-| profile | `[Enter] Choose`（列出所有 profile） | 無 |
+| layout / size / font / time / date / participants / character / scene / background | `[Enter] Choose`（原地選；participants 超過五個值、開 select，是 `[Enter] Edit`，2026-10-18 起；runner 的列只有 participants / character / scene / background；pets 的 scene hint 是 `where they are`、只列 `outdoor`（2026-10-08）；saver 上改的是預設值，只影響之後新增的 profile） | 同上 |
+| command（custom） | `[Enter] Edit`（2026-09-25） | custom 上只有 `[P] Preview`（把終端機交給程式，任意鍵回來）；2026-10-17 以前別的 profile 還有顏色的 Save / Reset，custom 沒有顏色所以沒有 |
+| bg / fg | `[Enter] Edit`（color picker，選好就寫檔；2026-10-18 起，決定 96；之前 bg / fg 是唯讀、不可停的色票列，底下 R / G / B 三列 `[Enter] Pick` 進草稿） | 同上 |
+| PIN | `[Enter] Edit`（hint `what the lock asks for`）：未設是 `NEW PIN` → `CONFIRM PIN`；已設是 `CURRENT PIN` → `NEW PIN`（8 顆灰點代表現有的，`Enter` 保留、`Backspace` 再 `Enter` 拿掉）→ `CONFIRM PIN`（2026-10-18 起，決定 96；之前未設 `[Enter] Set PIN`、已設 `[Enter] Change PIN`：current PIN → 選單 `New PIN` / `Remove PIN`；2026-09-24 拿掉 `[x] Clear PIN`，取消併進同一條流程） | 無 |
+| profile | `[Enter] Choose`（原地選；profile 多於五個時是 `[Enter] Edit`、開 select，2026-10-18 起；之前列出所有 profile） | 無 |
 | show_status | `[Enter] Toggle` | 無 |
-| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown | `[Enter] Edit` | 無 |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / input_tab_width（2026-10-20） | `[Enter] Edit` | 無 |
 | speed（snake 2026-10-06、bounce 與 tetromino 2026-10-07） | `[Enter] Choose`（hint `how fast it goes`；2026-10-07 起從清單選，原本是 number 框；saver 上改的是預設值） | 同上 |
 | animals（pets 2026-10-08） | `[Enter] Choose`（hint `what they are`；目前只有 `cats`；saver 上改的是預設值） | 同上 |
 | count（pets 2026-10-07） | `[Enter] Choose`（hint `how many cats`；saver 上改的是預設值） | 同上 |
-| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Activate`（confirm 後把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進 config file path；tmux 有 server 在跑就整份套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`）/ `[Enter] Deactivate`（confirm 後拿掉區塊、刪掉 locku 的檔案，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled（2026-09-25；2026-09-26 起不另說原因，config file path 那列本身是黃色的 `not set`） | preference、tmux、screen 的 `[2]` 上：`[P] Preview`（啟用中的 profile；2026-09-26 補進 menu，tdp M3） |
+| activate（tmux / screen 的 `[2]` 第一列） | `[Enter] Toggle`（checkbox，2026-10-18 起；之前 `[Enter] Activate` / `[Enter] Deactivate`，現在是 confirm 的標題）：勾上是 Activate（confirm 後把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進 config file path；tmux 有 server 在跑就整份套上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），取消勾是 Deactivate（confirm 後拿掉區塊、刪掉 locku 的檔案，tmux 連 server 上的、screen 連跑著的 session 的一併拿掉）；路徑沒填時 disabled（2026-09-25；2026-09-26 起不另說原因，config file path 那列本身是 `not set`，2026-10-18 起灰字，之前黃色） | preference、tmux、screen 的 `[2]` 上：`[P] Preview`（啟用中的 profile；2026-09-26 補進 menu，tdp M3） |
 | config file path | `[Enter] Edit`（on 時改路徑，區塊搬到新檔；清空就拿掉） | 無 |
-| 分隔線 | 不可停 | 無 |
 | lock（tmux） | `[Enter] Choose`（lock-server / lock-session；on 時直接重寫 locku 的檔案、tmux 換旗） | 無 |
 | lock-after-time（screen：idle） | `[Enter] Edit`（on 時直接重寫 locku 的檔案、tmux 即時套用、screen 送進跑著的 session） | 無 |
 | bind-key（tmux）/ bind（screen） | `[Enter] Edit`（同上；2026-09-25 screen 也有，`C-a x` 內建就鎖） | 無 |
@@ -88,9 +86,9 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 | 全域動作 | 鍵 |
 |---|---|
-| Preview（只在 `[2]`：profile / saver 的 `[2]` 是那一個、preference / tmux / screen 的 `[2]` 是啟用中的 profile，帶著顏色草稿，任意鍵回來；custom 把終端機交給程式；`[1]` 上不作用——那裡 `p` 預覽游標那列，2026-09-25） | `P` |
+| Preview（只在 `[2]`：profile / saver 的 `[2]` 是那一個、preference / tmux / screen 的 `[2]` 是啟用中的 profile（2026-10-17 以前帶著顏色草稿），任意鍵回來；custom 把終端機交給程式；`[1]` 上不作用——那裡 `p` 預覽游標那列，2026-09-25） | `P` |
 | 切面板 | `Tab`、`1` / `2` |
-| 離開 | `q` 與 `Ctrl-C`，同一件事（2026-09-26，tdp K9）：有未存的顏色草稿時先 confirm，confirm 開著時再按一次 `Ctrl-C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl-C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl-C` 不問就走。menu 的路：`Space` → `Global operation` → `[q]uit`（2026-09-27） |
+| 離開 | `q` 與 `Ctrl-C`，同一件事（2026-09-26，tdp K9）：沒有浮層時直接離開（2026-10-18 起，`App.Quit` 是 nil；之前有未存的顏色草稿時才先 confirm），有浮層開著時 lib 先問 `Quit locku?`（2026-10-25 起，terminu-go v0.4.20、tdp v0.9.8），confirm 開著時再按一次 `Ctrl-C` 立刻離開；除了打字中，每個 surface 都有效（`q` 在打字中是字元，`Ctrl-C` 照樣有效）。之前 `q` 在浮層內不作用、`Ctrl-C` 不問就走。menu 的路：`Space` → `Global operation` → `[q]uit`（2026-09-27） |
 | splash 彩蛋 | `V`（不揭露） |
 
 全域字母（`P`、`V`）在浮層開著、打字中兩種狀態下不作用；`q` 與 `Ctrl-C` 例外，見上。鎖定畫布與 Preview 中沒有全域鍵，`Ctrl-C` 也只是一個
@@ -100,8 +98,8 @@ profile / saver 上：顏色草稿的 Save / Reset（修訂 2026-09-24）。tmux
 
 - **popup 上**：只有這個 popup 的鍵——Space menu 是 `j/k`、`u/d`、`gg/G`、Enter、方括號裡的字母、`Space` / `Esc` 關；global operation popup 是 `j/k`、Enter、方括號裡的字母、`Esc` 回到 Space menu；options 是移動、Enter 選這個、`Esc` 不改就關；confirm 是 Enter 接受的那件事與 `Esc` 取消。輸入框裡 `?` 是字元（tdp K8），沒有 help。
 - **`[1]`，以及 profile / saver 的 `[2]`**：先是這個 panel、這個游標能按的鍵，從 Space menu 的同一張表讀出來（兩邊不會不一致；現在不能執行的照樣列出、變暗——鍵與說明都暗——跟 Space menu 一樣，2026-09-29，tdp v0.1.14 M6；之前列出但照亮）；再是 `everywhere`：core key 與導覽鍵。鍵 Blue、說明 Text，幾個鍵做同一件事用 `/`、範圍用 `–`（`q/Ctrl-C`、`Tab/1–2`；2026-09-29，tdp M5、color.2；之前鍵是 Subtext1、用 ` · ` 分隔）。框跟每個 popup 一樣寬（tdp F7，2026-09-28；之前依最長的說明，舊 D4），說明太長就在框裡折行。再按 `?` 關掉。
-- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；當時不照 tdp K6、M4，理由見 dev-remarks；2026-10-19 起照 tdp note.5，「每一列」一節在 key reference 最前面）。preference 的 `[2]` 是**只有** preference 六列（PIN 到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是只有
-activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind、screen 的 LOCKPRG 住在哪的說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；左欄是設定名稱、不是鍵，維持 Subtext1，不跟 key reference 的鍵一起變 Blue（2026-09-29）；鍵的清單也一樣換行。
+- **preference、tmux、screen 的 `[2]`**：維持原本的字典，不放 key reference（2026-09-26、2026-09-27 使用者定案：「以 UX 角度來說，那個使用者最需要看到的是現在的呈現方式」；當時不照 tdp K6、M4，理由見 dev-remarks；2026-10-19 起照 tdp note.5，「每一列」一節在 key reference 最前面）。preference 的 `[2]` 是 preference 七列（PIN 到 input_tab_width；2026-10-20 前六列，到 wrong_pin_attempt_cooldown）的說明，tmux / screen 的 `[2]` 是
+activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，screen 的 LOCKPRG 住在哪寫在 activate 的說明裡（2026-10-19 起，決定 98；之前另成一條）；2026-10-17 以前只有這些說明——這時 help 是這個面板的字典（2026-09-25，使用者：focus 在 `[2]` 且項目是 preference 時只要 preference 的說明）。每一項 key 一欄、說明一欄，說明比欄寬長就在欄內換行、key 只在第一行；左欄是設定名稱、不是鍵，維持 Subtext1，不跟 key reference 的鍵一起變 Blue（2026-09-29）；鍵的清單也一樣換行。
 
 ---
 
@@ -110,15 +108,15 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 | 元素 | 唯一語意 |
 |---|---|
 | 邊框 Blue / 雙線 | focus；側欄的區塊標題也是 Blue（2026-09-24） |
-| `[1]` Green `●` | 啟用中的 saver（只顯示，不設） |
+| `[1]` Green `●` | 啟用中的 profile（只顯示，不設） |
 | 值 Green | 使用者設了：PIN `set`、`on` |
 | 值 Yellow | 還沒設：`not set`；畫布 `no PIN` |
 | Red | 錯：input 的錯誤列（`wrong PIN`、`try again in N s`、`name is taken`……）、`config error` |
 | 值 Mauve | 可以改的值 |
 | dim | 唯讀（type、色票）、menu 裡 disabled 的列、key reference 裡現在不能按的鍵（2026-09-29，tdp M6）、menu 的 region header；有浮層開著時，最上層以外的一切照原色淡化（2026-09-28，tdp F8、color.4） |
-| 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態：`[2]` 的 ` · unsaved`、PIN prompt 的 ` · closing`；input 的錯誤不在這裡，在框內的錯誤列（2026-09-28，tdp F7、K3） |
-| 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭 |
-| R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`） |
+| 邊框 title 的 ` · xxx` 尾綴 | 這個框現在的狀態：`[2]` 的 ` · unsaved`、PIN prompt 的 ` · closing`；input 的錯誤不在這裡，在框內的錯誤列（2026-09-28，tdp F7、K3）；2026-10-18 起兩個都沒有（沒有草稿，決定 96；PIN 框收起不寫 `closing`） |
+| 色票列的 `→` | 已存的顏色 → 草稿的顏色；沒草稿就沒有箭頭（2026-10-17 以前；2026-10-18 起顏色是 color picker，沒有草稿） |
+| R / G / B 滑桿的顏色 | 那個通道在目前值的顏色（`#RR0000` / `#00GG00` / `#0000BB`）（2026-10-17 以前；2026-10-18 起沒有 slider） |
 
 ---
 
@@ -128,7 +126,7 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 | | `[1]` | `[2]` |
 |---|---|---|
-| 停靠點 | saver 列、profile 列、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位；表頭列（Property / Value）、saver 列與色票列跳過；saver 的說明沒有停靠點；tmux / screen 的分隔線跳過（2026-09-25） |
+| 停靠點 | profile 列、saver 列、tmux、screen、`preference`；區塊標題跳過；開啟時停在啟用中的 profile | 可改的欄位，bg / fg 也是（2026-10-18 起）；表頭列（Property / Value）與 saver 列跳過；saver 的說明沒有停靠點（2026-10-17 以前色票列與 tmux / screen 的分隔線也跳過，2026-09-25） |
 | `j` / `k` | 上下一列、頭尾相接（2026-09-24 修訂：原本不繞，使用者要面板跟 menu 一樣 loop） | 同 |
 | `u` / `d` | 半頁，到頭就停不繞；清單比半頁短時等於跳到頭 / 尾 | 同 |
 | `gg` / `G` | 頭 / 尾 | 同 |
@@ -144,18 +142,20 @@ activate、config file path、lock（tmux）、lock-after-time / idle、bind-key
 
 | 欄位 | 行為 |
 |---|---|
-| name（new / rename / duplicate） | 一行 input popup，邊框 `name`，預填目前值（new 預填 saver 的名字、用了就加號碼；duplicate 預填原名加 `2`）；Enter：空 → 錯誤列 `name is empty` 框留著、重複 → `name is taken` 框留著、否則寫檔；Esc 不動 |
+| name（new / rename / duplicate） | 一行 input popup，邊框 `name`，rename 預填目前值；new 灰字建議 saver 的名字、用了就加號碼，duplicate 灰字建議原名加號碼，沒碰就 `Enter` 用它（2026-10-19 起，tdp input.6；之前 new 預填 saver 的名字、duplicate 預填原名加 `2`）；Enter：空 → 錯誤列 `Name can't be empty` 框留著、重複 → `Name is taken` 框留著、否則寫檔（2026-10-18 起錯誤字帶欄位名；之前 `name is empty`、`name is taken`）；Esc 不動 |
 | command（custom；2026-09-25） | 一行 input popup，邊框 `command`，預填目前值；Enter 照打的存（前後空白去掉），空 = 未設；Esc 不動 |
-| layout / size / font / time / date / participants / character / scene / background / speed（snake、bounce、tetromino）/ animals、count、scene（pets）/ profile / lock（tmux） | options popup，列出所有值、cursor 在目前值；`j`/`k`、Enter 選並寫檔、Esc 不動 |
+| layout / size / font / time / date / participants / character / scene / background / speed（snake、bounce、tetromino）/ animals、count、scene（pets）/ profile / lock（tmux） | 五個以內在原地選（radio），選了就寫檔；超過五個（participants、profile 多於五個時）開 select，cursor 在目前值，Enter 選並寫檔、Esc 不動（2026-10-18 起，決定 96；之前全部開 options popup，列出所有值、cursor 在目前值，`j`/`k`、Enter 選並寫檔、Esc 不動） |
 | show_status | Enter 翻轉並寫檔，不開框 |
-| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數或負數 → 錯誤列 `a whole number, 0 or more` 框留著 |
-| bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |
-| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → 錯誤列 `an absolute or ~/ path` 框留著。下框的 hint 有提議時多 `Tab:edit it Backspace:clear`（2026-09-29，tdp M5）；on 時改路徑，區塊搬到新檔（2026-09-25） |
-| R / G / B | options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中；`j`/`k`/`u`/`d`/`gg`/`G`、Enter 移過去**進草稿**、不寫檔；色票列即時顯示草稿（webu slider 作法，不打字）。`S` 寫檔、`R` 丟草稿 |
+| pin_prompt_timeout / wrong_pin_attempts / wrong_pin_attempt_cooldown / input_tab_width / lock-after-time（tmux）/ idle（screen） | 一行 input popup，邊框 `number`，預填目前值；清空 = 預設；非整數 → 錯誤列 `<列名> must be a whole number`、太小 → `<列名> must be 0 or more`（wrong_pin_attempt_cooldown 與 input_tab_width 是 `1 or more`）框留著（2026-10-18 起；之前 `a whole number, 0 or more`） |
+| bind-key（tmux）/ bind（screen）（2026-09-25） | 一行 input popup，邊框 `key`，預填目前值；Enter：清空 = 不綁、含空白或 `#` → 錯誤列 `bind-key must be one key, e.g. l or C-l`（screen：`bind must be one key, e.g. l or ^L`；2026-10-18 起帶列名，之前 `one key, e.g. …`）框留著、否則寫檔；activate on 就直接進檔案與 server / 跑著的 session，off 只存 config |
+| config file path（tmux、screen 各一個，2026-09-25） | 一行 input popup，邊框 `path`，webu 的作法（2026-09-24）：框裡 dim 顯示一個**提議**——目前值，沒有就是 `~/.tmux.conf` / `~/.screenrc`——`Tab` 把提議接進來編輯、`Backspace` 拒絕提議（空行 Enter = 清掉，activate 就 disabled；on 的話區塊先從舊檔拿掉）、打字就從頭打；Enter 照打的存，沒碰提議就 Enter 不改；不是絕對路徑或 `~/` 開頭 → 錯誤列 `config file path must be an absolute or ~/ path` 框留著（2026-10-18 起帶列名；之前 `an absolute or ~/ path`）。下框的 hint 有提議時多 `Tab:edit it Backspace:clear`（2026-09-29，tdp M5）；on 時改路徑，區塊搬到新檔（2026-09-25） |
+| bg / fg | color picker（lib 的 `PickColor`）：舊色與新色並排，R G B 各用 hex 從 select 選，選好就寫檔，`Esc` 留著舊的（2026-10-18 起，決定 96）；之前是 R / G / B 三列：options popup，0 到 255 一列一個數字、10 列一窗、cursor 在目前值置中，Enter 移過去**進草稿**、不寫檔，色票列即時顯示草稿（webu slider 作法，不打字），`S` 寫檔、`R` 丟草稿 |
 | PIN | 遮罩 input popup 連開，見 §2.2 |
 
 打字中屏蔽所有 hotkey：`Space` 是空白、`?` 是問號、`q` 是 q。Backspace 刪一字；沒有游標移動。
 
+2026-10-18 起輸入框是 lib 的：貼上的控制字元（換行、Tab……）都留在值裡、照 lib 的畫法畫出來，Enter 時擋下，錯誤列 `<框的名字> can't have control characters`
+（`Name`、`command`、`config file path`、`bind-key`……，PIN 框是 `PIN`），框留著、什麼都不寫（tdp input.8）。2026-10-06 到 10-17：
 貼上的換行（`\r\n` 算一個）與 Tab 留在值裡、畫成 Red 的 `\n` / `\t`，其他控制字元丟掉；`Backspace` 一次刪掉整個。值裡有換行或
 Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have line breaks or tabs`（PIN 框寫 `no line breaks or tabs`，2026-10-08；之前寫 `PIN can't have line breaks or tabs`），框留著，什麼都不寫、不比對
 （2026-10-06；之前照收，值列斷成兩列，new PIN 存得進一個鎖定畫面打不出來的換行）。打字的 `Tab` 鍵照舊：有提議時接受提議，
@@ -165,8 +165,8 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 
 | 動作 | 順序 | 失敗 |
 |---|---|---|
-| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：`confirm PIN` 的錯誤列 `not the new PIN`、清空、框留著，要重打新的就 `Esc` 回 `new PIN`（2026-09-28，tdp K3；之前跳 toast `PIN mismatch` 回到空的 `new PIN`）；長度不在 4 到 12：錯誤列 `4-12 chars` 框留著（2026-10-08；之前 4 到 64） |
-| Change PIN（已設） | `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-09-24） | current 錯：錯誤列 `wrong PIN` 1 秒、清空、留在 current PIN |
+| Set PIN（未設） | `new PIN` → `confirm PIN` → 寫檔、toast `PIN set` | 兩次不同：`confirm PIN` 的錯誤列 `not the new PIN`、清空、框留著，要重打新的就 `Esc` 回 `new PIN`（2026-09-28，tdp K3；之前跳 toast `PIN mismatch` 回到空的 `new PIN`）；長度不在 4 到 12：錯誤列 `PIN must be 4-12 characters` 框留著（2026-10-08；之前 4 到 64；錯誤字 2026-10-18 起，之前 `4-12 chars`） |
+| Change PIN（已設） | `CURRENT PIN` → `NEW PIN`：框裡 8 顆灰點代表現有的，打新的 → `CONFIRM PIN` → 寫檔、toast `PIN set`；灰點上直接 `Enter` 保留，整串收掉；`Backspace` 再 `Enter` 拿掉（pin_hash 清空）、toast `PIN removed`，不再 confirm（2026-10-18 起，決定 96、99；之前 `current PIN` → options popup `PIN`：`New PIN` / `Remove PIN` → `New PIN`：`new PIN` → `confirm PIN` → 寫檔；`Remove PIN`：Enter 立即寫檔、toast `PIN removed`，不再 confirm，2026-09-24） | current 錯：錯誤列 `wrong PIN` 1 秒、清空、留在 current PIN |
 
 每一步一個 popup、疊在上一步上面，一次只問一件事；`Esc` 回到上一步，第一步再 `Esc` 就整串不做、什麼都不寫（2026-09-28，tdp v0.1.9 F1、F4；之前任一步 Esc 取消整串）。遮罩顯示 `●`，不顯示長度以外的資訊；`●` 之間空一格、從框中央向兩側長，跟鎖定畫布的 prompt 同一個畫法（2026-09-24）。
 
@@ -192,7 +192,7 @@ Tab 時每個框的 Enter 都不收：錯誤列 `<邊框的型別> can't have li
 
 ## §3 導覽詞彙
 
-`nav.go` 一份，所有清單共用；導覽字母 `j k u d g G` 不被任何動作佔用。
+導覽是 lib 的一份（2026-10-18 起；之前是 locku 的 `nav.go`），所有清單共用；導覽字母 `j k u d g G` 不被任何動作佔用。
 
 | 鍵 | 動作 |
 |---|---|
@@ -212,14 +212,14 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 | 層 | 鍵 |
 |---|---|
-| 全域 | `P`（只在 `[2]`）、`q`、`?`、`V`（彩蛋）、`Tab`、`1` / `2` |
-| `[1]` item | `p` `D` `r` `X` |
-| `[2]` item | `x`（只在 PIN 列） |
-| `[2]` panel（profile / saver 上） | `P` `S` `R`（custom 只有 `P`） |
+| 全域 | `P`（只在 `[2]`）、`q`、`?`、`!`（App Log，lib 的，2026-10-20 起）、`V`（彩蛋）、`Tab`、`1` / `2` |
+| `[1]` item | saver 上 `n` `p`；profile 上 `a` `p` `D` `r` `X` |
+| `[2]` item | 無（PIN 列的 `x` 2026-09-24 拿掉） |
+| `[2]` panel | 每個 `[2]` 都是 `P`，saver 上再加 `n`（2026-10-17 以前 profile / saver 上是 `P` `S` `R`，custom 只有 `P`） |
 | 導覽 | `j` `k` `u` `d` `gg` `G` |
 
-撞字檢查（2026-09-24 修訂）：`p` 只在 `[1]`、`P` 只在 `[2]`（profile / saver 的 `[2]` 上就是那一個，`[1]` 上不作用；同一件事，不撞），同 webu 的 `n` / `N`；`D` / `X` 只在 `[1]`，`x` 在 `[2]`
-只有 PIN 列一處，語意都是「刪 / 清」；`r` 只在 `[1]`、`R` 只在 `[2]` saver 上；`S` 沒有小寫對手；`V` 與 `v`
+撞字檢查（2026-09-24 修訂）：`p` 只在 `[1]`、`P` 只在 `[2]`（profile / saver 的 `[2]` 上就是那一個，`[1]` 上不作用；同一件事，不撞），同 webu 的 `n` / `N`；`D` / `X` 只在 `[1]`（`[2]` PIN 列的 `x` 2026-09-24 拿掉）；`a`、`r` 只在 `[1]`；`n` 在 `[1]` 的 saver 與 saver 的 `[2]` 上是同一件事
+（2026-10-17 以前 `R` 只在 `[2]` saver 上、`S` 沒有小寫對手）；`V` 與 `v`
 不衝突（沒有 `v`）；`d` 是半頁不是 delete，同 webu。
 
 ---
@@ -237,9 +237,9 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 層數最多七層：Space menu、`current PIN`、`New PIN` / `Remove PIN`、`new PIN`、`confirm PIN`、離開的 confirm、它的 `?`（2026-09-28；2026-09-27 起五層，之前三層）。
 
-**先 confirm 的動作**：Delete profile、有未存顏色草稿時的 Quit、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
+**先 confirm 的動作**：Delete profile、tmux / screen 的 activate on / off（2026-09-25：寫的是別人的設定檔與跑著的 server）；Quit 只在有浮層開著時由 lib 先問（2026-10-25 起；2026-10-17 以前是有未存顏色草稿時的 Quit 先 confirm，10-18 到 10-24 不問）。Preview 不 confirm：任意鍵就回來，沒有代價（2026-09-25：preview 不驗 PIN，PIN 是 `locku lock` 的事；custom saver 的 preview 把終端機交給程式，任意鍵殺掉回來，程式結束或沒填指令就在畫面內以板子上的字預覽）。Remove PIN 也不 confirm（2026-09-24）：它前面已經驗過 current PIN，那就是確認。
 
-**toast**：`PIN set`、`PIN removed`、`write failed: <reason>`（值退回）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果一行（`Wrote <locku 的檔> · Wrote <檔> · Applied to the running tmux server: …`，沒變的檔說 `Already up to date: <檔>` / `Removed locku's block from <檔> · Removed <locku 的檔> · …`；句首大寫、名稱與路徑照原樣，2026-10-21，tdp note.7；錯誤時紅色）。
+**toast**：`PIN set`、`PIN removed`（Success）；寫檔失敗是 error popup `WRITE FAILED`、值退回（2026-10-18 起；之前 toast `write failed: <reason>`）；disabled 的列不跳 toast（2026-09-26，tdp M6）；整合的結果（`Wrote <locku 的檔> · Wrote <檔> · Applied to the running tmux server: …`，沒變的檔說 `Already up to date: <檔>` / `Removed locku's block from <檔> · Removed <locku 的檔> · …`；句首大寫、名稱與路徑照原樣，2026-10-21，tdp note.7）三列放得下是 Success toast，放不下開 note，失敗開 error popup（`ACTIVATE FAILED: tmux`，報告一行一列、最後是錯誤）（2026-10-18 起；之前一行 toast、錯誤時紅色）。
 
 **鎖定畫布**：PIN prompt 是唯一浮層，backdrop 是整個畫布連狀態列淡化——亮格、accent、暗格、`config error` 的紅各自淡化（`ui.md` §2.3；2026-09-28，tdp F8、color.4；同日稍早是亮格與狀態列改 Overlay0，更早是亮格 Surface2、狀態列不變）；custom saver 底下是程式自己的畫面，不變暗（鎖定中的畫面不在 TUI 裡，由 app 自行決定，tdp P5；見 dev-remarks）；`q` 在畫布與 prompt
 裡都只是字元。
@@ -252,11 +252,11 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 
 | 情境 | 行為 |
 |---|---|
-| 啟動 | 讀 config；不存在或損毀 → 記憶體內用預設值，**不寫檔**，第一次改動才寫 |
-| 每次改動 | 立即原子寫檔；失敗 toast、值退回。例外：顏色進草稿，`S` 才寫 |
+| 啟動 | 讀 config.yaml 與 profiles.yaml；不存在 → 記憶體內用預設值，**不寫檔**，第一次改動才寫；讀不了 → lib 的 MOVE ASIDE：`Enter` 把它留成 `.bak`、像第一次打開一樣開始，`Esc` 離開、原因印到 stderr（2026-10-20 起，決定 100–102；之前損毀也是記憶體內用預設值、另外報錯，2026-10-18 到 10-19 是預設值上一個 error popup） |
+| 每次改動 | 立即原子寫檔；失敗開 error popup、值退回（2026-10-18 起顏色也一樣；之前失敗是 toast，顏色進草稿、`S` 才寫） |
 | 外部同時改 config | 不監看；最後寫的贏 |
-| Preview | 畫面被畫布取代（同進程，用記憶體內的 config 加顏色草稿；`[2]` 上 `P` 是那一個或啟用中的 profile、`[1]` 上 `p` 是游標那個）；任意鍵 → 回設定畫面，焦點與兩個游標不變，不驗 PIN；custom 把終端機交給程式，任意鍵殺掉回來 |
-| 離開 | `q` 直接離開；有未存的顏色草稿時先 confirm，Enter 丟掉草稿離開、Esc 留下 |
+| Preview | 畫面被畫布取代（同進程，用記憶體內的 config，2026-10-17 以前再加顏色草稿；`[2]` 上 `P` 是那一個或啟用中的 profile、`[1]` 上 `p` 是游標那個）；任意鍵 → 回設定畫面，焦點與兩個游標不變，不驗 PIN；custom 把終端機交給程式，任意鍵殺掉回來；結束時 App Log 記一筆（2026-10-27，決定 110） |
+| 離開 | `q` 直接離開；有浮層開著時 lib 先問 `Quit locku?`（2026-10-25 起；2026-10-17 以前有未存的顏色草稿時先 confirm，Enter 丟掉草稿離開、Esc 留下） |
 
 ### 鎖定畫布
 
@@ -287,13 +287,13 @@ duplicate / delete 對齊 sshu 用大寫（修訂 2026-09-24）；bracket 印的
 `P` preview（只在 `[2]`） · `1` / `2` 直達面板
 
 ### `[1]` 側欄
-saver 上 `n` new profile · `p` preview the defaults · profile 上 `Enter` edit · `p` preview this profile · `D` duplicate · `r` rename · `X` delete
+saver 上 `n` new profile · `p` preview the defaults · profile 上 `Enter` edit · `a` activate · `p` preview this profile · `D` duplicate · `r` rename · `X` delete
 
 ### `[2]` 明細
-`Enter` rename / choose / toggle / pick / set PIN / change PIN（含 remove） · saver 上 `n` new profile · saver / profile 上 `P` preview · `S` save colours · `R` reset colours（custom 只有 `P`） · tmux / screen 上 `Enter` activate / deactivate / edit / choose
+`Enter` edit / choose / toggle（名字、數字、路徑、鍵、顏色、PIN 是 edit；原地的選項是 choose；show_status、activate 是 toggle） · saver 上 `n` new profile · 每個 `[2]` 上 `P` preview（2026-10-17 以前還有 `pick`、`set PIN` / `change PIN`、`S` save colours、`R` reset colours）
 
 ### 鎖定畫布
-任何鍵 開 prompt（custom：框疊在動畫上） · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 刪一字
+任何鍵 開 prompt（custom：框疊在動畫上） · prompt 內 `Enter` 送出 · `Esc` 回 saver · `Backspace` 清掉全部（2026-10-18 起；之前刪一字）
 
 ### 導覽
 `j/k` · `u/d` · `gg/G`

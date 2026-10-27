@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.5)（tdp v0.11.5；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3，2026-10-27 到 v0.11.0、v0.11.1、v0.11.2、v0.11.3、v0.11.4、v0.11.5），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0)（tdp v1.0.0；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3，2026-10-27 到 v0.11.0、v0.11.1、v0.11.2、v0.11.3、v0.11.4、v0.11.5、v1.0.0），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3；2026-10-27 到 v0.6.0、v0.6.1、v0.6.2、v0.6.3、v0.6.4、v0.6.5）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3；2026-10-27 到 v0.6.0、v0.6.1、v0.6.2、v0.6.3、v0.6.4、v0.6.5、v1.0.0）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -20,8 +20,8 @@ v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20
 - **畫布只有一種畫法：整面 LED 點陣板。** 每格 nf-fa-square 加空格（icon 畫成兩格的字型上只有方塊，仍是兩格，見下面 icon 的實際寬度），暗格 saver 的 bg、亮格它的 fg。字形像七段顯示器：全部直角、沒有斜線、0 沒有中間斜線，數字 3 × 7，依 size 放大；字距、行距與時間裡的空白是獨立的間隔單元（small / medium 1 格、large 2 格），不跟著像素等比放大。時間與日期是兩個獨立區塊：時間先排、日期拿剩下的空間（row 在下、column 在左），各自先降 size 再去單位（時間去秒、日期去年），日期塞不下就不畫，時間塞不下才一般文字。第一幀不動畫，之後只對有變的像素做 splash 式 shuffle。字元集 39 個。各 size 需要的終端機尺寸表在 README「你會看到什麼」。
 - **狀態列**：`user@host · locked since HH:MM`（`show_status` 可關）→ config error → `no PIN · any key unlocks` → custom 的結束原因，這個順序，超過終端機寬度從尾端截掉。已知的邊角（2026-09-25）：hostname 很長加窄終端時被截的是尾端的 `no PIN` / custom note——GitHub 的 macOS runner hostname 62 字元沒有點，狀態列在 80 欄放不下，`internal/ui` 的測試在 `TestMain` 把 `whoami` 固定成 `user@host`。是設計決定，未改。
 
-- **設定畫面建在 terminu-go 上（2026-10-18）。** `internal/settings` 只登記：一個 `Screen`、兩個 `Panel`——`[1]` 是 `List`（`Row.Group` 分成 Profiles / Savers / Integration / Settings，啟用中的 profile 在格子裡畫 Green `●`），`[2]` 是 `Values`（一列一個 `Field`）——`[1]` 的 `OnMove` 換 `[2]` 的內容、label、動作與 `?` 最後一節，`Values.OnMove` 換 `[2]` 的 `Enter` 那一列。Space menu、`?`、hint、footer、confirm、toast、splash、`Esc` 一次一層、淡化與開關動畫都是 lib 從這份登記畫的，locku 不再有自己的 popup 疊（之前 `internal/ui` 的 app.go、actions.go、spacemenu.go、helppopup.go、popup.go……全刪）。欄位：五個以內的選項畫成原地的 radio（`Field.Options`），超過五個（`participants`、profile 多於五個時的 `profile`）開 `Select`；開關（`show_status`、`activate`）是單一選項的 checkbox；顏色是 `PickColor`；PIN 是 `PasswordInput` 的解鎖樣式；只顯示的列（saver 的說明、profile 的 saver）是停用的 `Field`，cursor 跳過。每個值在 popup 的 `Done` 裡改 config、`config.Save`、`refresh()` 重建兩邊的列（失敗退回並 toast）。預覽用 `tea.Exec` 把終端機交出去：`previewRun.Run()` 在同一個 tty 上跑 `ui.RunPreview`（一個自己的 Bubble Tea 程式，任意鍵 `tea.Quit`），custom 跑 `custom.Preview`，結束了再跑字的板子。
-- **icon 的實際寬度（tdp E5；2026-10-18 起是 lib 的）。** 設定畫面的 `App.Run` 與鎖定畫面的 `ui.DetectIconWidth()` 都是 lib 的 `terminu.Probe("locku")`：icon 與 powerline 符號各量各的，`LOCKU__ICON_WIDTH` / `LOCKU__POWERLINE_WIDTH` → `TERMINU__ICON_WIDTH` / `TERMINU__POWERLINE_WIDTH` → CPR 探測；同時用 OSC 4 問 16 色的調色盤給淡化用。鎖上照舊放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——逾時才到的回答被清掉，就算漏進鎖裡，`termreply` 也把終端機的回報丟掉，不會叫出 PIN 框或解鎖。`internal/ui` 的寬度只剩幾個轉給 lib 的函式（`width.go`：`dispW` = `terminu.Width`、`truncate`、`clipANSI` = `terminu.Cut`），框疊到板子上用 `terminu.Composite`，淡化用 `terminu.DimLines`（`dim.go`）。custom saver 的程式在 `custom.Start()` 拿到兩個 `TERMINU__` 變數（外面帶進來的同名變數被蓋掉，exec 同名取最後一個；powerline 的從 2026-10-18）。bubbletea v1 的 renderer 會在它量起來比終端機窄的列後面補 `ESC [ K`（icon 算一格），icon 佔兩格時會擦掉最後一格：lib 的 `App` 在輸出那層拿掉它，鎖定畫面自己開 program，所以 `ui.ScreenOutput` 照抄一份（`output.go`，TODO(lib LK1)）。2026-09-29 到 2026-10-17 是 locku 自己照 filu 搬的 `width.go`、`dim.go`、`iconwidth_unix.go`。
+- **設定畫面建在 terminu-go 上（2026-10-18）。** `internal/settings` 只登記：一個 `Screen`、兩個 `Panel`——`[1]` 是 `List`（`Row.Group` 分成 Profiles / Savers / Integration / Settings；`List.Flags` 開著，啟用中的 profile 的 Green `●` 是那一列的 `Row.Flag`，畫在標記欄，2026-10-27 起，決定 111，之前寫在名字前面），`[2]` 是 `Values`（一列一個 `Field`）——`[1]` 的 `OnMove` 換 `[2]` 的內容、label 與動作，`Values.OnMove` 換 `[2]` 的 `Enter` 那一列；`?` 的第一節 `what each row is` 是 lib 從每列的 `Field.Desc` 組的（2026-10-19 起，決定 98；10-18 那天由 `OnMove` 換成 `?` 的最後一節）。Space menu、`?`、hint、footer、confirm、toast、splash、`Esc` 一次一層、淡化與開關動畫都是 lib 從這份登記畫的，locku 不再有自己的 popup 疊（之前 `internal/ui` 的 app.go、actions.go、spacemenu.go、helppopup.go、popup.go……全刪）。欄位：五個以內的選項畫成原地的 radio（`Field.Options`），超過五個（`participants`、profile 多於五個時的 `profile`）開 `Select`；開關（`show_status`、`activate`）是單一選項的 checkbox；顏色是 `PickColor`；PIN 是 `PasswordInput` 的解鎖樣式；只顯示的列（saver 的說明、profile 的 saver）是停用的 `Field`，cursor 跳過。框裡的值在 popup 的 `Commit` 裡改 config、`config.Save`、`refresh()` 重建兩邊的列，寫不進去就退回、把錯誤交給 lib，error popup 疊在框上、框留著（`commit`；2026-10-19 起，LK10；10-18 那天在 `Done` 裡改，失敗退回並 toast）；原地的 radio 與 checkbox 在 `OnChange` 裡改（`change`），寫不進去就退回、開 error popup。預覽用 `tea.Exec` 把終端機交出去：`previewRun.Run()` 在同一個 tty 上跑 `ui.RunPreview`（一個自己的 Bubble Tea 程式，任意鍵 `tea.Quit`），custom 跑 `custom.Preview`，結束了再跑字的板子。
+- **icon 的實際寬度（tdp E5；2026-10-18 起是 lib 的）。** 設定畫面的 `App.Run` 與鎖定畫面的 `ui.DetectIconWidth()` 都是 lib 的 `terminu.Probe("locku")`：icon 與 powerline 符號各量各的，`LOCKU__ICON_WIDTH` / `LOCKU__POWERLINE_WIDTH` → `TERMINU__ICON_WIDTH` / `TERMINU__POWERLINE_WIDTH` → CPR 探測；同時用 OSC 4 問 16 色的調色盤給淡化用。鎖上照舊放在 `tmux.SetLocked` 之後、`termreply.DropPending` **之前**——逾時才到的回答被清掉，就算漏進鎖裡，`termreply` 也把終端機的回報丟掉，不會叫出 PIN 框或解鎖。`internal/ui` 的寬度只剩幾個轉給 lib 的函式（`width.go`：`dispW` = `terminu.Width`、`truncate`、`clipANSI` = `terminu.Cut`）；框疊到板子上與框下面的淡化都是 lib 的 `App` 做的（2026-10-19 起，LK1；10-18 那天用 `terminu.Composite` 與 `terminu.DimLines`，`dim.go` 現在只剩 `hexRGB`）。custom saver 的程式在 `custom.Start()` 拿到兩個 `TERMINU__` 變數（外面帶進來的同名變數被蓋掉，exec 同名取最後一個；powerline 的從 2026-10-18）。bubbletea v1 的 renderer 會在它量起來比終端機窄的列後面補 `ESC [ K`（icon 算一格），icon 佔兩格時會擦掉最後一格：lib 的 `App` 在輸出那層拿掉它，鎖定畫面自己開 program，所以 `ui.ScreenOutput` 照抄一份（`output.go`；2026-10-18 那天註解寫著 TODO(lib LK1)，10-19 拿掉：lock 自己開 program，就得自己帶）。2026-09-29 到 2026-10-17 是 locku 自己照 filu 搬的 `width.go`、`dim.go`、`iconwidth_unix.go`。
 
 ### 程式碼目錄
 
@@ -29,7 +29,7 @@ v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20
 locku/
 ├── cmd/locku/          進入點：lock / pin reset / version / 設定 TUI；argv[0] SCREEN-LOCK
 ├── internal/
-│   ├── config/         config.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN、pin_hash 重讀、NewPIN、data 目錄
+│   ├── config/         config.yaml 與 profiles.yaml 的讀寫：fail open、原子寫、0600、bcrypt PIN、pin_hash 重讀、NewPIN、data 目錄
 │   ├── custom/         custom saver：程式在 pty 上、輸出經 screen writer 直通、PIN 框疊在畫面上、按鍵留給 locku、結束的字（2026-09-25）
 │   ├── login/          `locku pin reset` 的登入密碼驗證：su 在 pty 上（2026-09-25）
 │   ├── saver/          內容：clock 的兩種 time × 五種 date × row / column、tick；會動的 saver 共用的 Game 介面與場景（game.go）；runner（原 dino）的跑者、場景、障礙與自動跳躍、天空（`sky.go`）；bounce 的框；snake 的環與近路；tetromino 的方塊、AI 與消行；pets 的房間、找路與貓；custom 結束的 Word
@@ -58,7 +58,7 @@ locku/
 - **config 有版本（2026-10-07）。** `config.ConfigVersion`（1）。`LoadFile` 先把檔解析成樹，`versionOf` 讀頂層的 `version`（沒有就是 0），小於 1 才跑 `carryOver`（0 → 1：2026-09-24、09-25 的改名與 dino → runner），decode、`sanitized` 之後，版本小於現行的就用 `SaveFile` 整份寫回；`SaveFile` 一律寫成現行版本，所以 `version` 永遠是檔案的第一個 key。下一次格式要變：加一個 1 → 2 的轉換接在 `carryOver` 後面、只對小於 2 的檔做，`ConfigVersion` 加一。測試守著：0 讀完寫回、再讀不動；1 的舊名不轉、不寫回；2 照讀不寫回、存檔寫成 1；讀不了的檔不寫回。家族裡 locku 是第一個做 config 版本的。
 - **環境變數照家族的 `LOCKU__NAME`（2026-09-29，tdp E2）。** app 名後兩個底線：`LOCKU__CONFIG`（設定目錄）、`LOCKU__DATA`（資料目錄）、`LOCKU__ICON_WIDTH`、`LOCKU__POWERLINE_WIDTH`（2026-10-18，lib 讀）。舊名 `LOCKU_CONFIG`、`LOCKU_DATA`（v0.1.3 已發佈）不再讀、不留相容（user 裁定），CHANGELOG 寫了新舊對照；`uninstall.sh` 與三個 e2e 腳本一起改。
 - **暫定（2026-10-18，重構時自己定的，等 user 確認）。** tdp 交給 app 的地方：
-  - 離開不問：沒有沒存的東西（顏色草稿拿掉之後），`App.Quit` 是 nil，`q` 直接離開（tdp K9：離開流程由 app 決定；之前有未存草稿才問）。
+  - 離開不問：沒有沒存的東西（顏色草稿拿掉之後），`App.Quit` 是 nil，`q` 直接離開（tdp K9：離開流程由 app 決定；之前有未存草稿才問）；有 popup 開著時 lib 照樣先問 `Quit locku?`（2026-10-25 起，terminu-go v0.4.20、tdp v0.9.8）。
   - popup 的標題與 glyph（components/layout/popup：input 的 glyph 由 app 選）：New profile / Duplicate / Rename 用 `nf-md-pencil`、數字用 `nf-md-timer_outline`、顏色 `nf-md-palette`、select `nf-md-tag`、路徑 `nf-md-file`、command `nf-md-console`、按鍵 `nf-md-keyboard`、PIN `nf-md-lock`，鎖定畫面的 PIN 框沿用 `nf-fa-lock`。（PIN 框的標題是 tdp S36 定的：設定畫面 `CURRENT PIN`、`NEW PIN`、`CONFIRM PIN`，鎖定畫面 `UNLOCK`，都沒有說明列。）
   - 只顯示的列（saver 的 `saver`、`what`、`profiles`、`defaults`，profile 的 `saver`）畫成停用的欄位：label Surface2、cursor 跳過。tdp 的一列一個值沒有「唯讀列」，停用是最接近的。
   - 兩個 panel 的寬：`[1]` 24 欄（`min(24, w/2)`），59 欄以下一次只畫有 focus 的那一個（`NarrowBelow: 60`，舊的 `w < 60`）。
@@ -115,7 +115,7 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   也不會蓋掉。只是內容的提醒（`no profiles`、`profile "x" not found`）照舊是 error popup，標題 `CONFIG`（2026-10-21 起；之前是
   `config.yaml`，被轉成 `CONFIG.YAML`，App Log 那一筆也以檔名開頭）。
 - **控制字元（tdp v0.9.0 components「控制字元」；2026-10-20）。** 名字與短字交給 lib 畫，locku 不再把顏色碼塞進字裡：`[1]` 啟用中的
-  profile 的綠點是 `Row.Styled`（字照樣在 `Cells` 給篩選用），顏色的值是 `Field.Styled` 加 lib 的 `ColorSpans`／`HexText`（locku 的
+  profile 的綠點是那一列的 `Row.Flag`，畫在標記欄（2026-10-27 起，決定 111；2026-10-20 到 10-27 是 `Row.Styled`，字照樣在 `Cells` 給篩選用），顏色的值是 `Field.Styled` 加 lib 的 `ColorSpans`／`HexText`（locku 的
   `swatch` 拿掉）。鎖定畫面的狀態列是 locku 自己畫在 Canvas 上的，外面來的字——user@host、config 的錯、custom 程式的 stderr——先過
   `terminu.Escape`、再用 lib 的 `Style` 上色（lipgloss 遇到裡面的 reset 不會接回原本的顏色）。
 - **tdptest（2026-10-20）。** `internal/settings/tdp_test.go`：`tdptest.Check` 走第一次啟動，另一次先放一份全是 `tdptest.Tricky` 的
@@ -189,11 +189,11 @@ custom 的 VT 終端機模擬器路線（多一個依賴、忠實度與效能都
   一個終端機模擬器重畫程式的畫面——2026-09-25 否決過（多一個依賴、忠實度與效能都要驗）；使用者也定過「框之外什麼都不畫」。
   一般 saver 的畫布照 tdp F8 淡化：畫好的畫面每個顏色各自往 base 淡化（lib 的 `App` 在框下面做）。同樣的淡化其實可以套在程式送出的輸出串流上，但只有
   PIN 框打開之後程式重畫的格子會變暗，靜態的畫面可能一直不變——仍不做（2026-09-28，使用者：維持偏離）。
-（2026-10-18 以前還有兩條，已經不是偏離了：preference、tmux、screen 的 `[2]` 上 `?` 只有每列的說明、不是 key reference——lib 的 `?` 一定是 key reference，說明接在最後一節，見 LK3；PIN 框比 tdp F7 窄（框內 29 欄）——現在照 tdp F7 算，45 欄。）
+（2026-10-18 以前還有兩條，已經不是偏離了：preference、tmux、screen 的 `[2]` 上 `?` 只有每列的說明、不是 key reference——lib 的 `?` 一定是 key reference，說明是最前面的一節 `what each row is`（2026-10-19 起，決定 98；10-18 那天接在最後一節），見 LK3；PIN 框比 tdp F7 窄（框內 29 欄）——現在照 tdp F7 算，45 欄。）
 
 ## 設計文件導讀
 
-三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 101 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
+三份設計文件每條決定就地標日期、被否決的做法也留著；`function.md` 的決定清單 112 條。2026-10-18 起，設定畫面長什麼樣、怎麼按，大多是 tdp 與 terminu-go 的事，`ui.md`、`ux.md` 只記 locku 自己的：每個 `[2]` 有哪些列、鎖定畫布、PIN 框、預覽。
 
 | 檔案 | 回答什麼 | 順序 |
 |---|---|---|
@@ -228,9 +228,9 @@ make gif                                         # 重錄 docs/demo.gif，見下
 make shots                                       # 重拍 docs/savers/*.png，見下方「saver 的靜態圖」
 ```
 
-家族共用的 target 在 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改），`Makefile` 只設 `BINARY := locku`、include 它，locku 自己的 `lock`、`e2e`、`shots` 放在最後一段（2026-10-18）。開發時用不進版控的 `go.work` 接本機的 lib：`go work init . ../terminu-go`；go.mod 寫的是發布過的 tag（v0.1.13），不用 `replace`。`make tidy`、`make snapshot`、`check-lib` 都關掉 `go.work`，跟 CI 一樣。
+家族共用的 target 在 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改），`Makefile` 只設 `BINARY := locku`、include 它，locku 自己的 `lock`、`e2e`、`shots` 放在最後一段（2026-10-18）。開發時用不進版控的 `go.work` 接本機的 lib：`go work init . ../terminu-go`；go.mod 寫的是發布過的 tag（2026-10-27 起 v1.0.0；2026-10-18 是 v0.1.13），不用 `replace`。`make tidy`、`make snapshot`、`check-lib` 都關掉 `go.work`，跟 CI 一樣。
 
-頂層目錄裡範本以外的：`e2e/`（python 的 pty 端到端）、`CLAUDE.md`（一行指向 2026-10-18 的重構交代）、`.claude/`（Claude Code 的 `social-preview` 指令與 agent，產 `docs/social-preview.png` 用，2026-10-08；`settings.local.json` 與 worktrees 不進版控）。
+頂層目錄裡範本以外的：`e2e/`（python 的 pty 端到端）、`CLAUDE.md`（指向 2026-10-18 的重構交代；2026-10-20 起再一段：指示檔只有這個 app、terminu、terminu-go 三個 session 可以改，user 定）、`.claude/`（Claude Code 的 `social-preview` 指令與 agent，產 `docs/social-preview.png` 用，2026-10-08；`settings.local.json` 與 worktrees 不進版控）。
 
 TUI 行為全部用 programmatic model test 驗證（不需要 tty）：設定畫面的測試（`internal/settings/settings_test.go` 的 `driver`）照 Bubble Tea 那樣餵訊息給 lib 的 `App`、把回來的指令跑完（popup 的動畫也是），再看 `App.Frame()` 與寫出去的 config.yaml，比一個 popup 的動畫長的計時器（toast）不等；`TestEveryRowIsTheTerminal` 在最低尺寸以上的四種尺寸、icon 一格與兩格、每一種 popup 開著時量每一列的寬（tdp L4、tdp E5），四十秒上下；最低尺寸以下一路到 1×1 是 `TestUnderTheLeastSize`（tdp L1）。鎖定畫面的測試（`internal/ui` 的 `drive`）一樣把指令跑完，PIN 框的開關動畫是 lib 的、照真的時間走。`make check` 帶 race detector（custom 的 pump 與 screen writer、login 的 su、custom 鎖的 prompt 各有 goroutine，沒有 race detector 看不出來，多花十幾秒）。tmux / custom / screen 的驗收（`docs/function.md` §12）以 python pty harness 跑真的 binary 完成：鎖定中 prefix d、prefix c、Ctrl-C 被吞、對 PIN 後 client 回來、鎖著的時候 attach 也被鎖、畫面上切 lock-session 時跑著的 server 整塊換掉、custom 的框疊在動畫上且程式被殺乾淨、screen 的 `C-a x` 與 `bind` 的鍵進 locku、`idle` 自動鎖、跑著的 session 即時收到設定、tty 關閉進程結束。
 
@@ -238,11 +238,11 @@ TUI 行為全部用 programmatic model test 驗證（不需要 tty）：設定�
 
 `V` 的 splash 彩蛋就是 `docs/icon.svg`，一格對一格（2026-09-26）：第一版在 icon 出現前一天畫，裡面是一個自創的掛鎖，icon 進來後沒跟上。2026-10-18 起是 lib 的 `NewSplash`：`internal/settings/icon.svg` 是 `docs/icon.svg` 的副本（`go:embed` 讀不到 `docs/`），`TestIconIsTheDocsIcon` 守住兩份一樣，icon 改了就要複製過去。揭露照 tdp S5：底 → 金色的 L、O、C、K（svg 裡註解的順序）→ 深藍 U 由下往上，下面是名稱、版本、`A screensaver with a PIN, for the terminal` 與作者。
 
-### demo gif（2026-09-26；2026-10-07 重錄）
+### demo gif（2026-09-26；2026-10-07、2026-10-27 重錄）
 
-README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape` 與 `config.yaml`（PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）。每次錄都把 config 蓋到 `.local/demos/config/config.yaml`、以 `LOCKU__CONFIG` / `LOCKU__DATA` 指過去，不碰真正的設定；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font。
+README 只放一個 gif，`docs/demo.gif`，用 VHS 錄。tape 與展示用 config 照家族慣例放在 `.local/demos/`（gitignore，不進版控）：`demo.tape`、`config.yaml`（PIN 1234，`htpasswd -nbBC 10 x 1234` 產生）與 `profiles.yaml`（profiles 是資料，2026-10-27 從 config.yaml 拆出來）。每次錄都把兩個檔蓋到 `.local/demos/config/config.yaml` 與 `.local/demos/data/profiles.yaml`、以 `LOCKU__CONFIG` / `LOCKU__DATA` 指過去，不碰真正的設定；資料目錄沒有 profiles.yaml 時，設定畫面一開就會把 config.yaml 的 profiles 搬過去，跳出寫著本機路徑的 toast；tape 從不按 `activate`，所以不會寫到真的 `~/.tmux.conf`。需要 VHS、JetBrainsMono Nerd Font。
 
-2026-10-07 重錄，每種 saver 都出場，順序使用者定：runner → pets → tetromino → snake → bounce → clock。結構也是使用者選的：鎖在 runner 開場（PIN 框疊在畫面上，錯一次再對），接著在設定畫面依序預覽其他五種，最後照舊是 Space 選單與 tmux；custom（cmatrix）拿掉，錄影因此不再需要 cmatrix。展示 config 的 profile 照這個順序排、名字就是 saver 的種類，啟用中的是 runner，所以設定畫面按 `j` 就照順序走，從 clock 再按 8 次 `j` 經過 Savers 到 tmux。pets 五隻、runner 用 `big-small`（我的判斷：五種花色都看得到、跑者有大有小）。runner 的天空是 time-shifting，照時鐘輪替，使用者要錄到黃昏：tape 在鏡頭外先跑一個迴圈，等到分鐘 % 3 = 1 那一分鐘的第 22 到 35 秒才開鏡（前 20 秒是從白天換過來的過場；runner 在畫面上約 11 秒，所以結束時還在黃昏），因此 `make gif` 最多要先等三分鐘。成品約 58 秒、6.4 到 6.9 MB（舊的 3.2 MB，多的主要是 runner 與 pets 的漸層；pets 的樹每次隨機，大小跟著差一點）。
+2026-10-07 重錄，每種 saver 都出場，順序使用者定：runner → pets → tetromino → snake → bounce → clock。結構也是使用者選的：鎖在 runner 開場（PIN 框疊在畫面上，錯一次再對），接著在設定畫面依序預覽其他五種，最後照舊是 Space 選單與 tmux；custom（cmatrix）拿掉，錄影因此不再需要 cmatrix。展示 config 的 profile 照這個順序排、名字就是 saver 的種類，啟用中的是 runner，所以設定畫面按 `j` 就照順序走，從 clock 再按 8 次 `j` 經過 Savers 到 tmux。pets 五隻、runner 用 `big-small`（我的判斷：五種花色都看得到、跑者有大有小）。runner 的天空是 time-shifting，照時鐘輪替，使用者要錄到黃昏：tape 在鏡頭外先跑一個迴圈，等到分鐘 % 3 = 1 那一分鐘的第 22 到 35 秒才開鏡（前 20 秒是從白天換過來的過場；runner 在畫面上約 11 秒，所以結束時還在黃昏），因此 `make gif` 最多要先等三分鐘。成品約 58 秒、6.4 到 6.9 MB（舊的 3.2 MB，多的主要是 runner 與 pets 的漸層；pets 的樹每次隨機，大小跟著差一點）。2026-10-27 發 v1.0.0 前重錄：按鍵與順序照舊，畫面換成 lib 畫的設定畫面（啟用中的 `●` 在標記欄）與 PIN 框，57.7 秒、7.1 MB。saver 的畫法從 v0.2.7 沒變，`docs/savers/*.png` 沒重拍。
 
 VHS 0.12.0 在這台機器上會印 `Creating docs/demo.gif...` 卻不出檔（webu 也踩過），當時改用 0.11.0；2026-10-07 機器上只剩 0.12.1，正常出檔。VHS 的 `Type "…"` 不吃反斜線跳脫，字串裡要引號就用單引號；鏡頭外的指令用 `Type@5ms` 打，不然要等很久；等某個輸出用 `Wait+Screen@<逾時> /regex/`，要等的字在指令裡寫成 `RE''ADY`，免得一打出指令就符合。展示 config 設 `show_status: false`：狀態列會照實顯示錄影機器的 `user@host`，不公開進 README（2026-09-26）。
 

@@ -105,7 +105,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | 
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/uninstall.sh | sh
 ```
 
-移除 binary，然後問你——不擅自決定——要不要刪設定目錄與資料目錄（PIN reset 的紀錄）。先在設定畫面把 `activate` 關掉，tmux.conf、screenrc 與 shell rc 裡 locku 的那一行就沒了；移除腳本不碰那些檔，最後會提醒你。
+移除 binary，然後問你——不擅自決定——要不要刪設定目錄與資料目錄 `~/.locku`（你的 profile 與 PIN reset 的紀錄）。先在設定畫面把 `activate` 關掉，tmux.conf、screenrc 與 shell rc 裡 locku 的那一行就沒了；移除腳本不碰那些檔，最後會提醒你。用 Homebrew 裝的：`brew uninstall locku`，兩個目錄會照原樣留著。
 
 ## 快速開始
 
@@ -140,12 +140,12 @@ locku version    # 版本；locku help 印用法
 ```
 ┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
 ┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
-┃   ● runner           ┃│ NAME      clock                                          │
-┃     pets             ┃│ SAVER     clock                                          │
-┃     tetromino        ┃│ LAYOUT    ◉ row                                          │
-┃     snake            ┃│           ○ column                                       │
-┃     bounce           ┃│ SIZE      ○ small                                        │
-┃     clock            ┃│           ◉ medium                                       │
+┃ ● runner             ┃│ NAME      clock                                          │
+┃   pets               ┃│ SAVER     clock                                          │
+┃   tetromino          ┃│ LAYOUT    ◉ row                                          │
+┃   snake              ┃│           ○ column                                       │
+┃   bounce             ┃│ SIZE      ○ small                                        │
+┃   clock              ┃│           ◉ medium                                       │
 ┃ SAVERS               ┃│           ○ large                                        │
 ┃   clock              ┃│ FONT      ◉ 3x7                                          │
 ┃   runner             ┃│           ○ 3x5                                          │
@@ -160,10 +160,10 @@ locku version    # 版本；locku help 印用法
 ┃ SETTINGS             ┃│ FG        ███ #F2B753                                    │
 ┃   preference         ┃│                                                          │
 ┗━ Enter:edit ━━━━━━━━━┛└─ Enter:edit ─────────────────────────────────────────────┘
-Space:menu ?:help Tab|1–2:panels q:quit
+Space:menu ?:help !:log Tab|1–2:panels q:quit
 ```
 
-兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，一列一個值。`Tab`、`1`、`2` 在兩邊移動。`[1]` 上 `Enter` 進 `[2]`；`[2]` 上 `Enter` 編輯那一列：選項少的在原地選，多的打開清單選，開關原地切換，其他打開輸入框。`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上，最前面先是每一列的說明；在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 除了打字中以外隨處都能離開。數字框空著就是預設值。設定畫面的終端機至少要 40 × 15；更小時畫面上會說，拉大就回來。
+兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，一列一個值。`Tab`、`1`、`2` 在兩邊移動。`[1]` 上 `Enter` 進 `[2]`；`[2]` 上 `Enter` 編輯那一列：選項少的在原地選，多的打開清單選，開關原地切換，其他打開輸入框。`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上，最前面先是每一列的說明；在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 離開：在面板上立刻離開；有浮層開著時先問 `Quit locku?`，再按一次 `Ctrl-C` 直接離開；打字中 `q` 是輸入的字，只有 `Ctrl-C` 會問。數字框空著就是預設值。設定畫面的終端機至少要 40 × 15；更小時畫面上會說，按兩次 `Ctrl-C` 離開，拉大就回來。
 
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。複製或新增時框裡用灰字提議一個沒人用的名字，直接 `Enter` 就用它，建好後直接進它的 `[2]`。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg`，各自在顏色選擇器裡選：舊的顏色與新的並排，紅、綠、藍用 hex。每一列一設定就寫檔。
 - **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
@@ -249,7 +249,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上再接著每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
 | `!` | App Log：locku 這次開著時做了什麼——寫進去的每一個值、新增／改名／刪除的 profile、每一次預覽、出現過的每一則訊息——以及出了什麼錯；有沒看過的錯誤時 footer 寫 `!:1 error` |
-| `q\|Ctrl-C` | 離開 |
+| `q\|Ctrl-C` | 離開；有浮層開著時先問 `Quit locku?` |
 | `j\|k` · `u\|d` · `gg\|G` | 下、上 · 半頁 · 首、尾 |
 
 #### `[1]` 側欄
@@ -363,7 +363,7 @@ profiles:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.5)（tdp v0.11.5），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0)（tdp v1.0.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

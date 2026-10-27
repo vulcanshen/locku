@@ -4,7 +4,7 @@
 > 功能邊界在 `function.md`。依 [terminu design principle](https://github.com/vulcanshen/terminu/tree/v0.1.23/principle)（tdp v0.1.23）與家族的 popup 慣例（tdp popup）撰寫，
 > 每條版面決定標日期。v1.0 定案，2026-09-24；2026-09-25 對齊程式碼重寫。
 
-> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110、111）** 照 [tdp v0.11.5](https://github.com/vulcanshen/terminu/tree/v0.11.5)。
+> **2026-10-18 起（function.md 決定 96）**：設定畫面建在家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) v0.1.13 上，照 [tdp v0.7.4](https://github.com/vulcanshen/terminu/tree/v0.7.4)；**2026-10-19 起（決定 98、99）** 鎖定畫面的 PIN 框也是 lib 的；**2026-10-20 起（決定 100、101）** 照 [tdp v0.9.1](https://github.com/vulcanshen/terminu/tree/v0.9.1)；**2026-10-21 起（決定 102–104）** 照 [tdp v0.9.3](https://github.com/vulcanshen/terminu/tree/v0.9.3)；**2026-10-25 起（決定 105、106）** 照 [tdp v0.9.16](https://github.com/vulcanshen/terminu/tree/v0.9.16)；**2026-10-26 起（決定 107–109）** 照 [tdp v0.10.3](https://github.com/vulcanshen/terminu/tree/v0.10.3)；**2026-10-27 起（決定 110–112）** 照 [tdp v1.0.0](https://github.com/vulcanshen/terminu/tree/v1.0.0)。
 > 框、膠囊、Space menu、`?`、hint、footer、confirm、toast、popup 的寬度與開關動畫、色帶與淡化都以 tdp 與 lib 為準，本文件裡寫它們的地方是 2026-10-17 以前的樣子、留作紀錄。
 > 還是 locku 自己的、照常維護的：每個 `[2]` 有哪些列（欄位的畫法跟著 tdp：五個以內的選項在原地選、超過五個開 select、開關是 checkbox、顏色是 color picker、只顯示的列是停用的列）、鎖定畫布、鎖定畫面的 PIN 框在 lib 的框之外 locku 自己加的（§3.2、ux §2.3）、預覽、整合寫什麼檔。
 
@@ -22,41 +22,48 @@ locku 有兩個彼此獨立的畫面，由 CLI 決定進哪一個，執行期間
 ### 1.1 設定畫面 grid
 
 ```
-╔[1] locku═════════════╗╭[2] clock  unsaved─────────────────────────────╮
-║ Profiles               ║│ Property          Value                          │
-║ ● clock                ║│ name              clock                          │
-║   clock2               ║│ saver             clock                          │
-║   runner               ║│ layout            row                            │
-║ Savers                 ║│ size              medium                         │
-║   clock                ║│ font              3x7                            │
-║   runner               ║│ time              HH MM                          │
-║ Integration            ║│ date              off                            │
-║   tmux                 ║│ bg                ■ #313244  →  ■ #ff3244        │
-║   screen               ║│   R               ───────────● 255               │
-║ Settings               ║│   G               ──●───────── 50                │
-║   preference           ║│   B               ───●──────── 68                │
-║                        ║│ fg                ■ #f2b753                      │
-║                        ║│   R               ──────────●─ 242               │
-║                        ║│   G               ────────●─── 183               │
-╚════════════════════════╝╰──────────────────────────────────────────────────╯
- Space:menu ?:help Tab/1–2:panels q:quit                                        ← footer
+┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────┐
+┃ PROFILES             ┃│ PROPERTY  VALUE                                  │
+┃ ● clock              ┃│ NAME      clock                                  │
+┃   clock2             ┃│ SAVER     clock                                  │
+┃   runner             ┃│ LAYOUT    ◉ row                                  │
+┃ SAVERS               ┃│           ○ column                               │
+┃   clock              ┃│ SIZE      ○ small                                │
+┃   runner             ┃│           ○ medium                               │
+┃   bounce             ┃│           ◉ large                                │
+┃   snake              ┃│ FONT      ○ 3x7                                  │
+┃   tetromino          ┃│           ◉ 3x5                                  │
+┃   pets               ┃│ TIME      ○ HH MM                                │
+┃   custom             ┃│           ◉ HH MM SS                             │
+┃ INTEGRATION          ┃│ DATE      ○ off                                  │
+┃   tmux               ┃│           ◉ YYYY-MM-DD                           │
+┃   screen             ┃│           ○ YYYY-MMM-DD                          │
+┃ SETTINGS             ┃│           ○ MM-DD                                │
+┃   preference         ┃│           ○ MMM-DD                               │
+┃                      ┃│ BG        ███ #313244                            │
+┃                      ┃│ FG        ███ #F2B753                            │
+┗━ Enter:edit ━━━━━━━━━┛└─ Enter:edit ─────────────────────────────────────┘
+Space:menu ?:help !:log Tab|1–2:panels q:quit                                   ← footer
 ```
 
-每個 `[2]` 第一列是表頭：`Property` 與 `Value`（單數，2026-09-25 同日改），用側欄區塊標題的 Blue，不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
+（2026-10-18 起是 lib 畫的樣子，2026-10-27 起 `●` 在標記欄（決定 111）：區塊標題、label、表頭大寫，五個以內的選項一個一列的 radio，顏色是一塊色加大寫 hex；
+之前的圖是 locku 自己畫的：雙線 / 圓角框、首字大寫的區塊標題、`[2] clock  unsaved`、一列一個值、bg 的色票列 `■ #313244  →  ■ #ff3244` 與底下的 R / G / B slider 列；草稿、slider 與 `unsaved` 2026-10-18 拿掉，決定 96。）
+
+每個 `[2]` 第一列是表頭：`Property` 與 `Value`（單數，2026-09-25 同日改），lib 畫成大寫的 `PROPERTY` / `VALUE`、Overlay0（2026-10-18 起；之前用側欄區塊標題的 Blue），不可停，cursor 從第二列起（2026-09-25，使用者：所有 panel 2
 都給標題列）。
 
 左 `[1]` 側欄四個區塊，順序 Profiles → Savers → Integration → Settings（2026-09-24 定案前三個，使用者以 OOP 分：saver 是 class、profile 是
 object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles** 列出使用者設定好的、有名字的 saver 實例，新增（從 Savers 的一種按 `n`）、
 複製、改名、刪除、設為啟用（`a`，2026-09-25）都在這裡；**Savers** 列出有哪幾種 saver（clock、runner、bounce、snake、tetromino、pets、custom），它們沒有名字、名字就是自己，不能新增刪除；
-**Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、一條分隔線、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案）；
-**Settings** 一項：`preference`。區塊標題 Blue、是
+**Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案；2026-10-18 起兩者之間沒有分隔線，lib 的 `[2]` 一列一個值，之前是一條 Surface2 的分隔線、不可停）；
+**Settings** 一項：`preference`。區塊標題 Blue、大寫（`PROFILES`……，lib 畫的，2026-10-18 起；之前首字大寫）、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
 掛在縮排那兩格裡（lib 的標記欄：`List.Flags`、那一列的 `Row.Flag`，tdp panel.7、panel.11），名字跟其他區塊的對齊（2026-10-18 到 10-27 由 lib 畫時那兩格只放得進勾選，`●` 寫在名字前面，profile 的名字比其他區塊多縮兩格；LK22，user 2026-10-27 定回到這個樣子），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
 
-右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明加預設值；在 profile 上就是那個 profile 的欄位與顏色（custom 只有 `command`，沒有顏色列，2026-09-25）；在 tmux / screen 上是整合的列；在 `preference` 上是一般設定的列。title 是膠囊（§5）：`[2] clock`、`[2] tmux`、`[2] preference`——只有名字，不標種類、不放狀態（2026-09-25，使用者：分類資訊多餘）；profile / saver 的顏色草稿未存時接一顆黃色 `unsaved`。
+右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明加預設值；在 profile 上就是那個 profile 的欄位與顏色（custom 只有 `command`，沒有顏色列，2026-09-25）；在 tmux / screen 上是整合的列；在 `preference` 上是一般設定的列。title 是膠囊（§5）：`[2] CLOCK`、`[2] TMUX`、`[2] PREFERENCE`（lib 把名字畫成大寫，2026-10-18 起）——只有名字，不標種類、不放狀態（2026-09-25，使用者：分類資訊多餘）；2026-10-17 以前 profile / saver 的顏色草稿未存時接一顆黃色 `unsaved`（2026-10-18 起沒有草稿，決定 96）。
 
 `[2]` 在 saver 上：先三列唯讀說明，再一列 dim 的 `defaults` 標題，然後是**這種 saver 的預設值**——跟 profile 一模一樣的欄位列與
-色票 / slider 列（沒有 name），同樣的 options popup、顏色草稿、`S` / `R`、` · unsaved`（2026-09-24 定案）。改預設值只影響之後
+顏色列（沒有 name），同樣的選法、選了就寫檔（2026-09-24 定案；2026-10-17 以前是色票 / slider 列，同樣的 options popup、顏色草稿、`S` / `R`、` · unsaved`）。改預設值只影響之後
 用這種 saver 新增的 profile，不動既有的；`[p]` / `[P]` 用預設值跑一個臨時 profile 預覽；`[n] New` 生 profile。
 
 | 列 | 值 |
@@ -65,69 +72,68 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | what | 一句話：clock 是 the time and the date, on the LED board；runner 是 the offline dino run, jumping by itself, for ever；bounce 是 the time in a box, bouncing, changing colour；snake 是 the Nokia snake, playing itself till the board is full；tetromino 是 falling blocks, playing themselves, full rows going（2026-10-07）；pets 是 cats outdoors, up the trees, jumping, napping（2026-10-07）；custom 是 your own program, on a terminal of its own, as the saver |
 | profiles | 是它的 profile 名，逗號分隔；沒有就 `none yet` |
 | defaults | dim 標題：`for profiles made of it from now on` |
-| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一色票列加 R G B（runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；tetromino：只有 speed（2026-10-07）；pets：animals / count / scene（count 2026-10-07，animals 與 scene 2026-10-08）；這四種也沒有顏色列 |
+| （預設值） | clock：layout / size / font / time / date；runner：participants / character / scene / background（2026-10-07）；clock 再有 bg / fg 各一列顏色（color picker，2026-10-18 起；之前各一色票列加 R G B；runner 2026-10-07 前也有）；custom：只有 command，沒有顏色列；bounce：speed / time（2026-10-07）；snake：只有 speed（2026-10-06；2026-10-07 起從清單選）；tetromino：只有 speed（2026-10-07）；pets：animals / count / scene（count 2026-10-07，animals 與 scene 2026-10-08）；這四種也沒有顏色列 |
 
-`[2]` 在 profile 上：
+`[2]` 在 profile 上（Enter 欄 2026-10-18 起照 tdp：五個以內的選項在原地選（radio），超過五個開 select，決定 96；之前每一個選項列都開 options popup、cursor 在目前值）：
 
 | 列 | 值 | Enter |
 |---|---|---|
 | name | 實例名 | input popup，型別 `name`；重複或空被擋 |
 | saver | `clock` / `runner` / `bounce` / `snake` / `tetromino` / `pets` / `custom` | 唯讀，dim，不可停：profile 的 class，要換就從 Savers 新增一個 profile（2026-09-24 定案；當天曾短暫可改）；底下的列跟著 saver 換 |
-| layout | `row` / `column` | options popup，cursor 在目前值（clock） |
-| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | options popup，cursor 在目前值（clock；runner 沒有 size，畫布自己取最大） |
-| font | `3x7` / `3x5`（字型高 7 列或 5 列） | options popup，cursor 在目前值 |
-| time | clock：`HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號）；bounce：`HH:MM` / `HH:MM:SS`，畫出冒號（2026-10-07） | options popup，cursor 在目前值 |
-| date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | options popup，cursor 在目前值；不是 off 時畫布第二列（clock） |
-| participants | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（runner，2026-10-07 前叫 `runner`：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | options popup（2026-09-24） |
-| character | `t-rex` / `cat` / `rabbit` / `giraffe` / `ghost`（runner：跑的是什麼，2026-10-06；`giraffe` 2026-10-07 前叫 `horse`） | options popup |
-| scene | `grassland` / `desert` / `city`（runner：草原是仙人掌，沙漠是金字塔，城市是平房、大廈、摩天大樓，2026-10-08）；`outdoor`（pets：目前只有這一個，2026-10-08） | options popup（2026-09-24） |
-| background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | options popup |
-| command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設 `not set`（Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
-| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake、bounce 與 tetromino：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有，tetromino 同日新增） | options popup |
-| animals | `cats`（pets：是什麼動物，目前只有這一個，為之後加別的動物留位子；2026-10-08） | options popup |
-| count | `1` / `2` / `3` / `4` / `5`（pets：幾隻貓，預設 `3`；2026-10-07） | options popup |
-| bg / fg | 一格該色的 glyph 當色票 + hex，是**已存**的顏色；草稿不同時右邊接 `→` 加草稿的色票 + hex | 不可停 |
-| R / G / B | webu 的 slider 列：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫——R 列是 `#RR0000`、G 列 `#00GG00`、B 列 `#0000BB`，值多大顏色就多亮；軌道底色反向，0 時全白、255 時全黑，暗的值才看得見；數字是 Mauve、沒有底色，跟其他列的值一樣（2026-09-24） | options popup：0 到 255 的數字清單，10 列一窗、游標在目前值置中，Enter 移過去（webu slider 作法，不打字）— 改的是草稿 |
+| layout | `row` / `column` | 原地選（clock） |
+| size | `small` / `medium` / `large`（一個字型像素 1 / 2 / 3 格見方） | 原地選（clock；runner 沒有 size，畫布自己取最大） |
+| font | `3x7` / `3x5`（字型高 7 列或 5 列） | 原地選 |
+| time | clock：`HH MM` / `HH MM SS`（2026-09-24：拿掉 12 時制，時間不畫冒號）；bounce：`HH:MM` / `HH:MM:SS`，畫出冒號（2026-10-07） | 原地選 |
+| date | `off` / `YYYY-MM-DD` / `YYYY-MMM-DD` / `MM-DD` / `MMM-DD` | 原地選；不是 off 時畫布第二列（clock） |
+| participants | `big` / `small` / `big-big` / `small-small` / `small-big` / `big-small`（runner，2026-10-07 前叫 `runner`：一隻大或小，或兩隻一前一後、名字就是畫面由左到右的順序、各自跳；2026-09-25 修訂，舊值 `trex` / `two-trex` 自動轉成 `big` / `big-small`） | select：六個值，超過五個（2026-09-24） |
+| character | `t-rex` / `cat` / `rabbit` / `giraffe` / `ghost`（runner：跑的是什麼，2026-10-06；`giraffe` 2026-10-07 前叫 `horse`） | 原地選 |
+| scene | `grassland` / `desert` / `city`（runner：草原是仙人掌，沙漠是金字塔，城市是平房、大廈、摩天大樓，2026-10-08）；`outdoor`（pets：目前只有這一個，2026-10-08） | 原地選（2026-09-24） |
+| background | `day` / `night` / `time-shifting`（runner：天空，從上到下漸層；time-shifting 三分鐘一天，預設；2026-10-07） | 原地選 |
+| command | custom（2026-09-25）：使用者自己的指令，`sh -c` 跑；未設是灰字 `not set`（2026-10-18 起 lib 畫成 Overlay0；之前 Yellow） | input popup，型別 `command`，預填目前值；清空 = 未設 |
+| speed | `slow` / `normal` / `fast` / `very-fast` / `super-fast`（snake、bounce 與 tetromino：跑多快，預設 `normal`；2026-10-07，snake 原本是每秒幾格的 number 框，bounce 原本沒有，tetromino 同日新增） | 原地選 |
+| animals | `cats`（pets：是什麼動物，目前只有這一個，為之後加別的動物留位子；2026-10-08） | 原地選 |
+| count | `1` / `2` / `3` / `4` / `5`（pets：幾隻貓，預設 `3`；2026-10-07） | 原地選 |
+| bg / fg | 一塊該色的 `███` 加大寫的 hex（lib 的 `ColorSpans`，tdp color-picker.4） | color picker：舊色與新色並排，R G B 各用 hex 從 select 選，選好就寫檔（2026-10-18 起，決定 96）。2026-10-17 以前 bg / fg 是不可停的色票列——一格該色的 glyph 當色票 + **已存**的 hex，草稿不同時右邊接 `→` 加草稿的色票 + hex——底下各有 R / G / B 三列 webu 的 slider：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫（`#RR0000` / `#00GG00` / `#0000BB`），軌道底色反向，數字是 Mauve；Enter 開 0 到 255 的數字清單，10 列一窗、游標在目前值置中，改的是草稿（2026-09-24） |
 
-顏色走**草稿**（修訂 2026-09-24，使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
+顏色跟其他欄位一樣，選好就寫檔（2026-10-18 起，決定 96、LK5：tdp 的一列一個值沒有送出，草稿就是送出）。2026-09-24 到 10-17 顏色走**草稿**（使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
 panel operation `[P] Preview` 預覽這個 saver、`[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走
-（rename 帶走、delete 一起丟）。預覽都帶著草稿。其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
-label 欄固定 18 欄，只在面板窄到放不下 label 加值時才縮（修訂 2026-09-24：原本上限是面板寬的三分之一，
+（rename 帶走、delete 一起丟），預覽都帶著草稿，其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
+label 欄是 lib 的：最長的 label（大寫）多寬就多寬（2026-10-18 起）；之前固定 18 欄，只在面板窄到放不下 label 加值時才縮（修訂 2026-09-24：原本上限是面板寬的三分之一，
 一般寬度的終端機就把最長的 label 壓到貼著值；2026-09-24 改名後最長的是 `wrong_pin_attempt_cooldown`，26 字，label 欄放寬到 28）。
 
 `[2]` 在 `preference` 上：
 
 | 列 | 值的呈現 | Enter |
 |---|---|---|
-| PIN | `set`（Green）/ `not set`（Yellow） | 未設：設定流程；已設：current PIN 之後選 `New PIN` / `Remove PIN`（2026-09-24，取消併進同一條流程） |
-| profile | 啟用中的 profile 名；指向不存在的加 ` (missing)` Yellow | options popup 列出所有 profile、cursor 在目前值，Enter 寫檔、側欄 `●` 移過去 |
-| show_status | `on` / `off` | 原地翻轉，不開 popup |
-| pin_prompt_timeout | 數字 | input popup，型別 `number` |
+| PIN | 有：`••••••••`，不論長短都是八顆（tdp password.3）；沒有：灰字 `not set`（2026-10-18 起；之前 `set`（Green）/ `not set`（Yellow）） | 未設：`NEW PIN` → `CONFIRM PIN`；已設：`CURRENT PIN` 之後開 `NEW PIN`，框裡 8 顆灰點代表現有的，直接 `Enter` 保留、`Backspace` 再 `Enter` 拿掉（2026-10-18 起，決定 96、99；之前 current PIN 之後選 `New PIN` / `Remove PIN`，2026-09-24，取消併進同一條流程） |
+| profile | 啟用中的 profile 名；指向不存在的 profile 時 label 變 Red（tdp panel.12，2026-10-19 起；之前名字後面加 ` (missing)` Yellow） | 原地選，profile 多於五個時開 select（2026-10-18 起；之前 options popup 列出所有 profile、cursor 在目前值），選了寫檔、側欄 `●` 移過去 |
+| show_status | checkbox `on` | 原地勾選，不開 popup（2026-10-18 起是 checkbox；之前 `on` / `off` 原地翻轉） |
+| pin_prompt_timeout | 秒數接單位：`30 seconds`，0 顯示 `0 (never)`（2026-10-19 起，決定 97；之前只有數字） | input popup，型別 `number` |
 | wrong_pin_attempts | 數字，0 顯示 `0 (off)` | 同上 |
-| wrong_pin_attempt_cooldown | 數字 | 同上 |
+| wrong_pin_attempt_cooldown | 秒數接單位：`30 seconds`，最少 1（單位 2026-10-19 起） | 同上 |
+| input_tab_width | 格數接單位：`4 spaces`，最少 1；家族的 key（tdp E3），下次啟動起生效（2026-10-20，決定 100、101） | 同上 |
 
-每一列是什麼，focus 在這個 `[2]` 時按 `?`：help 裡**只有**這幾列的說明，一列一項、太長就在說明欄內自動換行，沒有鍵的清單
-（2026-09-25：原本每列下面接一列 dim 說明，2026-09-24 加的，使用者要搬到 help，而且 `[2]` 上只要這些；`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
+每一列是什麼，focus 在這個 `[2]` 時按 `?`：key reference 的第一節 `what each row is`，一列一項、太長就在說明欄內自動換行，之後才是鍵
+（2026-10-19 起，lib 從每列的 `Field.Desc` 組，決定 98；2026-10-18 那天接在最後一節；2026-09-25 到 10-17 help 裡**只有**這幾列的說明、沒有鍵的清單——2026-09-25：原本每列下面接一列 dim 說明，2026-09-24 加的，使用者要搬到 help，而且 `[2]` 上只要這些；`[2]` 因此只剩設定列）：PIN `what the lock asks for; with none, any key unlocks`、profile `the profile the lock shows`、
 show_status `user@host and the time, on the lock's last row`、pin_prompt_timeout `seconds without a key before the PIN box
 closes; 0 never`、wrong_pin_attempts `wrong PINs in a row before a cooldown; 0 off`、wrong_pin_attempt_cooldown `seconds the
-cooldown lasts`。列數超過面板時跟著 cursor 捲。
+cooldown lasts`、input_tab_width `the spaces a tab takes in text to read — a long setup report, the App Log — from the next start`。列數超過面板時跟著 cursor 捲。
 
-`[2]` 在 Integration 的 tmux / screen 上（2026-09-25，使用者定案：property / value 兩欄，跟 profile 一樣），標題 `[2] tmux` / `[2] screen`：
+`[2]` 在 Integration 的 tmux / screen 上（2026-09-25，使用者定案：property / value 兩欄，跟 profile 一樣），標題 `[2] tmux` / `[2] screen`（lib 畫成大寫 `[2] TMUX` / `[2] SCREEN`，2026-10-18 起）：
 
 | 列 | 呈現 | 編輯 |
 |---|---|---|
-| activate | `on`（Green）/ `off`（Mauve）：區塊在不在 config file path 裡、它讀的 locku 自己的檔案在不在，每次畫都讀一次 | Enter → confirm popup 才執行：on 把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進檔案（tmux 有 server 在跑就把 locku 的檔案 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉區塊、刪掉 locku 的檔案（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled（2026-09-26 起只變暗，不另說原因，tdp M6） |
-| config file path | 路徑照存的樣子；未設 `not set`（Yellow），activate 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc`；on 的時候改路徑，區塊搬到新檔、清空就拿掉 |
-| ── 分隔線 | Surface2 一條線，不可停：上面是 locku 的設定，下面是寫進工具設定檔的 key | 無 |
-| lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | options popup，兩個值；on 時改了立刻重寫 locku 的檔案、server 換旗 |
-| lock-after-time（tmux）/ idle（screen） | 數字，0 顯示 `0 (off)`：閒置幾秒自動鎖，列名就是工具自己的設定名稱，activate on 時原樣寫進去、一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
-| bind-key（tmux）/ bind（screen） | 鍵照工具自己的寫法——tmux `l`、`C-l`、`F12`，screen `l`、`^L`；空顯示 `none`：prefix / C-a 之後按它就鎖，寫成 `bind-key <鍵> <lock>` / `bind <鍵> lockscreen`；screen 的 `C-a x` 內建就鎖，`?` 說明會講 | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → 錯誤列 `one key, e.g. l or C-l`（screen：`one key, e.g. l or ^L`）框留著 |
+| activate | checkbox `on`：區塊在不在 config file path 裡、它讀的 locku 自己的檔案在不在，每次畫都讀一次（2026-10-18 起是 checkbox；之前 `on`（Green）/ `off`（Mauve）） | Enter → confirm popup 才執行：on 把設定寫進 locku 自己的檔案、讀它的一行（區塊）寫進檔案（tmux 有 server 在跑就把 locku 的檔案 `source-file` 上去；screen 連 shell rc，跑著的 session 即時 `screen -X`），off 拿掉區塊、刪掉 locku 的檔案（server 上的、跑著的 session 上的一併拿掉）；config file path 沒填時 disabled（2026-09-26 起只變暗，不另說原因，tdp M6） |
+| config file path | 路徑照存的樣子；未設是灰字 `not set`（2026-10-18 起；之前 Yellow），activate 因此 disabled | input popup，型別 `path`，webu 的提議作法（`ux.md` §2.1），提議 `~/.tmux.conf` / `~/.screenrc`；on 的時候改路徑，區塊搬到新檔、清空就拿掉 |
+| lock（只有 tmux） | `lock-server` / `lock-session`：鎖的範圍——整台 server，或只有觸發的那個 session（別的 session 照常）；值用 tmux 的指令名；`?` 說明只講範圍。screen 沒有 server、沒有範圍可選，不硬造這列 | 原地選，兩個值（2026-10-18 起；之前 options popup）；on 時改了立刻重寫 locku 的檔案、server 換旗 |
+| lock-after-time（tmux）/ idle（screen） | 秒數接單位：`300 seconds`，0 顯示 `0 (off)`（單位 2026-10-19 起）：閒置幾秒自動鎖，列名就是工具自己的設定名稱，activate on 時原樣寫進去、一改就重寫，各工具一份 | input popup，型別 `number`，清空 = 300 |
+| bind-key（tmux）/ bind（screen） | 鍵照工具自己的寫法——tmux `l`、`C-l`、`F12`，screen `l`、`^L`；空顯示 `none`：prefix / C-a 之後按它就鎖，寫成 `bind-key <鍵> <lock>` / `bind <鍵> lockscreen`；screen 的 `C-a x` 內建就鎖，`?` 說明會講 | input popup，型別 `key`，預填目前值；清空 = 不綁；含空白或 `#` → 錯誤列 `bind-key must be one key, e.g. l or C-l`（screen：`bind must be one key, e.g. l or ^L`）框留著（2026-10-18 起錯誤字帶列名，tdp popup.7；之前 `one key, e.g. l or C-l` / `one key, e.g. l or ^L`） |
 
-**開一次，之後隨設即得**（2026-09-25，使用者定案）：`activate` on 時任何一列改動就直接重寫 locku 自己的檔案（使用者的檔案不再動，2026-10-08）、tmux 整份套到 server、screen 即時送進跑著的 session，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完 toast 一行結果；off 就只寫 config.yaml，activate 仍由使用者開。
-`?` help 的鍵清單說 Enter 在 activate 上做什麼；focus 在這個 `[2]` 時 `?` 只有 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，screen 再多一條 `LOCKPRG`：鎖本體不是一列、住在 shell rc、新開 shell 才有。
+**開一次，之後隨設即得**（2026-09-25，使用者定案）：`activate` on 時任何一列改動就直接重寫 locku 自己的檔案（使用者的檔案不再動，2026-10-08）、tmux 整份套到 server、screen 即時送進跑著的 session，config file path 改路徑就把區塊從舊檔搬到新檔、清空就拿掉，做完以 Success toast 報結果、三列放不下就開 note，失敗開 error popup（2026-10-18 起；之前 toast 一行結果）；off 就只寫 config.yaml，activate 仍由使用者開。
+focus 在這個 `[2]` 時 `?` 的第一節是 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，之後才是鍵；screen 的 activate 說明多講 `LOCKPRG`：鎖本體不是一列、住在 shell rc、新開 shell 才有（2026-10-19 起，決定 98；之前 `?` 只有這幾列的說明、`LOCKPRG` 另成一條，鍵清單說 Enter 在 activate 上做什麼）。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
-除了顏色草稿，每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態。寫檔失敗以 toast 報錯，值退回。
+每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態（2026-10-18 起顏色也是；之前顏色走草稿）。寫檔失敗開 error popup（`WRITE FAILED`），值退回；在框裡送出的值寫不進去時 error popup 疊在框上、框與打的值留著（2026-10-19，LK10，決定 98；2026-10-17 以前以 toast 報錯）。
 
 ### 1.2 鎖定畫布 grid
 
@@ -188,7 +194,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 - **Preview** 有兩個入口：`[2]` 上的全域 `P`——在 profile / saver 的 `[2]` 是那一個，在 preference / tmux / screen 的 `[2]` 是啟用中的 profile；側欄 saver / profile 上的 `[p] Preview` 看游標那一個，不改啟用；`[1]` 上 `P` 不作用（2026-09-25，使用者）。整合設定在側欄 Integration 的 tmux / screen 的 `[2]` 第一列 `activate`（2026-09-25）。
 
 **Preview**：一個動作，整個 TUI 被鎖定畫布取代，就像桌面螢幕保護程式的預覽。同一個進程、用記憶體內的 config
-加上顏色草稿，任意鍵回到設定畫面、焦點與 cursor 不變，不驗 PIN（2026-09-25）。custom 的預覽把終端機交給程式（同進程的 exec），任意鍵殺掉回來；程式結束或沒填指令就在畫面內以板子上的字（`EXIT <code>` / `NONE`）預覽。
+（2026-10-17 以前再加上顏色草稿），任意鍵回到設定畫面、焦點與 cursor 不變，不驗 PIN（2026-09-25）；結束時 App Log 記一筆 INFO（`Previewed profile clock2`、`Previewed clock defaults`，2026-10-27，決定 110）。custom 的預覽把終端機交給程式（同進程的 exec），任意鍵殺掉回來；程式結束或沒填指令就在畫面內以板子上的字（`EXIT <code>` / `NONE`）預覽。
 
 
 ### 2.2 `[2]` 明細
@@ -203,6 +209,9 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 ---
 
 ## §3 Popup
+
+（§3.1 是 2026-10-17 以前的樣子、留作紀錄：2026-10-18 起設定畫面的 popup 都是 lib 的（決定 96），寬度、層數、邊框、錯誤列與提議照 tdp 與 lib；
+還照常維護的是 locku 自己的 PIN 流程（§3.1 末段、`ux.md` §2.2）、錯誤字（`ux.md` §2.1）與 §3.2 鎖定畫布。）
 
 每個 popup 一樣寬：終端機寬 − 2，最多 120，左右各留一欄、置中；框裡放什麼都不改寬度，輸入框打字時也不變寬（2026-09-28，tdp F7；之前依內容算寬、外框最寬是畫面寬 − 4，PIN 框固定 48）。
 
@@ -224,9 +233,9 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 
 new 與 duplicate 都是 `name` input popup：new 預填 saver 的名字（`runner`，用了就 `runner2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 預填原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
-PIN 設定與更改是**一步一個 popup，一層疊一層**（`current PIN` → options `New PIN` / `Remove PIN` → `new PIN` → `confirm PIN`）：
-每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容）。
-一次只問一件事，錯在哪一步就停在哪一步；`Remove PIN` 按 Enter 立即生效、不 confirm（2026-09-24）。
+PIN 設定與更改是**一步一個 popup，一層疊一層**（`CURRENT PIN` → `NEW PIN` → `CONFIRM PIN`；沒有 PIN 時從 `NEW PIN` 開始）：
+每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容；2026-10-18 到 10-19 是一步關了才開下一步，LK7）。
+一次只問一件事，錯在哪一步就停在哪一步。已有 PIN 時 `NEW PIN` 框裡是 8 顆灰點代表現有的：直接 `Enter` 保留、整串收掉，`Backspace` 再 `Enter` 拿掉、toast `PIN removed`、不 confirm（2026-10-18 起，決定 96、99；之前 `current PIN` 之後是 options `New PIN` / `Remove PIN`，`Remove PIN` 按 Enter 立即生效、不 confirm，2026-09-24）。
 
 值裡的換行與 Tab（2026-10-06，terminu 定案，之後寫進 tdp input.8）：貼上的換行（`\r\n` 算一個，單獨的 `\n`、`\r`
 也各算一個）與 Tab 留在值裡，畫成 Red 的 `\n`、`\t`，佔 2 格，跟手打的 `\`、`n` 分得開；從前面截掉時整個留或整個去，不切開。
@@ -305,7 +314,7 @@ Blue 不出現在那裡。
 custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 框，沒有 locku 的任何 chrome（2026-09-25）。
 
 **Nerd Font 是設計、必裝**，與家族相同：畫布像素就是 nf-fa-square。字型在使用者本機的終端機模擬器，
-經 SSH 不受影響。有的字型（給 CJK 用的）把 icon 畫成兩格：啟動時用 CPR 量游標前進幾格（先看 `LOCKU__ICON_WIDTH`、再看家族共用的 `TERMINU__ICON_WIDTH`，有值就不量；2026-09-29，tdp E5，tdp v0.1.22 起），所有量寬度的地方——補空白、截斷、框線、疊浮層、並排面板、置中 splash——只走 `internal/ui/width.go` 的 `dispW()` 那一組；兩格時一個像素只畫方塊、不接空白，仍是兩格（2026-09-29，tdp E5；filu 的 `width.go` 是參考實作）。`docs/icon.svg` 沿用 terminu family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestSplashIsTheIcon` 守住兩者一致）。
+經 SSH 不受影響。有的字型（給 CJK 用的）把 icon 畫成兩格：啟動時用 CPR 量游標前進幾格（先看 `LOCKU__ICON_WIDTH`、再看家族共用的 `TERMINU__ICON_WIDTH`，有值就不量；2026-09-29，tdp E5，tdp v0.1.22 起；2026-10-18 起是 lib 的 `terminu.Probe`，powerline 符號也量，`LOCKU__POWERLINE_WIDTH` / `TERMINU__POWERLINE_WIDTH`），所有量寬度的地方——補空白、截斷、框線、疊浮層、並排面板、置中 splash——只走一組：2026-10-18 起是 lib 的 `terminu.Width`，鎖定畫面經 `internal/ui/width.go` 的 `dispW()` 轉過去（之前是 locku 自己的 `width.go`，filu 的 `width.go` 是參考實作）；兩格時一個像素只畫方塊、不接空白，仍是兩格（2026-09-29，tdp E5）。`docs/icon.svg` 沿用 terminu family mark 的 locku 版；`V` splash 彩蛋家族同鍵，只在設定畫面。splash 的點陣就是 icon.svg，一格對一格：深藍 U 包住金色的 L、O、C、K，依序由外往內揭露、U 最後由下往上升起（2026-09-26 修正：第一版早 icon 一天畫，放的是自創的掛鎖；`TestIconIsTheDocsIcon` 守住兩者一致——2026-10-18 起 splash 是 lib 的 `NewSplash`，守的是 `internal/settings/icon.svg` 與 `docs/icon.svg` 一樣，之前是 `TestSplashIsTheIcon`）。
 
 ---
 
@@ -314,9 +323,11 @@ custom saver 鎖定中，終端機上只有程式的畫面與（開著時）PIN 
 | 資料 | 形式 | 位置 |
 |---|---|---|
 | 設定 | `config.yaml`，見 `function.md` §7 | `~/.config/locku`（`$XDG_CONFIG_HOME/locku`、`$LOCKU__CONFIG`） |
+| profiles | `profiles.yaml`，使用者的 profile 清單（2026-10-20 起從 config.yaml 搬來，設定畫面第一次啟動時搬，決定 101） | `~/.locku/data`（`$LOCKU__DATA`） |
+| 整合 | `locku.tmux.conf`、`locku.screenrc`：activate 時寫的 locku 自己的檔，使用者的檔只放讀它的一行（2026-10-08，決定 93） | 跟 `config.yaml` 同一個目錄 |
 | PIN reset 紀錄 | `pin-resets.log`，一次 reset 一行（時間、`user@host`、結果），不含 PIN（2026-09-25） | `~/.locku/data`（`$LOCKU__DATA`） |
 
-沒有 cache、沒有 history。config 寫檔原子（temp + rename），權限 600；log 追加寫、600，目錄 700；目錄不存在時建立。
+沒有 cache、沒有 history。config.yaml 與 profiles.yaml 寫檔原子（temp + rename），權限 600；log 追加寫、600，目錄 700；目錄不存在時建立。
 
 ---
 
