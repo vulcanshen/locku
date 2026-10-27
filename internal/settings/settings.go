@@ -173,7 +173,7 @@ func (s *Settings) Run() error { return s.app.Run() }
 
 // sideW is [1]'s width, webu's (ui.md §1.3); narrowBelow the width under
 // which only the focused panel is drawn. minW × minH is the least size
-// (tdp L1), lower than the family's 80 × 40 so a tmux pane will do: the
+// (tdp L1), lower than the family's 60 × 32 so a tmux pane will do: the
 // colour picker, the largest box here at 36 × 11, fits whole inside [2]'s
 // frame, under its header and over the footer (2026-10-19).
 const (
@@ -314,8 +314,11 @@ func (s *Settings) change(what string, f func()) tea.Cmd {
 }
 
 func (s *Settings) onMsg(msg tea.Msg) tea.Cmd {
-	if m, ok := msg.(previewDone); ok && m.err != nil {
-		return s.app.Error("Preview", m.err.Error())
+	if m, ok := msg.(previewDone); ok {
+		if m.err != nil {
+			return s.app.Error("Preview", m.err.Error())
+		}
+		s.app.Log(terminu.Info, "Previewed "+m.what)
 	}
 	return nil
 }

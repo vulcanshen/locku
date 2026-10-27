@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v0.10.3)（tdp v0.10.3；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.0)（tdp v0.11.0；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3，2026-10-27 到 v0.11.0），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3；2026-10-27 到 v0.6.0）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -72,10 +72,10 @@ locku/
     `reported` 在報告之後記進 App Log（`Output of tmux source-file: …`，App Log 是拿來讀的內容，換行照原樣分列）。`reported`
     收 `*setup.Report`：之前傳值，`s.reported(name, out, s.install(name, &out))` 裡 `out` 與 `install` 誰先求值 Go 沒有規定。
 
-- **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40，app 可以調低。設定畫面是 40×15（`internal/settings`
+- **最低尺寸（tdp L1；2026-10-19，terminu-go v0.2.0 起）。** 家族預設 80×40（2026-10-27，tdp v0.11.0 起 60×32），app 可以調低，不能調高。設定畫面是 40×15（`internal/settings`
   的 `minW`、`minH`）：locku 常在 tmux 切出來的小窗格裡開；設定畫面最大的框是 color picker（36×11），40×15 時整個放得進 `[2]` 的框裡，
   上面是 `[2]` 的框與表頭、下面是 footer，其他的框、menu、`?` 太大時照 lib 折行、截斷、捲動，照樣改得了設定；60 欄以下只畫有 focus 的
-  panel（窄寬）。比它小時 lib 只在中間畫 `locku` 與 `needs a terminal of at least 40×15`，連按兩次 `Ctrl-C` 離開。鎖定畫面與預覽是 1×1：
+  panel（窄寬）。比它小時 lib 只在中間畫 `locku` 與 `needs a terminal of at least 40×15`（tdp v0.11.0 起再加一列 `Press [Ctrl-C] twice to quit`），連按兩次 `Ctrl-C` 離開。鎖定畫面與預覽是 1×1：
   鎖不能因為終端機小就不鎖，它也不在 TUI 裡、不是 surface（tdp K1）；板子、狀態列與 PIN 框照 tdp E5 一路縮、截到 1×1（測試守著）。
 - **鎖定畫面在 lib 的 App 上（tdp E8；2026-10-19，LK1）。** `ui.LockModel` 持有一個 `terminu.App`：`App.Canvas` 畫板子與狀態列，
   `App.CanvasKey` 收畫布上的鍵（任何鍵開 PIN 框，不算輸入），PIN 框是 lib 的 `PasswordInput`（解鎖樣式、`Check` 驗 PIN、`PausedUntil`

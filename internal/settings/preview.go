@@ -19,7 +19,9 @@ import (
 // screen as it was — no PIN asked (user, 2026-09-25). The lib's screen is
 // handed over with tea.Exec, the lock run on the terminal meanwhile; a
 // custom saver's program is given the terminal itself, and one that ends,
-// or none set, is the word on the board (function.md §5.5).
+// or none set, is the word on the board (function.md §5.5). One that is
+// over goes in the App Log, an operation that only looks (tdp note.7,
+// 2026-10-27).
 
 // previewProfile is [p] on a profile, or [P] on its [2]: the lock as it
 // would look with this profile active, whether or not it is.
@@ -27,7 +29,7 @@ func (s *Settings) previewProfile(ref int) tea.Cmd {
 	cfg := s.snapshot()
 	p := cfg.Profiles[ref]
 	cfg.Profile = p.Name
-	return preview(cfg, p)
+	return preview(cfg, p, "profile "+p.Name)
 }
 
 // previewSaver is [p] on a saver, or [P] on its [2]: a profile made of
@@ -38,7 +40,7 @@ func (s *Settings) previewSaver(kind string) tea.Cmd {
 	p.Name = kind + " (defaults)"
 	cfg.Profiles = append(cfg.Profiles, p)
 	cfg.Profile = p.Name
-	return preview(cfg, p)
+	return preview(cfg, p, kind+" defaults")
 }
 
 // previewActive is [P] on preference's or a tool's [2]: the lock as it
@@ -46,15 +48,21 @@ func (s *Settings) previewSaver(kind string) tea.Cmd {
 func (s *Settings) previewActive() tea.Cmd {
 	cfg := s.snapshot()
 	p, _ := cfg.Active()
-	return preview(cfg, p)
+	return preview(cfg, p, "profile "+p.Name)
 }
 
-func preview(cfg config.Config, p config.Profile) tea.Cmd {
-	return tea.Exec(&previewRun{cfg: cfg, p: p}, func(err error) tea.Msg { return previewDone{err} })
+// preview shows p; what is what is shown, as the App Log says it, the
+// words of Settings.wrote: "profile clock2", "clock defaults".
+func preview(cfg config.Config, p config.Profile, what string) tea.Cmd {
+	return tea.Exec(&previewRun{cfg: cfg, p: p}, func(err error) tea.Msg { return previewDone{what, err} })
 }
 
-// previewDone says the preview is over, with what went wrong, if anything.
-type previewDone struct{ err error }
+// previewDone says the preview of what is over, with what went wrong, if
+// anything.
+type previewDone struct {
+	what string
+	err  error
+}
 
 // previewRun is the preview as a command Bubble Tea hands the terminal to.
 type previewRun struct {

@@ -248,7 +248,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 | `Space` | 這裡能做什麼：這一列、這個面板，以及 `Global operation` 底下的離開 |
 | `?` | 這裡的按鍵，只供閱讀；preference、tmux、screen 的 `[2]` 上再接著每一列的說明；浮層上是那個浮層的鍵 |
 | `P` | `[2]` 上：預覽鎖定畫面；任意鍵回來 |
-| `!` | App Log：locku 這次開著時做了什麼——寫進去的每一個值、新增／改名／刪除的 profile、出現過的每一則訊息——以及出了什麼錯；有沒看過的錯誤時 footer 寫 `!:1 error` |
+| `!` | App Log：locku 這次開著時做了什麼——寫進去的每一個值、新增／改名／刪除的 profile、每一次預覽、出現過的每一則訊息——以及出了什麼錯；有沒看過的錯誤時 footer 寫 `!:1 error` |
 | `q\|Ctrl-C` | 離開 |
 | `j\|k` · `u\|d` · `gg\|G` | 下、上 · 半頁 · 首、尾 |
 
@@ -363,7 +363,7 @@ profiles:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.10.3)（tdp v0.10.3），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.0)（tdp v0.11.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu——[kbu](https://github.com/vulcanshen/kbu)（Kubernetes）、[filu](https://github.com/vulcanshen/filu)（檔案）、[sshu](https://github.com/vulcanshen/sshu)（ssh 與 sftp）、[webu](https://github.com/vulcanshen/webu)（網頁）、[kamonu](https://github.com/vulcanshen/kamonu)（家族的 mark）、[ccdrawu](https://github.com/vulcanshen/ccdrawu)（Claude Code 的側欄）。
 
 ## 授權
 

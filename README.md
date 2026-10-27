@@ -248,7 +248,7 @@ A new shell has it. A screen already running gets it once detached and attached 
 | `Space` | what can be done here: the row, the panel, and — under `Global operation` — quitting |
 | `?` | the keys here, to read; on preference's, tmux's or screen's `[2]`, then what each row means; on a popup, that popup's keys |
 | `P` | on `[2]`: preview the lock; any key comes back |
-| `!` | the App Log: what locku has done this run — each value written, each profile made, renamed or deleted, every message it showed — and what went wrong; the footer says `!:1 error` until it is read |
+| `!` | the App Log: what locku has done this run — each value written, each profile made, renamed or deleted, each preview, every message it showed — and what went wrong; the footer says `!:1 error` until it is read |
 | `q\|Ctrl-C` | quit |
 | `j\|k` · `u\|d` · `gg\|G` | down, up · half a page · first, last |
 
@@ -363,7 +363,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.10.3) (tdp v0.10.3), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v0.11.0) (tdp v0.11.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
 
 ## License
 

@@ -2,6 +2,7 @@ package settings
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -801,6 +802,24 @@ func TestAppLogSaysWhatWasDone(t *testing.T) {
 	}
 	if low := lowEntries(v); low != nil {
 		t.Errorf("entries in lower case: %q", low)
+	}
+}
+
+// A preview only looks, and is in the App Log all the same once it is
+// over (tdp note.7); one that fails is there as the error popup's entry.
+func TestAppLogHasThePreviews(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.send(previewDone{what: "profile clock2"})
+	d.send(previewDone{what: "clock defaults", err: errors.New("no terminal")})
+	d.press("Esc", "!")
+	v := d.screen()
+	for _, s := range []string{"Previewed profile clock2", "Preview: no terminal"} {
+		if !strings.Contains(v, s) {
+			t.Errorf("no %q in the App Log:\n%s", s, v)
+		}
+	}
+	if strings.Contains(v, "Previewed clock defaults") {
+		t.Errorf("a failed preview logged as done:\n%s", v)
 	}
 }
 
