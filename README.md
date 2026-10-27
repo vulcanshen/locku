@@ -363,7 +363,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0) (tdp v1.0.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks) and [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code).
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0) (tdp v1.0.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family — [kbu](https://github.com/vulcanshen/kbu) (Kubernetes), [filu](https://github.com/vulcanshen/filu) (files), [sshu](https://github.com/vulcanshen/sshu) (ssh and sftp), [webu](https://github.com/vulcanshen/webu) (the web), [kamonu](https://github.com/vulcanshen/kamonu) (the family's marks), [ccdrawu](https://github.com/vulcanshen/ccdrawu) (a sidebar for Claude Code) and [hostu](https://github.com/vulcanshen/hostu) (switch the hosts file between profiles, in the terminal).
 
 ## License
 
