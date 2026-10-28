@@ -177,7 +177,7 @@ func TestNoPINAnyKeyEnds(t *testing.T) {
 	}
 }
 
-// The box is the lib's password box in its unlock look (tdp password.2, LK1):
+// The box is the lib's password box in its unlock look (tdp password.2):
 // UNLOCK, no prompt row, seven rows with the frame, as wide as the longest
 // PIN's dots and the hint ask, in the middle of the board.
 func TestTheBoxIsTheLibs(t *testing.T) {

@@ -58,7 +58,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 **Integration** 兩項：`tmux`、`screen`，`[2]` 是 `activate`（on / off，就是區塊在不在設定檔裡、它讀的 locku 自己的檔案在不在，2026-10-08）、`config file path`、然後工具自己的 key（tmux 的 lock、lock-after-time、bind-key；screen 的 idle、bind）（2026-09-25，使用者定案；2026-10-18 起兩者之間沒有分隔線，lib 的 `[2]` 一列一個值，之前是一條 Surface2 的分隔線、不可停）；
 **Settings** 一項：`preference`。區塊標題 Blue、大寫（`PROFILES`……，lib 畫的，2026-10-18 起；之前首字大寫）、是
 分隔，不可停，區塊之間不空列；cursor 只在項目之間走，開啟時停在啟用中的 profile。啟用中的 profile 前面一顆 Green `●`，
-掛在縮排那兩格裡（lib 的標記欄：`List.Flags`、那一列的 `Row.Flag`，tdp panel.7、panel.11），名字跟其他區塊的對齊（2026-10-18 到 10-27 由 lib 畫時那兩格只放得進勾選，`●` 寫在名字前面，profile 的名字比其他區塊多縮兩格；LK22，user 2026-10-27 定回到這個樣子），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
+掛在縮排那兩格裡（lib 的標記欄：`List.Flags`、那一列的 `Row.Flag`，tdp panel.7、panel.11），名字跟其他區塊的對齊（2026-10-18 到 10-27 由 lib 畫時那兩格只放得進勾選，`●` 寫在名字前面，profile 的名字比其他區塊多縮兩格；user 2026-10-27 定回到這個樣子），是側欄唯一的綠色；設為啟用在 `preference › profile`，或在這列按 `a`（2026-09-25）。
 
 右 `[2]` 是**明細**，內容跟著 `[1]` 的 cursor 即時切換，不用 Enter，明細沒有切換成本：cursor 在 saver 上是它的說明加預設值；在 profile 上就是那個 profile 的欄位與顏色（custom 只有 `command`，沒有顏色列，2026-09-25）；在 tmux / screen 上是整合的列；在 `preference` 上是一般設定的列。title 是膠囊（§5）：`[2] CLOCK`、`[2] TMUX`、`[2] PREFERENCE`（lib 把名字畫成大寫，2026-10-18 起）——只有名字，不標種類、不放狀態（2026-09-25，使用者：分類資訊多餘）；2026-10-17 以前 profile / saver 的顏色草稿未存時接一顆黃色 `unsaved`（2026-10-18 起沒有草稿，決定 96）。
 
@@ -95,7 +95,7 @@ object，常用的 profile 在上；2026-09-25 加 Integration）：**Profiles**
 | count | `1` / `2` / `3` / `4` / `5`（pets：幾隻貓，預設 `3`；2026-10-07） | 原地選 |
 | bg / fg | 一塊該色的 `███` 加大寫的 hex（lib 的 `ColorSpans`，tdp color-picker.4） | color picker：舊色與新色並排，R G B 各用 hex 從 select 選，選好就寫檔（2026-10-18 起，決定 96）。2026-10-17 以前 bg / fg 是不可停的色票列——一格該色的 glyph 當色票 + **已存**的 hex，草稿不同時右邊接 `→` 加草稿的色票 + hex——底下各有 R / G / B 三列 webu 的 slider：12 格軌道 + 草稿的值，軌道用**該通道自己的顏色**畫（`#RR0000` / `#00GG00` / `#0000BB`），軌道底色反向，數字是 Mauve；Enter 開 0 到 255 的數字清單，10 列一窗、游標在目前值置中，改的是草稿（2026-09-24） |
 
-顏色跟其他欄位一樣，選好就寫檔（2026-10-18 起，決定 96、LK5：tdp 的一列一個值沒有送出，草稿就是送出）。2026-09-24 到 10-17 顏色走**草稿**（使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
+顏色跟其他欄位一樣，選好就寫檔（2026-10-18 起，決定 96：tdp 的一列一個值沒有送出，草稿就是送出）。2026-09-24 到 10-17 顏色走**草稿**（使用者調歪過一次調不回來）：滑桿改草稿，色票列同時看得到已存與草稿，
 panel operation `[P] Preview` 預覽這個 saver、`[S] Save` 寫檔、`[R] Reset` 丟掉草稿；草稿跟著 saver 的名字走
 （rename 帶走、delete 一起丟），預覽都帶著草稿，其餘欄位仍立即寫檔。手改 config 的非法 hex 視同預設。
 label 欄是 lib 的：最長的 label（大寫）多寬就多寬（2026-10-18 起）；之前固定 18 欄，只在面板窄到放不下 label 加值時才縮（修訂 2026-09-24：原本上限是面板寬的三分之一，
@@ -133,7 +133,7 @@ cooldown lasts`、input_tab_width `the spaces a tab takes in text to read — a 
 focus 在這個 `[2]` 時 `?` 的第一節是 activate、config file path、lock（tmux）、lock-after-time / idle、bind-key / bind 的說明，之後才是鍵；screen 的 activate 說明多講 `LOCKPRG`：鎖本體不是一列、住在 shell rc、新開 shell 才有（2026-10-19 起，決定 98；之前 `?` 只有這幾列的說明、`LOCKPRG` 另成一條，鍵清單說 Enter 在 activate 上做什麼）。
 
 `profiles` 與 `savers` 這兩個 key 不成列：它們就是 `[1]` 本身。其餘每個 config key 一定有一列。
-每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態（2026-10-18 起顏色也是；之前顏色走草稿）。寫檔失敗開 error popup（`WRITE FAILED`），值退回；在框裡送出的值寫不進去時 error popup 疊在框上、框與打的值留著（2026-10-19，LK10，決定 98；2026-10-17 以前以 toast 報錯）。
+每次改完立即寫檔，沒有 Save 鍵，沒有 dirty 狀態（2026-10-18 起顏色也是；之前顏色走草稿）。寫檔失敗開 error popup（`WRITE FAILED`），值退回；在框裡送出的值寫不進去時 error popup 疊在框上、框與打的值留著（2026-10-19，決定 98；2026-10-17 以前以 toast 報錯）。
 
 ### 1.2 鎖定畫布 grid
 
@@ -234,7 +234,7 @@ shuffle 揭露，沒變的像素不動，一次變更 ≤ 400 ms。
 new 與 duplicate 都是 `name` input popup：new 預填 saver 的名字（`runner`，用了就 `runner2`），確認後以那種 saver 的預設值生一個
 profile；duplicate 預填原名加 `2`，確認後複製參數。兩者都把 cursor 移到新 profile、焦點送到 `[2]`。
 PIN 設定與更改是**一步一個 popup，一層疊一層**（`CURRENT PIN` → `NEW PIN` → `CONFIRM PIN`；沒有 PIN 時從 `NEW PIN` 開始）：
-每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容；2026-10-18 到 10-19 是一步關了才開下一步，LK7）。
+每一步是自己的框，上一步留在底下；`Esc` 一次退一步，整串做完才一起收掉（2026-09-28，tdp v0.1.9 F1、F4；之前是同一個框換內容；2026-10-18 到 10-19 是一步關了才開下一步）。
 一次只問一件事，錯在哪一步就停在哪一步。已有 PIN 時 `NEW PIN` 框裡是 8 顆灰點代表現有的：直接 `Enter` 保留、整串收掉，`Backspace` 再 `Enter` 拿掉、toast `PIN removed`、不 confirm（2026-10-18 起，決定 96、99；之前 `current PIN` 之後是 options `New PIN` / `Remove PIN`，`Remove PIN` 按 Enter 立即生效、不 confirm，2026-09-24）。
 
 值裡的換行與 Tab（2026-10-06，terminu 定案，之後寫進 tdp input.8）：貼上的換行（`\r\n` 算一個，單獨的 `\n`、`\r`
@@ -248,7 +248,7 @@ PIN 設定與更改是**一步一個 popup，一層疊一層**（`CURRENT PIN` �
 
 | Popup | 類型 | 用途 |
 |---|---|---|
-| PIN prompt | input，password 的解鎖樣式（tdp password.2） | 唯一的 popup。lib 的 `PasswordInput`，開在 lib 的 App 上，板子是它的畫布（`App.Canvas`；2026-10-19，LK1；2026-10-18 到 10-19 是 locku 照 lib 的畫法自己畫的）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：兩列留白、點點（正中間那列）、空一列、錯誤列（Red，置中），沒有說明列——要輸入什麼由標題講（tdp password.2；2026-10-19 自己畫的那一版是留白、點點、空一列、錯誤列、留白，2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案；LK6）；框內 29 欄、連框 31 欄（決定 94） |
+| PIN prompt | input，password 的解鎖樣式（tdp password.2） | 唯一的 popup。lib 的 `PasswordInput`，開在 lib 的 App 上，板子是它的畫布（`App.Canvas`；2026-10-19；2026-10-18 到 10-19 是 locku 照 lib 的畫法自己畫的）：寬照 tdp F7 的「內容的寬度打開時就確定」算，最寬的是 hint `Enter:unlock Backspace:clear Esc:cancel`，39 + 6 = 45 欄；連上下框 7 列：兩列留白、點點（正中間那列）、空一列、錯誤列（Red，置中），沒有說明列——要輸入什麼由標題講（tdp password.2；2026-10-19 自己畫的那一版是留白、點點、空一列、錯誤列、留白，2026-10-18 那天是 9 列，多一列說明 `The PIN`）；標題膠囊 `UNLOCK`（`nf-fa-lock`）、層色；置中。`●` 之間空一格、從中間往兩側長，游標在下一顆的位置，打滿 12 顆時停在最後一顆上。開關照 tdp F2：拉線 4 格、停 1 格、展開 4 格，每格 32 ms。2026-10-17 以前：連框 7 列、沒有說明列、點點在正中間那列（2026-10-07，使用者定案）；框內 29 欄、連框 31 欄（決定 94） |
 | PIN prompt（custom saver） | 同一個框、同一套狀態，由一個沒有 renderer 的 lock 程式透過 callback 交給 custom 的 screen writer 畫在終端機正中央（lib 把框畫在空白的畫布上，locku 切出框的那一塊，2026-10-19）、疊在程式還在動的畫面上：程式每送一段輸出就在後面補畫一次（DECSC / DECRC 包住、一次 `?2026` synchronised update）；收起時清空它佔過的矩形（2026-09-25，使用者定案）；框在的時候 bracketed paste 開著，貼上的換行不會變成 Enter（2026-10-06） | custom 鎖定中唯一的 popup |
 
 四個狀態，框的大小都不變：

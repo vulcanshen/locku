@@ -308,8 +308,8 @@ func said(w io.Writer, what string, out []byte) {
 // server marked @locked — a global option every session sees — the
 // hooks lock a client that attaches to, or switches into, any session,
 // since tmux's own lock-server locks only the clients attached at that
-// moment. Or, since 2026-09-25 (user; the study in
-// .local/studies/lock.md), one session's: `locku` is lock-session, the
+// moment. Or, since 2026-09-25 (user, after a study of
+// tmux's locks), one session's: `locku` is lock-session, the
 // mark is set on the session, and the same hooks read a client's
 // session before the global (measured), so the other sessions are left
 // as they are — a screensaver per workspace, not a wall between them.

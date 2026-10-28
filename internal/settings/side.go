@@ -35,7 +35,7 @@ func (s *Settings) sideRows() []terminu.Row {
 		if p.Name == s.cfg.Profile {
 			// The dot in Green, the app's colour, in the mark column: the two
 			// cells the group's rows are further in, the names lined up with
-			// the other groups' (tdp panel.7, panel.11, panel-154; LK22, user
+			// the other groups' (tdp panel.7, panel.11, panel-154; user
 			// 2026-10-27).
 			row.Flag = terminu.Span{Text: "●", Style: terminu.Fg(terminu.Green)}
 		}

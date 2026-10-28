@@ -24,7 +24,7 @@ import (
 //
 // It runs in the lib's App, which draws the board as its canvas, whole, and
 // the PIN box over it — the lib's password box in its unlock look, the
-// board dimmed under it (tdp E8; LK1, 2026-10-19: until then the box was
+// board dimmed under it (tdp E8; 2026-10-19: until then the box was
 // drawn here, the lib's way). The lock is not a surface (tdp K1): no key of
 // the lib's acts on it, and what the lock adds to the box — a second of
 // "wrong" that swallows every key, the timeout, the PIN read at every key —

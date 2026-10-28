@@ -269,7 +269,7 @@ func TestUnderTheLeastSize(t *testing.T) {
 
 // [1] is the profiles, the savers, the tools and preference, in groups,
 // the active profile with its dot in the mark column, every name lined up;
-// the cursor starts on the active profile (ui.md §1.1; LK22).
+// the cursor starts on the active profile (ui.md §1.1).
 func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 	cfg := testConfig()
 	cfg.Profile = "clock2"
@@ -570,8 +570,8 @@ func TestDetailKeysAndGlossary(t *testing.T) {
 	if strings.Contains(d.screen(), "WHAT EACH ROW IS") {
 		t.Error("a profile's keys have no glossary")
 	}
-	// A long meaning folds in its column, read to its end (tdp v0.8.2,
-	// LK18); activate with no file keeps its own words, disabled (tdp M6).
+	// A long meaning folds in its column, read to its end (tdp v0.8.2);
+	// activate with no file keeps its own words, disabled (tdp M6).
 	d.press("Esc").on(toolID("tmux")).press("2", "?")
 	for _, s := range []string{"go on as they were", "Toggle — locku's line in the file, or not"} {
 		if !strings.Contains(d.screen(), s) {

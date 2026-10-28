@@ -112,7 +112,7 @@ func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 // which of tmux's lock commands `locku`, and the bind-key, run.
 // lock-server locks every client on the server; lock-session the clients
 // of this session alone, the other sessions left as they are (user,
-// 2026-09-25; the study in .local/studies/lock.md: those two and not
+// 2026-09-25, after a study of tmux's locks: those two and not
 // lock-client, whose mirror on the next terminal stays lit). screen has
 // no such choice: each screen is a process of its own, and LOCKPRG is
 // the shell's — there is no server to scope a lock to.

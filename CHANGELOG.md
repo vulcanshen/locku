@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- On terminu-go v1.1.0-beta.1, which follows tdp v1.1.0-beta.1: the repository no longer tracks Claude Code's files, `CLAUDE.md` and what is under `.claude/`, and its `.gitignore` is the family's new template (tdp project.3). Nothing you see changes.
+- The documents and the code's comments no longer point to notes kept off GitHub: what such a note said is written where it was cited, or the citation is gone.
+
 ## v1.0.0 — tdp v1.0.0
 
 - The settings screen is built on terminu-go, the family's library, and follows tdp v1.0.0: its frames, capsules, Space menu, key reference, footer, hints, confirms and toasts are the library's, and every popup opens and closes with the family's animation — a line drawn out from the middle, then the box opened up and down.
