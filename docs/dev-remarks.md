@@ -1,10 +1,10 @@
 # locku 開發者備忘
 
 開發 locku 時要提醒自己、以及與 AI 協作時記下的決策。locku 遵循
-[terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0)（tdp v1.0.0；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3，2026-10-27 到 v0.11.0、v0.11.1、v0.11.2、v0.11.3、v0.11.4、v0.11.5、v1.0.0；2026-10-28 起 repo 照 v1.1.0-beta.1 的 project.3，見決定 113），設定畫面與鎖定畫面的
+[terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0)（tdp v1.0.0；2026-10-20 起照 terminu 的升級交代跟上，2026-10-21 到 v0.9.2、v0.9.3，2026-10-25 到 v0.9.15、v0.9.16，2026-10-26 到 v0.10.0、v0.10.1、v0.10.2、v0.10.3，2026-10-27 到 v0.11.0、v0.11.1、v0.11.2、v0.11.3、v0.11.4、v0.11.5、v1.0.0；2026-10-28 起 repo 照 v1.1.0-beta.1 的 project.3，見決定 113，同日照 v1.1.0-beta.2 的發版範本，見決定 114），設定畫面與鎖定畫面的
 PIN 框都是家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 的（2026-10-18 起照 terminu 的交代整個重構，
 2026-10-19 升到 v0.2.0、v0.2.1、v0.2.2；2026-10-20 照 v0.4.0 改，tag 打之前先用 `go.work` 接本機的 terminu-go，同日 go.mod 升到
-v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3；2026-10-27 到 v0.6.0、v0.6.1、v0.6.2、v0.6.3、v0.6.4、v0.6.5、v1.0.0；2026-10-28 到 v1.1.0-beta.1）；
+v0.4.0，再到 v0.4.1；2026-10-21 到 v0.4.3、v0.4.4；2026-10-25 到 v0.4.20、v0.4.21、v0.4.22；2026-10-26 到 v0.5.0、v0.5.1、v0.5.2、v0.5.3；2026-10-27 到 v0.6.0、v0.6.1、v0.6.2、v0.6.3、v0.6.4、v0.6.5、v1.0.0；2026-10-28 到 v1.1.0-beta.1、v1.1.0-beta.2）；
 使用者要知道的在 README，這裡只放開發者需要的。
 
 ---
@@ -263,7 +263,7 @@ README「The settings screen」那張 ASCII 圖是 tmux 擷取的真畫面（84 
 - **推 `.github/workflows/` 要有 workflow scope 的 token**（2026-09-25）：shell 的 `GITHUB_TOKEN` 是沒有 workflow scope 的 PAT，推到 workflow 檔會被 GitHub 拒絕；那一次改用 gh 的 keyring token 推（`env -u GITHUB_TOKEN` 再走 `gh auth git-credential`）。其他 push 照常用 shell 的。
 - **Homebrew tap 的 formula 在 tap repo 的根目錄**（`locku.rb`），不在 `Formula/` 底下；核對 sha256 時看那裡。
 - **看 Actions 時 `gh run list`、`gh run watch <id> --exit-status`、`gh run view <id>` 分開跑**：串成一行的 shell 指令被安全檢查誤判成刪檔而擋下（2026-10-08）。
-- **五個 app 推同一個 homebrew-tap**：一次只發一個，前一個的 release 跑完、tap 更新了才打下一個的 tag，不然 tap 的 push 會互撞。
+- **五個 app 推同一個 homebrew-tap**：一次只發一個，前一個的 release 跑完、tap 更新了才打下一個的 tag，不然 tap 的 push 會互撞。beta 不推 tap（2026-10-28 起），不用排。
 - **發版前 `make check-lib`**：本機有 `go.work` 指著還沒發版的 terminu-go 時照樣過；關掉 `go.work` 照 go.mod 的版本也要過，CI 沒有 `go.work`。
 
-發版走家族的流程（tdp project 的「發布」）：`make check` → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push。GitHub Actions（`.github/workflows/release.yml`，範本）在 ubuntu 與 macOS 跑 `go test -race`，過了 goreleaser 打包四個平台的 tarball 與 checksums、更新 vulcanshen/homebrew-tap 的 `locku.rb`，再用 CHANGELOG 那一節蓋過 release 的內文（awk 認 `$2 == tag`，所以標題開頭一定是 tag）。v0.2.7 以前的標題照當時的寫法（`## [0.2.7] - 2026-10-08`），不改。CHANGELOG 只記使用者感覺得到的變動；純文件、打包、CI 的改動不記。
+發版走家族的流程（tdp project 的「發布」）：`make check` → CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C` → commit、打 tag `vX.Y.Z` → push。GitHub Actions（`.github/workflows/release.yml`，範本）在 ubuntu 與 macOS 跑 `go test -race`，過了 goreleaser 打包四個平台的 tarball 與 checksums、更新 vulcanshen/homebrew-tap 的 `locku.rb`，再用 CHANGELOG 那一節蓋過 release 的內文（awk 認 `$2 == tag`，所以標題開頭一定是 tag）。v0.2.7 以前的標題照當時的寫法（`## [0.2.7] - 2026-10-08`），不改。CHANGELOG 只記使用者感覺得到的變動；純文件、打包、CI 的改動不記（2026-10-28 的例外：v1.0.1-beta.1 畫面與操作都沒變，terminu 交代照 tdp project.6 把 repo 的改動記進去，那一段就是 pre-release 的內文）。beta 走同一套流程，tag 是 `vX.Y.Z-beta.N`：goreleaser 把它發成 GitHub 的 pre-release、不動 tap（`release.prerelease: auto`、`skip_upload: auto`），brew 與安裝腳本（抓 latest release）照舊是 stable；release notes 寫在 `$RUNNER_TEMP`，checkout 保持乾淨，執行檔的 build info 不會是 `+dirty`（tdp v1.1.0-beta.2 project.7，2026-10-28；v1.0.0 是 `v1.0.0+dirty`）。2026-10-27 起 push、tag 由 terminu 在 user 下令後做，locku 這邊 commit 好就回報。

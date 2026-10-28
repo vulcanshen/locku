@@ -2,10 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.1-beta.1 — tdp v1.1.0-beta.2
 
-- On terminu-go v1.1.0-beta.1, which follows tdp v1.1.0-beta.1: the repository no longer tracks Claude Code's files, `CLAUDE.md` and what is under `.claude/`, and its `.gitignore` is the family's new template (tdp project.3). Nothing you see changes.
+- On terminu-go v1.1.0-beta.2, which follows tdp v1.1.0-beta.2: the repository no longer tracks Claude Code's files, `CLAUDE.md` and what is under `.claude/`, and its `.gitignore` is the family's new template (tdp project.3). Nothing you see changes.
 - The documents and the code's comments no longer point to notes kept off GitHub: what such a note said is written where it was cited, or the citation is gone.
+- A beta, as this one is, is a GitHub pre-release: Homebrew and the install script stay on the latest stable release. The binaries' build information names the version alone, where v1.0.0's read `v1.0.0+dirty`.
 
 ## v1.0.0 — tdp v1.0.0
 
