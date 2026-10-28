@@ -363,7 +363,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0) (tdp v1.0.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family, whose members are listed in [tdp's README](https://github.com/vulcanshen/terminu). [terminu-harness](https://github.com/vulcanshen/terminu-harness) is the Claude Code plugin that makes an app with the two.
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.1.0) (tdp v1.1.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family, whose members are listed in [tdp's README](https://github.com/vulcanshen/terminu). [terminu-harness](https://github.com/vulcanshen/terminu-harness) is the Claude Code plugin that makes an app with the two.
 
 ## License
 

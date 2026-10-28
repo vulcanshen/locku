@@ -2,6 +2,15 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v1.0.1 — tdp v1.1.0
+
+- Nothing you see or press changes from v1.0.0: this release is about the repository and how locku is released, and covers the betas v1.0.1-beta.1 and v1.0.1-beta.2.
+- On terminu-go v1.1.0, which follows tdp v1.1.0.
+- The binaries' build information names the version alone, `v1.0.1`, where v1.0.0's read `v1.0.0+dirty`. The release build finds where to write the version from go.mod's module path, as the family's template now has it; `locku version` prints the version as before.
+- A beta of locku is a GitHub pre-release: Homebrew and the install script stay on the latest stable release.
+- The repository no longer tracks Claude Code's files, `CLAUDE.md` and what is under `.claude/`, and its `.gitignore` is the family's new template (tdp project.3).
+- The documents and the code's comments no longer point to notes kept off GitHub: what such a note said is written where it was cited, or the citation is gone.
+
 ## v1.0.1-beta.2 — tdp v1.1.0-beta.3
 
 - On terminu-go v1.1.0-beta.3, which follows tdp v1.1.0-beta.3: the release build finds where to write the version from go.mod's module path rather than a path written out, as the family's template now has it. locku's module path is unchanged, and `locku version` prints the version as before.

@@ -363,7 +363,7 @@ profiles:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v1.0.0)（tdp v1.0.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu，成員列在 [tdp 的 README](https://github.com/vulcanshen/terminu)。[terminu-harness](https://github.com/vulcanshen/terminu-harness) 是用這兩者做 app 的 Claude Code plugin。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v1.1.0)（tdp v1.1.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu，成員列在 [tdp 的 README](https://github.com/vulcanshen/terminu)。[terminu-harness](https://github.com/vulcanshen/terminu-harness) 是用這兩者做 app 的 Claude Code plugin。
 
 ## 授權
 
