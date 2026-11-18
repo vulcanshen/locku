@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End to end, on a real tmux with the real binary (function.md §12):
+"""End to end, on a real tmux with the real binary:
 the settings screen's Integration › tmux › activate writes locku's own
 file, the bind-key typed there included, and the line in tmux.conf that
 reads it; on a server started on it, `locku`

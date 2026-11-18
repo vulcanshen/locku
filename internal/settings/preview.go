@@ -14,12 +14,12 @@ import (
 	"github.com/vulcanshen/locku/internal/ui"
 )
 
-// Preview (ui.md §2.1): the whole terminal becomes the lock, as a desktop
+// Preview: the whole terminal becomes the lock, as a desktop
 // screensaver's preview does, and any key hands it back to the settings
 // screen as it was — no PIN asked (user, 2026-09-25). The lib's screen is
 // handed over with tea.Exec, the lock run on the terminal meanwhile; a
 // custom saver's program is given the terminal itself, and one that ends,
-// or none set, is the word on the board (function.md §5.5). One that is
+// or none set, is the word on the board. One that is
 // over goes in the App Log, an operation that only looks (tdp note.7,
 // 2026-10-27).
 

@@ -46,7 +46,7 @@ const usage = `locku — a screensaver with a PIN, for the terminal
 
 func main() {
 	// screen runs LOCKPRG by execl with argv[0] set to SCREEN-LOCK and no
-	// arguments: that name is the whole message (function.md §6).
+	// arguments: that name is the whole message.
 	if filepath.Base(os.Args[0]) == "SCREEN-LOCK" {
 		os.Exit(runLock("", ""))
 	}
@@ -82,10 +82,10 @@ func lockArgs(args []string) (socket, session string) {
 	return socket, session
 }
 
-// runLock is `locku lock`. The process is the lock (function.md §1.2): it
+// runLock is `locku lock`. The process is the lock: it
 // ends for the right PIN, for any key when there is no PIN, and for a
 // terminal that has gone away — and for nothing else. Signals are ignored
-// rather than handled (§2.2), and a program that comes down for any other
+// rather than handled, and a program that comes down for any other
 // reason, a panic included, goes straight back up.
 func runLock(socket, session string) int {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
@@ -93,7 +93,7 @@ func runLock(socket, session string) int {
 	cfg, problem := config.Load()
 	// Under tmux the server — or, for lock-session, this session — is
 	// marked locked for as long as this runs, so a client attaching to it
-	// meanwhile is locked too (function.md §6.2); a terminal that goes
+	// meanwhile is locked too; a terminal that goes
 	// away leaves the mark, and the next client in meets the lock.
 	tmux.SetLocked(socket, session, true)
 	// How wide an icon is, for the board's pixels and the prompt's title
@@ -152,7 +152,7 @@ func runBoard(model func() *ui.LockModel) (code int, unlocked bool) {
 }
 
 // runCustom is the lock with the user's own program for a saver
-// (function.md §5.5; user, 2026-09-25): the terminal is locku's — raw,
+// (user, 2026-09-25): the terminal is locku's — raw,
 // on the alternate screen — and the program's, on a pty, is passed on to
 // it as it comes. A key holds the program's picture back and puts the
 // PIN prompt up on a clear screen, a lock program of its own; Esc or
@@ -181,8 +181,8 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 	defer signal.Stop(winch)
 	keys := t.Key()
 	// The wrong PINs in a row and the cooling-off are the lock's, not one
-	// prompt's: each prompt takes them over from the last (function.md
-	// §4.4; terminu, 2026-10-06 — Esc and a key used to start them over).
+	// prompt's: each prompt takes them over from the last
+	// (terminu, 2026-10-06 — Esc and a key used to start them over).
 	var tries ui.Tries
 	for {
 		select {
@@ -206,7 +206,7 @@ func runCustom(cfg config.Config, problem, command string) (int, bool) {
 				return 0, false
 			}
 			// The PIN as the file has it now — as the board lock reads it
-			// at every key (function.md §4.5): none, and this key ends it.
+			// at every key: none, and this key ends it.
 			noPIN := !cfg.HasPIN()
 			if h, ok := config.LoadPINHash(); ok {
 				noPIN = h == ""

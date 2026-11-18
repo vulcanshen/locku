@@ -18,5 +18,5 @@ e2e: build ## 在真的 tmux 上跑端到端（e2e/tmux_attach.py：鎖定、鎖
 	python3 e2e/screen_lock.py ./$(BINARY)
 
 .PHONY: shots
-shots: build ## 拍 docs/savers/*.png，README 每種 saver 一張（需 vhs、JetBrainsMono Nerd Font、cmatrix；隨機的畫面要挑，見 dev-remarks「saver 的靜態圖」）
+shots: build ## 拍 docs/savers/*.png，README 每種 saver 一張（需 vhs、JetBrainsMono Nerd Font、cmatrix；隨機的畫面要挑）
 	$(VHS) .local/demos/savers.tape

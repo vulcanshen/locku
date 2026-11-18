@@ -16,10 +16,10 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// LockModel is `locku lock` (function.md §3): the board, the status row and
+// LockModel is `locku lock`: the board, the status row and
 // the PIN box. The process IS the lock — while it runs the terminal is
 // locked — and there are exactly three ways out: the right PIN, any key
-// when no PIN is set, and the terminal going away (§1.2). Nothing here
+// when no PIN is set, and the terminal going away. Nothing here
 // returns tea.Quit for any other reason.
 //
 // It runs in the lib's App, which draws the board as its canvas, whole, and
@@ -58,7 +58,7 @@ type LockModel struct {
 	idleGen int       // a timeout from before a key carries an older gen
 	held    time.Time // the second of "wrong": every key swallowed till then
 	wrong   bool      // the Enter just handled found the PIN wrong
-	// failures is the wrong PINs in a row, process-lifetime (§4.4), and
+	// failures is the wrong PINs in a row, process-lifetime, and
 	// lockoutUntil the end of the cooling-off they led to.
 	failures     int
 	lockoutUntil time.Time
@@ -66,15 +66,15 @@ type LockModel struct {
 	lockedAt   time.Time
 	user, host string
 
-	// preview: this lock runs inside the settings screen (ui.md §2.1), so
+	// preview: this lock runs inside the settings screen, so
 	// an unlock hands control back rather than ending the process.
 	preview  bool
 	unlocked bool
 	// gone: the terminal went away under the lock; the process ends, but
 	// nothing was unlocked — a tmux session stays marked locked.
 	gone bool
-	// promptOnly: the PIN box alone, for the custom saver (function.md
-	// §5.5) — up from the first frame, and when it closes the program is
+	// promptOnly: the PIN box alone, for the custom saver
+	// — up from the first frame, and when it closes the program is
 	// put back (back), not a board.
 	promptOnly bool
 	back       bool
@@ -106,8 +106,7 @@ type (
 type TTYGoneMsg struct{}
 
 // The box: its title says what to type (tdp password.2), and it says wrong for a
-// wrong PIN, which is a second of every key swallowed, the dots cleared
-// (function.md §4.4).
+// wrong PIN, which is a second of every key swallowed, the dots cleared.
 const (
 	pinTitle  = "Unlock"
 	wrongHold = time.Second
@@ -118,8 +117,8 @@ var errWrongPIN = errors.New("wrong PIN")
 // NewLock is the model for `locku lock`.
 func NewLock(cfg config.Config, problem string) *LockModel { return newLock(cfg, problem, false) }
 
-// NewLockWord is the lock for a custom saver's program that has ended
-// (function.md §5.5): the word on the board — EXIT and its code, or
+// NewLockWord is the lock for a custom saver's program that has ended:
+// the word on the board — EXIT and its code, or
 // NONE — in the clock's face at the largest size that fits, and the
 // note in red on the status row.
 func NewLockWord(cfg config.Config, problem string, word saver.Word, note string) *LockModel {
@@ -147,8 +146,8 @@ func (m *LockModel) withWord(word saver.Word, note string) *LockModel {
 	return m
 }
 
-// Tries is a lock's wrong PINs in a row and the end of its cooling-off
-// (function.md §4.4): the whole lock's, which a custom saver's prompts —
+// Tries is a lock's wrong PINs in a row and the end of its cooling-off:
+// the whole lock's, which a custom saver's prompts —
 // a program each — hand on from one to the next.
 type Tries struct {
 	failures int
@@ -218,7 +217,7 @@ func newLock(cfg config.Config, problem string, preview bool) *LockModel {
 
 // newApp is the lib's app the lock runs in. It locks a terminal of any size
 // (tdp L1: the least size is the app's, and this is not a surface), and
-// Ctrl-C does not leave it: the lock ends by the PIN alone (§1.2). A key on
+// Ctrl-C does not leave it: the lock ends by the PIN alone. A key on
 // the board is the lock's (CanvasKey).
 func (m *LockModel) newApp() *terminu.App {
 	a := terminu.New("locku")
@@ -265,7 +264,7 @@ func (m *LockModel) step(msg tea.Msg) (*LockModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
-		// A resize redraws whole; nothing animates (function.md §5.3).
+		// A resize redraws whole; nothing animates.
 		m.tickGen++
 		m.rev = nil
 		m.shown = m.refit()
@@ -311,7 +310,7 @@ func (m *LockModel) step(msg tea.Msg) (*LockModel, tea.Cmd) {
 		if m.lockoutUntil.IsZero() || m.lockedOut() {
 			return m, nil
 		}
-		// The cooling-off is over and the count starts again (§4.4); the
+		// The cooling-off is over and the count starts again; the
 		// wrong PIN that led to it goes from the box.
 		m.endLockout()
 		if !m.boxUp {
@@ -331,7 +330,7 @@ func (m *LockModel) toApp(msg tea.Msg) tea.Cmd {
 	return cmd
 }
 
-// key is every keystroke (ux.md §2.3). On the board any key opens the box
+// key is every keystroke. On the board any key opens the box
 // and is not input; in the box it is the box's, and starts the timeout
 // again — but for the second of "wrong", when every key is swallowed.
 func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
@@ -366,7 +365,7 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	cmd := m.toApp(msg)
 	if !m.wrong {
 		// Every key restarts the idle timer, so a PIN typed slowly does
-		// not vanish halfway (function.md §3).
+		// not vanish halfway.
 		return tea.Batch(cmd, m.armTimeout())
 	}
 	m.wrong = false
@@ -377,7 +376,7 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	}
 	// A second of "wrong": the dots go — Backspace clears a password whole
 	// — and every key is swallowed, so Enter pressed again and again does
-	// not skip the word (function.md §4.4).
+	// not skip the word.
 	m.held = m.now().Add(wrongHold)
 	return tea.Batch(cmd, m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}),
 		m.app.Tick(wrongHold, func(time.Time) tea.Msg { return heldOverMsg{} }))
@@ -428,7 +427,7 @@ func (m *LockModel) boxClosed() tea.Cmd {
 }
 
 // check is Enter in the box: the right PIN ends the lock at once — no
-// closing animation, the terminal is wanted back (ux.md §2.3); a wrong one
+// closing animation, the terminal is wanted back; a wrong one
 // is a second of "wrong" (key), or, at the configured count, a cooling-off.
 // A PIN with a control character in it — pasted — the lib refuses before
 // it gets here: it is not a wrong one.

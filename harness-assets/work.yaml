@@ -1,0 +1,452 @@
+tasks:
+  - id: 1
+    spec: 1
+    implementation: |
+      `locku lock`（cmd/locku）與 screen 用的 `SCREEN-LOCK` 名字跑鎖：先問終端機 icon 佔幾格，丟掉終端機裡在鎖之前就在等的輸入（按鍵與終端機的回答），再在 alternate screen 畫啟用中的 profile 的螢幕保護
+      鎖定畫面是 locku 自己畫的（internal/ui），不用 terminu-go 的元件；每一列剛好是終端機的寬，改大小時整面重畫
+      `-S <socket>`、`-t <session>` 由 tmux 整合寫進 lock-command，告訴鎖是哪個 tmux server 或 session
+      讀鍵時把終端機的回答（例：tmux attach 時送來的）和按鍵分開，回答不算按鍵
+    test:
+      - TestViewIsExactlyTheTerminal
+      - TestResizeRedrawsWhole
+      - TestRowsAreExactlyTheTerminalWide
+      - TestLineWidths
+      - TestFitLaysTheBlocksOut
+      - TestPaintCentresTheBlocks
+      - TestSceneFitsAndPaints
+      - TestPlainTextCarriesTheLines
+      - TestEachInkWearsItsColour
+      - TestPaintSceneKeepsTheInks
+      - TestShadedBoardSquaresWearTheirLooks
+      - TestLockInputReadsPastAnswers
+      - TestDropPending
+      - TestAnswersAreDropped
+      - TestTmuxAttachAnswersAreDropped
+      - TestAnAnswerSplitOverReads
+      - TestKeysGoThrough
+      - TestKeysOverReads
+      - TestAnUnendedAnswerGivesWay
+  - id: 2
+    spec: 1
+    implementation: |
+      鎖定畫面上任何鍵開 PIN 框，那個鍵不算輸入；框是 terminu-go 的 password 解鎖長相：每個字一顆 ●，置中往兩側長，框疊在還在動的螢幕保護上，底下淡化
+      Enter 送出：PIN 對了程式結束、終端機回來；Esc 收起框、回螢幕保護（螢幕保護一直照跑）；Backspace 清掉打的字
+      每一鍵都重新讀 config.yaml 的 pin_hash，所以 `locku pin reset` 換了 PIN，鎖著的畫面下一鍵就認得
+      終端機太小時框照樣放得下；icon 寬 1 或 2 格都照樣置中
+    test:
+      - TestTheBoxIsTheLibs
+      - TestTheBoxsKeys
+      - TestWrongThenRight
+      - TestEscBackToSaverLeavesTheBoardTicking
+      - TestBoardKeepsTickingUnderThePrompt
+      - TestPromptDimsTheLock
+      - TestPromptLargerThanTheScreen
+      - TestPromptBoxWithIcons
+      - TestPromptOnATinyScreen
+      - TestLockReadsTheFilesPINAtEveryKey
+      - TestLoadPINHash
+  - id: 3
+    spec: 1
+    implementation: |
+      錯誤的 PIN：錯誤列寫 `wrong PIN`（Red），吞掉 1 秒內的所有輸入
+      連錯 wrong_pin_attempts 次（0 關）進入 wrong_pin_attempt_cooldown 秒的冷卻：倒數寫在錯誤列、每秒更新，期間除了 Esc 都吞掉；框收起來時倒數照走
+      pin_prompt_timeout 秒（0 永不）沒按鍵，框自動收起；下一鍵再開
+      custom 螢幕保護的 PIN 框與其他的共用同一份錯誤次數
+    test:
+      - TestLockout
+      - TestPromptTimeoutClosesAndKeysRearmIt
+      - TestCustomPromptsShareTheTries
+      - TestCooldownRunsOutWhileThePromptIsDown
+  - id: 4
+    spec: 1
+    implementation: |
+      鎖定畫面最下面一列寫 `user@host · locked since HH:MM`；沒設 PIN 時寫 `no PIN · any key unlocks`，設定讀不到時寫原因
+      preference 的 show_status: false 不畫這一列
+      名稱裡的控制字元照名字畫（tdp components.5）
+    test:
+      - TestStatusRowSaysWhatMatters
+      - TestStatusRowDrawsControlCharactersByName
+  - id: 5
+    spec: 1
+    implementation: |
+      鎖的程式忽略 SIGINT、SIGTERM、SIGQUIT、SIGHUP、SIGTSTP、SIGTTIN、SIGTTOU；終端機是 raw，Ctrl-C、Ctrl-Z、Ctrl-\ 進來只是按鍵
+      程式因為其他原因結束（包括 panic）就重新升起；只在 PIN 正確、沒設 PIN 時任何鍵、終端機消失時結束
+    test:
+      - TestCtrlCDoesNotLeave
+      - commit: 58ae593
+  - id: 6
+    spec: 1
+    implementation: |
+      沒設 PIN：螢幕保護照常顯示，狀態列寫 `no PIN · any key unlocks`，任何鍵結束
+      config.yaml 讀不到（YAML 壞了、值的型別不對、pin_hash 不是 bcrypt hash）：照沒有 PIN 處理，原因寫在狀態列
+      profiles.yaml 讀不到：顯示預設的 clock，照樣要 PIN
+    test:
+      - TestNoPINAnyKeyEnds
+      - TestMalformedFileFailsOpen
+      - TestBadHashFailsOpen
+  - id: 7
+    spec: 1
+    implementation: |
+      clock：每個像素是一個 nf-fa-square，暗格是 profile 的 bg、亮格是 fg；時間用 3 × 7 或 3 × 5 像素字型畫，`HH MM` 或 `HH MM SS`、24 時制、不畫冒號；日期在下面，四種格式或關掉
+      layout column 直排把 HH / MM / SS 疊起來、日期在左邊；三種 size；塞不下就先去年、去秒、去日期，再降 size
+      每秒只重畫有變的像素，用 shuffle 的方式揭露；換顏色時整面立刻換
+    test:
+      - TestLines
+      - TestBlocks
+      - TestNext
+      - TestFontIsWellFormed
+      - TestNoDiagonals
+      - TestSaverStaysInTheFont
+      - TestTickRevealsOnlyTheChange
+      - TestRevealTouchesOnlyWhatChanged
+      - TestRevealIsNilWhenNothingToDo
+      - TestRevealRecoloursAtOnce
+  - id: 8
+    spec: 1
+    implementation: |
+      runner：地面與障礙向左捲（grassland 仙人掌、desert 金字塔、city 平房大廈與摩天大樓，夜裡有些窗戶亮著），跑者自己跳過去、永遠不撞到；障礙分三級，跳的高度照障礙
+      participants 一隻或兩隻、大或小，兩隻各跳各的；character 是 t-rex、cat、rabbit、giraffe、ghost，每個都有眼睛、都放得進跑道
+      天空是它自己的漸層：day 有太陽、night 有月亮（世界是月光的灰藍，跑者是描白框的剪影、眼睛金色），time-shifting 三分鐘一天、下一段一格一格換上來；雲會從太陽前面飄過
+      畫布取塞得下的最大倍率，一格一格跑
+    test:
+      - TestDinoNeverHitsAnything
+      - TestTwoRunnersJumpOnTheirOwn
+      - TestDinoIsItsSeed
+      - TestArtByName
+      - TestObstaclesComeInThreeTiers
+      - TestJumpIsTheObstaclesSize
+      - TestCityWindowsLightAtNight
+      - TestBesideAlignsTheBottoms
+      - TestEveryCharacterFitsTheRun
+      - TestRunnerCharacters
+      - TestRunnerBackgrounds
+      - TestRunnerSunAndMoon
+      - TestRunnerClouds
+      - TestRunnerCloudsPassInFrontOfTheSun
+      - TestRunnerSkyTurnsSquareBySquare
+      - TestRunnerSunYellowAndMoonRound
+      - TestRunnerOutlinedByNight
+      - TestRunnerEyes
+      - TestRunnerKeepsClearOfTheMoon
+      - TestRunnerNightWorldIsMoonlit
+      - TestTheLockRunsTheCharacter
+      - TestDinoLockRunsFrameByFrame
+      - TestTheLockDrawsTheRunnersSky
+      - TestADinoHasACharacter
+      - TestARunnerHasABackground
+  - id: 9
+    spec: 1
+    implementation: |
+      bounce：一個裝著時間的框（框兩格粗）在板子上飄，撞到邊就反彈、換一個顏色；剛好撞進角落把所有顏色閃一輪
+      speed 五段（slow 到 super-fast）、time 是 HH:MM 或 HH:MM:SS；顏色是它自己的；很小的畫面也放得下
+    test:
+      - TestBounceTurnsAtEveryEdgeInAnotherColour
+      - TestBounceCornerFlashes
+      - TestBounceShowsTheTime
+      - TestBounceIsTheSeedsAndKeepsItsPlace
+      - TestBounceInATinyScene
+      - TestBounceSpeedsAndTimes
+      - TestBounceFrameIsTwoThick
+      - TestBounceLockWearsItsOwnColours
+      - TestSpellIsTheBoardsLettering
+      - TestBounceLockRunsAtTheProfileSpeed
+      - TestABounceProfileIsItsSpeedAndTime
+  - id: 10
+    spec: 1
+    implementation: |
+      snake：沿著一條走遍整面的 Hamilton 迴路走，有空間時抄近路直奔果子，永遠不撞到自己，填滿整面後重來；改大小也重來
+      頭跟著方向轉，碰到果子、上下顎夾住、吞下去；吞下的果子在身體上一秒一節往尾巴走，到了尾巴蛇換成那個顏色、長一節
+      speed 五段；顏色是它自己的
+    test:
+      - TestHamiltonIsACycle
+      - TestSnakeFillsTheBoardAndStartsAgain
+      - TestSnakeCutsWhileThereIsRoom
+      - TestSnakeHeadTurnsWithTheWay
+      - TestSnakeDrawsItsBodyHeadLumpsAndApple
+      - TestSnakeIsTheSeedsAndStartsOverOnAResize
+      - TestSnakeLumpGoesDownASegmentASecond
+      - TestSnakeApplesQueue
+      - TestSnakeEatsInThreeMoves
+      - TestSnakeHeadRoundTheAppleIsAsDrawn
+      - TestSnakeSpeed
+      - TestSnakeAppleInTheBodyIsANode
+      - TestSnakeAppleAtTheTail
+      - TestSnakeGrowsAMoveLaterWhereTheHeadGoesIntoItsTail
+      - TestSnakeLockWearsItsOwnColours
+      - TestSnakeLockRunsAtTheProfileSpeed
+      - TestASnakeProfileIsItsSpeed
+  - id: 11
+    spec: 1
+    implementation: |
+      tetromino：整個畫面是井、外面一圈灰框；七種方塊一袋一袋出，接下來的排在右邊一欄、最上面是下一個
+      每個方塊從上面進場，自己找最低的位置落下，必要時鑽到懸空的下面；填滿的一列閃白、從中間往兩邊消掉
+      堆到頂就結束：方塊由上到下變灰、紅字 END，2 秒後重開；改大小也重開；speed 五段；顏色是它自己的
+    test:
+      - TestTetrominoPieces
+      - TestTetrominoBagOfSeven
+      - TestTetrominoFrameAndBoxes
+      - TestTetrominoQueue
+      - TestTetrominoPlays
+      - TestTetrominoClear
+      - TestTetrominoSlidesUnder
+      - TestTetrominoRatesWithTheFullRowsGone
+      - TestTetrominoKeepsOffTheTop
+      - TestTetrominoEnds
+      - TestTetrominoSpeed
+      - TestTetrominoIsTheSeedsAndStartsOverOnAResize
+      - TestTetrominoInks
+      - TestTetrominoLockWearsItsOwnColours
+      - TestTetrominoLockRunsAtTheProfileSpeed
+      - TestATetrominoProfileIsItsSpeed
+  - id: 12
+    spec: 1
+    implementation: |
+      pets：天空在上、綠地在下；樹和樹樁每次重新擺，放得下多少就多少，窄的 pane 也至少一棵樹
+      貓走最快的路到下一個地方：沿草地走、跳上樹樁、爬樹走到樹枝上；到了坐一會兒、甩尾巴，捲起來睡覺頭上冒黃色的 z，或抱在樹幹上；貓彼此保持距離
+      count 1 到 5，依序是橘紋、琥珀、白、灰藍、黑白；animals 目前只有 cats、scene 目前只有 outdoor；顏色是它自己的
+    test:
+      - TestPetsStump
+      - TestPetsTree
+      - TestPetsCatFacesBothWays
+      - TestPetsCoats
+      - TestPetsRoomsAreWhole
+      - TestPetsGoAbout
+      - TestPetsSleepUnderAZ
+      - TestPetsIsTheSeeds
+      - TestPetsCountAndSize
+      - TestPetsRoomPaceAndInks
+      - TestPetsJumps
+      - TestPetsWayIsTheQuickest
+      - TestPetsKeepApart
+      - TestPetsPace
+      - TestPetsTail
+      - TestPetsSpread
+      - TestPetsTreesVary
+      - TestPetsBackdrop
+      - TestPetsLockWearsItsOwnColours
+      - TestAPetsProfileIsItsCount
+      - TestAPetsProfileHasASceneAndAnimals
+  - id: 13
+    spec: 1
+    implementation: |
+      custom：profile 的 command 經 `sh -c` 跑在 locku 開的 pty 上，pty 的大小跟著終端機；輸出原樣直通，按鍵不送給它
+      環境變數設好 TERMINU__ICON_WIDTH、TERMINU__POWERLINE_WIDTH
+      任何鍵開的 PIN 框每一格畫面都疊在程式的輸出上，只蓋框的範圍、不切斷程式的跳脫序列，超出畫面就截掉；貼上的字照 bracketed paste 收進框
+      PIN 對了程式跟鎖一起結束；沒填 command 時畫一行字當螢幕保護、只有 PIN 框
+    test:
+      - TestTheBoxRidesOnEveryFrame
+      - TestOutcomes
+      - TestNoCommand
+      - TestSizeReachesTheProgram
+      - TestOverlayTouchesOnlyItsBox
+      - TestTheBoxNeverCutsASequence
+      - TestProgramIsToldTheIconWidth
+      - TestThePromptGetsPastesBracketed
+      - TestPaintBoxCutsAtTheScreen
+      - TestKeyReadsPastAnswers
+      - TestCommandIsTheCustomKindsAlone
+      - TestWordLockAndPromptOnly
+  - id: 14
+    spec: 1
+    implementation: |
+      `locku` 開設定畫面（internal/settings，terminu-go 的 App）：[1] 是 tgo List，分 PROFILES、SAVERS、INTEGRATION、SETTINGS 四組，開的時候 cursor 在啟用中的 profile
+      [2] 是 [1] cursor 那一列的明細（tgo Values，一列一個值），標題跟著換（例 `[2] CLOCK`）
+      Tab、1、2 在兩個 panel 間移動；[1] 上 Enter 進 [2]，[2] 上 Enter 編輯那一列
+      終端機小於 lib 的最小尺寸時畫面上說明，按兩次 Ctrl-C 離開，拉大就回來
+    test:
+      - TestSideIsGroupedAndStartsOnTheActive
+      - TestEveryRowIsTheTerminal
+      - TestUnderTheLeastSize
+  - id: 15
+    spec: 1
+    implementation: |
+      [1] PROFILES：每個 profile 一列，啟用中的那個在標記欄畫 Green ●
+      游標在 profile 上：a 設為啟用、p 預覽、D duplicate、r rename、X delete（confirm 問了才刪；啟用中的與最後一個停用）；也都在 Space menu
+      duplicate 與 n（在 saver 上）開 input popup，框裡用灰字提議一個沒人用的名字，直接 Enter 就用它；rename 的舊名是灰字提議；建好後直接進它的 [2]
+      寫 profiles.yaml；App Log 記新增、改名、刪除
+    test:
+      - TestRenameDuplicateNewDelete
+  - id: 16
+    spec: 1
+    implementation: |
+      profile 的 [2]：name、saver，接著這種 saver 自己的設定（clock 的 layout、size、font、time、date、bg、fg；runner 的 participants、character、scene、background；custom 的 command；snake、tetromino 的 speed；bounce 的 speed、time；pets 的 animals、count、scene）
+      選項少的是 radio 原地選、多的開 select 清單、開關原地切換、bg/fg 開顏色選擇器（舊色與新色並排、hex）、command 開 input popup
+      saver 的 [2]：說明加這種 saver 的預設值，改的是 config.yaml 的 savers，不動既有的 profile
+      每一列一設定就寫檔（profile 寫 profiles.yaml、預設值寫 config.yaml），App Log 記寫了什麼
+    test:
+      - TestEachSaverHasItsRows
+      - TestChoicesAreWrittenAtOnce
+      - TestSaverDefaultsAreTheFilesOwn
+      - TestHexHelpers
+  - id: 17
+    spec: 1
+    implementation: |
+      [1] 上 p：profile 預覽它自己、saver 預覽它的預設值；任何 [2] 上 P：profile 或 saver 的 [2] 是那一個，其他是啟用中的 profile
+      預覽就地跑鎖定畫面，任意鍵回到設定畫面，不驗 PIN；custom 的預覽把終端機整個交給程式，直到按鍵
+      App Log 記每一次預覽
+    test:
+      - TestPreviewUnlockHandsBack
+      - TestAppLogHasThePreviews
+  - id: 18
+    spec: 1
+    implementation: |
+      preference 的 PIN 列 Enter：沒設時開 NEW PIN → CONFIRM PIN；已設時先開 CURRENT PIN 驗目前的，再 NEW PIN（框裡是 8 顆灰點：直接 Enter 保留、Backspace 再 Enter 拿掉），再 CONFIRM PIN
+      每一步疊在上一步上面，Esc 退回上一步；PIN 4 到 12 個字元，不合的寫在錯誤列
+      寫 config.yaml 的 pin_hash（bcrypt），App Log 記設了、換了或拿掉了（不含 PIN）
+    test:
+      - TestPINSetChangeRemove
+      - TestPINLength
+      - TestCheckPINAcceptsAnyCost
+  - id: 19
+    spec: 1
+    implementation: |
+      preference 的 [2]：profile 開 select 選啟用的 profile（找不到的名字畫 Red）、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
+      數字框空著就是預設值；超出範圍的寫在錯誤列
+      寫 config.yaml；App Log 記寫了什麼
+    test:
+      - TestNumbersAndSwitches
+      - TestNumberOutOfRangeIsSaid
+      - TestInputTabWidth
+      - TestMissingProfileIsRed
+      - TestProfileNotFoundIsNoted
+  - id: 20
+    spec: 1
+    implementation: |
+      Integration › tmux 的 [2]：activate（開關）、config file path（input popup，提議 ~/.tmux.conf）、lock-after-time（number）、bind-key（input）、lock（lock-server / lock-session）
+      activate 打開先 confirm，再寫 ~/.config/locku/locku.tmux.conf，在使用者的檔裡加兩個標記之間的一行 `source-file -q …  # locku`，再叫跑著的 tmux server 讀它；先前的區塊讓位給這一行，其他部分不動，寫幾次都一樣
+      開著時改任何一列只重寫 locku 的檔並重新載入；關掉時拿掉那一行、刪掉 locku 的檔，跑著的 server 也拿掉
+      路徑沒填時 activate 按不下去；做了什麼一列一列報：放得進三列用 Success toast，放不下開 note；外部程式輸出的行不全塞進報告
+    test:
+      - TestActivateTmux
+      - TestConfigPathOffersTheUsualFile
+      - TestSetupIsReportedARowAtATime
+      - TestApplyIsIdempotentAndKeepsTheRest
+      - TestRemoveUndoesApply
+      - TestIdleTimeIsHandedOn
+      - TestEveryLineIsMarked
+      - TestTmuxWritesAndUndoesTheFile
+      - TestAnEarlierBlockGivesWayToTheLine
+      - TestTheLineNamesLockusOwnFile
+      - TestShellQuote
+      - TestAProgramsLinesAreNotAllInTheReport
+      - TestTmuxLockIsOneOfTwo
+  - id: 21
+    spec: 1
+    implementation: |
+      Integration › screen 的 [2]：activate、config file path（提議 ~/.screenrc）、idle（number）、bind（input，填了才綁）
+      activate 打開先 confirm，再寫 ~/.config/locku/locku.screenrc，在使用者的 screenrc 加一行 `source …  # locku`，在 shell rc（zsh、bash、fish）加 `export LOCKPRG=…`；跑著的 screen 立刻收到 idle 與 bind
+      關掉時把兩處的區塊拿掉、刪掉 locku 的檔
+    test:
+      - TestScreenBindsAKeyWhenNamed
+      - TestScreenWritesAndUndoesRCAndShellRC
+  - id: 22
+    spec: 1
+    implementation: |
+      locku.tmux.conf 設 lock-command（`locku lock -S '#{socket_path}'`）、lock-after-time、command-alias `locku=lock-server`、bind-key，以及 client-attached 與 client-session-changed 的 hook：@locked 設著時把進來的 client 鎖住
+      鎖起來時把 server（lock-session 時是那個 session）的 @locked 設起來，解鎖時拿掉；終端機消失時留著；沒有 tmux 時什麼都不做、不出聲
+    test:
+      - TestSetLockedIsGlobalOrTheSessions
+      - TestNoTmuxIsSilence
+  - id: 23
+    spec: 1
+    implementation: |
+      cmd/locku 的 main：沒有參數開設定畫面；`lock`、`pin reset`、`version`（印 `locku vX.Y.Z`）、`help`（`-h`、`--help` 也是）印用法；不認得的指令在 stderr 說一聲並印用法、結束碼 2
+    test:
+      - commit: 58ae593
+  - id: 24
+    spec: 1
+    implementation: |
+      `locku pin reset`：stdin 不是終端機時說要一個終端機、結束碼 2
+      先檢查 config.yaml 與 profiles.yaml：讀不了就把 `locku pin reset: <路徑> can't be read: <原因>` 寫到 stderr、結束碼 1，什麼都不問、什麼都不寫
+      問 `[y/N]`，再問登入密碼（su 驗）；產生八位數的新 PIN，寫 pin_hash，顯示一次；成功或被拒都在資料目錄的 pin-resets.log 加一行，不含 PIN
+    test:
+      - TestPINResetAsksTwiceAndRotates
+      - TestPINResetTouchesNothingItCannotRead
+      - TestPINResetNeedsATerminal
+      - TestNewPINIsEightDigits
+  - id: 25
+    spec: 1
+    implementation: |
+      config.yaml 在 $LOCKU__CONFIG、$XDG_CONFIG_HOME/locku 或 ~/.config/locku；profiles.yaml 與 pin-resets.log 在 $LOCKU__DATA 或 ~/.locku/data；舊的環境變數名稱不讀
+      沒有檔就是預設值；缺的鍵用預設值；不合的值換成預設值並說一聲；原子寫入、mode 0600、寫回的跟讀進來的一樣
+      config.yaml 標明 version，舊版的檔第一次讀到就轉成新格式整份寫回（改名的鍵、搬到 tmux / screen 底下的鍵、舊的 runner 名稱）
+      舊版放在 config.yaml 的 profile：設定畫面第一次開時搬到 profiles.yaml 並說一聲；搬失敗就留在原處；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著並開 error popup 說明
+      寫檔失敗開 error popup
+    test:
+      - TestMissingFileIsTheDefaults
+      - TestAbsentKeysKeepTheirDefaults
+      - TestEmptyProfilesAreTheDefault
+      - TestOldKeysAreCarriedOver
+      - TestAToolsIdleLockIsCarriedOver
+      - TestOldRunnerNamesAreCarriedOver
+      - TestBadValuesAreDefaults
+      - TestSaveRoundTrip
+      - TestOldVariableNamesAreNotRead
+      - TestTheConfigHasAVersion
+      - TestProfilesAreData
+      - TestProfilesStayUntilMoved
+      - TestProfilesInBothPlacesAreKept
+      - TestAMoveThatFailsLeavesThem
+      - TestProfilesMoveToTheirOwnFile
+      - TestWriteFailureIsAnErrorPopup
+  - id: 26
+    spec: 1
+    implementation: |
+      設定畫面啟動時先檢查 config.yaml，再檢查 profiles.yaml：讀不了就用 terminu-go 的 MoveAside 開 MOVE ASIDE confirm，寫路徑與原因
+      Enter 把檔移成 <名字>.bak（已有就 .bak.1……），照第一次啟動那樣重新開始；Esc 離開，路徑與原因印在 stderr
+    test:
+      - TestUnreadable
+      - TestUnreadableProfiles
+      - TestUnreadableConfigIsMovedAside
+      - TestUnreadableProfilesAreMovedAside
+  - id: 27
+    spec: 1
+    implementation: |
+      沒有 config.yaml 時用預設值開設定畫面（一個 clock profile、就是啟用中的那個、沒有 PIN），第一次改了什麼才寫出 config.yaml 與 profiles.yaml
+      activate 打開之前不碰 tmux.conf、screenrc 與 shell rc
+      tdp_test.go 用 tdptest.Check 掃第一次啟動，含 Tricky 的值
+    test:
+      - TestTDP
+      - TestTDPWithTrickyValues
+  - id: 28
+    spec: 1
+    implementation: |
+      Space menu、key reference、Global operation 是 terminu-go 的；locku 給每個 panel 與每一列的動作
+      preference、tmux、screen 的 [2] 上，? 最前面先是每一列的說明，再是按鍵
+      q 或 Ctrl-C：在面板上立刻離開；有 popup 開著時先問 `Quit locku?`；從 Space menu 開的 popup 關掉後 menu 還在底下
+    test:
+      - TestQuitWithAPopupOpenAsks
+      - TestDetailKeysAndGlossary
+      - TestMenuStaysUnderWhatItOpens
+  - id: 29
+    spec: 1
+    implementation: |
+      ! 開 terminu-go 的 App Log：每一個寫進去的值（`Set <哪裡> › <列>: <值>`）、新增／改名／刪除的 profile、每一次預覽、出現過的每一則訊息與錯誤；有沒看過的錯誤時 footer 寫 `!:1 error`
+    test:
+      - TestAppLogSaysWhatWasDone
+  - id: 30
+    spec: 1
+    implementation: |
+      icon 寬度依序取 LOCKU__ICON_WIDTH、TERMINU__ICON_WIDTH，都沒有就在啟動時問終端機（游標實際移了幾格）；powerline 符號一樣（LOCKU__POWERLINE_WIDTH、TERMINU__POWERLINE_WIDTH）
+      量出來的寬度用在點陣板的像素、PIN 框的標題與設定畫面
+    test:
+      - commit: 0147d48
+  - id: 31
+    spec: 1
+    implementation: |
+      設定畫面的 panel 上按 V 打開 terminu-go 的 splash，畫 locku 的 icon（L、O、C、K 一層包一層）；程式裡的 icon 與 docs/icon.svg 一致
+    test:
+      - TestIconIsTheDocsIcon
+  - id: 32
+    spec: 1
+    implementation: |
+      family.mk、.goreleaser.yaml、install.sh、uninstall.sh、release.yml、version.go、.gitignore 照 harness 的範本；goreleaser 出 macOS 與 Linux 的 binary 並推 Homebrew tap，沒有 Windows
+      install.sh 的 app's own 區塊提醒 Nerd Font 與 truecolor；uninstall.sh 的 app's own 區塊提醒 activate 寫的那幾行要自己拿掉
+    test:
+      - check: repo
+  - id: 33
+    spec: 1
+    implementation: |
+      README.md（英文）與 README-zh_TW.md：icon、badge、語言列、一句話、demo gif、每種螢幕保護的靜態圖、安裝、第一次啟動、移除、快速開始、使用方式、按鍵、忘記 PIN、資料放在哪、限制、terminu family
+    test:
+      - commit: cb24d16

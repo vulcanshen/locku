@@ -1,5 +1,5 @@
 // Package login checks a password against the user's own login. The
-// account is the one boundary locku has (function.md §0.1): whoever can
+// account is the one boundary locku has: whoever can
 // run commands as the user can end a lock anyway, so a PIN reset asks
 // for the account's password as its confirmation and nothing weaker
 // (user, 2026-09-25). A static binary has no PAM, so the check is su's:

@@ -1,5 +1,5 @@
 // Package termreply takes a terminal's answers out of what the lock reads
-// from it, so that only keys are left (function.md §2.1). A terminal
+// from it, so that only keys are left. A terminal
 // answers what it is asked — its background colour, where the cursor is,
 // what it is — on the same input the keys come in by, and the lock reads
 // any key as a key: an answer that reaches it would open the PIN prompt,

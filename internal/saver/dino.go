@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// The dino run (function.md §5.2): the offline game as a screensaver. The
+// The dino run: the offline game as a screensaver. The
 // runner runs, the ground and the obstacles scroll past, and it jumps
 // them by itself, for ever (user, 2026-10-07: the runner, as a kind of
 // saver; it was the dino). Nobody plays it: a jump is timed to clear

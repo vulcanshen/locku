@@ -1,5 +1,5 @@
 // Package saver produces what the lock screen shows, with no style of its
-// own (function.md §5.1): the clock, a few lines of plain text, and the
+// own: the clock, a few lines of plain text, and the
 // dino run, a bitmap in its own pixels (dino.go). The canvas decides how
 // either is drawn; a saver decides only what it says.
 package saver
@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// The two time shapes and the five date shapes (function.md §5.2). They
+// The two time shapes and the five date shapes. They
 // are the whole vocabulary: there is no free-form format, so every line a
 // saver produces is made of the characters the pixel font has.
 //
@@ -119,7 +119,7 @@ type Saver interface {
 	// parts: what the fonts have to be able to draw.
 	Lines(now time.Time) []string
 	// Next is when the lines will next change, so the lock can sleep until
-	// then rather than poll (function.md §5.2 "tick").
+	// then rather than poll.
 	Next(now time.Time) time.Time
 }
 

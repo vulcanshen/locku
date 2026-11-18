@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// A reveal is how the board changes after the first frame (function.md
-// §5.3 / §10.18): only the pixels that differ between the board on screen
+// A reveal is how the board changes after the first frame:
+// only the pixels that differ between the board on screen
 // and the one it is becoming are touched, in a shuffled order, over a few
 // frames — the family splash's reveal, applied to a diff. A pixel that is
 // the same in both never flickers, and a whole change lands inside 400 ms.

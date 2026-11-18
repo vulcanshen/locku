@@ -89,8 +89,6 @@ brew install vulcanshen/tap/locku
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
 ```
 
-Building from source is in [`docs/dev-remarks.md`](docs/dev-remarks.md).
-
 **A Nerd Font is required**: every pixel of the board is nf-fa-square, and the settings screen is drawn with Nerd Font glyphs too. Without one the board is a screen of boxes. How many cells an icon takes, and a powerline symbol — the ends of a capsule, the arrow at the end of the cursor — depends on the font and the terminal, and locku asks the terminal at start. To settle it by hand, set `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH` to `1` or `2`: every terminu app reads them, so once is enough for the whole family; `LOCKU__ICON_WIDTH` and `LOCKU__POWERLINE_WIDTH` are locku's own and come first. Inside another terminu app's terminal, that app sets the two `TERMINU__` ones for locku, and locku sets them the same way for a custom saver's program.
 
 **A truecolor terminal is required**: the board is drawn in the profile's own colours, and what is under a popup is faded, all in 24-bit colour. On a terminal with fewer colours they come out wrong.
@@ -359,7 +357,6 @@ Not there, on purpose:
 ## Links
 
 - [CHANGELOG.md](CHANGELOG.md) — what each release changed
-- [`docs/dev-remarks.md`](docs/dev-remarks.md) — the developer's notes: how it works, why, the design docs, building and testing
 
 ## terminu family
 

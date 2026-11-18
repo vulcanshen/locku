@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""End to end, on a pty with the real binary (function.md §5.6): a custom
+"""End to end, on a pty with the real binary: a custom
 saver's program has the screen and is killed when the lock ends; with a
 PIN, a key holds its picture back and puts the prompt up, Esc gives it
 the screen again, the PIN ends everything; a program that ends — with a
@@ -175,8 +175,8 @@ time.sleep(0.5)
 check("and the program with it", not running(MARK))
 
 # 3b. The wrong PINs in a row and the cooling-off are the lock's: Esc and
-# a key put up a new prompt, and the countdown is still on it (function.md
-# §4.4; terminu, 2026-10-06 — each prompt used to start from nothing).
+# a key put up a new prompt, and the countdown is still on it
+# (terminu, 2026-10-06 — each prompt used to start from nothing).
 config(loop, pin_hash, "wrong_pin_attempts: 2\nwrong_pin_attempt_cooldown: 4\n")
 pid, fd, out = lock()
 os.write(fd, b"x")

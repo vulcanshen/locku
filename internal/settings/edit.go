@@ -25,7 +25,7 @@ var (
 
 func oneKeyErr(name, example string) error { return errors.New(name + " must be one key, " + example) }
 
-// ---- the PIN (ux.md §2.2): one box a step, one question each.
+// ---- the PIN: one box a step, one question each.
 
 // editPIN is Enter on the PIN row. With none set, a new one and its
 // confirmation; with one set, the current one first, then a new one —
@@ -108,7 +108,7 @@ func (s *Settings) confirmPIN(step int) tea.Cmd {
 		}})
 }
 
-// ---- the tools (ux.md §A.1): locku's line written, or taken out.
+// ---- the tools: locku's line written, or taken out.
 
 // askActivate is activate turned: a confirm, then the line in — or out.
 // From then on the rows are live (resync), and the confirm says so.

@@ -10,8 +10,8 @@ import (
 
 // lockInput is the terminal, watched. Bubble Tea's own read loop treats
 // end-of-file as nothing to report and keeps the program up, which for a
-// lock would mean a process guarding a terminal that no longer exists
-// (function.md §1.2 case three). This wrapper turns the first read error —
+// lock would mean a process guarding a terminal that no longer exists.
+// This wrapper turns the first read error —
 // EOF on macOS, EIO on Linux when the pty's master side closes — into a
 // call the lock answers with TTYGoneMsg, and hands Bubble Tea a clean EOF.
 //

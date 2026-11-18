@@ -10,7 +10,7 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// The canvas is one LED board (function.md §5.3, ui.md §1.2): every cell of
+// The canvas is one LED board: every cell of
 // the terminal but the status row is one pixel — the square glyph and a
 // space, two columns wide, so a pixel is close to square. Dark pixels wear
 // the board's bg colour, lit pixels its fg. The saver's lines are set in
@@ -137,7 +137,7 @@ func lineW(f face, line string, k int) int {
 }
 
 // blockSize is the cells lines take at scale k: the widest line, and m
-// lines at the face's height each with a gap between (function.md §5.3).
+// lines at the face's height each with a gap between.
 func blockSize(f face, lines []string, k int) (w, h int) {
 	m := len(lines)
 	for _, l := range lines {
@@ -189,7 +189,7 @@ func (l layout) blockGap() int {
 	return underGap * gap(l.blocks[0].k)
 }
 
-// fit lays the saver's blocks out, each on its own (function.md §5.3):
+// fit lays the saver's blocks out, each on its own:
 // the time first, in the whole canvas; the date in what is left — under
 // the time in the row layout, beside it in the column layout, where the
 // date takes the left and the time the right. For each block the size
@@ -374,7 +374,7 @@ func paintScene(sc saver.Scene, k, cols, rows int) board {
 // boardRows draws the board, one string per row, each exactly cols wide:
 // runs of pixels in one colour are rendered together, so a row costs a few
 // escape sequences rather than one per cell. An odd terminal leaves its
-// rightmost column blank (function.md §5.3). Under the PIN prompt the
+// rightmost column blank. Under the PIN prompt the
 // lock fades whole, as drawn (LockModel.View). inks are the colours, one
 // an ink, the ground first; an ink past the end wears the last.
 func boardRows(b board, inks []lipgloss.Color, shade *saver.Shading, cols int) []string {
@@ -450,7 +450,7 @@ func plainRows(lines []string, bg, fg lipgloss.Color, cols, rows int) []string {
 	return out
 }
 
-// statusRow is the last row (function.md §5.4, ui.md §1.2): who is locked
+// statusRow is the last row: who is locked
 // out of what, since when — and, whatever show says, whether there is a
 // PIN at all, and whether the file could be read. Exactly cols wide.
 // What comes from outside — the user and host, a file's error, a custom

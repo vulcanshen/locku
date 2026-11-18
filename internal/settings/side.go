@@ -10,7 +10,7 @@ import (
 	"github.com/vulcanshen/locku/internal/saver"
 )
 
-// Panel [1] (ui.md §1.1): four groups, one under the other. Profiles
+// Panel [1]: four groups, one under the other. Profiles
 // first: the ones the user has set up — named, configured savers: the
 // objects. Then Savers, the kinds there are — the classes, which have no
 // name but their own and are not made or deleted (user, 2026-09-24, who
@@ -73,8 +73,8 @@ func (s *Settings) itemOf(id string) item {
 	return item{kind: kindPreference}
 }
 
-// sideActions is what can be done to the row under [1]'s cursor (ux.md
-// §A.1). Enter on any row is the same thing: over to [2], where the row's
+// sideActions is what can be done to the row under [1]'s cursor.
+// Enter on any row is the same thing: over to [2], where the row's
 // values are (user, 2026-09-24) — the active profile is set on
 // preference › profile, or with [a], not with Enter.
 func (s *Settings) sideActions() []terminu.Action {
@@ -160,7 +160,7 @@ func (s *Settings) nameCheck(self int) func(string) error {
 // newProfile asks a name for a profile of kind, made as its defaults say:
 // the free name is offered in grey, Enter on it taking it (tdp input.6). Made,
 // the cursor is on it and the focus in [2], to go on with its values
-// (ui.md §3.1; tdp K3, S19: the user expects to be taken to it).
+// (tdp K3: the user expects to be taken to it).
 func (s *Settings) newProfile(kind string) tea.Cmd {
 	return s.app.Text(terminu.TextInput{Title: "New profile", Subject: kind, Glyph: glyphPencil, Name: "Name",
 		Prompt: "A name for the new " + kind + " profile", Verb: "create", Suggest: s.freeName(kind), Check: s.nameCheck(-1),

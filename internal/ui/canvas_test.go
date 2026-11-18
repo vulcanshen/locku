@@ -20,7 +20,7 @@ func one(lines []string, k int) layout { return layout{blocks: []placed{{lines: 
 func under(blocks ...placed) layout    { return layout{blocks: blocks} }
 func beside(blocks ...placed) layout   { return layout{blocks: blocks, beside: true} }
 
-// The layouts function.md §5.3 expects, with rows = terminal height − 1
+// The layouts expected, with rows = terminal height − 1
 // for the status row: each block keeps its size while any of its content
 // fits at it, the time laid out first, the date in what is left. Widths
 // are cells: a digit 3k, the gap unit 1 at 1 and 2, 2 at 3.
@@ -102,7 +102,7 @@ func TestFitLaysTheBlocksOut(t *testing.T) {
 	}
 }
 
-// The widths the sizes are reasoned from (function.md §5.3), in cells at
+// The widths the sizes are reasoned from, in cells at
 // 1: digits and most letters three, M and W five, the hyphen three, the
 // space one gap unit, a gap of one between.
 func TestLineWidths(t *testing.T) {

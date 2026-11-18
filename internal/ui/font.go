@@ -4,7 +4,7 @@ import "github.com/vulcanshen/locku/internal/saver"
 
 // The pixel fonts: one glyph for each of the 39 characters a saver can
 // produce — the digits, the colon, the hyphen, the space, and the capitals
-// (function.md §5.2 / §10.16) — in two faces, 3 × 7 and 3 × 5, a saver's
+// — in two faces, 3 × 7 and 3 × 5, a saver's
 // choice (user, 2026-09-24: try the short one). There is no lower case:
 // the content is made of fixed choices, so this is the whole alphabet.
 //

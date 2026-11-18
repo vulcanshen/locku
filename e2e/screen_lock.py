@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""End to end, on a real GNU screen with the real binary (function.md
-§12): the settings screen's Integration › screen › activate writes
+"""End to end, on a real GNU screen with the real binary:
+the settings screen's Integration › screen › activate writes
 locku's own screenrc, the bind typed there included, the line in the
 screenrc that reads it, and LOCKPRG into the shell rc; a screen already running takes the idle time and the key
 at once (`screen -X`); on a screen started on the file with LOCKPRG in

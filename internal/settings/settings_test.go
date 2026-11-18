@@ -269,7 +269,7 @@ func TestUnderTheLeastSize(t *testing.T) {
 
 // [1] is the profiles, the savers, the tools and preference, in groups,
 // the active profile with its dot in the mark column, every name lined up;
-// the cursor starts on the active profile (ui.md §1.1).
+// the cursor starts on the active profile.
 func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 	cfg := testConfig()
 	cfg.Profile = "clock2"
@@ -304,7 +304,7 @@ func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 }
 
 // Each saver's [2] is its own settings — on its profiles and on its
-// defaults alike — and the colours only where it has them (ui.md §1.1).
+// defaults alike — and the colours only where it has them.
 func TestEachSaverHasItsRows(t *testing.T) {
 	want := map[string][]string{
 		saver.KindClock:     {"layout", "size", "font", "time", "date", "bg", "fg"},

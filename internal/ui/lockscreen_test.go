@@ -244,7 +244,7 @@ func TestTheBoxsKeys(t *testing.T) {
 }
 
 // Ctrl-C does not leave the lock, on the board, in the box, or before the
-// terminal's size is known: the lock ends by the PIN alone (§1.2). Nor does
+// terminal's size is known: the lock ends by the PIN alone. Nor does
 // it ask Quit locku?, which the lib asks with a popup open (tdp K9): the
 // lock's QuitFlow does nothing.
 func TestCtrlCDoesNotLeave(t *testing.T) {
@@ -280,7 +280,7 @@ func TestEscBackToSaverLeavesTheBoardTicking(t *testing.T) {
 	}
 }
 
-// The cooling-off (§4.4): the box counts it down on its error row, every
+// The cooling-off: the box counts it down on its error row, every
 // key but Esc swallowed (tdp popup.7); it is there again when the box opens
 // again, and once it is over the count starts again, the box taking a PIN.
 // On the clock: the lib counts on it.
@@ -383,7 +383,7 @@ func TestDinoLockRunsFrameByFrame(t *testing.T) {
 
 // A preview is a program of its own, run while the settings screen has
 // handed the terminal over: any key ends it, and the settings screen is
-// back (ui.md §2.1).
+// back.
 func TestPreviewUnlockHandsBack(t *testing.T) {
 	m := newLock(config.Default(), "", true)
 	m.now = func() time.Time { return at }

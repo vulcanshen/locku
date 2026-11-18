@@ -96,7 +96,7 @@ func TestNoDiagonals(t *testing.T) {
 }
 
 // Every line a saver can produce, in every shape, across a year, is drawn
-// from the charset — the promise of function.md §5.2 that the content is
+// from the charset — the promise that the content is
 // made of fixed choices.
 func TestSaverStaysInTheFont(t *testing.T) {
 	for _, tf := range saver.TimeFormats {

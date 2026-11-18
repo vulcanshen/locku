@@ -1,7 +1,7 @@
 // Package settings is the bare `locku`: the settings screen, built on
 // terminu-go, the family's lib (tdp E8) — the lib draws the screen, the
 // popups and the core keys from what is registered here, and this package
-// says what there is and what each thing does (ui.md §1.1).
+// says what there is and what each thing does.
 //
 // One screen of two panels. [1] is the items, in four groups: the
 // profiles — named savers, the objects — then the savers, the kinds there
@@ -96,7 +96,7 @@ func New(cfg config.Config, problem string) (*Settings, error) {
 	a.AddScreen(&terminu.Screen{Name: "Settings", Panels: []*terminu.Panel{s.p1, s.p2}, Layout: layout, NarrowBelow: narrowBelow})
 	s.side.SetRows(s.sideRows())
 	// The cursor starts on the active profile: what one most often came
-	// to change (ui.md §1.1).
+	// to change.
 	if i := cfg.Index(cfg.Profile); i >= 0 {
 		s.side.Select(profileID(cfg.Profiles[i].Name))
 	}
@@ -171,7 +171,7 @@ func (s *Settings) App() *terminu.App { return s.app }
 // Run runs the settings screen until it is left.
 func (s *Settings) Run() error { return s.app.Run() }
 
-// sideW is [1]'s width, webu's (ui.md §1.3); narrowBelow the width under
+// sideW is [1]'s width, webu's; narrowBelow the width under
 // which only the focused panel is drawn. minW × minH is the least size
 // (tdp L1), lower than the family's 60 × 32 so a tmux pane will do: the
 // colour picker, the largest box here at 36 × 11, fits whole inside [2]'s

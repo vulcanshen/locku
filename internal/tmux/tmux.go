@@ -1,7 +1,7 @@
 // Package tmux is the little locku says to tmux while it locks: that the
 // server is locked — so a client that attaches to any session meanwhile
-// is locked too, by the hooks `locku setup tmux` writes (function.md
-// §6.2; user, 2026-09-24: the lock is the whole server's, as a
+// is locked too, by the hooks `locku setup tmux` writes
+// (user, 2026-09-24: the lock is the whole server's, as a
 // screensaver is the whole machine's, since a lock on one session is
 // walked round by attaching to another). tmux itself has no such state:
 // lock-server and lock-session lock the clients attached at that moment.

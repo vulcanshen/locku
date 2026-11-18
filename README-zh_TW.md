@@ -89,8 +89,6 @@ brew install vulcanshen/tap/locku
 curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
 ```
 
-從原始碼建置見 [`docs/dev-remarks.md`](docs/dev-remarks.md)。
-
 **Nerd Font 必裝**：點陣板的每個像素就是 nf-fa-square，設定畫面也用 Nerd Font 字符畫。沒有的話整面板子是一堆方框。icon 佔幾格、powerline 符號（膠囊的兩端、cursor 尾端的箭頭）佔幾格，要看字型與終端機，locku 啟動時問終端機。要手動指定就把 `TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 設成 `1` 或 `2`：terminu 家族每個 app 都讀它們，設一次全家族通用；`LOCKU__ICON_WIDTH` 與 `LOCKU__POWERLINE_WIDTH` 只給 locku，比它們優先。在另一個 terminu app 的終端機裡跑時，那個 app 會替 locku 設好兩個 `TERMINU__` 變數；locku 也這樣替 custom saver 的程式設。
 
 **需要 truecolor 終端機**：點陣板用 profile 自己的顏色畫，浮層底下的畫面會淡化，全部用 24 位元色。顏色數比較少的終端機上，顏色會失真。
@@ -359,7 +357,6 @@ profiles:
 ## 相關連結
 
 - [CHANGELOG.md](CHANGELOG.md)——每個版本改了什麼
-- [`docs/dev-remarks.md`](docs/dev-remarks.md)——開發者備忘錄：怎麼運作、為什麼、設計文件導讀、建置與測試
 
 ## terminu family
 

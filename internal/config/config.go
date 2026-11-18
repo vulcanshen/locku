@@ -1,8 +1,8 @@
-// Package config reads and writes locku's one file, config.yaml
-// (function.md §7). Reading never fails the caller: a missing, unreadable
+// Package config reads and writes locku's one file, config.yaml.
+// Reading never fails the caller: a missing, unreadable
 // or malformed file yields the defaults and a note for the status row,
 // because a lock that cannot read its settings must open, not shut —
-// locku is not a security boundary (function.md §0.1, §4.3).
+// locku is not a security boundary.
 package config
 
 import (
@@ -24,16 +24,16 @@ import (
 
 const (
 	// DefaultBG is the board's dark cell: surface0. DefaultFG is the lit
-	// cell: the family splash's gold (ui.md §4).
+	// cell: the family splash's gold.
 	DefaultBG = "#313244"
 	DefaultFG = "#f2b753"
 
 	// AuthPIN is the one auth method v1 knows. The key is in the file so a
-	// later `auth: pam` changes nothing about its shape (function.md §4.1).
+	// later `auth: pam` changes nothing about its shape.
 	AuthPIN = "pin"
 
-	// PINMin and PINMax bound a PIN's length in characters (function.md §4.2;
-	// user, 2026-10-08: 12, where it was 64).
+	// PINMin and PINMax bound a PIN's length in characters
+	// (user, 2026-10-08: 12, where it was 64).
 	PINMin = 4
 	PINMax = 12
 
@@ -44,7 +44,7 @@ const (
 	bcryptCost = 10
 )
 
-// Profile is one named, configured saver (function.md §5.2; user,
+// Profile is one named, configured saver (user,
 // 2026-09-24: a saver is the class — the clock, the dino — and a profile
 // is the object, the one thing that has a name and can be made). Saver
 // says which; the rest is how it shows, and the two colours its board is
@@ -98,8 +98,8 @@ type Style struct {
 // Colours is the profile's pair.
 func (p Profile) Colours() Style { return Style{BG: p.BG, FG: p.FG} }
 
-// Tmux and Screen are each tool's integration in the file (function.md
-// §6.2; user, 2026-09-25: each its own): the file locku's block is
+// Tmux and Screen are each tool's integration in the file
+// (user, 2026-09-25: each its own): the file locku's block is
 // written into, as the user typed it — "~/…" allowed, empty is not set —
 // and the seconds the tool waits idle before it locks by itself, under
 // the tool's own name for that setting (user, 2026-09-25): tmux's
@@ -296,7 +296,7 @@ func (cfg Config) NewProfile(name, kind string) Profile {
 }
 
 // Dir is where config.yaml lives: $LOCKU__CONFIG, else $XDG_CONFIG_HOME/locku,
-// else ~/.config/locku (ui.md §6). The name is the family's, APP__NAME
+// else ~/.config/locku. The name is the family's, APP__NAME
 // (tdp E2, 2026-09-29); the old LOCKU_CONFIG is not read (user).
 func Dir() string {
 	if d := os.Getenv("LOCKU__CONFIG"); d != "" {
@@ -364,7 +364,7 @@ func readFile(path string) (Config, int, error) {
 		}
 	}
 	// A pin_hash that is not bcrypt could never match anything: that is a
-	// lock with no key, and the file is treated as absent (function.md §4.3).
+	// lock with no key, and the file is treated as absent.
 	if cfg.PINHash != "" {
 		if _, err := bcrypt.Cost([]byte(cfg.PINHash)); err != nil {
 			return cfg, 0, unreadable{"pin_hash is not a bcrypt hash", "pin_hash is not a bcrypt hash"}
@@ -590,7 +590,7 @@ func dropKey(m *yaml.Node, key string) {
 // something the rest of locku can rely on: the kind's absent keys are
 // its built-in defaults, a runner under its old name is under the new,
 // the other kind's keys are not its business and go, and a colour that
-// is not "#rrggbb" is quietly its default (ui.md §1.1).
+// is not "#rrggbb" is quietly its default.
 func tidy(p Profile, kind string) Profile {
 	p.Saver = kind
 	d := NewProfile(p.Name, kind)
@@ -693,7 +693,7 @@ func tidyTool(t Tool) Tool {
 
 // sanitized brings a parsed file to something the rest of locku can rely
 // on, and says what it had to correct. Only the profile reference is
-// worth a note (function.md §7).
+// worth a note.
 func (cfg Config) sanitized() (Config, string) {
 	note := ""
 	if cfg.Auth == "" {
@@ -792,7 +792,7 @@ func (cfg Config) Index(name string) int {
 }
 
 // HasPIN reports whether a PIN is set: the difference between a lock and a
-// screensaver (function.md §4.3).
+// screensaver.
 func (cfg Config) HasPIN() bool { return cfg.PINHash != "" }
 
 // CheckPIN reports whether pin is the one set. With no PIN set nothing
@@ -872,7 +872,7 @@ func DataDir() string {
 	return filepath.Join(h, ".locku", "data")
 }
 
-// CheckPINLength is the one rule a PIN has (function.md §4.2).
+// CheckPINLength is the one rule a PIN has.
 func CheckPINLength(pin string) error {
 	n := len([]rune(pin))
 	if n < PINMin || n > PINMax {
@@ -896,8 +896,8 @@ func SaveFile(path string, cfg Config) error {
 }
 
 // writeAtomic writes data to path atomically — a temp file beside it, then
-// a rename — with mode 0600, since config.yaml carries the PIN's hash (ui.md
-// §6). The directory is made when it is not there.
+// a rename — with mode 0600, since config.yaml carries the PIN's hash.
+// The directory is made when it is not there.
 func writeAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o700); err != nil {

@@ -1,6 +1,6 @@
 // Package setup writes the lock into tmux's and screen's configuration
 // and takes it out again — Integration › activate on the settings
-// screen (function.md §6.2). What the lock needs is written into a file
+// screen. What the lock needs is written into a file
 // of locku's own, next to its config.yaml, and the tool's file gets one
 // line that reads it (user, 2026-10-08): the user's file is touched when
 // activate is turned and not when a row changes, and holds nothing of
@@ -302,7 +302,7 @@ func said(w io.Writer, what string, out []byte) {
 	fmt.Fprintf(w, "%s: %s\n", what, reason)
 }
 
-// The tmux side (function.md §6.2). The lock is the whole server's by
+// The tmux side. The lock is the whole server's by
 // default, as a screensaver is the whole machine's (user, 2026-09-24):
 // `locku` locks every client on the server, and while locku has the
 // server marked @locked — a global option every session sees — the
@@ -587,7 +587,7 @@ func eachSession(tmux string, f func(id string)) {
 	}
 }
 
-// The screen side (function.md §6.2), the tmux side's shape under
+// The screen side, the tmux side's shape under
 // screen's own names (user, 2026-09-25). screen has no server: each
 // screen is a process of its own, so there is no lock to scope, and no
 // hooks, so a lock is not remembered for whoever attaches next. What it

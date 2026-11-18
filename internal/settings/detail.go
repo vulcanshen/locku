@@ -14,7 +14,7 @@ import (
 	"github.com/vulcanshen/locku/internal/setup"
 )
 
-// Panel [2] (ui.md §1.1): the details of whatever [1]'s cursor is on, one
+// Panel [2]: the details of whatever [1]'s cursor is on, one
 // value a row, written the moment it is set. A profile is its saver's
 // settings and its two colours. A saver is what it is, which profiles are
 // of it, and then its DEFAULTS — the same values a profile has, which a
@@ -462,7 +462,7 @@ func (s *Settings) toolFields() []*terminu.Field {
 	return out
 }
 
-// detailActions is what can be done on [2] (ux.md §A.1): Enter on the row
+// detailActions is what can be done on [2]: Enter on the row
 // under the cursor, then the panel's — Preview, and New on a saver.
 func (s *Settings) detailActions() []terminu.Action {
 	var out []terminu.Action

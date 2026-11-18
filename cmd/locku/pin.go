@@ -15,7 +15,7 @@ import (
 	"github.com/vulcanshen/locku/internal/config"
 )
 
-// pinReset is `locku pin reset` (function.md §4.5; user, 2026-09-25):
+// pinReset is `locku pin reset` (user, 2026-09-25):
 // the way back from a forgotten PIN, from any shell of the user's own.
 // It asks twice — y/N, then the user's login password, the account
 // being the one boundary locku has — then makes a new PIN, writes its

@@ -9,7 +9,7 @@ import (
 	"github.com/vulcanshen/locku/internal/custom"
 )
 
-// RunPreview is the settings screen's preview (ui.md §2.1): the lock on
+// RunPreview is the settings screen's preview: the lock on
 // cfg's active profile, on the whole terminal, until any key — no PIN
 // asked. The settings screen has handed the terminal over (tea.Exec), its
 // widths measured already by the lib.
