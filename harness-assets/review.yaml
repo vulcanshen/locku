@@ -38,8 +38,7 @@ tasks:
   - id: 18
     accepted: true
   - id: 19
-    accepted: false
-    reason: 'tdp 不清楚：啟用的 profile 開 select，可是 profile 的數量會變、常常不到五個（預設只有一個）；tdp radio.1「選項五個以內：直接畫在表單或 panel 上…超過五個用 select」沒說選項數會變的清單用哪一個'
+    accepted: true
   - id: 20
     accepted: false
     reason: 'tdp 不清楚：activate 寫了什麼「放得進三列用 Success toast，放不下開 note（tgo Viewer）」。tdp toast.2 只寫「最多幾列，app 可以自行決定…app 設了上限、訊息超過時，最後一列結尾加 `…`，完整的訊息走 error popup 或 app 的 log」；超過三列時不跳 toast、改開一個唯讀的 viewer（note.1）放完整的報告，是不照 toast.2，還是 note.1 允許的另一種做法，tdp 沒寫'
@@ -52,8 +51,7 @@ tasks:
   - id: 24
     accepted: true
   - id: 25
-    accepted: false
-    reason: 'tdp 不清楚：config.yaml「不合的值換成預設值並說一聲」，型別不對、pin_hash 不是 bcrypt hash 才算讀不了（task 6）。tdp E3「app 自己的設定、狀態、資料讀不了（格式錯、檔案壞掉、沒有權限……原因不分）時，app 不在這個狀態下繼續操作，啟動時開一個 confirm」；YAML 讀得進來、只有某個值不合規則算不算「讀不了」，tdp 沒寫（P5 把「輸入的值合不合規則」交給 app，E3 又寫原因不分）；換成預設值繼續、之後寫回能不能蓋掉使用者原本寫的值，「說一聲」用 toast 還是 App Log，也沒寫'
+    accepted: true
   - id: 26
     accepted: true
   - id: 27

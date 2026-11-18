@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -236,6 +237,55 @@ func TestInputTabWidth(t *testing.T) {
 			t.Errorf("%q: input_tab_width %d, want %d", body, cfg.InputTabWidth, want)
 		}
 	}
+}
+
+// A value locku does not have is its default all the same, and is said for
+// the App Log, something locku did by itself (tdp note.7): which file,
+// where, the value and the one used; so is a profile left out for its name.
+// Whether such a value is a file that cannot be read is tdp #18's.
+func TestCorrectionsAreSaid(t *testing.T) {
+	cfg, _ := LoadFile(write(t, "version: 1\nprofile: s\npin_prompt_timeout: -1\nprofiles:\n"+
+		"  - name: s\n    saver: snake\n    speed: warp\n  - name: s\n    saver: clock\n  - name: \"\"\n    saver: clock\n"+
+		"savers:\n  runner: {saver: runner, background: dusk}\n"))
+	want := []string{
+		`config.yaml: profile s's speed "warp" is not one locku has; normal used`,
+		`config.yaml: a second profile named "s" is left out`,
+		`config.yaml: a profile with no name is left out`,
+		`config.yaml: the runner defaults' background "dusk" is not one locku has; time-shifting used`,
+		`config.yaml: pin_prompt_timeout -1 is out of range; 30 used`,
+	}
+	if got := cfg.Corrected(); !sameSet(got, want) {
+		t.Errorf("corrections:\n%q\nwant\n%q", got, want)
+	}
+
+	// profiles.yaml's are said as its.
+	t.Setenv("LOCKU__CONFIG", t.TempDir())
+	t.Setenv("LOCKU__DATA", t.TempDir())
+	if err := os.WriteFile(ProfilesPath(), []byte("version: 1\nprofiles:\n  - name: p\n    saver: pets\n    count: 9\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _ = Load()
+	if got, want := cfg.Corrected(), []string{`profiles.yaml: profile p's count 9 is not one locku has; 3 used`}; !sameSet(got, want) {
+		t.Errorf("corrections:\n%q\nwant\n%q", got, want)
+	}
+
+	// A file locku wrote has nothing to say.
+	if got := Default().Corrected(); len(got) != 0 {
+		t.Errorf("the defaults corrected: %q", got)
+	}
+}
+
+// sameSet is whether a and b hold the same strings, in any order.
+func sameSet(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for _, s := range b {
+		if !slices.Contains(a, s) {
+			return false
+		}
+	}
+	return true
 }
 
 func TestBadValuesAreDefaults(t *testing.T) {

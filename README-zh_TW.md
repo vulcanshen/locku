@@ -290,7 +290,7 @@ locku pin reset
 | 設定 | `config.yaml`——PIN 的 hash、啟用的 profile、各 saver 的預設值、整合設定 | `~/.config/locku`（有設 `$XDG_CONFIG_HOME` 就是 `$XDG_CONFIG_HOME/locku`；`$LOCKU__CONFIG` 直接指定） |
 | 資料 | `profiles.yaml`——你的 profile；`pin-resets.log`——每次 `locku pin reset`，不含 PIN | `~/.locku/data`（`$LOCKU__DATA`） |
 
-無 history、無 cache、無 session；App Log（`!`）只在設定畫面開著時存在。`config.yaml` 原子寫入、mode 0600，可以手改。讀不了時（YAML 壞了、值的型別不對、`pin_hash` 不是 hash），設定畫面一開就問要不要把它移到旁邊成 `config.yaml.bak`（已經有了就是 `.bak.1`……，什麼都不蓋掉）、用預設值重新開始，或是離開並印出原因；鎖定畫面照沒有 PIN 處理，原因寫在狀態列。`profiles.yaml` 讀不了時也一樣問；這時鎖定畫面顯示預設的 clock，照樣要 PIN。舊版 locku 放在 `config.yaml` 裡的 profile，設定畫面第一次開時搬到 `profiles.yaml`，並說一聲；兩個檔都有 profile 時用 `profiles.yaml` 的，`config.yaml` 的留著讓你自己合併。`config.yaml` 會標明自己的 `version`：舊版 locku 的檔第一次被讀到時就轉成新格式，整份寫回並標上新的版本。
+無 history、無 cache、無 session；App Log（`!`）只在設定畫面開著時存在。`config.yaml` 原子寫入、mode 0600，可以手改。讀不了時（YAML 壞了、值的型別不對、`pin_hash` 不是 hash），設定畫面一開就問要不要把它移到旁邊成 `config.yaml.bak`（已經有了就是 `.bak.1`……，什麼都不蓋掉）、用預設值重新開始，或是離開並印出原因；鎖定畫面照沒有 PIN 處理，原因寫在狀態列。`profiles.yaml` 讀不了時也一樣問；這時鎖定畫面顯示預設的 clock，照樣要 PIN。值不是 locku 有的（沒有的 speed 或 background、不是 `#rrggbb` 的顏色、負的秒數）就用預設值，沒有名字或名字重複的 profile 略過：App Log 會寫是哪幾個，下一次存檔就照這樣寫回。舊版 locku 放在 `config.yaml` 裡的 profile，設定畫面第一次開時搬到 `profiles.yaml`，並說一聲；兩個檔都有 profile 時用 `profiles.yaml` 的，`config.yaml` 的留著讓你自己合併。`config.yaml` 會標明自己的 `version`：舊版 locku 的檔第一次被讀到時就轉成新格式，整份寫回並標上新的版本。
 
 ```yaml
 version: 1                # 檔案格式的版本，locku 自己寫

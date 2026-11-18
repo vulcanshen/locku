@@ -10,6 +10,7 @@ Each release names the version of terminu design (tdp) it follows.
 - `locku version` prints the version alone, as the tag reads it: `v1.0.1` where it printed `locku v1.0.1`.
 - `[2]`'s title is the name of what it shows as you wrote it, `[2] clock`, no longer in capitals.
 - `input_tab_width` takes effect as soon as you save it, rather than at the next start.
+- A value in config.yaml or profiles.yaml that locku does not have, such as a speed it does not offer or a colour that is not `#rrggbb`, was quietly its default; now the App Log says which file, which value and the one used, as it does for a profile left out for a name that is empty or taken.
 
 ## v1.0.1 — tdp v1.1.0
 

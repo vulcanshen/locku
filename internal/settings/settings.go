@@ -124,6 +124,13 @@ func (s *Settings) start() tea.Cmd {
 	if s.problem != "" {
 		said = s.app.Error("Config", s.problem)
 	}
+	// What locku put right as it read the files is something it did by
+	// itself, and the App Log's (tdp note.7), a Warning a value.
+	// TODO(tdp #18): whether it is said more loudly, and whether the next
+	// save may write it so, tdp does not say.
+	for _, c := range s.cfg.Corrected() {
+		s.app.Log(terminu.Warning, c)
+	}
 	return tea.Batch(s.moveProfiles(), said)
 }
 
@@ -291,6 +298,8 @@ func (s *Settings) wrote(label, value string) string {
 // tell says what was done in a Success toast when it fits in three rows,
 // and in a note to read when it does not: setup's report of a long path
 // is read, not glimpsed (tdp toast.2: how many rows is the app's).
+// TODO(tdp #17): tdp does not say whether a report too long for a toast may
+// be a note rather than a toast cut with "…".
 func (s *Settings) tell(title string, lines []string) tea.Cmd {
 	text := strings.Join(lines, " · ")
 	w, _ := s.app.Size()

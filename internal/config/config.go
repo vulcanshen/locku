@@ -208,7 +208,17 @@ type Config struct {
 	legacy bool
 	left   []Profile
 	lost   bool
+	// corrected is what the files had that sanitized put right (Corrected).
+	corrected []string
 }
+
+// Corrected is what the files had that locku put right as it read them, a
+// line each for the App Log, something locku did by itself (tdp note.7):
+// the file, where, the value it had and the one used, and a profile left
+// out for its name. The next save writes them so. TODO(tdp #18): whether
+// such a value is a file that cannot be read, and whether it may be
+// written back as its default, tdp does not say.
+func (cfg Config) Corrected() []string { return cfg.corrected }
 
 // NewProfile is a profile called name of the saver kind as the program
 // itself makes it: the built-in defaults (user, 2026-09-24) — the clock
@@ -398,7 +408,7 @@ func loadFile(path string) (cfg Config, note string, had, ok bool) {
 	if cfg.Profile == "" {
 		cfg.Profile = Default().Profile
 	}
-	cfg, note = cfg.sanitized()
+	cfg, note = cfg.sanitized(filepath.Base(path))
 	if version < ConfigVersion {
 		// Brought to this version, the file is written over in its shape
 		// and says so (user, 2026-10-07: a config migration), the profiles
@@ -682,6 +692,31 @@ func tidy(p Profile, kind string) Profile {
 	return p
 }
 
+// corrections is what tidy put right in a profile, as the App Log says it:
+// a value it had that is not one locku has, and the one used instead. A key
+// of another kind gone, a colour's case and a runner's old name are not
+// corrections, nor is an absent key.
+func corrections(where string, was, now Profile) []string {
+	var out []string
+	for _, f := range [][3]string{
+		{"layout", was.Layout, now.Layout}, {"size", was.Size, now.Size}, {"font", was.Font, now.Font},
+		{"time", was.Time, now.Time}, {"date", was.Date, now.Date},
+		{"participants", was.Participants, now.Participants}, {"character", was.Character, now.Character},
+		{"scene", was.Scene, now.Scene}, {"background", was.Background, now.Background},
+		{"speed", was.Speed, now.Speed}, {"animals", was.Animals, now.Animals},
+		{"bg", was.BG, now.BG}, {"fg", was.FG, now.FG},
+	} {
+		key, w, n := f[0], f[1], f[2]
+		if w != "" && n != "" && !strings.EqualFold(w, n) && renamedRunner[w] != n {
+			out = append(out, fmt.Sprintf("%s %s %q is not one locku has; %s used", where, key, w, n))
+		}
+	}
+	if was.Count != 0 && now.Count != 0 && was.Count != now.Count {
+		out = append(out, fmt.Sprintf("%s count %d is not one locku has; %d used", where, was.Count, now.Count))
+	}
+	return out
+}
+
 // tidyTool is a tool's integration as the rest of locku can rely on it.
 func tidyTool(t Tool) Tool {
 	t.Conf = strings.TrimSpace(t.Conf)
@@ -692,10 +727,15 @@ func tidyTool(t Tool) Tool {
 }
 
 // sanitized brings a parsed file to something the rest of locku can rely
-// on, and says what it had to correct. Only the profile reference is
-// worth a note.
-func (cfg Config) sanitized() (Config, string) {
+// on, and says what it had to correct: the profile reference in the note,
+// for the status row, and every value put right in corrected, for the App
+// Log. from is the file the profiles were read from; the rest is
+// config.yaml's. TODO(tdp #18): tdp does not say whether a value that
+// breaks a rule is a file that cannot be read, nor whether it may be
+// written back as its default.
+func (cfg Config) sanitized(from string) (Config, string) {
 	note := ""
+	say := func(format string, a ...any) { cfg.corrected = append(cfg.corrected, fmt.Sprintf(format, a...)) }
 	if cfg.Auth == "" {
 		cfg.Auth = AuthPIN
 	}
@@ -703,14 +743,21 @@ func (cfg Config) sanitized() (Config, string) {
 	seen := map[string]bool{}
 	for _, p := range cfg.Profiles {
 		p.Name = strings.TrimSpace(p.Name)
-		if p.Name == "" || seen[p.Name] {
+		switch {
+		case p.Name == "":
+			say("%s: a profile with no name is left out", from)
+			continue
+		case seen[p.Name]:
+			say("%s: a second profile named %q is left out", from, p.Name)
 			continue
 		}
 		seen[p.Name] = true
 		if p.Saver == "" {
 			p.Saver = saver.KindClock
 		}
-		profiles = append(profiles, tidy(p, p.Saver))
+		t := tidy(p, p.Saver)
+		cfg.corrected = append(cfg.corrected, corrections(fmt.Sprintf("%s: profile %s's", from, p.Name), p, t)...)
+		profiles = append(profiles, t)
 	}
 	cfg.Profiles = profiles
 	switch {
@@ -726,28 +773,41 @@ func (cfg Config) sanitized() (Config, string) {
 	savers := map[string]Profile{}
 	for _, k := range saver.Kinds {
 		p := tidy(cfg.Savers[k], k)
+		cfg.corrected = append(cfg.corrected, corrections("config.yaml: the "+k+" defaults'", cfg.Savers[k], p)...)
 		p.Name = ""
 		savers[k] = p
 	}
 	cfg.Savers = savers
-	if cfg.PINPromptTimeout < 0 {
-		cfg.PINPromptTimeout = Default().PINPromptTimeout
-	}
-	if cfg.WrongPINAttempts < 0 {
-		cfg.WrongPINAttempts = 0
-	}
-	if cfg.WrongPINCooldown <= 0 {
-		cfg.WrongPINCooldown = Default().WrongPINCooldown
-	}
-	if cfg.InputTabWidth <= 0 {
-		cfg.InputTabWidth = Default().InputTabWidth
+	def := Default()
+	for _, n := range []struct {
+		key   string
+		v     *int
+		least int
+		def   int
+	}{
+		{"pin_prompt_timeout", &cfg.PINPromptTimeout, 0, def.PINPromptTimeout},
+		{"wrong_pin_attempts", &cfg.WrongPINAttempts, 0, 0},
+		{"wrong_pin_attempt_cooldown", &cfg.WrongPINCooldown, 1, def.WrongPINCooldown},
+		{"input_tab_width", &cfg.InputTabWidth, 1, def.InputTabWidth},
+	} {
+		if *n.v < n.least {
+			say("config.yaml: %s %d is out of range; %d used", n.key, *n.v, n.def)
+			*n.v = n.def
+		}
 	}
 	for _, n := range []string{"tmux", "screen"} {
-		cfg.SetTool(n, tidyTool(cfg.Tool(n)))
+		t := tidyTool(cfg.Tool(n))
+		if was := cfg.Tool(n).Idle; was != t.Idle {
+			say("config.yaml: %s idle time %d is out of range; %d used", n, was, t.Idle)
+		}
+		cfg.SetTool(n, t)
 	}
 	cfg.Tmux.BindKey = strings.TrimSpace(cfg.Tmux.BindKey)
 	cfg.Screen.Bind = strings.TrimSpace(cfg.Screen.Bind)
 	if cfg.Tmux.Lock != LockSession {
+		if cfg.Tmux.Lock != "" && cfg.Tmux.Lock != LockServer {
+			say("config.yaml: tmux lock %q is not one locku has; %s used", cfg.Tmux.Lock, LockServer)
+		}
 		cfg.Tmux.Lock = LockServer
 	}
 	return cfg, note

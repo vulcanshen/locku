@@ -72,14 +72,14 @@ func Load() (Config, string) {
 	case errors.As(err, &u):
 		cfg.lost = true
 		cfg.Profiles = Default().Profiles
-		cfg, _ = cfg.sanitized()
+		cfg, _ = cfg.sanitized(filepath.Base(ProfilesPath()))
 		return cfg, u.note
 	}
 	if had {
 		cfg.left = cfg.Profiles
 	}
 	cfg.Profiles = ps
-	return cfg.sanitized()
+	return cfg.sanitized(filepath.Base(ProfilesPath()))
 }
 
 // Save writes cfg: the profiles to profiles.yaml, the rest to config.yaml;

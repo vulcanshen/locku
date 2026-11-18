@@ -210,7 +210,9 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 }
 
 // choice is a value out of options: a radio drawn in place for five or
-// fewer, a select past that (tdp form.5). apply puts the one
+// fewer, a select past that (tdp form.5). TODO(tdp #16): options that come
+// and go, as the profiles do, flip the row from one to the other; tdp does
+// not say which a list of the user's own takes. apply puts the one
 // chosen into the config, which is written at once; then, when given, runs
 // after.
 func (s *Settings) choice(label string, options []string, current string, apply func(string), then func() tea.Cmd) *terminu.Field {

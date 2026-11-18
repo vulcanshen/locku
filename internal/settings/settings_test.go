@@ -834,6 +834,30 @@ func TestAppLogSaysWhatWasDone(t *testing.T) {
 	}
 }
 
+// What locku put right in its files as it read them is in the App Log from
+// the start, a Warning a value: something locku did by itself (tdp note.7).
+func TestCorrectionsAreInTheAppLog(t *testing.T) {
+	tempDirs(t)
+	if err := config.Save(testConfig()); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(config.ProfilesPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config.ProfilesPath(), []byte(strings.Replace(string(b), "speed: normal", "speed: warp", 1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	d := started(t)
+	if v := d.screen(); strings.Contains(v, "MOVE ASIDE") {
+		t.Fatalf("a value put right is not a file that cannot be read:\n%s", v)
+	}
+	d.press("!")
+	if v := d.screen(); !strings.Contains(v, `speed "warp" is not one locku has; normal used`) {
+		t.Errorf("the correction is not in the App Log:\n%s", v)
+	}
+}
+
 // A preview only looks, and is in the App Log all the same once it is
 // over (tdp note.7); one that fails is there as the error popup's entry.
 func TestAppLogHasThePreviews(t *testing.T) {

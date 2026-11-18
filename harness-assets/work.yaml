@@ -300,7 +300,7 @@ tasks:
   - id: 19
     spec: 1
     implementation: |
-      preference 的 [2]：profile 開 select 選啟用的 profile、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
+      preference 的 [2]：profile 選啟用的 profile（profile 五個以內畫 radio 原地選，超過開 select）、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
       config.yaml 的 profile 找不到時，profile 那一列的 label 畫 Red（tgo Field.Err），值照常是 Text
       數字框空著就是預設值；超出範圍的寫在錯誤列
       input_tab_width 確定的那一刻也設給 tgo 的 App.InputTabWidth，lib 從下一個訊息起就照它畫 Tab
@@ -373,7 +373,10 @@ tasks:
     spec: 1
     implementation: |
       config.yaml 在 $LOCKU__CONFIG、$XDG_CONFIG_HOME/locku 或 ~/.config/locku；profiles.yaml 與 pin-resets.log 在 $LOCKU__DATA 或 ~/.locku/data；舊的環境變數名稱不讀
-      沒有檔就是預設值；缺的鍵用預設值；不合的值換成預設值並說一聲；原子寫入、mode 0600、寫回的跟讀進來的一樣
+      沒有檔就是預設值；缺的鍵用預設值；原子寫入、mode 0600、寫回的跟讀進來的一樣
+      YAML 讀得進來、只是值不合規則（沒有的 speed 或 background、不是 #rrggbb 的顏色、負的秒數、tmux 沒有的 lock）：換成預設值；名字空白或重複的 profile 略過；存檔時寫回成換過的樣子
+      換掉的值與略過的 profile 一筆一筆列出（config.Corrected：哪個檔、哪個 profile 或 saver 的預設值、哪個 key、原本的值、用了哪個），設定畫面啟動時每一筆以 Warning 記進 App Log；不另外跳 toast 或 popup
+      一個 profile 都沒有、或啟用的 profile 找不到時才說：設定畫面開 error popup（Config），鎖定畫面寫在狀態列
       config.yaml 標明 version，舊版的檔第一次讀到就轉成新格式整份寫回（改名的鍵、搬到 tmux / screen 底下的鍵、舊的 runner 名稱）
       舊版放在 config.yaml 的 profile：設定畫面第一次開時搬到 profiles.yaml 並說一聲；搬失敗就留在原處；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著並開 error popup 說明
       寫檔失敗開 error popup
@@ -394,6 +397,8 @@ tasks:
       - TestAMoveThatFailsLeavesThem
       - TestProfilesMoveToTheirOwnFile
       - TestWriteFailureIsAnErrorPopup
+      - TestCorrectionsAreSaid
+      - TestCorrectionsAreInTheAppLog
   - id: 26
     spec: 1
     implementation: |
