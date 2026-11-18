@@ -1,6 +1,6 @@
-id: 3
-from: v1.2.14
-to: v1.2.15
+id: 4
+from: v1.2.15
+to: v1.2.16
 tasks:
   - id: 1
     spec: 1
@@ -40,12 +40,12 @@ tasks:
     remark:
       - 鎖定畫面不是 TUI 的 surface，K9 的離開鍵不套用在這裡（tdp K1）
   - id: 6
-    spec: 1
+    spec: 4
     request: 沒設 PIN、或 config 讀不到時一律 fail open：螢幕保護照常顯示、狀態列說明原因、任何鍵結束
-    tdp: [tdp E3, tdp P5, tdp K1]
+    tdp: [tdp E3, tdp P5, tdp K1, tdp E3-36]
     remark:
       - profiles.yaml 讀不了時顯示預設的 clock，照樣要 PIN
-      - 鎖定畫面不在 TUI 裡：讀不了自己的檔時怎麼繼續由 app 決定，要守的是不動任何檔案（不做 .bak、不重寫）、讓使用者看到哪個檔讀不了與原因；下次開設定畫面照常問 MOVE ASIDE（tdp E3「不在 TUI 裡的畫面」，user 2026-11-18 在 terminu 定，tdp main ff56bde，發版後引用那一版）。locku 照沒有 PIN 處理、狀態列寫原因
+      - 鎖定畫面不在 TUI 裡：讀不了自己的檔時怎麼繼續由 app 決定，要守的是不動任何檔案（不做 .bak、不重寫）、讓使用者看到哪個檔讀不了與原因；下次開設定畫面照常問 MOVE ASIDE（tdp E3「不在 TUI 裡的畫面」，v1.2.16，user 2026-11-18 在 terminu 定；E3-36）。locku 照沒有 PIN 處理、狀態列寫原因
   - id: 7
     spec: 1
     request: clock：整個終端機是一面 LED 點陣板，用 3 × 7 或 3 × 5 像素字型畫時間與日期，可以直排、三種 size，塞不下就逐步省略
@@ -180,25 +180,25 @@ tasks:
       - '`locku version` 只印版號（發布版 `vX.Y.Z`、本機版 `dev`；harness project.4）'
     tdp: [tdp E1, harness project.4]
   - id: 24
-    spec: 3
+    spec: 4
     request: '`locku pin reset`：先問 [y/N]，再要登入密碼，然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次；每次成功或被拒都記在資料目錄，不含 PIN；config.yaml 或 profiles.yaml 讀不了時什麼都不問、什麼都不寫，說是哪個檔、為什麼'
-    tdp: [tdp E3, tdp P5, tdp E1]
+    tdp: [tdp E3, tdp P5, tdp E1, tdp E3-35, tdp E3-37]
     remark:
       - 帳號是 locku 唯一的邊界，所以用登入密碼驗證（tdp P5：功能邏輯）
       - 沒有畫面的指令碰到讀不了的檔：什麼都不碰，路徑與原因寫到 stderr，非零結束（tdp E3）
       - 碰到值不合規則或不合的 profile：跟有畫面時一樣複製成 .bak、重寫檔案，那句話寫到 stderr，繼續 reset（tdp E3，v1.2.15）
-      - config.yaml 的 profile 指到沒有的 profile：不動檔案，那句話寫到 stderr，繼續 reset（tdp E3，tdp main ff56bde）
+      - config.yaml 的 profile 指到沒有的 profile：不動檔案，那句話寫到 stderr，繼續 reset（tdp E3，v1.2.16；E3-35、E3-37）
   - id: 25
-    spec: 3
+    spec: 4
     request: '設定放 ~/.config/locku/config.yaml（$XDG_CONFIG_HOME、$LOCKU__CONFIG 可改），profile 放 ~/.locku/data/profiles.yaml（$LOCKU__DATA）；原子寫入、mode 0600、標明自己的 version，舊版的檔第一次讀到就轉成新格式'
-    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2, tdp P5, tdp K1, tdp panel.12, tdp toast.1]
+    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2, tdp P5, tdp K1, tdp panel.12, tdp toast.1, tdp E3-33, tdp E3-34, tdp E3-37]
     remark:
       - profile 是使用者寫給 locku 的清單，算資料（tdp E3 的例子有 locku 的 profiles）
       - 舊版放在 config.yaml 的 profile，設定畫面第一次開時搬到 profiles.yaml 並說一聲；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著讓使用者自己合併
       - 舊的環境變數名稱（LOCKU_DATA 這類）不讀（tdp E2）
-      - 值不合規則、或名字空白或重複的 profile，不算讀不了（tdp E3，v1.2.15 照 tdp #18 定的）：設定畫面啟動時把那個檔複製成 .bak（已有就 .bak.1……，不蓋掉），再用預設值重寫、拿掉不合的 profile；啟動 toast 的一列寫出檔案與備份，每一筆以 WARN 記進 App Log（tdp note.7）；同一次啟動要說的好幾則合成一個 toast，一則一列（tdp E3 main「同一次啟動有好幾件」）；複製失敗就不重寫，這次照預設值，啟動 toast 的一列（Error）說原因
-      - config.yaml 的 profile 指到 profiles.yaml 裡沒有的 profile，不算值不合規則：值留著、不重寫、不做 .bak，這次用內建的預設；啟動 toast 的一列（Warning，App Log 一筆 WARN），沒有畫面時寫到 stderr；那一列照原樣、label 畫 Red；那個 profile 回來就又能用（tdp E3「名字指到不在的一筆」，tdp #19，user 2026-11-18 選 B，tdp main ff56bde，發版後引用那一版）。不開 error popup：開設定畫面不是 popup 的動作失敗（tdp note.6）
-      - '`locku lock` 啟動時一樣複製成 .bak、重寫（tdp E3：檔案怎麼處理跟有沒有畫面無關），但有檔讀不了時不動任何檔案（tdp E3 main「不在 TUI 裡的畫面」）；鎖定畫面不在 TUI 裡（tdp K1、P5），沒有 toast，那句話寫在狀態列，接在已經有的說明後面'
+      - 值不合規則、或名字空白或重複的 profile，不算讀不了（tdp E3，v1.2.15 照 tdp #18 定的）：設定畫面啟動時把那個檔複製成 .bak（已有就 .bak.1……，不蓋掉），再用預設值重寫、拿掉不合的 profile；啟動 toast 的一列寫出檔案與備份，每一筆以 WARN 記進 App Log（tdp note.7）；同一次啟動要說的好幾則合成一個 toast，一則一列（tdp E3「同一次啟動有好幾件」，v1.2.16；E3-37）；複製失敗就不重寫，這次照預設值，啟動 toast 的一列（Error）說原因
+      - config.yaml 的 profile 指到 profiles.yaml 裡沒有的 profile，不算值不合規則：值留著、不重寫、不做 .bak，這次用內建的預設；啟動 toast 的一列（Warning，App Log 一筆 WARN），沒有畫面時寫到 stderr；那一列照原樣、label 畫 Red；那個 profile 回來就又能用（tdp E3「名字指到不在的一筆」，v1.2.16，tdp #19，user 2026-11-18 選 B；E3-33 到 E3-35）。不開 error popup：開設定畫面不是 popup 的動作失敗（tdp note.6）
+      - '`locku lock` 啟動時一樣複製成 .bak、重寫（tdp E3：檔案怎麼處理跟有沒有畫面無關），但有檔讀不了時不動任何檔案（tdp E3「不在 TUI 裡的畫面」，v1.2.16；E3-36）；鎖定畫面不在 TUI 裡（tdp K1、P5），沒有 toast，那句話寫在狀態列，接在已經有的說明後面'
   - id: 26
     spec: 1
     request: config.yaml 或 profiles.yaml 讀不了時，設定畫面一開就問要不要移到旁邊成 .bak、用預設值重新開始，或是離開並印出原因

@@ -78,7 +78,7 @@ tasks:
       - TestCtrlCDoesNotLeave
       - commit: 58ae593
   - id: 6
-    spec: 1
+    spec: 4
     implementation: |
       沒設 PIN：螢幕保護照常顯示，狀態列寫 `no PIN · any key unlocks`，任何鍵結束
       config.yaml 讀不到（YAML 壞了、值的型別不對、pin_hash 不是 bcrypt hash）：照沒有 PIN 處理
@@ -368,7 +368,7 @@ tasks:
       - TestVersionAndHelp
       - commit: 58ae593
   - id: 24
-    spec: 3
+    spec: 4
     implementation: |
       `locku pin reset`：stdin 不是終端機時說要一個終端機、結束碼 2
       先檢查 config.yaml 與 profiles.yaml：讀不了就把 `locku pin reset: <路徑> can't be read: <原因>` 寫到 stderr、結束碼 1，什麼都不問、什麼都不寫
@@ -383,7 +383,7 @@ tasks:
       - TestPINResetKeepsAsideWhatDidNotFit
       - TestPINResetSaysAProfileThatIsNotThere
   - id: 25
-    spec: 3
+    spec: 4
     implementation: |
       config.yaml 在 $LOCKU__CONFIG、$XDG_CONFIG_HOME/locku 或 ~/.config/locku；profiles.yaml 與 pin-resets.log 在 $LOCKU__DATA 或 ~/.locku/data；舊的環境變數名稱不讀
       沒有檔就是預設值；缺的鍵用預設值；原子寫入、mode 0600、寫回的跟讀進來的一樣
