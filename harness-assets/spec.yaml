@@ -1,6 +1,6 @@
-id: 2
+id: 3
 from: v1.2.14
-to: v1.2.14
+to: v1.2.15
 tasks:
   - id: 1
     spec: 1
@@ -142,26 +142,23 @@ tasks:
       - 新 PIN 打兩次確認（NEW PIN → CONFIRM PIN），是 app 的流程（tdp password 的例子就是 locku）
       - PIN 存成 bcrypt hash
   - id: 19
-    spec: 1
+    spec: 3
     request: 'Settings › preference 的其他值：啟用的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width；數字框空著就是預設值'
     tdp: [tdp panel.12, tdp number, tdp checkbox, tdp select, tdp components.5, tdp E3, tdp popup.7, tdp color.2, tdp note.7, tdp input.10, tdp radio]
     remark:
       - input_tab_width 是拿來讀的字（太長的 setup 報告、App Log）裡一個 Tab 佔幾格（tdp components.5）；跟每個值一樣，確定了就生效（tdp panel.12）
       - 啟用的 profile 名字找不到時，那一列的 label 畫 Red（tdp panel.12、color.2）
-      - note: 'profile 的數量會變，tdp radio.1 只看選項幾個：暫時照字面，五個以內畫 radio、超過開 select，同一列的長相會隨 profile 的數量變'
-        issue: tdp #16
+      - 啟用的 profile 是從使用者自己建的 profile 裡選，數量會變，所以不管有幾個一律開 select（tdp radio.1，v1.2.15 照 tdp #16 定的）；locku 自己定的固定選項才畫 radio
   - id: 20
-    spec: 1
+    spec: 3
     request: 'Integration › tmux：activate、config file path、lock-after-time、bind-key、lock（lock-server 或 lock-session）；activate 打開、確認後，設定寫進 locku 自己的 locku.tmux.conf，使用者的檔只多一行去讀它，跑著的 tmux server 立刻收到'
-    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp radio, tdp toast.2, tdp note.1, tdp E3, tdp input.6, tdp components.5, tdp panel.12, tdp form.9, tdp note.7]
+    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp radio, tdp toast.2, tdp note.1, tdp E3, tdp input.6, tdp components.5, tdp panel.12, tdp form.9, tdp note.7, tdp note.3, tdp note.2]
     remark:
       - 使用者的檔只碰兩個標記之間的區塊，那一行尾巴 `# locku`；那一行從家目錄寫起，同一份 dotfiles 放到別台也是同一行
       - 開著的時候任何一列一改就重寫 locku 的檔，不再動使用者的；關掉就拿掉那一行、刪掉 locku 的檔，跑著的也一併拿掉
       - 路徑沒填時 activate 按不下去，不猜；路徑那一列提議常見的檔（~/.tmux.conf）
-      - 寫了什麼放得進三列就用 Success toast 說，放不下就開 note 讀（tdp toast.2、note.1）
+      - 寫了什麼放得進三列就用 Success toast 說，放不下就開成功報告：唯讀的 viewer，標題寫做了什麼（ACTIVATED — tmux），Enter 與 Esc 都能關，以 Success 記進 App Log（tdp toast.2、note.1、note.3，v1.2.15 照 tdp #17 定的）
       - 外部程式（tmux、screen）印了好幾行時，報告只放最後一行（原因），全文記進 App Log（tdp components.5）
-      - note: 'toast 放不下的成功報告能不能改開 note，tdp toast.2 沒寫：暫時照現在的做法，放得進三列用 Success toast、放不下開唯讀的 viewer，全文都記進 App Log'
-        issue: tdp #17
   - id: 21
     spec: 1
     request: 'Integration › screen：activate、config file path、idle、bind；設定寫進 locku 自己的 locku.screenrc，使用者的 screenrc 與 shell rc（LOCKPRG）各多一段'
@@ -182,23 +179,25 @@ tasks:
       - '`locku version` 只印版號（發布版 `vX.Y.Z`、本機版 `dev`；harness project.4）'
     tdp: [tdp E1, harness project.4]
   - id: 24
-    spec: 1
+    spec: 3
     request: '`locku pin reset`：先問 [y/N]，再要登入密碼，然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次；每次成功或被拒都記在資料目錄，不含 PIN；config.yaml 或 profiles.yaml 讀不了時什麼都不問、什麼都不寫，說是哪個檔、為什麼'
     tdp: [tdp E3, tdp P5]
     remark:
       - 帳號是 locku 唯一的邊界，所以用登入密碼驗證（tdp P5：功能邏輯）
       - 沒有畫面的指令碰到讀不了的檔：什麼都不碰，路徑與原因寫到 stderr，非零結束（tdp E3）
+      - 碰到值不合規則或不合的 profile：跟有畫面時一樣複製成 .bak、重寫檔案，那句話寫到 stderr，繼續 reset（tdp E3，v1.2.15）
   - id: 25
-    spec: 1
+    spec: 3
     request: '設定放 ~/.config/locku/config.yaml（$XDG_CONFIG_HOME、$LOCKU__CONFIG 可改），profile 放 ~/.locku/data/profiles.yaml（$LOCKU__DATA）；原子寫入、mode 0600、標明自己的 version，舊版的檔第一次讀到就轉成新格式'
-    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2]
+    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2, tdp P5, tdp K1, tdp panel.12]
     remark:
       - profile 是使用者寫給 locku 的清單，算資料（tdp E3 的例子有 locku 的 profiles）
       - 舊版放在 config.yaml 的 profile，設定畫面第一次開時搬到 profiles.yaml 並說一聲；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著讓使用者自己合併
       - 舊的環境變數名稱（LOCKU_DATA 這類）不讀（tdp E2）
-      - '值不合規則時換成預設值、名字空白或重複的 profile 略過，都是 locku 自己做的事，每一筆記進 App Log（tdp note.7）'
-      - note: 'YAML 讀得進來、只有值不合規則算不算讀不了，tdp E3 沒寫；profile 是資料（tdp E3），名字空白或重複的 profile 略過、存檔時從 profiles.yaml 拿掉也是同一個問題。暫時照現在的做法：換成預設值、略過，記進 App Log，不另外跳 toast 或 popup，存檔寫回換過的樣子'
-        issue: tdp #18
+      - 值不合規則、或名字空白或重複的 profile，不算讀不了（tdp E3，v1.2.15 照 tdp #18 定的）：設定畫面啟動時把那個檔複製成 .bak（已有就 .bak.1……，不蓋掉），再用預設值重寫、拿掉不合的 profile；一個 Warning toast 寫出檔案與備份，每一筆以 WARN 記進 App Log（tdp note.7）；複製失敗就不重寫，這次照預設值，Error toast 說原因
+      - note: 'config.yaml 的 profile 指到不存在的 profile 算不算「值不合規則」、預設值是哪一個，tdp E3 沒寫：暫時值留著不換、不重寫，設定畫面開 error popup（profile "X" not found）、label 畫 Red，鎖定畫面用內建的 clock、狀態列寫原因'
+        issue: tdp #19
+      - '`locku lock` 啟動時一樣複製成 .bak、重寫（tdp E3：檔案怎麼處理跟有沒有畫面無關）；鎖定畫面不在 TUI 裡（tdp K1、P5），沒有 toast，那句話寫在狀態列，接在已經有的說明後面'
   - id: 26
     spec: 1
     request: config.yaml 或 profiles.yaml 讀不了時，設定畫面一開就問要不要移到旁邊成 .bak、用預設值重新開始，或是離開並印出原因

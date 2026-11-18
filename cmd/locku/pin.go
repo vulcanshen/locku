@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/charmbracelet/x/term"
+	terminu "github.com/vulcanshen/terminu-go"
 
 	"github.com/vulcanshen/locku/internal/config"
 )
@@ -45,6 +46,12 @@ func pinReset(in *os.File, out, errs io.Writer, verify func(user, password strin
 		}
 	}
 	cfg, _ := config.Load()
+	// A value or a profile that did not fit is no file that cannot be read:
+	// with no screen too it is kept aside and written again, the sentence on
+	// stderr (tdp E3).
+	for _, said := range keepAside(cfg) {
+		fmt.Fprintln(errs, "locku pin reset: "+said)
+	}
 	fmt.Fprint(out, "Reset the PIN? A new one is made and shown here once; the old one stops working at once. [y/N] ")
 	line, _ := bufio.NewReader(in).ReadString('\n')
 	if !strings.EqualFold(strings.TrimSpace(line), "y") {
@@ -76,6 +83,32 @@ func pinReset(in *os.File, out, errs io.Writer, verify func(user, password strin
 	logged := logReset(who, "a new PIN written")
 	fmt.Fprintf(out, "New PIN: %s\n  written to %s — a lock already up takes it at its next key; change it on the settings screen when you like\n  logged in %s\n", pin, foldHome(config.Path()), foldHome(logged))
 	return 0
+}
+
+// keepAside is what a start without the settings screen does with a file
+// that had a value or a profile that did not fit (tdp E3), as the settings
+// screen does: the file copied whole to the next free .bak and written
+// again with the defaults. It returns what to say, a sentence a file —
+// the lib's — or, when the copy cannot be made, why, the file left as it
+// was and the defaults for this run only.
+func keepAside(cfg config.Config) []string {
+	var said []string
+	for _, path := range cfg.MisfitFiles() {
+		var ms []terminu.Misfit
+		for _, m := range cfg.MisfitsIn(path) {
+			ms = append(ms, terminu.Misfit{Key: m.Key, Was: m.Was, Now: m.Now})
+		}
+		copy, err := terminu.KeepAside(path)
+		if err == nil {
+			err = config.Rewrite(cfg, path)
+		}
+		if err != nil {
+			said = append(said, err.Error())
+			continue
+		}
+		said = append(said, terminu.DidNotFitText(path, copy, ms...))
+	}
+	return said
 }
 
 // username is who is asking: the account, for su and for the log.

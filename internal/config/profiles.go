@@ -72,14 +72,14 @@ func Load() (Config, string) {
 	case errors.As(err, &u):
 		cfg.lost = true
 		cfg.Profiles = Default().Profiles
-		cfg, _ = cfg.sanitized(filepath.Base(ProfilesPath()))
+		cfg, _ = cfg.sanitized(Path(), ProfilesPath())
 		return cfg, u.note
 	}
 	if had {
 		cfg.left = cfg.Profiles
 	}
 	cfg.Profiles = ps
-	return cfg.sanitized(filepath.Base(ProfilesPath()))
+	return cfg.sanitized(Path(), ProfilesPath())
 }
 
 // Save writes cfg: the profiles to profiles.yaml, the rest to config.yaml;
@@ -98,6 +98,24 @@ func Save(cfg Config) error {
 	c := cfg
 	c.Profiles = cfg.left
 	return SaveFile(Path(), c)
+}
+
+// Rewrite writes the file at path — config.yaml, or the file the profiles
+// are in — again as cfg has it, a misfit's default in its place and the
+// profiles that did not fit left out (tdp E3), once it is kept aside. The
+// other file is not touched.
+func Rewrite(cfg Config, path string) error {
+	switch {
+	case cfg.legacy || path == Path():
+		c := cfg
+		if !cfg.legacy {
+			c.Profiles = cfg.left
+		}
+		return SaveFile(Path(), c)
+	case !cfg.lost:
+		return saveProfiles(ProfilesPath(), cfg.Profiles)
+	}
+	return nil
 }
 
 // saveProfiles writes ps to profiles.yaml at path.

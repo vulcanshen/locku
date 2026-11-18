@@ -176,7 +176,7 @@ func (s *Settings) reported(verb, name string, out *setup.Report, err error) tea
 	if err != nil {
 		cmd = s.app.ErrorAbout(verb+" failed", name, append(lines, err.Error())...)
 	} else {
-		cmd = s.tell(name, lines)
+		cmd = s.tell(map[string]string{"Activate": "Activated", "Deactivate": "Deactivated", "Write": "Wrote", "Move": "Moved"}[verb], name, lines)
 	}
 	for _, all := range out.Whole {
 		s.app.Log(terminu.Info, "Output of "+all)

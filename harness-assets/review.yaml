@@ -1,4 +1,4 @@
-spec: 2
+spec: 3
 tasks:
   - id: 1
     accepted: true
@@ -40,8 +40,7 @@ tasks:
   - id: 19
     accepted: true
   - id: 20
-    accepted: false
-    reason: 'tdp 不清楚：activate 寫了什麼「放得進三列用 Success toast，放不下開 note（tgo Viewer）」。tdp toast.2 只寫「最多幾列，app 可以自行決定…app 設了上限、訊息超過時，最後一列結尾加 `…`，完整的訊息走 error popup 或 app 的 log」；超過三列時不跳 toast、改開一個唯讀的 viewer（note.1）放完整的報告，是不照 toast.2，還是 note.1 允許的另一種做法，tdp 沒寫'
+    accepted: true
   - id: 21
     accepted: true
   - id: 22

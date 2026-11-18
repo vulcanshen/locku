@@ -90,7 +90,7 @@ func lockArgs(args []string) (socket, session string) {
 func runLock(socket, session string) int {
 	signal.Ignore(syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGHUP,
 		syscall.SIGTSTP, syscall.SIGTTIN, syscall.SIGTTOU)
-	cfg, problem := config.Load()
+	cfg, problem := lockStart(config.Load())
 	// Under tmux the server — or, for lock-session, this session — is
 	// marked locked for as long as this runs, so a client attaching to it
 	// meanwhile is locked too; a terminal that goes
@@ -115,6 +115,18 @@ func runLock(socket, session string) int {
 		tmux.SetLocked(socket, session, false)
 	}
 	return code
+}
+
+// lockStart is the lock's start with what config.Load gave: a file that had
+// a value or a profile that did not fit is kept aside and written again,
+// as any start does it (tdp E3). The lock is no TUI screen (tdp K1, P5):
+// what is said goes on its status row, after what is wrong already.
+func lockStart(cfg config.Config, problem string) (config.Config, string) {
+	said := keepAside(cfg)
+	if problem != "" {
+		said = append([]string{problem}, said...)
+	}
+	return cfg, strings.Join(said, " · ")
 }
 
 // runBoard runs a lock program on the terminal until it ends, and puts

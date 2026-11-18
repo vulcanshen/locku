@@ -301,9 +301,9 @@ tasks:
       - TestPINLength
       - TestCheckPINAcceptsAnyCost
   - id: 19
-    spec: 1
+    spec: 3
     implementation: |
-      preference 的 [2]：profile 選啟用的 profile（profile 五個以內畫 radio 原地選，超過開 select）、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
+      preference 的 [2]：profile 不管有幾個一律開 select 選啟用的 profile、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
       config.yaml 的 profile 找不到時，profile 那一列的 label 畫 Red（tgo Field.Err），值照常是 Text
       數字框空著就是預設值；超出範圍的寫在錯誤列
       input_tab_width 確定的那一刻也設給 tgo 的 App.InputTabWidth，lib 從下一個訊息起就照它畫 Tab
@@ -315,13 +315,14 @@ tasks:
       - TestMissingProfileIsRed
       - TestProfileNotFoundIsNoted
       - TestInputTabWidthTakesEffectAtOnce
+      - TestTheActiveProfileIsASelect
   - id: 20
-    spec: 1
+    spec: 3
     implementation: |
       Integration › tmux 的 [2]：activate（開關）、config file path（input popup，提議 ~/.tmux.conf）、lock-after-time（number）、bind-key（input）、lock（lock-server / lock-session）
       activate 打開先 confirm，再寫 ~/.config/locku/locku.tmux.conf，在使用者的檔裡加兩個標記之間的一行 `source-file -q …  # locku`，再叫跑著的 tmux server 讀它；先前的區塊讓位給這一行，其他部分不動，寫幾次都一樣
       開著時改任何一列只重寫 locku 的檔並重新載入；關掉時拿掉那一行、刪掉 locku 的檔，跑著的 server 也拿掉
-      路徑沒填時 activate 按不下去；做了什麼一列一列報：放得進三列用 Success toast，放不下開 note（tgo Viewer）；報告也以 Success 記進 App Log
+      路徑沒填時 activate 按不下去；做了什麼一列一列報：放得進三列用 Success toast（toast 自己記進 App Log），放不下用 tgo App.Report 開成功報告：標題寫做了什麼（Activated、Deactivated、Wrote、Moved，名字照原樣：ACTIVATED — tmux），Enter 與 Esc 都能關，lib 以 Success 記進 App Log
       外部程式（tmux）印了好幾行時，報告只放最後一行（原因），全文以 Info 記進 App Log（`Output of …`）
     test:
       - TestActivateTmux
@@ -337,6 +338,7 @@ tasks:
       - TestShellQuote
       - TestAProgramsLinesAreNotAllInTheReport
       - TestTmuxLockIsOneOfTwo
+      - TestALongReportIsAReport
   - id: 21
     spec: 1
     implementation: |
@@ -362,23 +364,27 @@ tasks:
       - TestVersionAndHelp
       - commit: 58ae593
   - id: 24
-    spec: 1
+    spec: 3
     implementation: |
       `locku pin reset`：stdin 不是終端機時說要一個終端機、結束碼 2
       先檢查 config.yaml 與 profiles.yaml：讀不了就把 `locku pin reset: <路徑> can't be read: <原因>` 寫到 stderr、結束碼 1，什麼都不問、什麼都不寫
+      值不合規則或不合的 profile：tgo KeepAside 複製成 .bak，config.Rewrite 重寫那個檔，`locku pin reset: <tgo DidNotFitText 的那句>` 寫到 stderr，繼續；複製失敗就把錯誤寫到 stderr、不重寫
       問 `[y/N]`，再問登入密碼（su 驗）；產生八位數的新 PIN，寫 pin_hash，顯示一次；成功或被拒都在資料目錄的 pin-resets.log 加一行，不含 PIN
     test:
       - TestPINResetAsksTwiceAndRotates
       - TestPINResetTouchesNothingItCannotRead
       - TestPINResetNeedsATerminal
       - TestNewPINIsEightDigits
+      - TestPINResetKeepsAsideWhatDidNotFit
   - id: 25
-    spec: 1
+    spec: 3
     implementation: |
       config.yaml 在 $LOCKU__CONFIG、$XDG_CONFIG_HOME/locku 或 ~/.config/locku；profiles.yaml 與 pin-resets.log 在 $LOCKU__DATA 或 ~/.locku/data；舊的環境變數名稱不讀
       沒有檔就是預設值；缺的鍵用預設值；原子寫入、mode 0600、寫回的跟讀進來的一樣
-      YAML 讀得進來、只是值不合規則（沒有的 speed 或 background、不是 #rrggbb 的顏色、負的秒數、tmux 沒有的 lock）：換成預設值；名字空白或重複的 profile 略過；存檔時寫回成換過的樣子
-      換掉的值與略過的 profile 一筆一筆列出（config.Corrected：哪個檔、哪個 profile 或 saver 的預設值、哪個 key、原本的值、用了哪個），設定畫面啟動時每一筆以 Warning 記進 App Log；不另外跳 toast 或 popup
+      YAML 讀得進來、只是值不合規則（沒有的 speed 或 background、不是 #rrggbb 的顏色、負的秒數、tmux 沒有的 lock）：換成預設值；名字空白或重複的 profile 略過；每一筆是 config.Misfit（哪個檔、哪一個、原本的值、現在用的）
+      設定畫面啟動時，有 misfit 的檔一個一個：tgo KeepAside 複製成下一個空著的 .bak，config.Rewrite 只重寫那個檔，tgo App.DidNotFit 跳一個 Warning toast（「1 value in profiles.yaml did not fit: defaults used, yours kept in profiles.yaml.bak」）、每一筆以 WARN 記進 App Log（`profiles.yaml: profile bounce › speed "warp" did not fit; using "normal"`）
+      複製失敗：Error toast 寫 KeepAside 的錯（`… could not be made: <why>; … left as it was`），不重寫，這次照預設值，App Log 照樣記每一筆；重寫失敗開 error popup
+      `locku lock` 啟動時（cmd/locku 的 lockStart，與 pin reset 共用 keepAside）一樣 KeepAside、Rewrite，DidNotFitText 的那句（或複製失敗的原因）寫在鎖定畫面的狀態列，接在已經有的說明後面
       一個 profile 都沒有、或啟用的 profile 找不到時才說：設定畫面開 error popup（Config），鎖定畫面寫在狀態列
       config.yaml 標明 version，舊版的檔第一次讀到就轉成新格式整份寫回（改名的鍵、搬到 tmux / screen 底下的鍵、舊的 runner 名稱）
       舊版放在 config.yaml 的 profile：設定畫面第一次開時搬到 profiles.yaml 並說一聲；搬失敗就留在原處；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著並開 error popup 說明
@@ -400,8 +406,10 @@ tasks:
       - TestAMoveThatFailsLeavesThem
       - TestProfilesMoveToTheirOwnFile
       - TestWriteFailureIsAnErrorPopup
-      - TestCorrectionsAreSaid
-      - TestCorrectionsAreInTheAppLog
+      - TestMisfitsAreFound
+      - TestMisfitsAreKeptAsideAndWrittenAgain
+      - TestAMisfitWhoseCopyCannotBeMade
+      - TestTheLockKeepsAsideWhatDidNotFit
   - id: 26
     spec: 1
     implementation: |

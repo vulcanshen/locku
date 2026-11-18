@@ -124,14 +124,36 @@ func (s *Settings) start() tea.Cmd {
 	if s.problem != "" {
 		said = s.app.Error("Config", s.problem)
 	}
-	// What locku put right as it read the files is something it did by
-	// itself, and the App Log's (tdp note.7), a Warning a value.
-	// TODO(tdp #18): whether it is said more loudly, and whether the next
-	// save may write it so, tdp does not say.
-	for _, c := range s.cfg.Corrected() {
-		s.app.Log(terminu.Warning, c)
+	fit := s.keepAside()
+	return tea.Batch(fit, s.moveProfiles(), said)
+}
+
+// keepAside is what the start does with a file that had a value or a
+// profile that did not fit (tdp E3): not one that cannot be read, so locku
+// goes on. The file is copied whole to the next free <name>.bak and written
+// again as locku reads it, the defaults in, the profiles left out; one
+// Warning toast says so and the App Log has each misfit, a WARN. A copy that
+// cannot be made leaves the file as it was, the defaults for this run
+// only, the Error toast saying why, and the WARNs alone.
+func (s *Settings) keepAside() tea.Cmd {
+	var cmds []tea.Cmd
+	for _, path := range s.cfg.MisfitFiles() {
+		var ms []terminu.Misfit
+		for _, m := range s.cfg.MisfitsIn(path) {
+			ms = append(ms, terminu.Misfit{Key: m.Key, Was: m.Was, Now: m.Now})
+		}
+		copy, err := terminu.KeepAside(path)
+		if err != nil {
+			cmds = append(cmds, s.app.Toast(terminu.Error, err.Error()), s.app.DidNotFit(path, "", ms...))
+			continue
+		}
+		if err := config.Rewrite(s.cfg, path); err != nil {
+			cmds = append(cmds, s.app.ErrorAbout("Write failed", filepath.Base(path), err.Error()), s.app.DidNotFit(path, "", ms...))
+			continue
+		}
+		cmds = append(cmds, s.app.DidNotFit(path, copy, ms...))
 	}
-	return tea.Batch(s.moveProfiles(), said)
+	return tea.Batch(cmds...)
 }
 
 // fresh is the start once the file that could not be read is moved aside:
@@ -295,19 +317,18 @@ func (s *Settings) wrote(label, value string) string {
 	return "Set " + where + " › " + label + ": " + value
 }
 
-// tell says what was done in a Success toast when it fits in three rows,
-// and in a note to read when it does not: setup's report of a long path
-// is read, not glimpsed (tdp toast.2: how many rows is the app's).
-// TODO(tdp #17): tdp does not say whether a report too long for a toast may
-// be a note rather than a toast cut with "…".
-func (s *Settings) tell(title string, lines []string) tea.Cmd {
+// tell says what was done to name in a Success toast when it fits in three
+// rows (tdp toast.2: how many rows is the app's), and in a report when it
+// does not: setup's report of a long path is read, not glimpsed. The report
+// is the lib's (tdp toast.2, note.3): titled with what was done, Enter
+// closing it as well as Esc, in the App Log as a Success, as the toast is.
+func (s *Settings) tell(done, name string, lines []string) tea.Cmd {
 	text := strings.Join(lines, " · ")
 	w, _ := s.app.Size()
 	if len(terminu.Wrap(text, max(min(w-2, 120)-4, 1))) <= 3 {
 		return s.app.Toast(terminu.Success, text)
 	}
-	s.done(text) // a toast logs itself, a note does not: the toast's words
-	return s.app.Viewer(&terminu.Viewer{Title: title, Glyph: glyphFile, Lines: lines})
+	return s.app.Report(&terminu.Viewer{Title: done, Subject: name, Glyph: glyphFile, Lines: lines})
 }
 
 // change runs f on the config and saves it; what is what was done, for

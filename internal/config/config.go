@@ -208,17 +208,43 @@ type Config struct {
 	legacy bool
 	left   []Profile
 	lost   bool
-	// corrected is what the files had that sanitized put right (Corrected).
-	corrected []string
+	// misfits is what the files had that did not fit (Misfits).
+	misfits []Misfit
 }
 
-// Corrected is what the files had that locku put right as it read them, a
-// line each for the App Log, something locku did by itself (tdp note.7):
-// the file, where, the value it had and the one used, and a profile left
-// out for its name. The next save writes them so. TODO(tdp #18): whether
-// such a value is a file that cannot be read, and whether it may be
-// written back as its default, tdp does not say.
-func (cfg Config) Corrected() []string { return cfg.corrected }
+// Misfit is a value or an entry of locku's files that did not fit (tdp E3):
+// Path is the file it is in; Key says which ("profile s › speed", or
+// `profile 2 (name "s")` for a profile left out); Was is what the file
+// had; Now is what is used now, "" for a profile left out.
+type Misfit struct{ Path, Key, Was, Now string }
+
+// Misfits is what the files had that did not fit as locku read them: a
+// value it does not have, its default used, and a profile whose name is
+// empty or taken, left out. Such a file is not one that cannot be read
+// (tdp E3): whoever starts keeps it aside and writes it again (Rewrite).
+func (cfg Config) Misfits() []Misfit { return cfg.misfits }
+
+// MisfitFiles is the files that had a misfit, in the order met.
+func (cfg Config) MisfitFiles() []string {
+	var out []string
+	for _, m := range cfg.misfits {
+		if !slices.Contains(out, m.Path) {
+			out = append(out, m.Path)
+		}
+	}
+	return out
+}
+
+// MisfitsIn is the misfits of the file at path.
+func (cfg Config) MisfitsIn(path string) []Misfit {
+	var out []Misfit
+	for _, m := range cfg.misfits {
+		if m.Path == path {
+			out = append(out, m)
+		}
+	}
+	return out
+}
 
 // NewProfile is a profile called name of the saver kind as the program
 // itself makes it: the built-in defaults (user, 2026-09-24) — the clock
@@ -408,7 +434,7 @@ func loadFile(path string) (cfg Config, note string, had, ok bool) {
 	if cfg.Profile == "" {
 		cfg.Profile = Default().Profile
 	}
-	cfg, note = cfg.sanitized(filepath.Base(path))
+	cfg, note = cfg.sanitized(path, path)
 	if version < ConfigVersion {
 		// Brought to this version, the file is written over in its shape
 		// and says so (user, 2026-10-07: a config migration), the profiles
@@ -692,12 +718,11 @@ func tidy(p Profile, kind string) Profile {
 	return p
 }
 
-// corrections is what tidy put right in a profile, as the App Log says it:
-// a value it had that is not one locku has, and the one used instead. A key
-// of another kind gone, a colour's case and a runner's old name are not
-// corrections, nor is an absent key.
-func corrections(where string, was, now Profile) []string {
-	var out []string
+// misfitsOf is what tidy put right in a profile: a value it had that is not
+// one locku has, and the one used instead. A key of another kind gone, a
+// colour's case and a runner's old name did fit, as an absent key does.
+func misfitsOf(path, where string, was, now Profile) []Misfit {
+	var out []Misfit
 	for _, f := range [][3]string{
 		{"layout", was.Layout, now.Layout}, {"size", was.Size, now.Size}, {"font", was.Font, now.Font},
 		{"time", was.Time, now.Time}, {"date", was.Date, now.Date},
@@ -708,11 +733,11 @@ func corrections(where string, was, now Profile) []string {
 	} {
 		key, w, n := f[0], f[1], f[2]
 		if w != "" && n != "" && !strings.EqualFold(w, n) && renamedRunner[w] != n {
-			out = append(out, fmt.Sprintf("%s %s %q is not one locku has; %s used", where, key, w, n))
+			out = append(out, Misfit{path, where + " › " + key, w, n})
 		}
 	}
 	if was.Count != 0 && now.Count != 0 && was.Count != now.Count {
-		out = append(out, fmt.Sprintf("%s count %d is not one locku has; %d used", where, was.Count, now.Count))
+		out = append(out, Misfit{path, where + " › count", strconv.Itoa(was.Count), strconv.Itoa(now.Count)})
 	}
 	return out
 }
@@ -728,27 +753,21 @@ func tidyTool(t Tool) Tool {
 
 // sanitized brings a parsed file to something the rest of locku can rely
 // on, and says what it had to correct: the profile reference in the note,
-// for the status row, and every value put right in corrected, for the App
-// Log. from is the file the profiles were read from; the rest is
-// config.yaml's. TODO(tdp #18): tdp does not say whether a value that
-// breaks a rule is a file that cannot be read, nor whether it may be
-// written back as its default.
-func (cfg Config) sanitized(from string) (Config, string) {
+// for the status row, and every value or profile that did not fit in
+// misfits (tdp E3). conf is config.yaml's path, from the file the profiles
+// were read from.
+func (cfg Config) sanitized(conf, from string) (Config, string) {
 	note := ""
-	say := func(format string, a ...any) { cfg.corrected = append(cfg.corrected, fmt.Sprintf(format, a...)) }
+	misfit := func(path, key, was, now string) { cfg.misfits = append(cfg.misfits, Misfit{path, key, was, now}) }
 	if cfg.Auth == "" {
 		cfg.Auth = AuthPIN
 	}
 	var profiles []Profile
 	seen := map[string]bool{}
-	for _, p := range cfg.Profiles {
+	for i, p := range cfg.Profiles {
 		p.Name = strings.TrimSpace(p.Name)
-		switch {
-		case p.Name == "":
-			say("%s: a profile with no name is left out", from)
-			continue
-		case seen[p.Name]:
-			say("%s: a second profile named %q is left out", from, p.Name)
+		if p.Name == "" || seen[p.Name] {
+			misfit(from, fmt.Sprintf("profile %d (name %q)", i+1, p.Name), "", "")
 			continue
 		}
 		seen[p.Name] = true
@@ -756,7 +775,7 @@ func (cfg Config) sanitized(from string) (Config, string) {
 			p.Saver = saver.KindClock
 		}
 		t := tidy(p, p.Saver)
-		cfg.corrected = append(cfg.corrected, corrections(fmt.Sprintf("%s: profile %s's", from, p.Name), p, t)...)
+		cfg.misfits = append(cfg.misfits, misfitsOf(from, "profile "+p.Name, p, t)...)
 		profiles = append(profiles, t)
 	}
 	cfg.Profiles = profiles
@@ -766,6 +785,9 @@ func (cfg Config) sanitized(from string) (Config, string) {
 		cfg.Profiles = []Profile{DefaultProfile()}
 		cfg.Profile = DefaultProfile().Name
 	case !seen[cfg.Profile]:
+		// TODO(tdp #19): a name that is in no profile stays, said, not put
+		// right as a value that did not fit: which default it would take tdp
+		// does not say.
 		note = fmt.Sprintf("profile %q not found", cfg.Profile)
 	}
 	// Every kind has its defaults in the file, whole: the file's where it
@@ -773,7 +795,7 @@ func (cfg Config) sanitized(from string) (Config, string) {
 	savers := map[string]Profile{}
 	for _, k := range saver.Kinds {
 		p := tidy(cfg.Savers[k], k)
-		cfg.corrected = append(cfg.corrected, corrections("config.yaml: the "+k+" defaults'", cfg.Savers[k], p)...)
+		cfg.misfits = append(cfg.misfits, misfitsOf(conf, "savers › "+k, cfg.Savers[k], p)...)
 		p.Name = ""
 		savers[k] = p
 	}
@@ -791,14 +813,14 @@ func (cfg Config) sanitized(from string) (Config, string) {
 		{"input_tab_width", &cfg.InputTabWidth, 1, def.InputTabWidth},
 	} {
 		if *n.v < n.least {
-			say("config.yaml: %s %d is out of range; %d used", n.key, *n.v, n.def)
+			misfit(conf, n.key, strconv.Itoa(*n.v), strconv.Itoa(n.def))
 			*n.v = n.def
 		}
 	}
 	for _, n := range []string{"tmux", "screen"} {
 		t := tidyTool(cfg.Tool(n))
 		if was := cfg.Tool(n).Idle; was != t.Idle {
-			say("config.yaml: %s idle time %d is out of range; %d used", n, was, t.Idle)
+			misfit(conf, n+" › "+map[string]string{"tmux": "lock-after-time", "screen": "idle"}[n], strconv.Itoa(was), strconv.Itoa(t.Idle))
 		}
 		cfg.SetTool(n, t)
 	}
@@ -806,7 +828,7 @@ func (cfg Config) sanitized(from string) (Config, string) {
 	cfg.Screen.Bind = strings.TrimSpace(cfg.Screen.Bind)
 	if cfg.Tmux.Lock != LockSession {
 		if cfg.Tmux.Lock != "" && cfg.Tmux.Lock != LockServer {
-			say("config.yaml: tmux lock %q is not one locku has; %s used", cfg.Tmux.Lock, LockServer)
+			misfit(conf, "tmux › lock", cfg.Tmux.Lock, LockServer)
 		}
 		cfg.Tmux.Lock = LockServer
 	}

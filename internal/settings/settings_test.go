@@ -834,9 +834,10 @@ func TestAppLogSaysWhatWasDone(t *testing.T) {
 	}
 }
 
-// What locku put right in its files as it read them is in the App Log from
-// the start, a Warning a value: something locku did by itself (tdp note.7).
-func TestCorrectionsAreInTheAppLog(t *testing.T) {
+// misfit saves testConfig with the first speed in profiles.yaml one locku
+// does not have, and returns the file as it was then.
+func misfit(t *testing.T) []byte {
+	t.Helper()
 	tempDirs(t)
 	if err := config.Save(testConfig()); err != nil {
 		t.Fatal(err)
@@ -845,16 +846,92 @@ func TestCorrectionsAreInTheAppLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(config.ProfilesPath(), []byte(strings.Replace(string(b), "speed: normal", "speed: warp", 1)), 0o600); err != nil {
+	b = []byte(strings.Replace(string(b), "speed: normal", "speed: warp", 1))
+	if err := os.WriteFile(config.ProfilesPath(), b, 0o600); err != nil {
 		t.Fatal(err)
 	}
+	return b
+}
+
+// A value that did not fit is not a file that cannot be read (tdp E3): the
+// file is copied aside whole as <name>.bak and written again with the
+// default in its place; one Warning toast says so, and the App Log has the
+// value, what it was and what is used now.
+func TestMisfitsAreKeptAsideAndWrittenAgain(t *testing.T) {
+	was := misfit(t)
 	d := started(t)
-	if v := d.screen(); strings.Contains(v, "MOVE ASIDE") {
-		t.Fatalf("a value put right is not a file that cannot be read:\n%s", v)
+	if v := d.screen(); strings.Contains(v, "MOVE ASIDE") || !strings.Contains(v, "did not fit") {
+		t.Fatalf("no Warning toast:\n%s", v)
+	}
+	if bak, err := os.ReadFile(config.ProfilesPath() + ".bak"); err != nil || string(bak) != string(was) {
+		t.Errorf("the copy: %v\n%s", err, bak)
+	}
+	if now, _ := os.ReadFile(config.ProfilesPath()); strings.Contains(string(now), "warp") {
+		t.Errorf("not written again:\n%s", now)
 	}
 	d.press("!")
-	if v := d.screen(); !strings.Contains(v, `speed "warp" is not one locku has; normal used`) {
-		t.Errorf("the correction is not in the App Log:\n%s", v)
+	if v := d.screen(); !strings.Contains(v, `profiles.yaml: profile bounce › speed "warp" did not fit; using "normal"`) {
+		t.Errorf("not in the App Log:\n%s", v)
+	}
+}
+
+// When the copy cannot be made, the file is left as it was, the defaults
+// hold for this run only, and an Error toast says why (tdp E3).
+func TestAMisfitWhoseCopyCannotBeMade(t *testing.T) {
+	was := misfit(t)
+	dir := filepath.Dir(config.ProfilesPath())
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+	d := started(t)
+	if v := d.screen(); !strings.Contains(v, "could not be made") {
+		t.Errorf("no Error toast:\n%s", v)
+	}
+	if now, _ := os.ReadFile(config.ProfilesPath()); string(now) != string(was) {
+		t.Errorf("written again though not kept aside:\n%s", now)
+	}
+}
+
+// The profile the lock shows is one of the user's own profiles, as many as
+// there are, so it is a select however few (tdp radio.1; user, 2026-11-18):
+// never a radio drawn in place.
+func TestTheActiveProfileIsASelect(t *testing.T) {
+	d := newDriver(t, config.Default(), 100, 30)
+	d.on(preferenceID)
+	for _, f := range d.s.vals.Fields {
+		if f.Label == "profile" && (f.Options != nil || f.Edit == nil) {
+			t.Errorf("the profile row is drawn in place: %q", f.Options)
+		}
+	}
+	d.toField("profile", 0).press("Enter")
+	if v := d.screen(); !strings.Contains(v, "PROFILE: preference") {
+		t.Errorf("Enter does not open a select:\n%s", v)
+	}
+}
+
+// A report too long for a toast is a report (tdp toast.2, note.3): a viewer
+// titled with what was done that Enter closes as well as Esc, and in the
+// App Log once, as a Success.
+func TestALongReportIsAReport(t *testing.T) {
+	cfg := testConfig()
+	deep := filepath.Join(t.TempDir(), strings.Repeat("a-folder-deep-down/", 4))
+	if err := os.MkdirAll(deep, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Tmux.Conf = filepath.Join(deep, "tmux.conf")
+	d := newDriver(t, cfg, 100, 30)
+	d.on(toolID("tmux")).toField("activate", 0).press("Enter", "Enter")
+	if v := d.screen(); !strings.Contains(v, "ACTIVATED — tmux") {
+		t.Fatalf("no report:\n%s", v)
+	}
+	d.press("Enter")
+	if v := d.screen(); strings.Contains(v, "ACTIVATED — tmux") {
+		t.Errorf("Enter did not close the report:\n%s", v)
+	}
+	d.press("!")
+	if n := strings.Count(d.screen(), "Activated: "); n != 1 {
+		t.Errorf("the report is in the App Log %d times:\n%s", n, d.screen())
 	}
 }
 

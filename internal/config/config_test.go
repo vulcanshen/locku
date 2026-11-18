@@ -239,44 +239,61 @@ func TestInputTabWidth(t *testing.T) {
 	}
 }
 
-// A value locku does not have is its default all the same, and is said for
-// the App Log, something locku did by itself (tdp note.7): which file,
-// where, the value and the one used; so is a profile left out for its name.
-// Whether such a value is a file that cannot be read is tdp #18's.
-func TestCorrectionsAreSaid(t *testing.T) {
-	cfg, _ := LoadFile(write(t, "version: 1\nprofile: s\npin_prompt_timeout: -1\nprofiles:\n"+
+// A value locku does not have, or a profile whose name is empty or taken,
+// did not fit (tdp E3): its default is used, the profile left out, and each
+// is a Misfit — the file it is in, which, what it had and what is used now,
+// "" for a profile left out — for whoever starts to keep the file aside and
+// write it again.
+func TestMisfitsAreFound(t *testing.T) {
+	path := write(t, "version: 1\nprofile: s\npin_prompt_timeout: -1\nprofiles:\n"+
 		"  - name: s\n    saver: snake\n    speed: warp\n  - name: s\n    saver: clock\n  - name: \"\"\n    saver: clock\n"+
-		"savers:\n  runner: {saver: runner, background: dusk}\n"))
-	want := []string{
-		`config.yaml: profile s's speed "warp" is not one locku has; normal used`,
-		`config.yaml: a second profile named "s" is left out`,
-		`config.yaml: a profile with no name is left out`,
-		`config.yaml: the runner defaults' background "dusk" is not one locku has; time-shifting used`,
-		`config.yaml: pin_prompt_timeout -1 is out of range; 30 used`,
+		"savers:\n  runner: {saver: runner, background: dusk}\ntmux:\n  lock: everything\n")
+	cfg, _ := LoadFile(path)
+	want := []Misfit{
+		{Path: path, Key: "profile s › speed", Was: "warp", Now: "normal"},
+		{Path: path, Key: `profile 2 (name "s")`},
+		{Path: path, Key: `profile 3 (name "")`},
+		{Path: path, Key: "savers › runner › background", Was: "dusk", Now: "time-shifting"},
+		{Path: path, Key: "pin_prompt_timeout", Was: "-1", Now: "30"},
+		{Path: path, Key: "tmux › lock", Was: "everything", Now: "lock-server"},
 	}
-	if got := cfg.Corrected(); !sameSet(got, want) {
-		t.Errorf("corrections:\n%q\nwant\n%q", got, want)
+	if got := cfg.Misfits(); !sameSet(got, want) {
+		t.Errorf("misfits:\n%q\nwant\n%q", got, want)
+	}
+	if got := cfg.MisfitFiles(); len(got) != 1 || got[0] != path {
+		t.Errorf("files with misfits: %q", got)
 	}
 
-	// profiles.yaml's are said as its.
+	// profiles.yaml's are its own.
 	t.Setenv("LOCKU__CONFIG", t.TempDir())
 	t.Setenv("LOCKU__DATA", t.TempDir())
 	if err := os.WriteFile(ProfilesPath(), []byte("version: 1\nprofiles:\n  - name: p\n    saver: pets\n    count: 9\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cfg, _ = Load()
-	if got, want := cfg.Corrected(), []string{`profiles.yaml: profile p's count 9 is not one locku has; 3 used`}; !sameSet(got, want) {
-		t.Errorf("corrections:\n%q\nwant\n%q", got, want)
+	if got, want := cfg.Misfits(), []Misfit{{Path: ProfilesPath(), Key: "profile p › count", Was: "9", Now: "3"}}; !sameSet(got, want) {
+		t.Errorf("misfits:\n%q\nwant\n%q", got, want)
 	}
 
-	// A file locku wrote has nothing to say.
-	if got := Default().Corrected(); len(got) != 0 {
-		t.Errorf("the defaults corrected: %q", got)
+	// Rewrite writes that file again as locku reads it, and no other.
+	if err := Rewrite(cfg, ProfilesPath()); err != nil {
+		t.Fatal(err)
+	}
+	if again, _ := Load(); len(again.Misfits()) != 0 || again.Profiles[0].Count != 3 {
+		t.Errorf("written again: misfits %q, count %d", again.Misfits(), again.Profiles[0].Count)
+	}
+	if _, err := os.Stat(Path()); !os.IsNotExist(err) {
+		t.Errorf("config.yaml was written too: %v", err)
+	}
+
+	// A file locku wrote has nothing that did not fit.
+	if got := Default().Misfits(); len(got) != 0 {
+		t.Errorf("the defaults: %q", got)
 	}
 }
 
-// sameSet is whether a and b hold the same strings, in any order.
-func sameSet(a, b []string) bool {
+// sameSet is whether a and b hold the same things, in any order.
+func sameSet[T comparable](a, b []T) bool {
 	if len(a) != len(b) {
 		return false
 	}

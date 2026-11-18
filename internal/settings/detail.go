@@ -209,12 +209,10 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 	return out
 }
 
-// choice is a value out of options: a radio drawn in place for five or
-// fewer, a select past that (tdp form.5). TODO(tdp #16): options that come
-// and go, as the profiles do, flip the row from one to the other; tdp does
-// not say which a list of the user's own takes. apply puts the one
-// chosen into the config, which is written at once; then, when given, runs
-// after.
+// choice is a value out of a fixed set locku defines: a radio drawn in
+// place for five or fewer, a select past that (tdp radio.1, form.5). apply
+// puts the one chosen into the config, which is written at once; then,
+// when given, runs after.
 func (s *Settings) choice(label string, options []string, current string, apply func(string), then func() tea.Cmd) *terminu.Field {
 	at := slices.Index(options, current)
 	if len(options) <= 5 {
@@ -225,6 +223,14 @@ func (s *Settings) choice(label string, options []string, current string, apply 
 		}
 		return f
 	}
+	return s.pick(label, options, current, apply, then)
+}
+
+// pick is a value out of options in a select, however few: options that
+// are the user's own data, their number changing with use, as the profiles
+// are (tdp radio.1; user, 2026-11-18), and a fixed set past five.
+func (s *Settings) pick(label string, options []string, current string, apply func(string), then func() tea.Cmd) *terminu.Field {
+	at := slices.Index(options, current)
 	return &terminu.Field{Label: label, Value: func() string { return current },
 		Edit: func() tea.Cmd {
 			return s.app.Select(terminu.Select{Title: label, Subject: s.detailLabel(), Glyph: glyphTag, Options: options, Selected: at,
@@ -324,7 +330,7 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 	for i, p := range s.cfg.Profiles {
 		names[i] = p.Name
 	}
-	profile := s.choice("profile", names, s.cfg.Profile, func(v string) { s.cfg.Profile = v }, nil)
+	profile := s.pick("profile", names, s.cfg.Profile, func(v string) { s.cfg.Profile = v }, nil)
 	profile.Desc = "the profile the lock shows"
 	pin.Desc = "what the lock asks for; with none, any key unlocks"
 	// A profile the file names but does not have is a value gone wrong:

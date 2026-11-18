@@ -148,6 +148,41 @@ func TestPINResetTouchesNothingItCannotRead(t *testing.T) {
 	}
 }
 
+// A value that did not fit is kept aside with no screen too (tdp E3): the
+// reset copies the file to .bak, writes it again with the default, says so
+// on stderr, and goes on.
+func TestPINResetKeepsAsideWhatDidNotFit(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
+	cfg := config.Default()
+	if err := cfg.SetPIN("1234"); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Profiles = append(cfg.Profiles, cfg.NewProfile("mine", saver.KindSnake))
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	b, _ := os.ReadFile(config.ProfilesPath())
+	was := strings.Replace(string(b), "speed: normal", "speed: warp", 1)
+	if err := os.WriteFile(config.ProfilesPath(), []byte(was), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	if code := pinReset(typing(t, "y", "s3cret"), &out, &errs, func(_, pw string) bool { return pw == "s3cret" }); code != 0 {
+		t.Fatalf("code %d:\n%s\n%s", code, out.String(), errs.String())
+	}
+	if !strings.Contains(errs.String(), "did not fit") || !strings.Contains(errs.String(), "profiles.yaml.bak") {
+		t.Errorf("stderr:\n%s", errs.String())
+	}
+	if bak, _ := os.ReadFile(config.ProfilesPath() + ".bak"); string(bak) != was {
+		t.Errorf("the copy:\n%s", bak)
+	}
+	if now, _ := os.ReadFile(config.ProfilesPath()); strings.Contains(string(now), "warp") {
+		t.Errorf("not written again:\n%s", now)
+	}
+}
+
 // Without a terminal there is nothing to ask on.
 func TestPINResetNeedsATerminal(t *testing.T) {
 	t.Setenv("LOCKU__CONFIG", t.TempDir())
