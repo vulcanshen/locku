@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	"github.com/creack/pty"
 
 	"github.com/vulcanshen/locku/internal/config"
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 // A terminal for the command to ask on, and what is typed at it.
@@ -56,7 +58,7 @@ func TestPINResetAsksTwiceAndRotates(t *testing.T) {
 	verify := func(_, pw string) bool { return pw == "s3cret" }
 
 	var out bytes.Buffer
-	if code := pinReset(typing(t, "y", "s3cret"), &out, verify); code != 0 {
+	if code := pinReset(typing(t, "y", "s3cret"), &out, io.Discard, verify); code != 0 {
 		t.Fatalf("code %d:\n%s", code, out.String())
 	}
 	m := regexp.MustCompile(`New PIN: (\d{8})`).FindStringSubmatch(out.String())
@@ -74,7 +76,7 @@ func TestPINResetAsksTwiceAndRotates(t *testing.T) {
 
 	// The wrong password: refused, logged, nothing changed.
 	out.Reset()
-	if code := pinReset(typing(t, "y", "nope"), &out, verify); code == 0 || !strings.Contains(out.String(), "not your login password") {
+	if code := pinReset(typing(t, "y", "nope"), &out, io.Discard, verify); code == 0 || !strings.Contains(out.String(), "not your login password") {
 		t.Errorf("code %d:\n%s", code, out.String())
 	}
 	if again, _ := config.Load(); !again.CheckPIN(m[1]) {
@@ -86,8 +88,63 @@ func TestPINResetAsksTwiceAndRotates(t *testing.T) {
 
 	// No: nothing asked further, nothing changed.
 	out.Reset()
-	if code := pinReset(typing(t, "n"), &out, verify); code == 0 || strings.Contains(out.String(), "Password for") {
+	if code := pinReset(typing(t, "n"), &out, io.Discard, verify); code == 0 || strings.Contains(out.String(), "Password for") {
 		t.Errorf("code %d:\n%s", code, out.String())
+	}
+}
+
+// A file of locku's that cannot be read stops the reset before it asks:
+// nothing written, nothing printed, the path and the reason on stderr and a
+// non-zero exit (tdp E3, with no screen). A config.yaml whose pin_hash is
+// fine and whose rest is not was once read as the defaults, and the reset
+// wrote them over it, and the default profile over profiles.yaml.
+func TestPINResetTouchesNothingItCannotRead(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		spoil func(cfg config.Config) (path, data string)
+	}{
+		{"config.yaml", func(cfg config.Config) (string, string) {
+			return config.Path(), "version: 1\npin_hash: " + cfg.PINHash + "\nsavers: 3\n"
+		}},
+		{"profiles.yaml", func(config.Config) (string, string) {
+			return config.ProfilesPath(), "profiles: 3\n"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			t.Setenv("LOCKU__CONFIG", dir)
+			t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
+			cfg := config.Default()
+			if err := cfg.SetPIN("1234"); err != nil {
+				t.Fatal(err)
+			}
+			cfg.Profiles = append(cfg.Profiles, cfg.NewProfile("mine", saver.KindSnake))
+			if err := config.Save(cfg); err != nil {
+				t.Fatal(err)
+			}
+			path, data := tc.spoil(cfg)
+			if err := os.WriteFile(path, []byte(data), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			before := map[string][]byte{}
+			for _, p := range []string{config.Path(), config.ProfilesPath()} {
+				before[p], _ = os.ReadFile(p)
+			}
+
+			var out, errs bytes.Buffer
+			code := pinReset(typing(t, "y", "s3cret"), &out, &errs, func(_, pw string) bool { return pw == "s3cret" })
+			if code == 0 || out.Len() != 0 {
+				t.Errorf("code %d, printed:\n%s", code, out.String())
+			}
+			if want := "locku pin reset: " + path + " can't be read: "; !strings.HasPrefix(errs.String(), want) || strings.Count(errs.String(), "\n") != 1 {
+				t.Errorf("stderr must be one line, the path and the reason:\n%s\nwant it to start with %q", errs.String(), want)
+			}
+			for p, b := range before {
+				if now, _ := os.ReadFile(p); !bytes.Equal(now, b) {
+					t.Errorf("%s was written:\n%s\nwas:\n%s", filepath.Base(p), now, b)
+				}
+			}
+		})
 	}
 }
 
@@ -100,7 +157,7 @@ func TestPINResetNeedsATerminal(t *testing.T) {
 	}
 	defer f.Close()
 	var out bytes.Buffer
-	if code := pinReset(f, &out, func(string, string) bool { return true }); code != 2 || !strings.Contains(out.String(), "needs a terminal") {
+	if code := pinReset(f, &out, io.Discard, func(string, string) bool { return true }); code != 2 || !strings.Contains(out.String(), "needs a terminal") {
 		t.Errorf("code %d:\n%s", code, out.String())
 	}
 }

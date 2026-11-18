@@ -283,7 +283,7 @@ export LOCKPRG=/usr/local/bin/locku   # locku: screen's LOCKPRG
 locku pin reset
 ```
 
-先問 `[y/N]`，再要你的**登入密碼**——帳號是 locku 唯一的邊界——然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次。鎖定中的畫面下一鍵就認得新 PIN。之後到設定畫面換成自己要的。每次 reset，成功或被拒，都記在 `~/.locku/data` 底下，不含 PIN。
+先問 `[y/N]`，再要你的**登入密碼**——帳號是 locku 唯一的邊界——然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次。鎖定中的畫面下一鍵就認得新 PIN。之後到設定畫面換成自己要的。`config.yaml` 或 `profiles.yaml` 讀不了時，它什麼都不問、什麼都不寫，直接說是哪個檔、為什麼。每次 reset，成功或被拒，都記在 `~/.locku/data` 底下，不含 PIN。
 
 ## 你的資料放在哪
 
@@ -363,7 +363,7 @@ profiles:
 
 ## terminu family
 
-locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v1.1.0)（tdp v1.1.0），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu，成員列在 [tdp 的 README](https://github.com/vulcanshen/terminu)。[terminu-harness](https://github.com/vulcanshen/terminu-harness) 是用這兩者做 app 的 Claude Code plugin。
+locku 遵循 [terminu design](https://github.com/vulcanshen/terminu/tree/v1.2.14)（tdp v1.2.14），畫面由家族的 lib [terminu-go](https://github.com/vulcanshen/terminu-go) 畫：跟家族其他成員一樣的按鍵、一樣的 menu，成員列在 [tdp 的 README](https://github.com/vulcanshen/terminu)。[terminu-harness](https://github.com/vulcanshen/terminu-harness) 是用這兩者做 app 的 Claude Code plugin。
 
 ## 授權
 

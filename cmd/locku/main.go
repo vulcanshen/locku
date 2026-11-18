@@ -57,7 +57,7 @@ func main() {
 	case args[0] == "lock":
 		os.Exit(runLock(lockArgs(args[1:])))
 	case args[0] == "pin" && len(args) > 1 && args[1] == "reset":
-		os.Exit(pinReset(os.Stdin, os.Stdout, login.Verify))
+		os.Exit(pinReset(os.Stdin, os.Stdout, os.Stderr, login.Verify))
 	case args[0] == "version":
 		fmt.Println("locku " + version.Display())
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":

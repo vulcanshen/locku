@@ -283,7 +283,7 @@ From any shell of your own:
 locku pin reset
 ```
 
-It asks `[y/N]`, then your **login password** — your account is the one boundary locku has — and makes a new eight-digit PIN, writes it over the old one and shows it once. A lock already up takes the new PIN at its next key. Change it to one of your own on the settings screen afterwards. Every reset, done or refused, is logged under `~/.locku/data`, without the PIN.
+It asks `[y/N]`, then your **login password** — your account is the one boundary locku has — and makes a new eight-digit PIN, writes it over the old one and shows it once. A lock already up takes the new PIN at its next key. Change it to one of your own on the settings screen afterwards. When `config.yaml` or `profiles.yaml` cannot be read, it stops before asking, writes nothing and says which file and why. Every reset, done or refused, is logged under `~/.locku/data`, without the PIN.
 
 ## Where your data lives
 
@@ -363,7 +363,7 @@ Not there, on purpose:
 
 ## terminu family
 
-locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.1.0) (tdp v1.1.0), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family, whose members are listed in [tdp's README](https://github.com/vulcanshen/terminu). [terminu-harness](https://github.com/vulcanshen/terminu-harness) is the Claude Code plugin that makes an app with the two.
+locku follows [terminu design](https://github.com/vulcanshen/terminu/tree/v1.2.14) (tdp v1.2.14), and its screens are drawn by the family's library, [terminu-go](https://github.com/vulcanshen/terminu-go): the same keys and the same menus as the rest of the family, whose members are listed in [tdp's README](https://github.com/vulcanshen/terminu). [terminu-harness](https://github.com/vulcanshen/terminu-harness) is the Claude Code plugin that makes an app with the two.
 
 ## License
 

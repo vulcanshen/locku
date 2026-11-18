@@ -24,21 +24,27 @@ import (
 // already up reads the new hash at its next key (ui.LockModel), so the
 // new PIN opens it. The reset is logged under ~/.locku/data, without
 // the PIN. verify is login.Verify, or a stand-in under test.
-func pinReset(in *os.File, out io.Writer, verify func(user, password string) bool) int {
+func pinReset(in *os.File, out, errs io.Writer, verify func(user, password string) bool) int {
 	if !term.IsTerminal(in.Fd()) {
 		fmt.Fprintln(out, "locku pin reset: needs a terminal to ask on")
 		return 2
 	}
-	cfg, note := config.Load()
-	if _, ok := config.LoadPINHash(); !ok {
-		if _, err := os.Stat(config.Path()); err == nil {
-			// A file that cannot be read — or whose pin_hash is no hash —
-			// would be written back as the defaults with a PIN on top:
-			// not this command's to do. A file that is not there is made.
-			fmt.Fprintf(out, "locku pin reset: config.yaml cannot be read (%s) — fix that first\n", note)
+	// A file of locku's that cannot be read — config.yaml, its pin_hash no
+	// hash included, or profiles.yaml — would be read as the defaults and
+	// written back over it. With no screen there is no MOVE ASIDE to ask,
+	// so the reset does as its Esc does: nothing touched, nothing printed,
+	// the path and the reason on stderr (tdp E3). A file that is not there
+	// is made.
+	for _, f := range []struct {
+		path string
+		err  error
+	}{{config.Path(), config.Unreadable()}, {config.ProfilesPath(), config.UnreadableProfiles()}} {
+		if f.err != nil {
+			fmt.Fprintf(errs, "locku pin reset: %s can't be read: %v\n", foldHome(f.path), f.err)
 			return 1
 		}
 	}
+	cfg, _ := config.Load()
 	fmt.Fprint(out, "Reset the PIN? A new one is made and shown here once; the old one stops working at once. [y/N] ")
 	line, _ := bufio.NewReader(in).ReadString('\n')
 	if !strings.EqualFold(strings.TrimSpace(line), "y") {

@@ -2,7 +2,7 @@
 # locku installer for macOS / Linux.
 # Usage: curl -fsSL https://raw.githubusercontent.com/vulcanshen/locku/main/install.sh | sh
 #
-# terminu family template (tdp project/install.sh). Replace locku; set
+# terminu family template (harness project/install.sh). Replace locku; set
 # WINDOWS; the blocks marked "app's own" are the app's, the rest stays as it is.
 
 set -e
@@ -87,6 +87,8 @@ esac
 echo ""
 echo "NOTE: $APP draws with Nerd Font glyphs. Use a Nerd Font terminal"
 echo "      profile (https://www.nerdfonts.com) or they render as boxes."
+echo "      It also needs a truecolor (24-bit) terminal; with 256 colours"
+echo "      the dimmed and layered colours can't be told apart."
 echo ""
 echo "Run '$APP' to start."
 # --- end of the app's own ---
