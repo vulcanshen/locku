@@ -93,7 +93,7 @@ tasks:
   - id: 14
     spec: 1
     request: 設定畫面有兩個 panel：[1] 側欄，[2] 游標那列的內容，一列一個值；Tab、1、2 在兩邊移動
-    tdp: [tdp screen.1, tdp screen.2, tdp panel.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp K2, tdp K3, tdp L1, tdp L4, tdp screen.7, tdp components.4]
+    tdp: [tdp screen.1, tdp screen.2, tdp panel.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp K2, tdp K3, tdp L1, tdp L4, tdp screen.7, tdp components.4, tdp K1]
     remark:
       - |
         配置：
@@ -191,7 +191,7 @@ tasks:
   - id: 25
     spec: 4
     request: '設定放 ~/.config/locku/config.yaml（$XDG_CONFIG_HOME、$LOCKU__CONFIG 可改），profile 放 ~/.locku/data/profiles.yaml（$LOCKU__DATA）；原子寫入、mode 0600、標明自己的 version，舊版的檔第一次讀到就轉成新格式'
-    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2, tdp P5, tdp K1, tdp panel.12, tdp toast.1, tdp E3-33, tdp E3-34, tdp E3-37]
+    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6, tdp note.7, tdp toast.2, tdp P5, tdp K1, tdp panel.12, tdp toast.1, tdp E3-33, tdp E3-34, tdp E3-37, tdp E3-35, tdp E3-36]
     remark:
       - profile 是使用者寫給 locku 的清單，算資料（tdp E3 的例子有 locku 的 profiles）
       - 舊版放在 config.yaml 的 profile，設定畫面第一次開時搬到 profiles.yaml 並說一聲；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著讓使用者自己合併
