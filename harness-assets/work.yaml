@@ -489,7 +489,7 @@ tasks:
   - id: 34
     spec: 5
     implementation: |
-      saver.KindRandom（random）在 saver.Kinds 的最後；profile 多一個 `profiles`（config.Profile.Profiles，profiles.yaml 的 `profiles: [clock, runner]`），tidy 只留名字，空白與重複的去掉，其他 saver 的鍵拿掉；內建預設與 saver 的預設值都是空的
+      saver.KindRandom（random）在 saver.Kinds 的最後；profile 多一個 `profiles`（config.Profile.Profiles，profiles.yaml 的 `profiles: [clock, runner]`），tidy 只留名字，其他 saver 的鍵拿掉；清單裡空白或重複的名字是不合的值（config.Misfit，`profile mix › profiles 2 (name " ")`，Now 空的＝taken out），照 task 25 的流程：設定畫面啟動時 KeepAside 複製成 .bak、Rewrite 重寫、啟動 toast 的一列 Warning、每一筆 WARN；lock 與 pin reset 也照 task 25；內建預設與 saver 的預設值都是空的
       saver 的 [2]（random）：saver、what、profiles（用它做的 profile），沒有 defaults 與可設的列
       random profile 的 [2]：name、saver、profiles 一列（值是勾的名字，用「, 」接起來，空的寫灰字 none）；Enter 開 tgo Checks（checkbox popup，Select all 在第一列）：選項是 config.Candidates()（random 以外的 profile，照順序），後面接勾著但挑不到的名字（config.Unusable：不存在或是 random），畫成 Unavailable；Enter 寫回 profiles.yaml，App Log 記 `Set profile mix › profiles: …`
       一個都沒勾、或有挑不到的名字時，profiles 那一列 label 畫 Red（tgo Field.Err）
@@ -509,3 +509,4 @@ tasks:
       - TestARandomProfileListingWhatIsNotThere
       - TestARandomPreviewPicks
       - TestTheLockPicksOneOfARandomProfiles
+      - TestMisfitsAreKeptAsideAndWrittenAgain

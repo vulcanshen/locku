@@ -753,6 +753,18 @@ func misfitsOf(path, where string, was, now Profile) []Misfit {
 			out = append(out, Misfit{path, where + " › " + key, w, n})
 		}
 	}
+	// A random profile's blank or repeated name, taken out (user,
+	// 2026-11-18).
+	if was.Saver == saver.KindRandom {
+		var seen []string
+		for i, n := range was.Profiles {
+			if t := strings.TrimSpace(n); t == "" || slices.Contains(seen, t) {
+				out = append(out, Misfit{path, fmt.Sprintf("%s › profiles %d (name %q)", where, i+1, n), "", ""})
+			} else {
+				seen = append(seen, t)
+			}
+		}
+	}
 	if was.Count != 0 && now.Count != 0 && was.Count != now.Count {
 		out = append(out, Misfit{path, where + " › count", strconv.Itoa(was.Count), strconv.Itoa(now.Count)})
 	}

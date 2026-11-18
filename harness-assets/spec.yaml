@@ -238,10 +238,11 @@ tasks:
   - id: 34
     spec: 5
     request: 'random：從已經設定好的 profile 裡勾幾個（複選），每次鎖定時隨機挑一個來顯示；沒有可勾的 profile 就不給新增；它沒有自己的畫面與設定'
-    tdp: [tdp P5, tdp K1, tdp checkbox.1, tdp checkbox.2, tdp checkbox.3, tdp panel.12, tdp M6, tdp input.6, tdp E3, tdp E3-33, tdp E3-34, tdp E3-37, tdp note.7]
+    tdp: [tdp P5, tdp K1, tdp checkbox.1, tdp checkbox.2, tdp checkbox.3, tdp panel.12, tdp M6, tdp input.6, tdp E3, tdp E3-33, tdp E3-34, tdp E3-37, tdp note.7, tdp checkbox.4, tdp input.10, tdp toast.2, tdp E3-29, tdp E3-30, tdp E3-35, tdp E3-31, tdp E3-32]
     remark:
       - 'SAVERS 多一種 random；它的 profile 只有一列 profiles，存勾了哪幾個 profile 的名字（profiles.yaml 的 `profiles: [clock, runner]`）；saver 的 [2] 只有說明與用它做的 profile，沒有預設值可設（它沒有自己的東西）'
       - 'profiles 那一列開 checkbox popup：選項是使用者自己建的 profile，數量會變，所以不管幾個一律開 popup（tdp checkbox.1），帶 Select all（checkbox.3）；選項是 random 以外的 profile（random 挑到 random 會一直繞下去），勾過但已經不在的名字照樣列出、畫成不可用（checkbox.2），可以取消'
+      - '清單裡空白或重複的名字是不合的值，照 tdp E3「值不合規則」：複製成 .bak、重寫時拿掉、Warning、每一筆 WARN（E3-29、E3-30）'
       - '新建 random profile 時預設全部勾起來；沒有可勾的 profile 時 n 停用（tdp M6）'
       - '一個都沒勾、或勾到不存在的 profile：那一列 label 畫 Red（tdp panel.12）；勾到不存在的那幾個名字照原樣留著、挑的時候跳過，設定畫面啟動時以 Warning 說（tdp E3「名字指到不在的一筆」，E3-33、E3-34，好幾則合成一個 toast，E3-37）；挑不到任何一個時，這次用內建的預設 clock，鎖定畫面的狀態列寫原因（tdp K1、P5：不在 TUI 裡的畫面）'
       - '在設定畫面改名或刪掉一個 profile 時，random 清單裡的名字跟著改、跟著拿掉：那是使用者在 app 裡做的事，不是檔案裡指不到的名字'

@@ -706,6 +706,13 @@ func TestARandomProfileIsItsProfiles(t *testing.T) {
 	if got := cfg.Candidates(); !slices.Equal(got, []string{"clock"}) {
 		t.Errorf("candidates: %q", got)
 	}
+	// The blank name and the repeated one did not fit: taken out, and said
+	// (tdp E3, values that do not fit).
+	for _, key := range []string{`profile mix › profiles 2 (name " ")`, `profile mix › profiles 3 (name "clock")`} {
+		if !slices.ContainsFunc(cfg.Misfits(), func(m Misfit) bool { return m.Key == key && m.Now == "" }) {
+			t.Errorf("no misfit %q in %q", key, cfg.Misfits())
+		}
+	}
 }
 
 // The lock picks one of a random profile's profiles that are there and are

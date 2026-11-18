@@ -1,4 +1,4 @@
-spec: 4
+spec: 5
 tasks:
   - id: 1
     accepted: true
@@ -65,4 +65,6 @@ tasks:
   - id: 32
     accepted: true
   - id: 33
+    accepted: true
+  - id: 34
     accepted: true
