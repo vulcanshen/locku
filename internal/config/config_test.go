@@ -118,7 +118,7 @@ func TestBadHashFailsOpen(t *testing.T) {
 
 func TestProfileNotFoundIsNoted(t *testing.T) {
 	cfg, note := LoadFile(write(t, "profile: nope\nprofiles:\n  - name: a\n    saver: clock\n"))
-	if note != `profile "nope" is not in config.yaml: using the default` {
+	if note != `Profile "nope" is not in config.yaml: using the default` {
 		t.Errorf("note %q", note)
 	}
 	if s, ok := cfg.Active(); ok || s.Name != "clock" {

@@ -42,3 +42,33 @@ func TestTheLockKeepsAsideWhatDidNotFit(t *testing.T) {
 		t.Errorf("a file that fits says nothing: %q", note)
 	}
 }
+
+// When a file cannot be read the lock touches none (tdp E3, a screen outside
+// the TUI): a value that did not fit in the other is not kept aside or
+// written again, the next settings screen's start doing it; the status row
+// says which file cannot be read and why.
+func TestTheLockTouchesNoFileWhenOneCannotBeRead(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
+	conf := "version: 1\nprofile: clock\nsavers:\n  runner: {saver: runner, background: dusk}\n"
+	if err := os.WriteFile(config.Path(), []byte(conf), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(config.ProfilesPath()), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(config.ProfilesPath(), []byte("profiles: [not yaml\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, note := lockStart(config.Load())
+	if now, _ := os.ReadFile(config.Path()); string(now) != conf {
+		t.Errorf("config.yaml was written:\n%s", now)
+	}
+	if _, err := os.Stat(config.Path() + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("a .bak was made: %v", err)
+	}
+	if !strings.Contains(note, "profiles.yaml") {
+		t.Errorf("the status row does not say which file: %q", note)
+	}
+}

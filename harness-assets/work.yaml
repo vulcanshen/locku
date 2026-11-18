@@ -81,12 +81,16 @@ tasks:
     spec: 1
     implementation: |
       沒設 PIN：螢幕保護照常顯示，狀態列寫 `no PIN · any key unlocks`，任何鍵結束
-      config.yaml 讀不到（YAML 壞了、值的型別不對、pin_hash 不是 bcrypt hash）：照沒有 PIN 處理，原因寫在狀態列
+      config.yaml 讀不到（YAML 壞了、值的型別不對、pin_hash 不是 bcrypt hash）：照沒有 PIN 處理
       profiles.yaml 讀不到：顯示預設的 clock，照樣要 PIN
+      兩種都在狀態列寫 `config error: <檔名>: <原因>`（例 `config error: profiles.yaml: yaml: line 2: …`）；show_status 關掉時也照樣寫，show_status 只管 user@host · locked since 那一段
+      有檔讀不了時鎖定畫面不動任何檔案：不做 .bak、不重寫，另一個檔有不合的值也不動（cmd/locku 的 lockStart）；下次開設定畫面照常問 MOVE ASIDE
     test:
       - TestNoPINAnyKeyEnds
       - TestMalformedFileFailsOpen
       - TestBadHashFailsOpen
+      - TestTheReasonShowsWithTheStatusOff
+      - TestTheLockTouchesNoFileWhenOneCannotBeRead
   - id: 7
     spec: 1
     implementation: |
@@ -386,8 +390,8 @@ tasks:
       YAML 讀得進來、只是值不合規則（沒有的 speed 或 background、不是 #rrggbb 的顏色、負的秒數、tmux 沒有的 lock）：換成預設值；名字空白或重複的 profile 略過；每一筆是 config.Misfit（哪個檔、哪一個、原本的值、現在用的）
       設定畫面啟動時，有 misfit 的檔一個一個：tgo KeepAside 複製成下一個空著的 .bak，config.Rewrite 只重寫那個檔，tgo App.DidNotFit 跳一個 Warning toast（「1 value in profiles.yaml did not fit: defaults used, yours kept in profiles.yaml.bak」）、每一筆以 WARN 記進 App Log（`profiles.yaml: profile bounce › speed "warp" did not fit; using "normal"`）
       複製失敗：Error toast 寫 KeepAside 的錯（`… could not be made: <why>; … left as it was`），不重寫，這次照預設值，App Log 照樣記每一筆；重寫失敗開 error popup
-      `locku lock` 啟動時（cmd/locku 的 lockStart，與 pin reset 共用 keepAside）一樣 KeepAside、Rewrite，DidNotFitText 的那句（或複製失敗的原因）寫在鎖定畫面的狀態列，接在已經有的說明後面
-      一個 profile 都沒有（用內建的預設），或 config.yaml 的 profile 指到沒有的 profile（值不換、不重寫、不做 .bak，這次用內建的預設）：設定畫面啟動時一個 Warning toast（`profile "work" in config.yaml is not in profiles.yaml: using the default`，lib 記成 App Log 的 WARN），不開 error popup；鎖定畫面寫在狀態列；pin reset 寫到 stderr
+      `locku lock` 啟動時（cmd/locku 的 lockStart，與 pin reset 共用 keepAside）兩個檔都讀得了才一樣 KeepAside、Rewrite，DidNotFitText 的那句（或複製失敗的原因）寫在鎖定畫面的狀態列，接在已經有的說明後面
+      一個 profile 都沒有（用內建的預設），或 config.yaml 的 profile 指到沒有的 profile（值不換、不重寫、不做 .bak，這次用內建的預設）：設定畫面啟動時一個 Warning toast（`Profile "work" in config.yaml is not in profiles.yaml: using the default`，開頭大寫，lib 記成 App Log 的 WARN），不開 error popup；鎖定畫面寫在狀態列；pin reset 寫到 stderr
       config.yaml 標明 version，舊版的檔第一次讀到就轉成新格式整份寫回（改名的鍵、搬到 tmux / screen 底下的鍵、舊的 runner 名稱）
       舊版放在 config.yaml 的 profile：設定畫面第一次開時搬到 profiles.yaml 並說一聲；搬失敗就留在原處；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著並開 error popup 說明
       寫檔失敗開 error popup

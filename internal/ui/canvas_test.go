@@ -418,3 +418,13 @@ func TestShadedBoardSquaresWearTheirLooks(t *testing.T) {
 		}
 	}
 }
+
+// A file that cannot be read is said on the status row with show_status off
+// too, which and why (tdp E3, a screen outside the TUI): show_status hides
+// who is locked and since when, never what is wrong.
+func TestTheReasonShowsWithTheStatusOff(t *testing.T) {
+	s := statusRow(80, false, "vulcan", "host", time.Now(), false, "profiles.yaml: yaml: line 2: did not find expected key", "")
+	if !strings.Contains(s, "profiles.yaml: yaml: line 2") || strings.Contains(s, "locked since") {
+		t.Errorf("status row: %q", s)
+	}
+}

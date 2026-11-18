@@ -790,9 +790,9 @@ func (cfg Config) sanitized(conf, from string) (Config, string) {
 		// written, the built-in default is used this run (Active), and it is
 		// said; once that profile is back, it works again.
 		if conf == from {
-			note = fmt.Sprintf("profile %q is not in %s: using the default", cfg.Profile, filepath.Base(from))
+			note = fmt.Sprintf("Profile %q is not in %s: using the default", cfg.Profile, filepath.Base(from))
 		} else {
-			note = fmt.Sprintf("profile %q in %s is not in %s: using the default", cfg.Profile, filepath.Base(conf), filepath.Base(from))
+			note = fmt.Sprintf("Profile %q in %s is not in %s: using the default", cfg.Profile, filepath.Base(conf), filepath.Base(from))
 		}
 	}
 	// Every kind has its defaults in the file, whole: the file's where it

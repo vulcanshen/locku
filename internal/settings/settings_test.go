@@ -849,7 +849,7 @@ func TestAProfileThatIsNotThereIsAWarning(t *testing.T) {
 	was, _ := os.ReadFile(config.Path())
 	d := started(t)
 	v := d.screen()
-	if !strings.Contains(v, "WARNING") || !strings.Contains(v, `"ghost" in config.yaml is not in profiles.yaml`) || strings.Contains(v, "CONFIG") {
+	if !strings.Contains(v, "WARNING") || !strings.Contains(v, `Profile "ghost" in config.yaml is not in profiles.yaml`) || strings.Contains(v, "CONFIG") {
 		t.Errorf("no Warning toast, or an error popup:\n%s", v)
 	}
 	if now, _ := os.ReadFile(config.Path()); string(now) != string(was) {

@@ -120,9 +120,15 @@ func runLock(socket, session string) int {
 // lockStart is the lock's start with what config.Load gave: a file that had
 // a value or a profile that did not fit is kept aside and written again,
 // as any start does it (tdp E3). The lock is no TUI screen (tdp K1, P5):
-// what is said goes on its status row, after what is wrong already.
+// what is said goes on its status row, after what is wrong already. When
+// a file cannot be read, the lock touches none (tdp E3, a screen outside
+// the TUI): the status row says which and why, and the settings screen's
+// next start asks about it and keeps aside the rest.
 func lockStart(cfg config.Config, problem string) (config.Config, string) {
-	said := keepAside(cfg)
+	var said []string
+	if config.Unreadable() == nil && config.UnreadableProfiles() == nil {
+		said = keepAside(cfg)
+	}
 	if problem != "" {
 		said = append([]string{problem}, said...)
 	}

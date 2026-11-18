@@ -11,8 +11,7 @@ tasks:
   - id: 5
     accepted: true
   - id: 6
-    accepted: false
-    reason: 'tdp 不清楚：`locku lock` 碰到讀不了的 config.yaml 照沒有 PIN 處理（螢幕保護照常、狀態列寫原因、任何鍵結束），讀不了的 profiles.yaml 用預設的 clock 照樣要 PIN。tdp E3「讀不了時」只有兩種：有畫面的「app 不在這個狀態下繼續操作，啟動時開一個 confirm」，與「沒有畫面時（不打開 app、直接印出來的指令）」不動檔案、路徑與原因寫到 stderr、非 0 結束；鎖定畫面是不在 TUI 裡的畫面（tdp P5、K1「不在 TUI 裡的畫面…app 可以自行決定（例：locku 鎖定時的螢幕保護與 PIN 框）」），兩種都不是。P5 的放行只管畫面與按鍵，還是也包括讀不了時照樣鎖、照樣用預設值，tdp 沒寫'
+    accepted: true
   - id: 7
     accepted: true
   - id: 8
@@ -50,7 +49,8 @@ tasks:
   - id: 24
     accepted: true
   - id: 25
-    accepted: true
+    accepted: false
+    reason: '違反：同一次啟動有好幾則 E3 的 toast 時沒有合成一個（misfit 的檔各跳一個、指不到的 profile 再一個、搬 profile 與 .bak 做不出來的也各自跳，後一個取代前一個；tdp E3 main「同一次啟動有好幾件」，清單 E3-37）。另一處：指不到 profile 的 toast 與 App Log 那一筆開頭小寫（profile "work" in config.yaml…）；tdp toast.2「每一列的第一個字母大寫」，例外只有從名稱或路徑開始的列（App Log 同，note.7）'
   - id: 26
     accepted: true
   - id: 27

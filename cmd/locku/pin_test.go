@@ -202,7 +202,7 @@ func TestPINResetSaysAProfileThatIsNotThere(t *testing.T) {
 	if code := pinReset(typing(t, "y", "s3cret"), &out, &errs, func(_, pw string) bool { return pw == "s3cret" }); code != 0 {
 		t.Fatalf("code %d:\n%s\n%s", code, out.String(), errs.String())
 	}
-	if !strings.Contains(errs.String(), `locku pin reset: profile "ghost" in config.yaml is not in profiles.yaml: using the default`) {
+	if !strings.Contains(errs.String(), `locku pin reset: Profile "ghost" in config.yaml is not in profiles.yaml: using the default`) {
 		t.Errorf("stderr:\n%s", errs.String())
 	}
 	if again, _ := config.Load(); again.Profile != "ghost" {
