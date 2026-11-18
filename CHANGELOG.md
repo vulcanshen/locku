@@ -2,14 +2,14 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.2 — tdp v1.2.15
 
+- On terminu-go v1.2.16, which follows tdp v1.2.15.
 - A wrong PIN no longer holds the lock for a second: the box clears and takes the next PIN at once, `wrong PIN` staying until you press Enter again. The cooling-off after `wrong_pin_attempts` wrong PINs in a row is as it was.
 - Enter with nothing typed in the PIN box says the PIN can't be empty and is not counted as a wrong PIN, so pressing it again and again does not run into the cooling-off.
-- On terminu-go v1.2.16, which follows tdp v1.2.15.
 - `locku pin reset` stops before it asks anything when config.yaml or profiles.yaml cannot be read: it writes nothing, says which file and why on stderr and exits with 1, as the settings screen does when you leave it on MOVE ASIDE. Until now a config.yaml whose PIN hash could be read but whose rest could not was taken for the defaults, and the reset wrote them over it, and the default profile over your profiles.
 - The App Log, the key reference (`?`) and the notes locku shows can be searched with `/`, `n` and `N` going to the next and the previous hit.
-- `locku version` prints the version alone, as the tag reads it: `v1.0.1` where it printed `locku v1.0.1`.
+- `locku version` prints the version alone, as the tag reads it: `v1.0.2`, where it printed `locku v1.0.1`.
 - `[2]`'s title is the name of what it shows as you wrote it, `[2] clock`, no longer in capitals.
 - `input_tab_width` takes effect as soon as you save it, rather than at the next start.
 - A value in config.yaml or profiles.yaml that locku does not have, such as a speed it does not offer or a colour that is not `#rrggbb`, was quietly its default and gone at the next save, and so was a profile whose name was empty or taken. Now, as the settings screen starts, the file is copied whole to `.bak` (`.bak.1`… when that is taken) and written again with the defaults; a toast says so and the App Log lists each value with what it was and what is used. `locku lock` does the same, saying so on its status row, and `locku pin reset`, on stderr.
