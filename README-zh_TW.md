@@ -20,7 +20,7 @@
 
 ## 你會看到什麼
 
-七種 saver，每種可以生任意多個有名字的 profile，其中一個是啟用中的。
+八種 saver，每種可以生任意多個有名字的 profile，其中一個是啟用中的。
 
 ### clock
 
@@ -72,6 +72,10 @@ Chrome 的離線小恐龍遊戲當螢幕保護：地面與障礙向左捲，草�
 ![custom](docs/savers/custom.png)
 
 你自己的程式當畫面：例如 `cmatrix -b`，任何會畫畫面的東西，經 `sh -c` 跑。locku 管鎖、PIN 與整合；程式跑在 locku 開的 pty 上，輸出原樣直通，按鍵永遠到不了它。PIN 框直接疊在還在動的畫面上，解鎖時程式跟鎖一起結束。
+
+### random
+
+你的其他 profile 之一，每次鎖定時隨機挑一個：在它的 `[2]` 勾它可以挑哪些，新建時全部勾著。它沒有自己的東西，所以沒有其他 profile 可挑時就不能新增。勾的 profile 不在了，挑的時候跳過，設定畫面一開會說；一個都挑不到時，鎖定畫面用預設的 clock，並寫出原因。
 
 ## 安裝
 
@@ -164,7 +168,7 @@ Space:menu ?:help !:log Tab|1–2:panels q:quit
 兩個面板：**`[1]`** 側欄，**`[2]`** 游標那列的內容，一列一個值。`Tab`、`1`、`2` 在兩邊移動。`[1]` 上 `Enter` 進 `[2]`；`[2]` 上 `Enter` 編輯那一列：選項少的在原地選，多的打開清單選，開關原地切換，其他打開輸入框。`Esc` 關浮層；`Space` 列出當前能做的事，最後一列 `Global operation` 通往離開；`?` 列出這裡的按鍵，只供閱讀——在 preference、tmux、screen 的 `[2]` 上，最前面先是每一列的說明；在浮層上是那個浮層的鍵；`q` 或 `Ctrl-C` 離開：在面板上立刻離開；有浮層開著時先問 `Quit locku?`，再按一次 `Ctrl-C` 直接離開；打字中 `q` 是輸入的字，只有 `Ctrl-C` 會問。數字框空著就是預設值。設定畫面的終端機至少要 40 × 15；更小時畫面上會說，按兩次 `Ctrl-C` 離開，拉大就回來。
 
 - **Profiles**——你設定好、有名字的 saver。`●` 是啟用中的、鎖定畫面顯示的那個；`a` 把游標那個設為啟用、`p` 預覽、`D` duplicate、`r` rename、`X` delete。複製或新增時框裡用灰字提議一個沒人用的名字，直接 `Enter` 就用它，建好後直接進它的 `[2]`。它的 `[2]` 是它的設定：clock 的 `layout`、`size`、`font`、`time`、`date`；runner 的 `participants`、`character`、`scene`、`background`；custom 的 `command`；snake 與 tetromino 的 `speed`；bounce 的 `speed`、`time`；pets 的 `animals`、`count`、`scene`；以及 clock 的 `bg` / `fg`，各自在顏色選擇器裡選：舊的顏色與新的並排，紅、綠、藍用 hex。每一列一設定就寫檔。
-- **Savers**——七種種類：clock、runner、bounce、snake、tetromino、pets、custom。每個 `[2]` 是說明加**預設值**，之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
+- **Savers**——八種種類：clock、runner、bounce、snake、tetromino、pets、custom、random。每個 `[2]` 是說明加**預設值**（random 沒有），之後用這種 saver 新增的 profile 就從這裡開始；`n` 生一個、`p` 用預設值預覽。改預設值不動既有的 profile。
 - **Integration**——tmux 與 screen，見下。
 - **Settings › preference**——PIN（4 到 12 個字元；已設時 `Enter` 先驗目前的，再輸入新的：框裡現有的 PIN 是 8 顆灰點，直接 `Enter` 保留，`Backspace` 再 `Enter` 拿掉；每一步疊在上一步上面，`Esc` 退回上一步）、啟用的 `profile`、`show_status`、`pin_prompt_timeout`、`wrong_pin_attempts`、`wrong_pin_attempt_cooldown`、`input_tab_width`。
 
@@ -344,6 +348,9 @@ profiles:
   - name: matrix
     saver: custom
     command: "cmatrix -b" # sh -c 跑；沒有自己的顏色
+  - name: any
+    saver: random
+    profiles: [clock, runner] # 每次鎖定時從這幾個挑一個
 ```
 
 ## 限制

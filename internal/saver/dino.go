@@ -59,7 +59,7 @@ const (
 )
 
 var (
-	Kinds        = []string{KindClock, KindRunner, KindBounce, KindSnake, KindTetromino, KindPets, KindCustom}
+	Kinds        = []string{KindClock, KindRunner, KindBounce, KindSnake, KindTetromino, KindPets, KindCustom, KindRandom}
 	Participants = []string{RunnerBig, RunnerSmall, RunnerBigBig, RunnerSmallSmall, RunnerSmallBig, RunnerBigSmall}
 	Characters   = []string{CharacterTRex, CharacterCat, CharacterRabbit, CharacterGiraffe, CharacterGhost}
 	Scenes       = []string{SceneGrass, SceneDesert, SceneCity}

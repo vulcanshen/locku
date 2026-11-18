@@ -39,6 +39,7 @@ var about = map[string]string{
 	saver.KindTetromino: "falling blocks, playing themselves, full rows going",
 	saver.KindPets:      "cats outdoors, up the trees, jumping, napping",
 	saver.KindCustom:    "your own program, on a terminal of its own, as the saver",
+	saver.KindRandom:    "one of the profiles you check, picked each time the lock starts",
 }
 
 // usualConf is where a tool's file usually is: offered in grey in the box
@@ -127,8 +128,11 @@ func (s *Settings) fields() []*terminu.Field {
 			readOnly("saver", kind),
 			readOnly("what", about[kind]),
 			readOnly("profiles", used),
-			readOnly("defaults", "for profiles made of it from now on"),
 		}
+		if kind == saver.KindRandom {
+			return out // nothing of its own to set (user, 2026-11-18)
+		}
+		out = append(out, readOnly("defaults", "for profiles made of it from now on"))
 		p, _ := s.subject()
 		return append(out, s.profileFields(p)...)
 	case kindProfile:
@@ -154,6 +158,8 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 	}
 	var out []*terminu.Field
 	switch p.Saver {
+	case saver.KindRandom:
+		return []*terminu.Field{s.picks(p)}
 	case saver.KindBounce:
 		out = []*terminu.Field{
 			s.choice("speed", saver.Speeds, p.Speed, set(func(p *config.Profile, v string) { p.Speed = v }), nil),
@@ -207,6 +213,37 @@ func (s *Settings) profileFields(p config.Profile) []*terminu.Field {
 			s.colour("fg", c.FG, set(func(p *config.Profile, v string) { p.FG = v })))
 	}
 	return out
+}
+
+// picks is a random profile's profiles row: the names it picks from, in a
+// checkbox popup however few (tdp checkbox.1), the profiles it can pick
+// first, a name it cannot pick after them, not available (checkbox.2);
+// the label Red while one cannot be picked or none is checked (panel.12).
+func (s *Settings) picks(p config.Profile) *terminu.Field {
+	unusable := s.cfg.Unusable(p)
+	f := &terminu.Field{Label: "profiles", Value: func() string { return strings.Join(p.Profiles, ", ") }, Empty: "none",
+		Desc: "the profiles the lock picks one of, each time it starts",
+		Err:  func() bool { return len(p.Profiles) == 0 || len(unusable) > 0 }}
+	f.Edit = func() tea.Cmd {
+		options := append(s.cfg.Candidates(), unusable...)
+		can := len(options) - len(unusable)
+		checked := make([]bool, len(options))
+		for i, o := range options {
+			checked[i] = slices.Contains(p.Profiles, o)
+		}
+		return s.app.Checks(terminu.Checks{Title: "profiles", Subject: s.detailLabel(), Glyph: glyphTag, Options: options, Checked: checked,
+			Unavailable: func(i int) bool { return i >= can },
+			Commit: func(on []bool) error {
+				var names []string
+				for i, o := range on {
+					if o {
+						names = append(names, options[i])
+					}
+				}
+				return s.commit(s.wrote("profiles", strings.Join(names, ", ")), func() { s.alter(func(p *config.Profile) { p.Profiles = names }) })
+			}})
+	}
+	return f
 }
 
 // choice is a value out of a fixed set locku defines: a radio drawn in

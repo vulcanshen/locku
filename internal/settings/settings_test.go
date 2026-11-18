@@ -55,7 +55,7 @@ func testConfig() config.Config {
 	second.Name, second.Time, second.Date = "clock2", "HH MM", "off"
 	cfg.Profiles = append(cfg.Profiles, second)
 	for _, k := range saver.Kinds {
-		if k != saver.KindClock {
+		if k != saver.KindClock && k != saver.KindRandom {
 			cfg.Profiles = append(cfg.Profiles, config.NewProfile(k, k))
 		}
 	}
@@ -1035,5 +1035,106 @@ func TestMissingProfileIsRed(t *testing.T) {
 		if f.Label == "profile" && (f.Err == nil || !f.Err()) {
 			t.Error("the profile row is not marked wrong")
 		}
+	}
+}
+
+// random is a saver with nothing of its own (user, 2026-11-18): its [2] says
+// what it is and which profiles are made of it, with no defaults to set.
+func TestRandomHasNothingOfItsOwn(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(saverID(saver.KindRandom))
+	var labels []string
+	for _, f := range d.s.vals.Fields {
+		labels = append(labels, f.Label)
+	}
+	if !slices.Equal(labels, []string{"saver", "what", "profiles"}) {
+		t.Errorf("rows: %q", labels)
+	}
+}
+
+// A random profile made with n has every profile it can pick checked; with
+// none to pick n is there but not now (tdp M6).
+func TestANewRandomProfile(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(saverID(saver.KindRandom)).press("n", "Enter")
+	cfg := d.saved()
+	i := cfg.Index("random")
+	if i < 0 || !slices.Equal(cfg.Profiles[i].Profiles, cfg.Candidates()) || len(cfg.Candidates()) == 0 {
+		t.Fatalf("made: %+v", cfg.Profiles)
+	}
+	only := config.Default()
+	only.Profiles = []config.Profile{{Name: "mix", Saver: saver.KindRandom}}
+	only.Profile = "mix"
+	d = newDriver(t, only, 100, 30)
+	if a := d.s.newAction(saver.KindRandom, terminu.ItemScope); a.Disabled == nil || !a.Disabled() {
+		t.Error("n is not off with nothing to pick")
+	}
+}
+
+// A random profile's profiles row opens a checkbox popup of the profiles it
+// can pick however few (tdp checkbox.1), Select all first, a name that is
+// gone still listed; Enter writes the ticks; a name that is gone, or none
+// checked, turns the label Red (tdp panel.12).
+func TestTheRandomProfilesRow(t *testing.T) {
+	cfg := testConfig()
+	cfg.Profiles = append(cfg.Profiles, config.Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"clock", "ghost"}})
+	d := newDriver(t, cfg, 100, 40)
+	d.on(profileID("mix"))
+	for _, f := range d.s.vals.Fields {
+		if f.Label == "profiles" && (f.Value() != "clock, ghost" || f.Err == nil || !f.Err()) {
+			t.Errorf("the row: %q", f.Value())
+		}
+	}
+	d.toField("profiles", 0).press("Enter")
+	if v := d.screen(); !strings.Contains(v, "PROFILES") || !strings.Contains(v, "Select all") || !strings.Contains(v, "ghost") || !strings.Contains(v, "runner") {
+		t.Fatalf("no checkbox popup:\n%s", v)
+	}
+	d.press("Space", "Enter")
+	if got := d.saved(); slices.Equal(got.Profiles[got.Index("mix")].Profiles, []string{"clock", "ghost"}) {
+		t.Errorf("the ticks were not written: %q", got.Profiles[got.Index("mix")].Profiles)
+	}
+}
+
+// Renaming or deleting a profile on the settings screen reaches the random
+// profiles that list it.
+func TestRenameAndDeleteReachRandom(t *testing.T) {
+	cfg := testConfig()
+	cfg.Profiles = append(cfg.Profiles, config.Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"clock2", "runner"}})
+	d := newDriver(t, cfg, 100, 30)
+	d.on(profileID("clock2")).press("r", "Tab").typeText("x").press("Enter")
+	d.on(profileID("runner")).press("X", "Enter")
+	got := d.saved()
+	if p := got.Profiles[got.Index("mix")]; !slices.Equal(p.Profiles, []string{"clock2x"}) {
+		t.Errorf("mix: %q", p.Profiles)
+	}
+}
+
+// A random profile listing a profile that is not there says so as the
+// settings screen starts, the file left as it is (tdp E3, a value naming an
+// entry that is not there).
+func TestARandomProfileListingWhatIsNotThere(t *testing.T) {
+	tempDirs(t)
+	cfg := testConfig()
+	cfg.Profiles = append(cfg.Profiles, config.Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"clock", "ghost"}})
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	d := started(t)
+	if v := d.screen(); !strings.Contains(v, "WARNING") || !strings.Contains(v, `Profile "mix" lists "ghost"`) {
+		t.Errorf("no warning:\n%s", v)
+	}
+	if b, _ := os.ReadFile(config.ProfilesPath()); !strings.Contains(string(b), "ghost") {
+		t.Errorf("profiles.yaml was written:\n%s", b)
+	}
+}
+
+// A preview of a random profile picks one of its profiles, as the lock does.
+func TestARandomPreviewPicks(t *testing.T) {
+	cfg := testConfig()
+	cfg.Profiles = append(cfg.Profiles, config.Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"runner"}})
+	cfg.Profile = "mix"
+	got, p := forPreview(cfg, cfg.Profiles[cfg.Index("mix")])
+	if got.Profile != "runner" || p.Name != "runner" {
+		t.Errorf("previewed %q, %q", got.Profile, p.Name)
 	}
 }

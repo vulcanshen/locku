@@ -72,3 +72,21 @@ func TestTheLockTouchesNoFileWhenOneCannotBeRead(t *testing.T) {
 		t.Errorf("the status row does not say which file: %q", note)
 	}
 }
+
+// The lock of a random profile is one of the profiles it lists, picked as
+// it starts (user, 2026-11-18).
+func TestTheLockPicksOneOfARandomProfiles(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
+	cfg := config.Default()
+	cfg.Profiles = append(cfg.Profiles, cfg.NewProfile("snake", saver.KindSnake),
+		config.Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"snake"}})
+	cfg.Profile = "mix"
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	if got, note := lockStart(config.Load()); got.Profile != "snake" || note != "" {
+		t.Errorf("the lock shows %q, %q", got.Profile, note)
+	}
+}

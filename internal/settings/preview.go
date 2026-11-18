@@ -2,6 +2,7 @@ package settings
 
 import (
 	"io"
+	"math/rand/v2"
 	"os"
 	"strings"
 
@@ -54,7 +55,19 @@ func (s *Settings) previewActive() tea.Cmd {
 // preview shows p; what is what is shown, as the App Log says it, the
 // words of Settings.wrote: "profile clock2", "clock defaults".
 func preview(cfg config.Config, p config.Profile, what string) tea.Cmd {
+	cfg, p = forPreview(cfg, p)
 	return tea.Exec(&previewRun{cfg: cfg, p: p}, func(err error) tea.Msg { return previewDone{what, err} })
+}
+
+// forPreview is what a preview of p shows: p, or, for a random profile,
+// one of its profiles picked as the lock picks it (user, 2026-11-18).
+func forPreview(cfg config.Config, p config.Profile) (config.Config, config.Profile) {
+	if p.Saver != saver.KindRandom {
+		return cfg, p
+	}
+	cfg, _ = cfg.Picked(rand.IntN)
+	p, _ = cfg.Active()
+	return cfg, p
 }
 
 // previewDone says the preview of what is over, with what went wrong, if

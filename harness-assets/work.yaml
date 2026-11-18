@@ -486,3 +486,26 @@ tasks:
       8 你的資料放在哪：config.yaml 與 profiles.yaml 的位置、範例，含 input_tab_width 與預設值 4；9 限制；10 相關連結：CHANGELOG；11 terminu family：tdp、terminu-go、terminu-harness 的連結，不列成員；12 授權
     test:
       - commit: cb24d16
+  - id: 34
+    spec: 5
+    implementation: |
+      saver.KindRandom（random）在 saver.Kinds 的最後；profile 多一個 `profiles`（config.Profile.Profiles，profiles.yaml 的 `profiles: [clock, runner]`），tidy 只留名字，空白與重複的去掉，其他 saver 的鍵拿掉；內建預設與 saver 的預設值都是空的
+      saver 的 [2]（random）：saver、what、profiles（用它做的 profile），沒有 defaults 與可設的列
+      random profile 的 [2]：name、saver、profiles 一列（值是勾的名字，用「, 」接起來，空的寫灰字 none）；Enter 開 tgo Checks（checkbox popup，Select all 在第一列）：選項是 config.Candidates()（random 以外的 profile，照順序），後面接勾著但挑不到的名字（config.Unusable：不存在或是 random），畫成 Unavailable；Enter 寫回 profiles.yaml，App Log 記 `Set profile mix › profiles: …`
+      一個都沒勾、或有挑不到的名字時，profiles 那一列 label 畫 Red（tgo Field.Err）
+      [1] 或 saver 的 [2] 上 n：random 預設全部勾起來（Candidates）；Candidates 是空的時 n 停用（Action.Disabled）
+      在設定畫面改名（r）時 config.RenameInRandom 把 random 清單裡的名字跟著改，刪除（X）時 config.DropFromRandom 把它拿掉
+      設定畫面啟動時，挑不到的名字每個一則（config.UnusableSaid：`Profile "mix" lists "ghost", which is not a profile it can pick: left out`），Warning，跟其他啟動要說的合成一個 toast（App.Notify）；不動檔案；pin reset 沒有畫面，寫到 stderr
+      `locku lock` 啟動時（lockStart）config.Picked(rand.IntN)：啟用中的是 random 就從勾的、挑得到的裡面挑一個當這次的 profile（custom 也照 custom 跑）；一個都挑不到時用內建的預設 clock，狀態列寫 `Profile "mix" has no profile to pick: using the default`
+      預覽（p、P）random profile 時 forPreview 也照 Picked 挑一個
+    test:
+      - TestARandomProfileIsItsProfiles
+      - TestARandomProfileIsPicked
+      - TestRenamesAndDeletesReachRandom
+      - TestRandomHasNothingOfItsOwn
+      - TestANewRandomProfile
+      - TestTheRandomProfilesRow
+      - TestRenameAndDeleteReachRandom
+      - TestARandomProfileListingWhatIsNotThere
+      - TestARandomPreviewPicks
+      - TestTheLockPicksOneOfARandomProfiles

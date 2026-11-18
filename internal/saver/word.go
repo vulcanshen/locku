@@ -13,6 +13,11 @@ import (
 // the program ended, when it does.
 const KindCustom = "custom"
 
+// KindRandom is a saver with nothing of its own (user, 2026-11-18): a
+// profile of it names other profiles, and the lock shows one of them,
+// picked as it starts.
+const KindRandom = "random"
+
 // Word is what the board says of a custom saver's program that has
 // ended, in the clock's own face and sizes: EXIT and its code, as a
 // shell would report it, or NONE when nothing ran (user, 2026-09-25: an

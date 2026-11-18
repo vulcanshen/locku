@@ -132,6 +132,9 @@ func (s *Settings) start() tea.Cmd {
 	if s.problem != "" {
 		notices = append(notices, terminu.Notice{Kind: terminu.Warning, Text: s.problem})
 	}
+	for _, said := range s.cfg.UnusableSaid() {
+		notices = append(notices, terminu.Notice{Kind: terminu.Warning, Text: said})
+	}
 	return tea.Batch(failed, cannot, s.app.Notify(notices...))
 }
 

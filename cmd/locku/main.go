@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math/rand/v2"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -131,6 +132,12 @@ func lockStart(cfg config.Config, problem string) (config.Config, string) {
 	}
 	if problem != "" {
 		said = append([]string{problem}, said...)
+	}
+	// A random profile is one of its profiles, picked now (user,
+	// 2026-11-18); with none to pick, the default, said.
+	cfg, picked := cfg.Picked(rand.IntN)
+	if picked != "" {
+		said = append(said, picked)
 	}
 	return cfg, strings.Join(said, " · ")
 }

@@ -20,7 +20,7 @@
 
 ## What you see
 
-Seven kinds of saver, as many named profiles of each as you like, one of them active.
+Eight kinds of saver, as many named profiles of each as you like, one of them active.
 
 ### clock
 
@@ -72,6 +72,10 @@ Cats outdoors, going where they please: along the grass, onto a stump, up a tree
 ![custom](docs/savers/custom.png)
 
 A program of your own as the picture: `cmatrix -b`, say, or anything else that draws, run through `sh -c`. locku does the lock, the PIN and the integration; the program runs on a pty of locku's, its output passed on as it comes, and the keys never reach it. The PIN prompt goes straight over the moving picture, and unlocking ends the program with the lock.
+
+### random
+
+One of your other profiles, picked each time the lock starts: check the ones it may pick on its `[2]`; a new one starts with all of them checked. It has nothing of its own, so with no other profile to pick there is none to make. A profile it lists that is gone is left out of the pick and said as the settings screen starts; with none left to pick, the lock shows the default clock and says why.
 
 ## Install
 
@@ -164,7 +168,7 @@ Space:menu ?:help !:log Tab|1–2:panels q:quit
 Two panels: **`[1]`** the sidebar, **`[2]`** what the row under the cursor holds, one value a row. `Tab`, `1` and `2` move between them. `Enter` on `[1]` goes into `[2]`; on `[2]` it edits the row: a choice of a few is picked where it is drawn, more open a list to choose from, a switch flips, the rest open a box to type in. `Esc` closes a popup; `Space` lists what can be done here, and its last row, `Global operation`, leads to quitting; `?` lists the keys here, to read — on preference's, tmux's or screen's `[2]` after what each row means, and on a popup that popup's keys; `q` or `Ctrl-C` quits: at once from a panel; with a popup open it asks `Quit locku?` first, and a second `Ctrl-C` leaves at once; in a box being typed in `q` is a letter, and only `Ctrl-C` asks. A number box left empty is the default. The settings screen needs a terminal of at least 40 × 15; on a smaller one it says so, `Ctrl-C` twice leaves, and it comes back as the terminal grows.
 
 - **Profiles** — the savers you have set up and named. `●` marks the active one, the one the lock shows; `a` makes the row under the cursor active, `p` previews it, `D` duplicates, `r` renames, `X` deletes. A copy, or a new profile, is offered a free name in grey — `Enter` takes it — and once made you are in its `[2]`. Its `[2]` is its settings: clock's `layout`, `size`, `font`, `time`, `date`; runner's `participants`, `character`, `scene`, `background`; custom's `command`; snake's and tetromino's `speed`; bounce's `speed` and `time`; pets' `animals`, `count` and `scene`; and the clock's `bg` / `fg`, each chosen in a colour picker, the old colour beside the new, red, green and blue in hex. Everything is written the moment it is set.
-- **Savers** — the seven kinds: clock, runner, bounce, snake, tetromino, pets, custom. Each `[2]` is a description and the **defaults** a new profile of that kind starts with; `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
+- **Savers** — the eight kinds: clock, runner, bounce, snake, tetromino, pets, custom, random. Each `[2]` is a description and the **defaults** a new profile of that kind starts with (random has none); `n` makes one, `p` previews the defaults. Changing the defaults touches no existing profile.
 - **Integration** — tmux and screen, below.
 - **Settings › preference** — the PIN (4 to 12 characters; with one set, `Enter` asks the current one, then a new one over the PIN there, shown as eight grey dots: `Enter` on them keeps it, `Backspace` then `Enter` removes it; each step opens over the one before, and `Esc` goes back a step), the active `profile`, `show_status`, `pin_prompt_timeout`, `wrong_pin_attempts`, `wrong_pin_attempt_cooldown`, `input_tab_width`.
 
@@ -344,6 +348,9 @@ profiles:
   - name: matrix
     saver: custom
     command: "cmatrix -b" # run through sh -c; no colours of its own
+  - name: any
+    saver: random
+    profiles: [clock, runner] # the lock picks one of them as it starts
 ```
 
 ## Limits

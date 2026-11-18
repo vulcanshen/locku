@@ -131,7 +131,10 @@ func (s *Settings) sideActions() []terminu.Action {
 // saver's defaults say).
 func (s *Settings) newAction(kind string, scope terminu.Scope) terminu.Action {
 	return terminu.Action{Key: "n", Label: "new", Desc: "a profile of this saver, under a name", Scope: scope,
-		Do: func() tea.Cmd { return s.newProfile(kind) }}
+		// A random profile with no profile to pick: there, but not now (tdp
+		// M6; user, 2026-11-18).
+		Disabled: func() bool { return kind == saver.KindRandom && len(s.cfg.Candidates()) == 0 },
+		Do:       func() tea.Cmd { return s.newProfile(kind) }}
 }
 
 // freeName is base while no profile has it, else base numbered from 2.
@@ -165,7 +168,13 @@ func (s *Settings) newProfile(kind string) tea.Cmd {
 	return s.app.Text(terminu.TextInput{Title: "New profile", Subject: kind, Glyph: glyphPencil, Name: "Name",
 		Prompt: "A name for the new " + kind + " profile", Verb: "create", Suggest: s.freeName(kind), Check: s.nameCheck(-1),
 		Commit: func(name string) error {
-			return s.commit("Profile "+name+" made, of "+kind, func() { s.cfg.Profiles = append(s.cfg.Profiles, s.cfg.NewProfile(name, kind)) })
+			return s.commit("Profile "+name+" made, of "+kind, func() {
+				p := s.cfg.NewProfile(name, kind)
+				if kind == saver.KindRandom {
+					p.Profiles = s.cfg.Candidates() // every one it can pick, checked
+				}
+				s.cfg.Profiles = append(s.cfg.Profiles, p)
+			})
 		},
 		Done: s.made})
 }
@@ -202,6 +211,7 @@ func (s *Settings) rename(ref int) tea.Cmd {
 				if s.cfg.Profile == old {
 					s.cfg.Profile = name
 				}
+				s.cfg.RenameInRandom(old, name)
 			})
 		},
 		Done: func(name string) tea.Cmd {
@@ -217,7 +227,10 @@ func (s *Settings) delete(name string) tea.Cmd {
 	if i < 0 {
 		return nil
 	}
-	cmd := s.change("Profile "+name+" deleted", func() { s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...) })
+	cmd := s.change("Profile "+name+" deleted", func() {
+		s.cfg.Profiles = append(s.cfg.Profiles[:i:i], s.cfg.Profiles[i+1:]...)
+		s.cfg.DropFromRandom(name)
+	})
 	// The cursor stays among the profiles: the next one, or the new last.
 	s.selectProfile(s.cfg.Profiles[min(i, len(s.cfg.Profiles)-1)].Name)
 	return cmd

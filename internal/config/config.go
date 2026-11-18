@@ -86,6 +86,9 @@ type Profile struct {
 	// saver.PetAnimals, and how many, one of saver.PetCounts.
 	Animals string `yaml:"animals,omitempty"`
 	Count   int    `yaml:"count,omitempty"`
+	// A random profile's (user, 2026-11-18): the names of the profiles the
+	// lock picks one of as it starts.
+	Profiles []string `yaml:"profiles,omitempty"`
 }
 
 // Style is a pair of board colours as "#rrggbb": a profile's, or a draft
@@ -253,6 +256,10 @@ func (cfg Config) MisfitsIn(path string) []Misfit {
 // come first: see Config.NewProfile.
 func NewProfile(name, kind string) Profile {
 	switch kind {
+	case saver.KindRandom:
+		// Nothing of its own (user, 2026-11-18): the profiles it picks from
+		// are checked as it is made.
+		return Profile{Name: name, Saver: kind}
 	case saver.KindRunner:
 		return Profile{Name: name, Saver: kind, Participants: saver.Participants[0], Character: saver.Characters[0], Scene: saver.Scenes[0], Background: saver.BackgroundTimeShifting}
 	case saver.KindCustom:
@@ -632,6 +639,16 @@ func tidy(p Profile, kind string) Profile {
 	d := NewProfile(p.Name, kind)
 	p.Command = strings.TrimSpace(p.Command)
 	switch {
+	case kind == saver.KindRandom:
+		// Nothing of its own (user, 2026-11-18): the names it picks from, a
+		// blank or a repeated one gone.
+		var names []string
+		for _, n := range p.Profiles {
+			if n = strings.TrimSpace(n); n != "" && !slices.Contains(names, n) {
+				names = append(names, n)
+			}
+		}
+		return Profile{Name: p.Name, Saver: kind, Profiles: names}
 	case kind == saver.KindCustom:
 		p.Layout, p.Size, p.Font, p.Time, p.Date, p.Participants, p.Character, p.Scene, p.Background = "", "", "", "", "", "", "", "", ""
 		p.BG, p.FG, p.Speed, p.Animals, p.Count = "", "", "", "", 0
@@ -740,6 +757,96 @@ func misfitsOf(path, where string, was, now Profile) []Misfit {
 		out = append(out, Misfit{path, where + " › count", strconv.Itoa(was.Count), strconv.Itoa(now.Count)})
 	}
 	return out
+}
+
+// Candidates is the profiles a random profile can pick, by name: every
+// profile but the random ones, which would pick again and again.
+func (cfg Config) Candidates() []string {
+	var out []string
+	for _, p := range cfg.Profiles {
+		if p.Saver != saver.KindRandom {
+			out = append(out, p.Name)
+		}
+	}
+	return out
+}
+
+// Unusable is the names p lists that it cannot pick: no profile, or a
+// random one. They stay as written, and are left out of the pick (tdp E3,
+// a value naming an entry that is not there).
+func (cfg Config) Unusable(p Profile) []string {
+	can := cfg.Candidates()
+	var out []string
+	for _, n := range p.Profiles {
+		if !slices.Contains(can, n) {
+			out = append(out, n)
+		}
+	}
+	return out
+}
+
+// UnusableSaid is what a start says of the random profiles' names it
+// cannot pick, a sentence a name (tdp E3).
+func (cfg Config) UnusableSaid() []string {
+	var out []string
+	for _, p := range cfg.Profiles {
+		if p.Saver != saver.KindRandom {
+			continue
+		}
+		for _, n := range cfg.Unusable(p) {
+			out = append(out, fmt.Sprintf("Profile %q lists %q, which is not a profile it can pick: left out", p.Name, n))
+		}
+	}
+	return out
+}
+
+// Picked is cfg as a lock that starts now shows it: with a random profile
+// active, one of the profiles it lists that it can pick, picked by intn
+// (rand.IntN); with none, the built-in default and why, for the status row.
+func (cfg Config) Picked(intn func(int) int) (Config, string) {
+	p, ok := cfg.Active()
+	if !ok || p.Saver != saver.KindRandom {
+		return cfg, ""
+	}
+	can := cfg.Candidates()
+	var pick []string
+	for _, n := range p.Profiles {
+		if slices.Contains(can, n) {
+			pick = append(pick, n)
+		}
+	}
+	if len(pick) == 0 {
+		cfg.Profile = "" // no profile: Active is the built-in default
+		return cfg, fmt.Sprintf("Profile %q has no profile to pick: using the default", p.Name)
+	}
+	cfg.Profile = pick[intn(len(pick))]
+	return cfg, ""
+}
+
+// RenameInRandom renames old to name in the random profiles that list it:
+// a profile renamed on the settings screen.
+func (cfg *Config) RenameInRandom(old, name string) {
+	for i := range cfg.Profiles {
+		if cfg.Profiles[i].Saver == saver.KindRandom {
+			names := slices.Clone(cfg.Profiles[i].Profiles)
+			for j, n := range names {
+				if n == old {
+					names[j] = name
+				}
+			}
+			cfg.Profiles[i].Profiles = names
+		}
+	}
+}
+
+// DropFromRandom takes name out of the random profiles that list it: a
+// profile deleted on the settings screen.
+func (cfg *Config) DropFromRandom(name string) {
+	for i := range cfg.Profiles {
+		if cfg.Profiles[i].Saver == saver.KindRandom {
+			cfg.Profiles[i].Profiles = slices.DeleteFunc(slices.Clone(cfg.Profiles[i].Profiles), func(n string) bool { return n == name })
+		}
+	}
 }
 
 // tidyTool is a tool's integration as the rest of locku can rely on it.

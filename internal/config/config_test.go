@@ -3,11 +3,14 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/vulcanshen/locku/internal/saver"
 )
 
 func write(t *testing.T, body string) string {
@@ -57,9 +60,9 @@ func TestAbsentKeysKeepTheirDefaults(t *testing.T) {
 		t.Errorf("profile %+v", s)
 	}
 	// And every saver has its defaults, whole, the built-in ones here.
-	if len(cfg.Savers) != 7 || cfg.Saver("clock") != NewProfile("", "clock") || cfg.Saver("runner").Participants != "big" || cfg.Saver("custom") != NewProfile("", "custom") ||
-		cfg.Saver("bounce") != NewProfile("", "bounce") || cfg.Saver("snake") != NewProfile("", "snake") || cfg.Saver("tetromino") != NewProfile("", "tetromino") ||
-		cfg.Saver("pets") != NewProfile("", "pets") {
+	if len(cfg.Savers) != 8 || !reflect.DeepEqual(cfg.Saver("clock"), NewProfile("", "clock")) || cfg.Saver("runner").Participants != "big" || !reflect.DeepEqual(cfg.Saver("custom"), NewProfile("", "custom")) ||
+		!reflect.DeepEqual(cfg.Saver("bounce"), NewProfile("", "bounce")) || !reflect.DeepEqual(cfg.Saver("snake"), NewProfile("", "snake")) || !reflect.DeepEqual(cfg.Saver("tetromino"), NewProfile("", "tetromino")) ||
+		!reflect.DeepEqual(cfg.Saver("pets"), NewProfile("", "pets")) {
 		t.Errorf("savers %+v", cfg.Savers)
 	}
 }
@@ -91,7 +94,7 @@ func TestSaverDefaultsAreTheFilesOwn(t *testing.T) {
 		t.Errorf("saved:\n%s", s)
 	}
 	back, _ := LoadFile(p)
-	if back.Saver("clock") != c {
+	if !reflect.DeepEqual(back.Saver("clock"), c) {
 		t.Errorf("round trip %+v", back.Saver("clock"))
 	}
 }
@@ -475,13 +478,13 @@ func TestABounceProfileIsItsSpeedAndTime(t *testing.T) {
 	if note != "" {
 		t.Errorf("note %q", note)
 	}
-	if s, ok := cfg.Active(); !ok || s != (Profile{Name: "box", Saver: "bounce", Time: "HH:MM:SS", Speed: "fast"}) {
+	if s, ok := cfg.Active(); !ok || !reflect.DeepEqual(s, Profile{Name: "box", Saver: "bounce", Time: "HH:MM:SS", Speed: "fast"}) {
 		t.Errorf("the bounce profile %+v", s)
 	}
-	if o := cfg.Profiles[1]; o != (Profile{Name: "old", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
+	if o := cfg.Profiles[1]; !reflect.DeepEqual(o, Profile{Name: "old", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
 		t.Errorf("one with a time and a speed it does not have %+v", o)
 	}
-	if n := cfg.NewProfile("b", "bounce"); n != (Profile{Name: "b", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
+	if n := cfg.NewProfile("b", "bounce"); !reflect.DeepEqual(n, Profile{Name: "b", Saver: "bounce", Time: "HH:MM", Speed: "normal"}) {
 		t.Errorf("a new one %+v", n)
 	}
 	if err := SaveFile(p, cfg); err != nil {
@@ -503,13 +506,13 @@ func TestASnakeProfileIsItsSpeed(t *testing.T) {
 	p := write(t, "profile: s\nprofiles:\n  - name: s\n    saver: snake\n    speed: very-fast\n    size: large\n    runner: big\n    command: cmatrix\n    bg: \"#43523d\"\n    fg: \"#ABCDEF\"\n"+
 		"  - name: fast\n    saver: snake\n    speed: 12\n  - name: none\n    saver: snake\n  - name: c\n    saver: clock\n    speed: fast\n  - name: d\n    saver: dino\n    speed: fast\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "s", Saver: "snake", Speed: "very-fast"}) {
+	if s, _ := cfg.Active(); !reflect.DeepEqual(s, Profile{Name: "s", Saver: "snake", Speed: "very-fast"}) {
 		t.Errorf("the snake profile %+v", s)
 	}
 	if cfg.Profiles[1].Speed != "normal" || cfg.Profiles[2].Speed != "normal" || cfg.Profiles[3].Speed != "" || cfg.Profiles[4].Speed != "" {
 		t.Errorf("speeds %+v", cfg.Profiles)
 	}
-	if n := cfg.NewProfile("n", "snake"); n != (Profile{Name: "n", Saver: "snake", Speed: "normal"}) {
+	if n := cfg.NewProfile("n", "snake"); !reflect.DeepEqual(n, Profile{Name: "n", Saver: "snake", Speed: "normal"}) {
 		t.Errorf("a new one %+v", n)
 	}
 	if err := SaveFile(p, cfg); err != nil {
@@ -527,13 +530,13 @@ func TestATetrominoProfileIsItsSpeed(t *testing.T) {
 	p := write(t, "profile: t\nprofiles:\n  - name: t\n    saver: tetromino\n    speed: fast\n    size: large\n    time: HH:MM\n    bg: \"#43523d\"\n"+
 		"  - name: odd\n    saver: tetromino\n    speed: 12\n  - name: none\n    saver: tetromino\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "t", Saver: "tetromino", Speed: "fast"}) {
+	if s, _ := cfg.Active(); !reflect.DeepEqual(s, Profile{Name: "t", Saver: "tetromino", Speed: "fast"}) {
 		t.Errorf("the profile %+v", s)
 	}
 	if cfg.Profiles[1].Speed != "normal" || cfg.Profiles[2].Speed != "normal" {
 		t.Errorf("speeds %+v", cfg.Profiles)
 	}
-	if n := cfg.NewProfile("n", "tetromino"); n != (Profile{Name: "n", Saver: "tetromino", Speed: "normal"}) {
+	if n := cfg.NewProfile("n", "tetromino"); !reflect.DeepEqual(n, Profile{Name: "n", Saver: "tetromino", Speed: "normal"}) {
 		t.Errorf("a new one %+v", n)
 	}
 }
@@ -546,7 +549,7 @@ func TestAPetsProfileIsItsCount(t *testing.T) {
 		"  - name: odd\n    saver: pets\n    count: 9\n  - name: none\n    saver: pets\n"+
 		"  - name: c\n    saver: clock\n    count: 2\n  - name: s\n    saver: snake\n    count: 2\n  - name: r\n    saver: runner\n    count: 2\n")
 	cfg, _ := LoadFile(p)
-	if s, _ := cfg.Active(); s != (Profile{Name: "p", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 5}) {
+	if s, _ := cfg.Active(); !reflect.DeepEqual(s, Profile{Name: "p", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 5}) {
 		t.Errorf("the profile %+v", s)
 	}
 	if cfg.Profiles[1].Count != 3 || cfg.Profiles[2].Count != 3 {
@@ -555,7 +558,7 @@ func TestAPetsProfileIsItsCount(t *testing.T) {
 	if cfg.Profiles[3].Count != 0 || cfg.Profiles[4].Count != 0 || cfg.Profiles[5].Count != 0 {
 		t.Errorf("not the pets: %+v", cfg.Profiles[3:])
 	}
-	if n := cfg.NewProfile("n", "pets"); n != (Profile{Name: "n", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 3}) {
+	if n := cfg.NewProfile("n", "pets"); !reflect.DeepEqual(n, Profile{Name: "n", Saver: "pets", Scene: "outdoor", Animals: "cats", Count: 3}) {
 		t.Errorf("a new one %+v", n)
 	}
 }
@@ -684,5 +687,62 @@ func TestTheConfigHasAVersion(t *testing.T) {
 		if after, _ := os.ReadFile(p); string(after) != bad {
 			t.Errorf("%q written over:\n%s", bad, after)
 		}
+	}
+}
+
+// A random profile is the names of the profiles it picks from, nothing of
+// its own (user, 2026-11-18): a blank or repeated name goes, another saver's
+// keys are not its; a name that is no profile it can pick is unusable.
+func TestARandomProfileIsItsProfiles(t *testing.T) {
+	cfg, _ := LoadFile(write(t, "version: 1\nprofile: clock\nprofiles:\n  - name: clock\n    saver: clock\n"+
+		"  - name: mix\n    saver: random\n    speed: fast\n    profiles: [clock, \" \", clock, ghost]\n"))
+	p := cfg.Profiles[cfg.Index("mix")]
+	if !slices.Equal(p.Profiles, []string{"clock", "ghost"}) || p.Speed != "" {
+		t.Errorf("mix: %+v", p)
+	}
+	if got := cfg.Unusable(p); !slices.Equal(got, []string{"ghost"}) {
+		t.Errorf("unusable: %q", got)
+	}
+	if got := cfg.Candidates(); !slices.Equal(got, []string{"clock"}) {
+		t.Errorf("candidates: %q", got)
+	}
+}
+
+// The lock picks one of a random profile's profiles that are there and are
+// not random themselves; with none to pick, the built-in default, said.
+func TestARandomProfileIsPicked(t *testing.T) {
+	cfg := Default()
+	cfg.Profiles = append(cfg.Profiles, cfg.NewProfile("runner", saver.KindRunner),
+		Profile{Name: "mix", Saver: saver.KindRandom, Profiles: []string{"clock", "ghost", "runner", "mix2"}},
+		Profile{Name: "mix2", Saver: saver.KindRandom, Profiles: []string{"clock"}})
+	cfg.Profile = "mix"
+	got, note := cfg.Picked(func(n int) int {
+		if n != 2 {
+			t.Errorf("picked out of %d", n)
+		}
+		return 1
+	})
+	if got.Profile != "runner" || note != "" {
+		t.Errorf("picked %q, %q", got.Profile, note)
+	}
+	cfg.Profiles[cfg.Index("mix")].Profiles = []string{"ghost", "mix2"}
+	got, note = cfg.Picked(func(int) int { t.Error("nothing to pick from"); return 0 })
+	if p, _ := got.Active(); p.Saver != saver.KindClock || note != `Profile "mix" has no profile to pick: using the default` {
+		t.Errorf("none to pick: %+v, %q", p, note)
+	}
+	cfg.Profile = "clock"
+	if got, note := cfg.Picked(func(int) int { return 0 }); got.Profile != "clock" || note != "" {
+		t.Errorf("not random: %q, %q", got.Profile, note)
+	}
+}
+
+// A profile renamed or deleted on the settings screen is renamed in, or
+// taken out of, the random profiles that list it.
+func TestRenamesAndDeletesReachRandom(t *testing.T) {
+	cfg := Config{Profiles: []Profile{{Name: "a", Saver: saver.KindClock}, {Name: "m", Saver: saver.KindRandom, Profiles: []string{"a", "b"}}}}
+	cfg.RenameInRandom("a", "c")
+	cfg.DropFromRandom("b")
+	if got := cfg.Profiles[1].Profiles; !slices.Equal(got, []string{"c"}) {
+		t.Errorf("m: %q", got)
 	}
 }

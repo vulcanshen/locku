@@ -57,6 +57,9 @@ func pinReset(in *os.File, out, errs io.Writer, verify func(user, password strin
 	if note != "" {
 		fmt.Fprintln(errs, "locku pin reset: "+note)
 	}
+	for _, said := range cfg.UnusableSaid() {
+		fmt.Fprintln(errs, "locku pin reset: "+said)
+	}
 	fmt.Fprint(out, "Reset the PIN? A new one is made and shown here once; the old one stops working at once. [y/N] ")
 	line, _ := bufio.NewReader(in).ReadString('\n')
 	if !strings.EqualFold(strings.TrimSpace(line), "y") {
