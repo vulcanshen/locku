@@ -136,7 +136,7 @@ locku version    # 版本；locku help 印用法
 ### 設定畫面
 
 ```
-┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
+┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] clock ───────────────────────────────────────────────┐
 ┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
 ┃ ● runner             ┃│ NAME      clock                                          │
 ┃   pets               ┃│ SAVER     clock                                          │
@@ -309,7 +309,7 @@ show_status: true               # user@host · locked since 那一列
 pin_prompt_timeout: 30          # 幾秒沒按鍵框收起；0 永不收起
 wrong_pin_attempts: 0           # 連錯幾次進冷卻；0 關
 wrong_pin_attempt_cooldown: 30  # 冷卻秒數
-input_tab_width: 4              # 拿來讀的字（太長的 setup 報告）裡一個 Tab 佔幾格；下次啟動起生效
+input_tab_width: 4              # 拿來讀的字（太長的 setup 報告）裡一個 Tab 佔幾格
 tmux:
   conf: "~/.tmux.conf"          # config file path；空 = activate 打不開
   lock-after-time: 300

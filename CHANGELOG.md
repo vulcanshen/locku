@@ -7,6 +7,9 @@ Each release names the version of terminu design (tdp) it follows.
 - On terminu-go v1.2.15, which follows tdp v1.2.14.
 - `locku pin reset` stops before it asks anything when config.yaml or profiles.yaml cannot be read: it writes nothing, says which file and why on stderr and exits with 1, as the settings screen does when you leave it on MOVE ASIDE. Until now a config.yaml whose PIN hash could be read but whose rest could not was taken for the defaults, and the reset wrote them over it, and the default profile over your profiles.
 - The App Log, the key reference (`?`) and the notes locku shows can be searched with `/`, `n` and `N` going to the next and the previous hit.
+- `locku version` prints the version alone, as the tag reads it: `v1.0.1` where it printed `locku v1.0.1`.
+- `[2]`'s title is the name of what it shows as you wrote it, `[2] clock`, no longer in capitals.
+- `input_tab_width` takes effect as soon as you save it, rather than at the next start.
 
 ## v1.0.1 — tdp v1.1.0
 

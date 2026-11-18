@@ -214,7 +214,7 @@ func (s *Settings) fill() {
 		s.shown = s.cur
 	}
 	s.vals.Fields = s.fields()
-	s.p2.Label = s.detailLabel()
+	s.p2.Name = s.detailLabel() // a name, kept as it is (tdp components.4, panel.13)
 	s.p1.Actions = s.sideActions()
 	s.p2.Actions = s.detailActions()
 }

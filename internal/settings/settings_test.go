@@ -298,7 +298,7 @@ func TestSideIsGroupedAndStartsOnTheActive(t *testing.T) {
 		runner[0] != active[0] || runner[1] != active[0] {
 		t.Errorf("the profiles' names are not lined up with the savers': clock2 at %v, runner at %v\n%s", active, runner, v)
 	}
-	if d.s.cur.kind != kindProfile || d.s.cfg.Profiles[d.s.cur.ref].Name != "clock2" || !strings.Contains(v, "[2] CLOCK2") {
+	if d.s.cur.kind != kindProfile || d.s.cfg.Profiles[d.s.cur.ref].Name != "clock2" || !strings.Contains(v, "[2] clock2") {
 		t.Errorf("the cursor starts on the active profile: %+v\n%s", d.s.cur, v)
 	}
 }
@@ -475,6 +475,20 @@ func TestNumbersAndSwitches(t *testing.T) {
 	d.toField("show_status", 0).press("Enter")
 	if d.saved().ShowStatus == was {
 		t.Error("show_status did not flip")
+	}
+}
+
+// input_tab_width takes effect the moment its box is saved, as every value
+// does (tdp panel.12): the lib draws text to read with it from then on,
+// where it once waited for the next start.
+func TestInputTabWidthTakesEffectAtOnce(t *testing.T) {
+	d := newDriver(t, testConfig(), 100, 30)
+	d.on(preferenceID).toField("input_tab_width", 0).press("Enter", "Backspace").typeText("2").press("Enter")
+	if got := d.saved().InputTabWidth; got != 2 {
+		t.Errorf("input_tab_width %d written", got)
+	}
+	if got := d.s.app.InputTabWidth; got != 2 {
+		t.Errorf("the lib still draws a tab as %d spaces", got)
 	}
 }
 

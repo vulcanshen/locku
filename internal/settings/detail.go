@@ -94,8 +94,8 @@ func readOnly(label, value string) *terminu.Field {
 	return &terminu.Field{Label: label, Value: func() string { return value }, Disabled: func() bool { return true }}
 }
 
-// detailLabel is [2]'s name: the item's own (user, 2026-09-25: no kind, no
-// state).
+// detailLabel is [2]'s name: the item's own, as it is (user, 2026-09-25:
+// no kind, no state).
 func (s *Settings) detailLabel() string {
 	switch s.cur.kind {
 	case kindProfile:
@@ -345,10 +345,14 @@ func (s *Settings) preferenceFields() []*terminu.Field {
 		"seconds", "", s.cfg.WrongPINCooldown, 1, def.WrongPINCooldown, func(n int) { s.cfg.WrongPINCooldown = n }, nil)
 	cooldown.Desc = "seconds the cooldown lasts"
 	// The family's key (tdp E3), for the viewer a long setup report opens
-	// in; the lib takes it as it starts.
-	tab := s.number("input_tab_width", "Spaces a tab takes in text to read, 1 or more; from the next start",
-		"spaces", "", s.cfg.InputTabWidth, 1, def.InputTabWidth, func(n int) { s.cfg.InputTabWidth = n }, nil)
-	tab.Desc = "the spaces a tab takes in text to read — a long setup report, the App Log — from the next start"
+	// in. Saved, it is in force at once, as every value is (tdp panel.12):
+	// the lib draws with App.InputTabWidth from its next message on.
+	tab := s.number("input_tab_width", "Spaces a tab takes in text to read, 1 or more",
+		"spaces", "", s.cfg.InputTabWidth, 1, def.InputTabWidth, func(n int) {
+			s.cfg.InputTabWidth = n
+			s.app.InputTabWidth = n
+		}, nil)
+	tab.Desc = "the spaces a tab takes in text to read — a long setup report, the App Log"
 	return []*terminu.Field{pin, profile, status, timeout, attempts, cooldown, tab}
 }
 

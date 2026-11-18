@@ -136,7 +136,7 @@ locku version    # the version; locku help prints the usage
 ### The settings screen
 
 ```
-┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] CLOCK ───────────────────────────────────────────────┐
+┏ [1] LOCKU ━━━━━━━━━━━┓┌ [2] clock ───────────────────────────────────────────────┐
 ┃ PROFILES             ┃│ PROPERTY  VALUE                                          │
 ┃ ● runner             ┃│ NAME      clock                                          │
 ┃   pets               ┃│ SAVER     clock                                          │
@@ -309,7 +309,7 @@ show_status: true               # the user@host · locked since row
 pin_prompt_timeout: 30          # seconds without a key before the prompt closes; 0 never
 wrong_pin_attempts: 0           # wrong PINs in a row before a cooldown; 0 off
 wrong_pin_attempt_cooldown: 30  # the cooldown, in seconds
-input_tab_width: 4              # spaces a tab takes in text to read, a long setup report; from the next start
+input_tab_width: 4              # spaces a tab takes in text to read, a long setup report
 tmux:
   conf: "~/.tmux.conf"          # config file path; empty = activate cannot be turned on
   lock-after-time: 300

@@ -13,7 +13,7 @@ tasks:
   - id: 2
     spec: 1
     request: 任何鍵叫出 PIN 框，那個鍵不算輸入；Enter 送出、Esc 回螢幕保護、Backspace 清掉打的字；PIN 對了終端機回來
-    tdp: [tdp P5, tdp K1, tdp password.2, tdp password.4, tdp popup.7, tdp F8]
+    tdp: [tdp P5, tdp K1, tdp password.2, tdp password.4, tdp popup.7, tdp F8, tdp E5]
     remark:
       - PIN 框用 password 的「解鎖」長相：每個字一顆 ●，置中往兩側長（tdp password.2 的例子就是 locku）
       - PIN 框疊在還在動的螢幕保護上，底下淡化（tdp F8）
@@ -90,11 +90,11 @@ tasks:
   - id: 14
     spec: 1
     request: 設定畫面有兩個 panel：[1] 側欄，[2] 游標那列的內容，一列一個值；Tab、1、2 在兩邊移動
-    tdp: [tdp screen.1, tdp screen.2, tdp panel.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp K2, tdp K3, tdp L1, tdp L4, tdp screen.7]
+    tdp: [tdp screen.1, tdp screen.2, tdp panel.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp K2, tdp K3, tdp L1, tdp L4, tdp screen.7, tdp components.4]
     remark:
       - |
         配置：
-        ┏ [1] LOCKU ━━━━━━━━━┓┌ [2] CLOCK ──────────────┐
+        ┏ [1] LOCKU ━━━━━━━━━┓┌ [2] clock ──────────────┐
         ┃ PROFILES           ┃│ PROPERTY  VALUE         │
         ┃ ● runner           ┃│ NAME      clock         │
         ┃   clock            ┃│ SAVER     clock         │
@@ -108,12 +108,13 @@ tasks:
         ┗━ Enter:edit ━━━━━━━┛└─ Enter:edit ────────────┘
         Space:menu ?:help !:log Tab|1–2:panels q:quit
       - '[1] 是分組的清單（PROFILES、SAVERS、INTEGRATION、SETTINGS，tdp panel.11）；[2] 是 [1] cursor 那一列的明細，一列一個值（tdp panel.12、panel.13）'
+      - '[2] 的 label 就是那一筆的名字，照原樣寫（`[2] clock`、`[2] tmux`；tdp components.4、panel.13），不寫種類（user 2026-09-25）'
       - '[1] 上 Enter 進 [2]；[2] 上 Enter 編輯那一列（tdp K3）'
       - 終端機小於 40 × 15 時畫面上說明，拉大就回來（tdp screen.7）
   - id: 15
     spec: 1
     request: Profiles：有名字的螢幕保護設定，● 是啟用中的；a 設為啟用、D duplicate、r rename、X delete，複製或新增時用灰字提議一個沒人用的名字，建好後直接進它的 [2]
-    tdp: [tdp panel.5, tdp panel.7, tdp M2, tdp M5, tdp M6, tdp input.5, tdp input.6, tdp text, tdp confirm, tdp P5]
+    tdp: [tdp panel.5, tdp panel.7, tdp M2, tdp M5, tdp M6, tdp input.5, tdp input.6, tdp text, tdp confirm, tdp P5, tdp K3, tdp note.7]
     remark:
       - 啟用中的那個前面畫 Green ●，畫在標記欄（tdp panel.7 的例子就是 locku）
       - 啟用中的與最後一個不能刪，刪除的動作停用（tdp M6）
@@ -121,42 +122,44 @@ tasks:
   - id: 16
     spec: 1
     request: profile 的 [2] 是它的設定、saver 的 [2] 是說明加預設值；選項少的原地選、多的開清單選、開關原地切換、顏色在顏色選擇器裡選；每一列一設定就寫檔
-    tdp: [tdp panel.12, tdp panel.13, tdp radio, tdp select, tdp checkbox, tdp color-picker, tdp input.10, tdp P5]
+    tdp: [tdp panel.12, tdp panel.13, tdp radio, tdp select, tdp checkbox, tdp color-picker, tdp input.10, tdp P5, tdp text, tdp note.7]
     remark:
       - 顏色選擇器裡舊的顏色與新的並排，紅、綠、藍用 hex（tdp color-picker 的例子就是 locku 的配色）
       - 改 saver 的預設值不動既有的 profile；之後用這種 saver 新增的 profile 從預設值開始（n）
   - id: 17
     spec: 1
     request: 預覽鎖定畫面：[1] 上 p、任何 [2] 上 P，就地看那個 profile 或 saver 的鎖定畫面，任意鍵回來，不驗 PIN
-    tdp: [tdp P5, tdp K1, tdp M3, tdp M5]
+    tdp: [tdp P5, tdp K1, tdp M3, tdp M5, tdp note.7]
     remark:
       - 不是 profile 或 saver 的 [2] 上，預覽啟用中的 profile；custom 的預覽把終端機整個交給程式，直到按鍵
   - id: 18
     spec: 1
     request: 'Settings › preference 的 PIN：4 到 12 個字元；已設時先驗目前的再輸入新的，框裡現有的 PIN 是 8 顆灰點，直接 Enter 保留，Backspace 再 Enter 拿掉；每一步疊在上一步上面，Esc 退回上一步'
-    tdp: [tdp password, tdp input.5, tdp K4, tdp F4]
+    tdp: [tdp password, tdp input.5, tdp K4, tdp F4, tdp popup.7, tdp note.7]
     remark:
       - 新 PIN 打兩次確認（NEW PIN → CONFIRM PIN），是 app 的流程（tdp password 的例子就是 locku）
       - PIN 存成 bcrypt hash
   - id: 19
     spec: 1
     request: 'Settings › preference 的其他值：啟用的 profile、show_status、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width；數字框空著就是預設值'
-    tdp: [tdp panel.12, tdp number, tdp checkbox, tdp select, tdp components.5]
+    tdp: [tdp panel.12, tdp number, tdp checkbox, tdp select, tdp components.5, tdp E3, tdp popup.7, tdp color.2, tdp note.7, tdp input.10]
     remark:
-      - input_tab_width 是拿來讀的字（太長的 setup 報告）裡一個 Tab 佔幾格，下次啟動起生效（tdp components.5）
+      - input_tab_width 是拿來讀的字（太長的 setup 報告、App Log）裡一個 Tab 佔幾格（tdp components.5）；跟每個值一樣，確定了就生效（tdp panel.12）
+      - 啟用的 profile 名字找不到時，那一列的 label 畫 Red（tdp panel.12、color.2）
   - id: 20
     spec: 1
     request: 'Integration › tmux：activate、config file path、lock-after-time、bind-key、lock（lock-server 或 lock-session）；activate 打開、確認後，設定寫進 locku 自己的 locku.tmux.conf，使用者的檔只多一行去讀它，跑著的 tmux server 立刻收到'
-    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp radio, tdp toast.2, tdp note.1, tdp E3]
+    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp radio, tdp toast.2, tdp note.1, tdp E3, tdp input.6, tdp components.5, tdp panel.12, tdp form.9, tdp note.7]
     remark:
       - 使用者的檔只碰兩個標記之間的區塊，那一行尾巴 `# locku`；那一行從家目錄寫起，同一份 dotfiles 放到別台也是同一行
       - 開著的時候任何一列一改就重寫 locku 的檔，不再動使用者的；關掉就拿掉那一行、刪掉 locku 的檔，跑著的也一併拿掉
       - 路徑沒填時 activate 按不下去，不猜；路徑那一列提議常見的檔（~/.tmux.conf）
-      - 寫了什麼放得進三列就用 Success toast 說，放不下就開 note 讀（tdp toast.2）
+      - 寫了什麼放得進三列就用 Success toast 說，放不下就開 note 讀（tdp toast.2、note.1）
+      - 外部程式（tmux、screen）印了好幾行時，報告只放最後一行（原因），全文記進 App Log（tdp components.5）
   - id: 21
     spec: 1
     request: 'Integration › screen：activate、config file path、idle、bind；設定寫進 locku 自己的 locku.screenrc，使用者的 screenrc 與 shell rc（LOCKPRG）各多一段'
-    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp E3]
+    tdp: [tdp P5, tdp confirm, tdp checkbox, tdp text, tdp number, tdp E3, tdp input.6, tdp panel.12]
     remark:
       - screen 的鎖定程式只從啟動它的 shell 環境讀，所以 shell rc（zsh、bash、fish）也寫 `export LOCKPRG=…`
       - 已在跑的 screen session 要 detach 後從新 shell 重新 attach 才有，設定畫面會說明
@@ -169,7 +172,9 @@ tasks:
   - id: 23
     spec: 1
     request: '命令列：`locku` 開設定畫面、`locku lock` 鎖、`locku pin reset`、`locku version` 印版本、`locku help` 印用法；不認得的指令說一聲'
-    tdp: [tdp E1]
+    remark:
+      - '`locku version` 只印版號（發布版 `vX.Y.Z`、本機版 `dev`；harness project.4）'
+    tdp: [tdp E1, harness project.4]
   - id: 24
     spec: 1
     request: '`locku pin reset`：先問 [y/N]，再要登入密碼，然後產生一組新的八位數 PIN、覆蓋舊的、顯示一次；每次成功或被拒都記在資料目錄，不含 PIN；config.yaml 或 profiles.yaml 讀不了時什麼都不問、什麼都不寫，說是哪個檔、為什麼'
@@ -180,7 +185,7 @@ tasks:
   - id: 25
     spec: 1
     request: '設定放 ~/.config/locku/config.yaml（$XDG_CONFIG_HOME、$LOCKU__CONFIG 可改），profile 放 ~/.locku/data/profiles.yaml（$LOCKU__DATA）；原子寫入、mode 0600、標明自己的 version，舊版的檔第一次讀到就轉成新格式'
-    tdp: [tdp E2, tdp E3]
+    tdp: [tdp E2, tdp E3, tdp F5, tdp note.6]
     remark:
       - profile 是使用者寫給 locku 的清單，算資料（tdp E3 的例子有 locku 的 profiles）
       - 舊版放在 config.yaml 的 profile，設定畫面第一次開時搬到 profiles.yaml 並說一聲；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著讓使用者自己合併
@@ -198,15 +203,15 @@ tasks:
   - id: 28
     spec: 1
     request: 'Space 列出這裡能做的事，最後一列 Global operation 通往離開；? 列出這裡的按鍵，preference、tmux、screen 的 [2] 上最前面先是每一列的說明；q 或 Ctrl-C 離開，有浮層開著時先問 Quit locku?'
-    tdp: [tdp K5, tdp K6, tdp K9, tdp M2, tdp M4, tdp note.5, tdp panel.12]
+    tdp: [tdp K5, tdp K6, tdp K9, tdp M2, tdp M4, tdp note.5, tdp panel.12, tdp F4]
   - id: 29
     spec: 1
     request: '`!` 開 App Log：這次開著時寫進去的每一個值、新增／改名／刪除的 profile、每一次預覽、出現過的每一則訊息，以及出了什麼錯'
-    tdp: [tdp note.7, tdp F5]
+    tdp: [tdp note.7, tdp F5, tdp screen.2]
   - id: 30
     spec: 1
     request: 'icon 與 powerline 符號佔幾格，啟動時問終端機；TERMINU__ICON_WIDTH、TERMINU__POWERLINE_WIDTH（全家族）與 LOCKU__ICON_WIDTH、LOCKU__POWERLINE_WIDTH（只給 locku、優先）可以手動指定'
-    tdp: [tdp E5, tdp E2]
+    tdp: [tdp E5, tdp E2, tdp E8]
   - id: 31
     spec: 1
     request: '`V` 打開 splash，內容是家族 icon（L、O、C、K 一層包一層）'
@@ -220,4 +225,4 @@ tasks:
   - id: 33
     spec: 1
     request: 'README 英文與繁中兩份：是什麼、demo、每種螢幕保護、安裝、快速開始、使用方式與按鍵、資料放在哪、限制、terminu family'
-    tdp: [tdp E7]
+    tdp: [tdp E7, tdp E4, tdp M5, tdp E6, harness project.7]

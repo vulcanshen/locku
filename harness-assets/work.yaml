@@ -250,7 +250,7 @@ tasks:
     spec: 1
     implementation: |
       `locku` 開設定畫面（internal/settings，terminu-go 的 App）：[1] 是 tgo List，分 PROFILES、SAVERS、INTEGRATION、SETTINGS 四組，開的時候 cursor 在啟用中的 profile
-      [2] 是 [1] cursor 那一列的明細（tgo Values，一列一個值），標題跟著換（例 `[2] CLOCK`）
+      [2] 是 [1] cursor 那一列的明細（tgo Values，一列一個值）；標題是那一筆的名字，放在 tgo 的 Panel.Name 照原樣畫（`[2] clock`、`[2] runner`、`[2] tmux`、`[2] preference`），跟著 cursor 換
       Tab、1、2 在兩個 panel 間移動；[1] 上 Enter 進 [2]，[2] 上 Enter 編輯那一列
       終端機小於 lib 的最小尺寸時畫面上說明，按兩次 Ctrl-C 離開，拉大就回來
     test:
@@ -300,8 +300,10 @@ tasks:
   - id: 19
     spec: 1
     implementation: |
-      preference 的 [2]：profile 開 select 選啟用的 profile（找不到的名字畫 Red）、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
+      preference 的 [2]：profile 開 select 選啟用的 profile、show_status 原地切換、pin_prompt_timeout、wrong_pin_attempts、wrong_pin_attempt_cooldown、input_tab_width 開 number popup
+      config.yaml 的 profile 找不到時，profile 那一列的 label 畫 Red（tgo Field.Err），值照常是 Text
       數字框空著就是預設值；超出範圍的寫在錯誤列
+      input_tab_width 確定的那一刻也設給 tgo 的 App.InputTabWidth，lib 從下一個訊息起就照它畫 Tab
       寫 config.yaml；App Log 記寫了什麼
     test:
       - TestNumbersAndSwitches
@@ -309,13 +311,15 @@ tasks:
       - TestInputTabWidth
       - TestMissingProfileIsRed
       - TestProfileNotFoundIsNoted
+      - TestInputTabWidthTakesEffectAtOnce
   - id: 20
     spec: 1
     implementation: |
       Integration › tmux 的 [2]：activate（開關）、config file path（input popup，提議 ~/.tmux.conf）、lock-after-time（number）、bind-key（input）、lock（lock-server / lock-session）
       activate 打開先 confirm，再寫 ~/.config/locku/locku.tmux.conf，在使用者的檔裡加兩個標記之間的一行 `source-file -q …  # locku`，再叫跑著的 tmux server 讀它；先前的區塊讓位給這一行，其他部分不動，寫幾次都一樣
       開著時改任何一列只重寫 locku 的檔並重新載入；關掉時拿掉那一行、刪掉 locku 的檔，跑著的 server 也拿掉
-      路徑沒填時 activate 按不下去；做了什麼一列一列報：放得進三列用 Success toast，放不下開 note；外部程式輸出的行不全塞進報告
+      路徑沒填時 activate 按不下去；做了什麼一列一列報：放得進三列用 Success toast，放不下開 note（tgo Viewer）；報告也以 Success 記進 App Log
+      外部程式（tmux）印了好幾行時，報告只放最後一行（原因），全文以 Info 記進 App Log（`Output of …`）
     test:
       - TestActivateTmux
       - TestConfigPathOffersTheUsualFile
@@ -350,8 +354,9 @@ tasks:
   - id: 23
     spec: 1
     implementation: |
-      cmd/locku 的 main：沒有參數開設定畫面；`lock`、`pin reset`、`version`（印 `locku vX.Y.Z`）、`help`（`-h`、`--help` 也是）印用法；不認得的指令在 stderr 說一聲並印用法、結束碼 2
+      cmd/locku 的 main：沒有參數開設定畫面；`lock`、`pin reset`；`version` 只印 version.Display()（發布版 `vX.Y.Z`、本機版 `dev`）；`help`（`-h`、`--help` 也是）印用法；不認得的指令在 stderr 說一聲並印用法、結束碼 2
     test:
+      - TestVersionAndHelp
       - commit: 58ae593
   - id: 24
     spec: 1
@@ -427,8 +432,10 @@ tasks:
   - id: 30
     spec: 1
     implementation: |
-      icon 寬度依序取 LOCKU__ICON_WIDTH、TERMINU__ICON_WIDTH，都沒有就在啟動時問終端機（游標實際移了幾格）；powerline 符號一樣（LOCKU__POWERLINE_WIDTH、TERMINU__POWERLINE_WIDTH）
-      量出來的寬度用在點陣板的像素、PIN 框的標題與設定畫面
+      設定畫面由 tgo 的 App 量；`locku lock` 在拿走終端機之前叫 tgo 的 `terminu.Probe("locku")`：兩邊都是 lib 做，順序照 tdp E5
+      icon：LOCKU__ICON_WIDTH → TERMINU__ICON_WIDTH → LC_TERMINU_ICON_WIDTH → 啟動時問終端機（游標實際移了幾格）
+      powerline 符號：LOCKU__POWERLINE_WIDTH → TERMINU__POWERLINE_WIDTH → LC_TERMINU_POWERLINE_WIDTH → 探測
+      量出來的寬度（tgo IconWidth、PowerlineWidth）用在點陣板的像素、PIN 框與設定畫面
     test:
       - commit: 0147d48
   - id: 31
@@ -447,6 +454,10 @@ tasks:
   - id: 33
     spec: 1
     implementation: |
-      README.md（英文）與 README-zh_TW.md：icon、badge、語言列、一句話、demo gif、每種螢幕保護的靜態圖、安裝、第一次啟動、移除、快速開始、使用方式、按鍵、忘記 PIN、資料放在哪、限制、terminu family
+      README.md（英文）與 README-zh_TW.md 內容對齊，照 tdp E7 的 12 段：
+      1 標題 locku、icon、badge、語言列；2 粗體的一句話加一段它能做什麼（與「不確定就按 Space」）；3 Demo：一張 docs/demo.gif
+      4 特色「你會看到什麼」：七種螢幕保護各一小節，各一張靜態圖；5 安裝：只支援 macOS / Linux、Homebrew、安裝腳本，前置需求 Nerd Font（寫出 LOCKU__ICON_WIDTH、TERMINU__ICON_WIDTH、LOCKU__POWERLINE_WIDTH、TERMINU__POWERLINE_WIDTH，TERMINU__ 的全家族共用、在家族 app 的 PTY 裡由外層設好）與 truecolor，小節「第一次啟動」「移除」
+      6 快速開始；7 使用方式：鎖定畫面、設定畫面、tmux 與 screen、按鍵；app 自己加的段「忘記 PIN」接在使用方式之後
+      8 你的資料放在哪：config.yaml 與 profiles.yaml 的位置、範例，含 input_tab_width 與預設值 4；9 限制；10 相關連結：CHANGELOG；11 terminu family：tdp、terminu-go、terminu-harness 的連結，不列成員；12 授權
     test:
       - commit: cb24d16

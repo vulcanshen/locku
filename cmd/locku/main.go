@@ -59,7 +59,7 @@ func main() {
 	case args[0] == "pin" && len(args) > 1 && args[1] == "reset":
 		os.Exit(pinReset(os.Stdin, os.Stdout, os.Stderr, login.Verify))
 	case args[0] == "version":
-		fmt.Println("locku " + version.Display())
+		fmt.Println(version.Display()) // the version alone, as the tag reads it (harness project.4)
 	case args[0] == "help" || args[0] == "-h" || args[0] == "--help":
 		fmt.Print(usage)
 	default:
