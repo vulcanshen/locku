@@ -2,9 +2,9 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.4 — tdp v1.2.16
 
-- A new saver, random: a profile of it lists some of your other profiles, checked on its `[2]`, and the lock shows one of them, picked each time it starts; a preview picks too. It has nothing of its own, so it cannot be made while there is no other profile to pick. A name it lists that is gone is left out and said as the settings screen starts; with none left, the lock shows the default clock and says why. Renaming or deleting a profile reaches the random profiles that list it.
+- A new saver, random: a profile of it lists some of your other profiles, checked on its `[2]`, and the lock shows one of them, picked each time it starts; a preview picks too. It has nothing of its own, so it cannot be made while there is no other profile to pick. A name it lists that is gone is left out and said as the settings screen starts; with none left, the lock shows the default clock and says why. Renaming or deleting a profile reaches the random profiles that list it. A blank or repeated name in its list is a value that does not fit: kept aside in `.bak` and taken out, as the others are.
 
 ## v1.0.3 — tdp v1.2.16
 
