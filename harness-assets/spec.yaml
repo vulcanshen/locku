@@ -45,6 +45,8 @@ tasks:
     tdp: [tdp E3, tdp P5]
     remark:
       - profiles.yaml 讀不了時顯示預設的 clock，照樣要 PIN
+      - note: '不在 TUI 裡的鎖定畫面讀不了自己的檔時怎麼辦，tdp E3 只寫了有畫面（MOVE ASIDE）與沒有畫面（stderr、非 0 結束；對鎖等於解鎖）兩種，K1、P5 的放行管不管檔案也沒寫：暫時照現在的做法；user 的看法是 locku 自己的事'
+        issue: 送給 terminu session（本機 SendMessage），2026-11-18
   - id: 7
     spec: 1
     request: clock：整個終端機是一面 LED 點陣板，用 3 × 7 或 3 × 5 像素字型畫時間與日期，可以直排、三種 size，塞不下就逐步省略
