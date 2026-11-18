@@ -126,7 +126,7 @@ locku version    # the version; locku help prints the usage
 ### The lock screen
 
 - Any key opens the PIN prompt, and that key is not input. `Enter` submits, `Esc` goes back to the saver, `Backspace` clears what was typed.
-- A wrong PIN says `wrong PIN` and swallows every key for a second. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
+- A wrong PIN says `wrong PIN` and clears the box: type the PIN again right away. Enter with nothing typed is not counted as a wrong PIN. `wrong_pin_attempts` wrong in a row start a countdown of `wrong_pin_attempt_cooldown` seconds (off by default); `pin_prompt_timeout` seconds without a key close the prompt (30 by default).
 - The status row reads `user@host · locked since HH:MM` (`show_status: false` hides it), and says `no PIN · any key unlocks` when there is none.
 - `Ctrl-C`, `Ctrl-Z` and `Ctrl-\` are just keys; SIGINT / SIGTERM / SIGHUP are ignored; after a panic the lock comes back up. The process ends in three cases only: the right PIN, any key with no PIN set, the terminal going away.
 - No PIN set, or a config file that cannot be read, fails open: the saver shows, the status row says why, any key ends it.

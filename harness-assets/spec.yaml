@@ -1,5 +1,5 @@
-id: 1
-from: 0
+id: 2
+from: v1.2.14
 to: v1.2.14
 tasks:
   - id: 1
@@ -19,12 +19,14 @@ tasks:
       - PIN 框疊在還在動的螢幕保護上，底下淡化（tdp F8）
       - 鎖著時 PIN 在別處被重設，下一鍵就認得新 PIN
   - id: 3
-    spec: 1
-    request: 錯誤的 PIN 寫 wrong PIN 並吞掉 1 秒內的輸入；連錯幾次進入冷卻倒數；幾秒沒按鍵 PIN 框自己收起
-    tdp: [tdp password, tdp popup.7]
+    spec: 2
+    request: 錯誤的 PIN 寫 wrong PIN，馬上可以重新輸入；連錯幾次進入冷卻倒數；幾秒沒按鍵 PIN 框自己收起
+    tdp: [tdp P5, tdp K1, tdp password, tdp popup.7]
     remark:
       - 次數、冷卻秒數、逾時秒數是 preference 的 wrong_pin_attempts、wrong_pin_attempt_cooldown、pin_prompt_timeout（預設 0 關、30、30）
       - 冷卻的倒數寫在錯誤列（tdp popup.7、password 的「錯太多次而暫停收值時」，例子就是 locku）
+      - 輸錯一次不再吞掉 1 秒的輸入（user 2026-11-18）：點點清空，下一個鍵就是新的 PIN；wrong PIN 留在錯誤列，到下一次 Enter 檢查才換（tdp popup.7「兩次檢查之間不動」）
+      - 什麼都沒打就按 Enter 不算一次錯（user 2026-11-18）：錯誤列寫必填的錯 `PIN can't be empty`（tdp popup.7「必填」），連按 Enter 不會把次數用完
   - id: 4
     spec: 1
     request: '鎖定畫面的狀態列寫 `user@host · locked since HH:MM`，可以關掉；沒設 PIN 時標明 `no PIN · any key unlocks`'

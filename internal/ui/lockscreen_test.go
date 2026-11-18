@@ -127,13 +127,6 @@ func screen(m *LockModel) string { return ansi.Strip(m.View()) }
 // dots is how many characters the box holds.
 func dots(m *LockModel) int { return strings.Count(screen(m), "●") }
 
-// pastHold lets the second of "wrong" go by on the lock's clock.
-func pastHold(m *LockModel) {
-	now := m.now()
-	m.now = func() time.Time { return now.Add(wrongHold) }
-	drive(m, heldOverMsg{})
-}
-
 // openPrompt presses a key and lets the box open.
 func openPrompt(t *testing.T, m *LockModel) *LockModel {
 	t.Helper()
@@ -206,19 +199,47 @@ func TestTheBoxIsTheLibs(t *testing.T) {
 // Esc:cancel, and three cells on either side.
 const pinBoxW = 45
 
+// A wrong PIN says so and clears the dots, and the box takes the next PIN
+// at once (user, 2026-11-18: no second of every key swallowed); "wrong PIN"
+// stays on the error row until the next Enter checks again (tdp popup.7).
 func TestWrongThenRight(t *testing.T) {
 	m := openPrompt(t, testLock(t, "1234", nil))
 	if quit := typed(m, "0000"); quit || !strings.Contains(screen(m), "wrong PIN") || dots(m) != 0 || m.failures != 1 {
 		t.Fatalf("wrong PIN: quit=%v dots=%d failures=%d\n%s", quit, dots(m), m.failures, screen(m))
 	}
-	// Everything is swallowed for the second, Esc included.
-	press(m, "1", "Esc")
-	if dots(m) != 0 || !m.boxUp {
-		t.Fatal("input during the wrong second was not swallowed")
+	press(m, "1")
+	if dots(m) != 1 || !strings.Contains(screen(m), "wrong PIN") {
+		t.Fatalf("the key right after a wrong PIN: dots=%d\n%s", dots(m), screen(m))
 	}
-	pastHold(m)
+	press(m, "Backspace")
 	if !typed(m, "1234") {
 		t.Error("the right PIN must end the process")
+	}
+}
+
+// Enter with nothing typed is not a wrong PIN: the box says the PIN can't be
+// empty (tdp popup.7: a value required) and no try is counted, so Enter
+// pressed again and again after a wrong PIN does not run into the
+// cooling-off (user, 2026-11-18).
+func TestAnEmptyPINIsNotAWrongOne(t *testing.T) {
+	m := openPrompt(t, testLock(t, "1234", func(c *config.Config) { c.WrongPINAttempts = 2 }))
+	typed(m, "0000")
+	press(m, "Enter", "Enter", "Enter")
+	if m.failures != 1 || m.lockedOut() || !strings.Contains(screen(m), "PIN can't be empty") {
+		t.Fatalf("empty PINs: failures=%d locked out=%v\n%s", m.failures, m.lockedOut(), screen(m))
+	}
+	if !typed(m, "1234") {
+		t.Error("the right PIN must end the process")
+	}
+}
+
+// Esc right after a wrong PIN closes the box, as any other time.
+func TestEscAfterAWrongPIN(t *testing.T) {
+	m := openPrompt(t, testLock(t, "1234", nil))
+	typed(m, "0000")
+	press(m, "Esc")
+	if m.boxUp {
+		t.Errorf("Esc after a wrong PIN did not close the box:\n%s", screen(m))
 	}
 }
 
@@ -289,7 +310,6 @@ func TestLockout(t *testing.T) {
 	m.now = time.Now
 	openPrompt(t, m)
 	typed(m, "0000")
-	m.held = time.Time{}
 	typed(m, "0000")
 	if !m.lockedOut() || !strings.Contains(screen(m), "try again in 1 s") {
 		t.Fatalf("no cooling-off after 2 wrong:\n%s", screen(m))

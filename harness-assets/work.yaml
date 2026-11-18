@@ -36,7 +36,6 @@ tasks:
     test:
       - TestTheBoxIsTheLibs
       - TestTheBoxsKeys
-      - TestWrongThenRight
       - TestEscBackToSaverLeavesTheBoardTicking
       - TestBoardKeepsTickingUnderThePrompt
       - TestPromptDimsTheLock
@@ -46,13 +45,17 @@ tasks:
       - TestLockReadsTheFilesPINAtEveryKey
       - TestLoadPINHash
   - id: 3
-    spec: 1
+    spec: 2
     implementation: |
-      錯誤的 PIN：錯誤列寫 `wrong PIN`（Red），吞掉 1 秒內的所有輸入
+      錯誤的 PIN：錯誤列寫 `wrong PIN`（Red），點點清空；下一個鍵馬上收進框，Esc 照常收起框；wrong PIN 留在錯誤列，到下一次 Enter 檢查才換
+      什麼都沒打就按 Enter：錯誤列寫 `PIN can't be empty`（tgo ErrEmpty），不算一次錯
       連錯 wrong_pin_attempts 次（0 關）進入 wrong_pin_attempt_cooldown 秒的冷卻：倒數寫在錯誤列、每秒更新，期間除了 Esc 都吞掉；框收起來時倒數照走
       pin_prompt_timeout 秒（0 永不）沒按鍵，框自動收起；下一鍵再開
       custom 螢幕保護的 PIN 框與其他的共用同一份錯誤次數
     test:
+      - TestWrongThenRight
+      - TestEscAfterAWrongPIN
+      - TestAnEmptyPINIsNotAWrongOne
       - TestLockout
       - TestPromptTimeoutClosesAndKeysRearmIt
       - TestCustomPromptsShareTheTries

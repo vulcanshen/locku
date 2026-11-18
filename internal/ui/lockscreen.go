@@ -26,9 +26,9 @@ import (
 // the PIN box over it — the lib's password box in its unlock look, the
 // board dimmed under it (tdp E8; 2026-10-19: until then the box was
 // drawn here, the lib's way). The lock is not a surface (tdp K1): no key of
-// the lib's acts on it, and what the lock adds to the box — a second of
-// "wrong" that swallows every key, the timeout, the PIN read at every key —
-// is done here, around the App.
+// the lib's acts on it, and what the lock adds to the box — the dots
+// cleared after a wrong PIN, the timeout, the PIN read at every key — is
+// done here, around the App.
 type LockModel struct {
 	cfg     config.Config
 	problem string
@@ -54,10 +54,9 @@ type LockModel struct {
 	tickGen       int      // a clock or reveal tick from before a change carries an older gen
 
 	app     *terminu.App
-	boxUp   bool      // the PIN box is open, or opening
-	idleGen int       // a timeout from before a key carries an older gen
-	held    time.Time // the second of "wrong": every key swallowed till then
-	wrong   bool      // the Enter just handled found the PIN wrong
+	boxUp   bool // the PIN box is open, or opening
+	idleGen int  // a timeout from before a key carries an older gen
+	wrong   bool // the Enter just handled found the PIN wrong
 	// failures is the wrong PINs in a row, process-lifetime, and
 	// lockoutUntil the end of the cooling-off they led to.
 	failures     int
@@ -97,7 +96,6 @@ type (
 	clockTickMsg   struct{ gen int }
 	revealTickMsg  struct{ gen int }
 	boxIdleMsg     struct{ gen int } // pin_prompt_timeout ran out
-	heldOverMsg    struct{}          // the second of "wrong" is over
 	lockoutOverMsg struct{}          // the cooling-off is over
 )
 
@@ -105,12 +103,10 @@ type (
 // EOF or EIO. There is nothing left to protect, and the process ends.
 type TTYGoneMsg struct{}
 
-// The box: its title says what to type (tdp password.2), and it says wrong for a
-// wrong PIN, which is a second of every key swallowed, the dots cleared.
-const (
-	pinTitle  = "Unlock"
-	wrongHold = time.Second
-)
+// The box: its title says what to type (tdp password.2), and it says wrong
+// for a wrong PIN, the dots cleared for the next one, which it takes at once
+// (user, 2026-11-18; until then every key was swallowed for a second).
+const pinTitle = "Unlock"
 
 var errWrongPIN = errors.New("wrong PIN")
 
@@ -295,17 +291,12 @@ func (m *LockModel) step(msg tea.Msg) (*LockModel, tea.Cmd) {
 		m.shown = m.rev.cur
 		return m, m.revealTick()
 	case boxIdleMsg:
-		// Not while a wrong PIN is said or a cooling-off counts down: each
-		// starts the timer again when it is over.
-		if msg.gen != m.idleGen || !m.boxUp || m.holding() || m.lockedOut() {
+		// Not while a cooling-off counts down: it starts the timer again
+		// when it is over.
+		if msg.gen != m.idleGen || !m.boxUp || m.lockedOut() {
 			return m, nil
 		}
 		return m, m.app.CloseAll()
-	case heldOverMsg:
-		if !m.boxUp || m.holding() {
-			return m, nil
-		}
-		return m, m.armTimeout()
 	case lockoutOverMsg:
 		if m.lockoutUntil.IsZero() || m.lockedOut() {
 			return m, nil
@@ -332,7 +323,7 @@ func (m *LockModel) toApp(msg tea.Msg) tea.Cmd {
 
 // key is every keystroke. On the board any key opens the box
 // and is not input; in the box it is the box's, and starts the timeout
-// again — but for the second of "wrong", when every key is swallowed.
+// again.
 func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	// Nothing is drawn before the terminal's size is known, and a key
 	// there is not one the user saw anything for.
@@ -359,9 +350,6 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 	if !m.boxUp {
 		return m.toApp(msg)
 	}
-	if m.holding() {
-		return nil
-	}
 	cmd := m.toApp(msg)
 	if !m.wrong {
 		// Every key restarts the idle timer, so a PIN typed slowly does
@@ -374,15 +362,12 @@ func (m *LockModel) key(msg tea.KeyMsg) tea.Cmd {
 		// swallowed; when it is over the count starts again.
 		return tea.Batch(cmd, m.app.Tick(m.lockoutUntil.Sub(m.now()), func(time.Time) tea.Msg { return lockoutOverMsg{} }))
 	}
-	// A second of "wrong": the dots go — Backspace clears a password whole
-	// — and every key is swallowed, so Enter pressed again and again does
-	// not skip the word.
-	m.held = m.now().Add(wrongHold)
-	return tea.Batch(cmd, m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}),
-		m.app.Tick(wrongHold, func(time.Time) tea.Msg { return heldOverMsg{} }))
+	// The dots go — Backspace clears a password whole — and the next PIN
+	// is typed at once, "wrong PIN" on the error row till Enter checks
+	// again (tdp popup.7; user, 2026-11-18).
+	return tea.Batch(cmd, m.toApp(tea.KeyMsg{Type: tea.KeyBackspace}), m.armTimeout())
 }
 
-func (m *LockModel) holding() bool   { return m.now().Before(m.held) }
 func (m *LockModel) lockedOut() bool { return m.now().Before(m.lockoutUntil) }
 
 // openBox puts the PIN box up. The board goes on underneath it — ticking,
@@ -418,7 +403,6 @@ func (m *LockModel) endLockout() { m.failures, m.lockoutUntil = 0, time.Time{} }
 func (m *LockModel) boxClosed() tea.Cmd {
 	m.boxUp = false
 	m.idleGen++
-	m.held = time.Time{}
 	if m.promptOnly {
 		m.back, m.over = true, true
 		return tea.Quit
@@ -427,11 +411,17 @@ func (m *LockModel) boxClosed() tea.Cmd {
 }
 
 // check is Enter in the box: the right PIN ends the lock at once — no
-// closing animation, the terminal is wanted back; a wrong one
-// is a second of "wrong" (key), or, at the configured count, a cooling-off.
+// closing animation, the terminal is wanted back; a wrong one clears the
+// dots for the next (key), or, at the configured count, is a cooling-off.
 // A PIN with a control character in it — pasted — the lib refuses before
 // it gets here: it is not a wrong one.
 func (m *LockModel) check(pin string) error {
+	// Nothing typed is not a wrong PIN: the box says one is needed (tdp
+	// popup.7, a value required) and no try is counted, so Enter pressed
+	// again and again does not run into the cooling-off (user, 2026-11-18).
+	if pin == "" {
+		return terminu.ErrEmpty
+	}
 	if m.cfg.CheckPIN(pin) {
 		return nil
 	}

@@ -126,7 +126,7 @@ locku version    # 版本；locku help 印用法
 ### 鎖定畫面
 
 - 任何鍵開 PIN 框，那個鍵不算輸入。`Enter` 送出、`Esc` 回 saver、`Backspace` 清掉打的字。
-- 錯誤的 PIN 會寫 `wrong PIN`，並吞掉 1 秒內的所有輸入。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
+- 錯誤的 PIN 會寫 `wrong PIN`、清空框，馬上可以重打。什麼都沒打就按 Enter 不算一次錯。連錯 `wrong_pin_attempts` 次進入 `wrong_pin_attempt_cooldown` 秒倒數（預設關）；`pin_prompt_timeout` 秒沒按鍵框自動收起（預設 30）。
 - 狀態列 `user@host · locked since HH:MM`（`show_status: false` 可關），沒設 PIN 時標明 `no PIN · any key unlocks`。
 - `Ctrl-C`、`Ctrl-Z`、`Ctrl-\` 只是按鍵；SIGINT / SIGTERM / SIGHUP 一律忽略；panic 後鎖定畫面重新升起。進程只在三種情況結束：PIN 正確、無 PIN 時任意鍵、終端機消失。
 - 沒設 PIN、或 config 讀不到，一律 fail open：saver 照常顯示、狀態列說明原因、任何鍵結束。

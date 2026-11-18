@@ -27,12 +27,9 @@ func customPrompt(t *testing.T, tries Tries) *LockModel {
 	return m
 }
 
-// wrong types a wrong PIN and Enter, and lets the second of "wrong" pass.
+// wrong types a wrong PIN and Enter.
 func wrong(m *LockModel) *LockModel {
 	typed(m, "0000")
-	if m.holding() {
-		pastHold(m)
-	}
 	return m
 }
 
