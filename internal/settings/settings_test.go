@@ -915,7 +915,7 @@ func TestTheActiveProfileIsASelect(t *testing.T) {
 // App Log once, as a Success.
 func TestALongReportIsAReport(t *testing.T) {
 	cfg := testConfig()
-	deep := filepath.Join(t.TempDir(), strings.Repeat("a-folder-deep-down/", 4))
+	deep := filepath.Join(t.TempDir(), strings.Repeat("a-folder-deep-down/", 10))
 	if err := os.MkdirAll(deep, 0o700); err != nil {
 		t.Fatal(err)
 	}

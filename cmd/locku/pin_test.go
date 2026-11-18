@@ -136,7 +136,7 @@ func TestPINResetTouchesNothingItCannotRead(t *testing.T) {
 			if code == 0 || out.Len() != 0 {
 				t.Errorf("code %d, printed:\n%s", code, out.String())
 			}
-			if want := "locku pin reset: " + path + " can't be read: "; !strings.HasPrefix(errs.String(), want) || strings.Count(errs.String(), "\n") != 1 {
+			if want := "locku pin reset: " + foldHome(path) + " can't be read: "; !strings.HasPrefix(errs.String(), want) || strings.Count(errs.String(), "\n") != 1 {
 				t.Errorf("stderr must be one line, the path and the reason:\n%s\nwant it to start with %q", errs.String(), want)
 			}
 			for p, b := range before {
