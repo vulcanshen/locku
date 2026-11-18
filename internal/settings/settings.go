@@ -120,26 +120,30 @@ func (s *Settings) start() tea.Cmd {
 	if err := config.UnreadableProfiles(); err != nil {
 		return s.app.MoveAside(config.ProfilesPath(), err, s.fresh)
 	}
-	// What the files name and do not have — a profile that is not there —
-	// is said as the start goes on, a Warning toast and its WARN in the App
-	// Log (tdp E3), not an error popup: no popup's action failed (tdp
+	// What the start has to say is one toast, a row each in the order it
+	// came, its kind the strongest, each row its own App Log entry (tdp
+	// E3, several at one start): the files kept aside, the profiles moved,
+	// and what the files name and do not have — a profile that is not there
+	// — a Warning, not an error popup: no popup's action failed (tdp
 	// note.6).
-	var said tea.Cmd
+	notices, failed := s.keepAside()
+	moved, cannot := s.moveProfiles()
+	notices = append(notices, moved...)
 	if s.problem != "" {
-		said = s.app.Toast(terminu.Warning, s.problem)
+		notices = append(notices, terminu.Notice{Kind: terminu.Warning, Text: s.problem})
 	}
-	fit := s.keepAside()
-	return tea.Batch(fit, s.moveProfiles(), said)
+	return tea.Batch(failed, cannot, s.app.Notify(notices...))
 }
 
 // keepAside is what the start does with a file that had a value or a
 // profile that did not fit (tdp E3): not one that cannot be read, so locku
 // goes on. The file is copied whole to the next free <name>.bak and written
 // again as locku reads it, the defaults in, the profiles left out; one
-// Warning toast says so and the App Log has each misfit, a WARN. A copy that
-// cannot be made leaves the file as it was, the defaults for this run
-// only, the Error toast saying why, and the WARNs alone.
-func (s *Settings) keepAside() tea.Cmd {
+// Warning row of the start's toast says so and the App Log has each
+// misfit, a WARN. A copy that cannot be made leaves the file as it was, the
+// defaults for this run only, an Error row saying why, and the WARNs alone;
+// a file that cannot be written again is an error popup, the action failed.
+func (s *Settings) keepAside() (notices []terminu.Notice, failed tea.Cmd) {
 	var cmds []tea.Cmd
 	for _, path := range s.cfg.MisfitFiles() {
 		var ms []terminu.Misfit
@@ -148,16 +152,17 @@ func (s *Settings) keepAside() tea.Cmd {
 		}
 		copy, err := terminu.KeepAside(path)
 		if err != nil {
-			cmds = append(cmds, s.app.Toast(terminu.Error, err.Error()), s.app.DidNotFit(path, "", ms...))
+			notices = append(notices, terminu.Notice{Kind: terminu.Error, Text: err.Error()}, terminu.MisfitNotice(path, "", ms...))
 			continue
 		}
 		if err := config.Rewrite(s.cfg, path); err != nil {
-			cmds = append(cmds, s.app.ErrorAbout("Write failed", filepath.Base(path), err.Error()), s.app.DidNotFit(path, "", ms...))
+			cmds = append(cmds, s.app.ErrorAbout("Write failed", filepath.Base(path), err.Error()))
+			notices = append(notices, terminu.MisfitNotice(path, "", ms...))
 			continue
 		}
-		cmds = append(cmds, s.app.DidNotFit(path, copy, ms...))
+		notices = append(notices, terminu.MisfitNotice(path, copy, ms...))
 	}
-	return tea.Batch(cmds...)
+	return notices, tea.Batch(cmds...)
 }
 
 // fresh is the start once the file that could not be read is moved aside:
@@ -175,19 +180,19 @@ func (s *Settings) fresh() tea.Cmd {
 // the first time (tdp E3, when the place changes): a toast says from where
 // to where. One that cannot be made, and profiles in both places, open an
 // error popup with both paths.
-func (s *Settings) moveProfiles() tea.Cmd {
+func (s *Settings) moveProfiles() (moved []terminu.Notice, cannot tea.Cmd) {
 	from, to := tilde(config.Path()), tilde(config.ProfilesPath())
 	if s.cfg.Both() {
-		return s.app.Error("Profiles", "The profiles are in "+to+", and in "+from+" too: "+to+"'s are used, "+from+"'s left there to be merged by hand.")
+		return nil, s.app.Error("Profiles", "The profiles are in "+to+", and in "+from+" too: "+to+"'s are used, "+from+"'s left there to be merged by hand.")
 	}
-	moved, err := config.MoveProfiles(&s.cfg)
+	done, err := config.MoveProfiles(&s.cfg)
 	switch {
 	case err != nil:
-		return s.app.Error("Profiles", "The profiles could not be moved from "+from+" to "+to+": "+err.Error()+". They stay in "+from+".")
-	case moved:
-		return s.app.Toast(terminu.Info, "Profiles moved from "+from+" to "+to)
+		return nil, s.app.Error("Profiles", "The profiles could not be moved from "+from+" to "+to+": "+err.Error()+". They stay in "+from+".")
+	case done:
+		return []terminu.Notice{{Kind: terminu.Info, Text: "Profiles moved from " + from + " to " + to}}, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // tilde is path with the home directory written ~.

@@ -864,6 +864,31 @@ func TestAProfileThatIsNotThereIsAWarning(t *testing.T) {
 	}
 }
 
+// Several of E3's notices at one start are one toast (tdp E3, several at one
+// start): a value that did not fit and a profile that is not there, a row
+// each in the order they came, its kind the strongest; in the App Log each
+// is an entry of its own, the misfit's WARN right after its row.
+func TestSeveralAtOneStartAreOneToast(t *testing.T) {
+	misfit(t)
+	cfg, _ := config.Load()
+	cfg.Profile, cfg.Profiles = "ghost", nil // the profiles stay in profiles.yaml alone
+	if err := config.SaveFile(config.Path(), cfg); err != nil {
+		t.Fatal(err)
+	}
+	d := started(t)
+	v := d.screen()
+	if strings.Count(v, "WARNING") != 1 || !strings.Contains(v, "did not fit") || !strings.Contains(v, `Profile "ghost" in config.yaml is not in profiles.yaml`) {
+		t.Fatalf("not one toast with both rows:\n%s", v)
+	}
+	d.press("Esc", "!")
+	v = d.screen()
+	for _, want := range []string{"1 value in profiles.yaml did not fit", `profiles.yaml: profile bounce › speed "warp" did not fit`, `Profile "ghost" in config.yaml`} {
+		if !strings.Contains(v, want) {
+			t.Errorf("no %q in the App Log:\n%s", want, v)
+		}
+	}
+}
+
 // misfit saves testConfig with the first speed in profiles.yaml one locku
 // does not have, and returns the file as it was then.
 func misfit(t *testing.T) []byte {
