@@ -368,6 +368,7 @@ tasks:
     implementation: |
       `locku pin reset`：stdin 不是終端機時說要一個終端機、結束碼 2
       先檢查 config.yaml 與 profiles.yaml：讀不了就把 `locku pin reset: <路徑> can't be read: <原因>` 寫到 stderr、結束碼 1，什麼都不問、什麼都不寫
+      config.yaml 的 profile 指到沒有的 profile：不動檔案，`locku pin reset: <那句>` 寫到 stderr，繼續
       值不合規則或不合的 profile：tgo KeepAside 複製成 .bak，config.Rewrite 重寫那個檔，`locku pin reset: <tgo DidNotFitText 的那句>` 寫到 stderr，繼續；複製失敗就把錯誤寫到 stderr、不重寫
       問 `[y/N]`，再問登入密碼（su 驗）；產生八位數的新 PIN，寫 pin_hash，顯示一次；成功或被拒都在資料目錄的 pin-resets.log 加一行，不含 PIN
     test:
@@ -376,6 +377,7 @@ tasks:
       - TestPINResetNeedsATerminal
       - TestNewPINIsEightDigits
       - TestPINResetKeepsAsideWhatDidNotFit
+      - TestPINResetSaysAProfileThatIsNotThere
   - id: 25
     spec: 3
     implementation: |
@@ -385,7 +387,7 @@ tasks:
       設定畫面啟動時，有 misfit 的檔一個一個：tgo KeepAside 複製成下一個空著的 .bak，config.Rewrite 只重寫那個檔，tgo App.DidNotFit 跳一個 Warning toast（「1 value in profiles.yaml did not fit: defaults used, yours kept in profiles.yaml.bak」）、每一筆以 WARN 記進 App Log（`profiles.yaml: profile bounce › speed "warp" did not fit; using "normal"`）
       複製失敗：Error toast 寫 KeepAside 的錯（`… could not be made: <why>; … left as it was`），不重寫，這次照預設值，App Log 照樣記每一筆；重寫失敗開 error popup
       `locku lock` 啟動時（cmd/locku 的 lockStart，與 pin reset 共用 keepAside）一樣 KeepAside、Rewrite，DidNotFitText 的那句（或複製失敗的原因）寫在鎖定畫面的狀態列，接在已經有的說明後面
-      一個 profile 都沒有、或啟用的 profile 找不到時才說：設定畫面開 error popup（Config），鎖定畫面寫在狀態列
+      一個 profile 都沒有（用內建的預設），或 config.yaml 的 profile 指到沒有的 profile（值不換、不重寫、不做 .bak，這次用內建的預設）：設定畫面啟動時一個 Warning toast（`profile "work" in config.yaml is not in profiles.yaml: using the default`，lib 記成 App Log 的 WARN），不開 error popup；鎖定畫面寫在狀態列；pin reset 寫到 stderr
       config.yaml 標明 version，舊版的檔第一次讀到就轉成新格式整份寫回（改名的鍵、搬到 tmux / screen 底下的鍵、舊的 runner 名稱）
       舊版放在 config.yaml 的 profile：設定畫面第一次開時搬到 profiles.yaml 並說一聲；搬失敗就留在原處；兩個檔都有時用 profiles.yaml 的，config.yaml 的留著並開 error popup 說明
       寫檔失敗開 error popup
@@ -410,6 +412,7 @@ tasks:
       - TestMisfitsAreKeptAsideAndWrittenAgain
       - TestAMisfitWhoseCopyCannotBeMade
       - TestTheLockKeepsAsideWhatDidNotFit
+      - TestAProfileThatIsNotThereIsAWarning
   - id: 26
     spec: 1
     implementation: |

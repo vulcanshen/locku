@@ -781,14 +781,19 @@ func (cfg Config) sanitized(conf, from string) (Config, string) {
 	cfg.Profiles = profiles
 	switch {
 	case len(cfg.Profiles) == 0:
-		note = "no profiles"
+		note = filepath.Base(from) + " has no profiles: using the default"
 		cfg.Profiles = []Profile{DefaultProfile()}
 		cfg.Profile = DefaultProfile().Name
 	case !seen[cfg.Profile]:
-		// TODO(tdp #19): a name that is in no profile stays, said, not put
-		// right as a value that did not fit: which default it would take tdp
-		// does not say.
-		note = fmt.Sprintf("profile %q not found", cfg.Profile)
+		// A name that is in no profile is no value that did not fit (tdp E3,
+		// a value naming an entry that is not there): it stays, nothing is
+		// written, the built-in default is used this run (Active), and it is
+		// said; once that profile is back, it works again.
+		if conf == from {
+			note = fmt.Sprintf("profile %q is not in %s: using the default", cfg.Profile, filepath.Base(from))
+		} else {
+			note = fmt.Sprintf("profile %q in %s is not in %s: using the default", cfg.Profile, filepath.Base(conf), filepath.Base(from))
+		}
 	}
 	// Every kind has its defaults in the file, whole: the file's where it
 	// has them, the built-in for the rest.

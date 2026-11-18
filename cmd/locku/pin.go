@@ -45,12 +45,17 @@ func pinReset(in *os.File, out, errs io.Writer, verify func(user, password strin
 			return 1
 		}
 	}
-	cfg, _ := config.Load()
+	cfg, note := config.Load()
 	// A value or a profile that did not fit is no file that cannot be read:
 	// with no screen too it is kept aside and written again, the sentence on
 	// stderr (tdp E3).
 	for _, said := range keepAside(cfg) {
 		fmt.Fprintln(errs, "locku pin reset: "+said)
+	}
+	// A profile config.yaml names and profiles.yaml has not stays as it is,
+	// said on stderr (tdp E3, a value naming an entry that is not there).
+	if note != "" {
+		fmt.Fprintln(errs, "locku pin reset: "+note)
 	}
 	fmt.Fprint(out, "Reset the PIN? A new one is made and shown here once; the old one stops working at once. [y/N] ")
 	line, _ := bufio.NewReader(in).ReadString('\n')

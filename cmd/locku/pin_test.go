@@ -183,6 +183,33 @@ func TestPINResetKeepsAsideWhatDidNotFit(t *testing.T) {
 	}
 }
 
+// A profile config.yaml names that profiles.yaml does not have is said on
+// stderr with no screen (tdp E3), the file left as it is, and the reset
+// goes on.
+func TestPINResetSaysAProfileThatIsNotThere(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("LOCKU__CONFIG", dir)
+	t.Setenv("LOCKU__DATA", filepath.Join(dir, "data"))
+	cfg := config.Default()
+	if err := cfg.SetPIN("1234"); err != nil {
+		t.Fatal(err)
+	}
+	cfg.Profile = "ghost"
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	if code := pinReset(typing(t, "y", "s3cret"), &out, &errs, func(_, pw string) bool { return pw == "s3cret" }); code != 0 {
+		t.Fatalf("code %d:\n%s\n%s", code, out.String(), errs.String())
+	}
+	if !strings.Contains(errs.String(), `locku pin reset: profile "ghost" in config.yaml is not in profiles.yaml: using the default`) {
+		t.Errorf("stderr:\n%s", errs.String())
+	}
+	if again, _ := config.Load(); again.Profile != "ghost" {
+		t.Errorf("the profile named was changed to %q", again.Profile)
+	}
+}
+
 // Without a terminal there is nothing to ask on.
 func TestPINResetNeedsATerminal(t *testing.T) {
 	t.Setenv("LOCKU__CONFIG", t.TempDir())

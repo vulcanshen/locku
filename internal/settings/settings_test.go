@@ -834,6 +834,36 @@ func TestAppLogSaysWhatWasDone(t *testing.T) {
 	}
 }
 
+// A profile config.yaml names that profiles.yaml does not have is no value
+// that did not fit (tdp E3, a value naming an entry that is not there): it
+// stays, nothing is written, the default is used, and the start says so in
+// a Warning toast, a WARN in the App Log, not an error popup, which is for
+// a popup's action that failed (tdp note.6).
+func TestAProfileThatIsNotThereIsAWarning(t *testing.T) {
+	tempDirs(t)
+	cfg := testConfig()
+	cfg.Profile = "ghost"
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+	was, _ := os.ReadFile(config.Path())
+	d := started(t)
+	v := d.screen()
+	if !strings.Contains(v, "WARNING") || !strings.Contains(v, `"ghost" in config.yaml is not in profiles.yaml`) || strings.Contains(v, "CONFIG") {
+		t.Errorf("no Warning toast, or an error popup:\n%s", v)
+	}
+	if now, _ := os.ReadFile(config.Path()); string(now) != string(was) {
+		t.Errorf("config.yaml was written:\n%s", now)
+	}
+	if _, err := os.Stat(config.Path() + ".bak"); !os.IsNotExist(err) {
+		t.Errorf("a .bak was made: %v", err)
+	}
+	d.press("Esc", "!")
+	if v := d.screen(); !strings.Contains(v, "WARN") || !strings.Contains(v, `"ghost" in config.yaml is not in profiles.yaml`) {
+		t.Errorf("not in the App Log:\n%s", v)
+	}
+}
+
 // misfit saves testConfig with the first speed in profiles.yaml one locku
 // does not have, and returns the file as it was then.
 func misfit(t *testing.T) []byte {

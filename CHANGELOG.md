@@ -2,6 +2,10 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- A profile that config.yaml names and profiles.yaml does not have is said in a warning as the settings screen starts, and in the App Log, rather than in an error popup; `locku pin reset` says it on stderr. As before, locku uses the default profile meanwhile and leaves the name as you wrote it, so the profile works again once it is back.
+
 ## v1.0.2 — tdp v1.2.15
 
 - On terminu-go v1.2.16, which follows tdp v1.2.15.

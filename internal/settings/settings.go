@@ -120,9 +120,13 @@ func (s *Settings) start() tea.Cmd {
 	if err := config.UnreadableProfiles(); err != nil {
 		return s.app.MoveAside(config.ProfilesPath(), err, s.fresh)
 	}
+	// What the files name and do not have — a profile that is not there —
+	// is said as the start goes on, a Warning toast and its WARN in the App
+	// Log (tdp E3), not an error popup: no popup's action failed (tdp
+	// note.6).
 	var said tea.Cmd
 	if s.problem != "" {
-		said = s.app.Error("Config", s.problem)
+		said = s.app.Toast(terminu.Warning, s.problem)
 	}
 	fit := s.keepAside()
 	return tea.Batch(fit, s.moveProfiles(), said)
